@@ -1,0 +1,114 @@
+---
+title: 'Overview'
+sidebarTitle: 'Overview'
+description: 'The official Go client for connecting to ClickHouse.'
+keywords: ['clickhouse', 'go', 'client', 'golang']
+slug: integrations/go
+---
+
+<Card title="clickhouse-go" icon="github" href="https://github.com/ClickHouse/clickhouse-go">
+  View the source code and contribute on GitHub.
+</Card>
+
+ClickHouse supports two official Go clients. These clients are complementary and intentionally support different use cases.
+
+* [clickhouse-go](https://github.com/ClickHouse/clickhouse-go) - High level language client which supports either the Go standard database/sql interface or the native interface.
+* [ch-go](https://github.com/ClickHouse/ch-go) - Low level client. Native interface only.
+
+clickhouse-go provides a high-level interface, allowing users to query and insert data using row-orientated semantics and batching that are lenient with respect to data types - values will be converted provided no precision loss is potentially incurred. ch-go, meanwhile, provides an optimized column-orientated interface that provides fast data block streaming with low CPU and memory overhead at the expense of type strictness and more complex usage.
+
+From version 2.3, Clickhouse-go utilizes ch-go for low-level functions such as encoding, decoding, and compression. Note that clickhouse-go also supports the Go `database/sql` interface standard. Both clients use the native format for their encoding to provide optimal performance and can communicate over the native ClickHouse protocol. clickhouse-go also supports HTTP as its transport mechanism for cases where users have a requirement to proxy or load balance traffic.
+
+When choosing a client library, users should be aware of their respective pros and cons - see Choosing a Client Library.
+
+|               | Native format | Native protocol | HTTP protocol | Row Orientated API | Column Orientated API | Type flexibility | Compression | Query Placeholders |
+|:-------------:|:-------------:|:---------------:|:-------------:|:------------------:|:---------------------:|:----------------:|:-----------:|:------------------:|
+| clickhouse-go |       ✅       |        ✅        |       ✅       |          ✅         |           ✅           |         ✅        |      ✅      |          ✅         |
+|     ch-go     |       ✅       |        ✅        |               |                    |           ✅           |                  |      ✅      |                    |
+
+## Choosing a client
+
+Selecting a client library depends on your usage patterns and need for optimal performance. For insert heavy use cases, where millions of inserts are required per second, we recommend using the low level client [ch-go](https://github.com/ClickHouse/ch-go). This client avoids the associated overhead of pivoting the data from a row-orientated format to columns, as the ClickHouse native format requires. Furthermore, it avoids any reflection or use of the `interface{}` (`any`) type to simplify usage.
+
+For query workloads focused on aggregations or lower throughput insert workloads, the [clickhouse-go](https://github.com/ClickHouse/clickhouse-go) provides a familiar `database/sql` interface and more straightforward row semantics. Users can also optionally use HTTP for the transport protocol and take advantage of helper functions to marshal rows to and from structs.
+
+## The clickhouse-go client
+
+The clickhouse-go client provides two API interfaces for communicating with ClickHouse:
+
+* ClickHouse client-specific API
+* `database/sql` standard - generic interface around SQL databases provided by Golang.
+
+While the `database/sql` provides a database-agnostic interface, allowing developers to abstract their data store, it enforces some typing and query semantics that impact performance. For this reason, the client-specific API should be used where [performance is important](https://github.com/clickHouse/clickHouse-go#benchmark). However, users who wish to integrate ClickHouse into tooling, which supports multiple databases, may prefer to use the standard interface.
+
+Both interfaces encode data using the [native format](/native-protocol/basics.md) and native protocol for communication. Additionally, the standard interface supports communication over HTTP.
+
+|                    | Native format | Native protocol | HTTP protocol | Bulk write support | Struct marshaling | Compression | Query Placeholders |
+|:------------------:|:-------------:|:---------------:|:-------------:|:------------------:|:-----------------:|:-----------:|:------------------:|
+|   ClickHouse API   |       ✅       |        ✅        |               |          ✅         |         ✅         |      ✅      |          ✅         |
+| `database/sql` API |       ✅       |        ✅        |       ✅       |          ✅         |                   |      ✅      |          ✅         |
+
+## Installation
+
+v1 of the driver is deprecated and will not reach feature updates or support for new ClickHouse types. Users should migrate to v2, which offers superior performance.
+
+To install the 2.x version of the client, add the package to your go.mod file:
+
+`require github.com/ClickHouse/clickhouse-go/v2 main`
+
+Or, clone the repository:
+
+```bash
+git clone --branch v2 https://github.com/clickhouse/clickhouse-go.git $GOPATH/src/github
+```
+
+To install another version, modify the path or the branch name accordingly.
+
+```bash
+mkdir my-clickhouse-app && cd my-clickhouse-app
+
+cat > go.mod <<-END
+  module my-clickhouse-app
+
+  go 1.18
+
+  require github.com/ClickHouse/clickhouse-go/v2 main
+END
+
+cat > main.go <<-END
+  package main
+
+  import (
+    "fmt"
+    "github.com/ClickHouse/clickhouse-go/v2"
+  )
+
+  func main() {
+   conn, _ := clickhouse.Open(&clickhouse.Options{Addr: []string{"127.0.0.1:9000"}})
+    v, _ := conn.ServerVersion()
+    fmt.Println(v.String())
+  }
+END
+
+go mod tidy
+go run main.go
+
+```
+
+### Versioning & compatibility
+
+The client is released independently of ClickHouse. 2.x represents the current major under development. All versions of 2.x should be compatible with each other.
+
+#### ClickHouse compatibility
+
+The client supports:
+
+- All currently supported versions of ClickHouse as recorded [here](https://github.com/ClickHouse/ClickHouse/blob/master/SECURITY.md). As ClickHouse versions are no longer supported they are also no longer actively tested against client releases.
+- All versions of ClickHouse 2 years from the release date of the client. Note only LTS versions are actively tested.
+
+#### Golang compatibility
+
+| Client Version | Golang Versions |
+|:--------------:|:---------------:|
+|  => 2.0 &lt;= 2.2 |    1.17, 1.18   |
+|     >= 2.3     |       1.18      |

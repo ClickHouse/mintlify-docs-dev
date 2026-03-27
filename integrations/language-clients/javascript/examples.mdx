@@ -1,0 +1,691 @@
+---
+title: 'Examples'
+sidebarTitle: 'Examples'
+description: 'Examples for using the ClickHouse JS client.'
+keywords: ['clickhouse', 'js', 'JavaScript', 'NodeJS', 'examples']
+---
+
+import GatherYourDetailsHttp from '/snippets/_gather_your_details_http.mdx';
+
+We aim to cover various scenarios of client usage with the [examples](https://github.com/ClickHouse/clickhouse-js/blob/main/examples) in the client repository.
+
+The overview is available in the [examples README](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/README.md#overview).
+
+If something is unclear or missing from the examples or from the following documentation, feel free to [contact us](/docs/language-clients/javascript/usage#contact-us).
+
+## Client API
+
+Most of the examples should be compatible with both Node.js and web versions of the client, unless explicitly stated otherwise.
+
+### Creating a client instance
+
+You can create as many client instances as necessary with the `createClient` factory:
+
+```ts
+import { createClient } from '@clickhouse/client' // or '@clickhouse/client-web'
+
+const client = createClient({
+  /* configuration */
+})
+```
+
+If your environment doesn't support ESM modules, you can use CJS syntax instead:
+
+```ts
+const { createClient } = require('@clickhouse/client');
+
+const client = createClient({
+  /* configuration */
+})
+```
+
+A client instance can be [pre-configured](#configuration) during instantiation.
+
+### Configuration
+
+When creating a client instance, the following connection settings can be adjusted:
+
+| Setting                                                                  | Description                                                                         | Default Value           | See Also                                                                                   |
+|--------------------------------------------------------------------------|-------------------------------------------------------------------------------------|-------------------------|--------------------------------------------------------------------------------------------|
+| **url**?: string                                                         | A ClickHouse instance URL.                                                          | `http://localhost:8123` | [URL configuration docs](#url-configuration)                                        |
+| **pathname**?: string                                                    | An optional pathname to add to the ClickHouse URL after it is parsed by the client. | `''`                    | [Proxy with a pathname docs](/docs/language-clients/javascript/usage#proxy-with-a-pathname)                                |
+| **request_timeout**?: number                                             | The request timeout in milliseconds.                                                | `30_000`                | -                                                                                          |
+| **compression**?: `{ **response**?: boolean; **request**?: boolean }`    | Enable compression.                                                                 | -                       | [Compression docs](/docs/language-clients/javascript/usage#compression)                                                    |
+| **username**?: string                                                    | The name of the user on whose behalf requests are made.                             | `default`               | -                                                                                          |
+| **password**?: string                                                    | The user password.                                                                  | `''`                    | -                                                                                          |
+| **application**?: string                                                 | The name of the application using the Node.js client.                               | `clickhouse-js`         | -                                                                                          |
+| **database**?: string                                                    | The database name to use.                                                           | `default`               | -                                                                                          |
+| **clickhouse_settings**?: ClickHouseSettings                             | ClickHouse settings to apply to all requests.                                       | `{}`                    | -                                                                                          |
+| **log**?: `{ **LoggerClass**?: Logger, **level**?: ClickHouseLogLevel }` | Internal client logs configuration.                                                 | -                       | [Logging docs](/docs/language-clients/javascript/usage#logging-nodejs-only)                                                |
+| **session_id**?: string                                                  | Optional ClickHouse Session ID to send with every request.                          | -                       | -                                                                                          |
+| **keep_alive**?: `{ **enabled**?: boolean }`                             | Enabled by default in both Node.js and Web versions.                                | -                       | -                                                                                          |
+| **http_headers**?: `Record<string, string>`                              | Additional HTTP headers for outgoing ClickHouse requests.                           | -                       | [Reverse proxy with authentication docs](/docs/language-clients/javascript/usage#reverse-proxy-with-authentication)        |
+| **roles**?: string \|  string[]                                          | ClickHouse role name(s) to attach to the outgoing requests.                         | -                       | [Using roles with the HTTP interface](/interfaces/http#setting-role-with-query-parameters) |
+
+### Node.js-specific configuration parameters
+
+| Setting                                                                                               | Description                                                 | Default Value | See Also                                                                                             |
+|-------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|---------------|------------------------------------------------------------------------------------------------------|
+| **max_open_connections**?: number                                                                     | A maximum number of connected sockets to allow per host.    | `10`          | -                                                                                                    |
+| **tls**?: `{ **ca_cert**: Buffer, **cert**?: Buffer, **key**?: Buffer }`                              | Configure TLS certificates.                                 | -             | [TLS docs](/docs/language-clients/javascript/usage#tls-certificates-nodejs-only)                                                     |
+| **keep_alive**?: `{ **enabled**?: boolean, **idle_socket_ttl**?: number }`                            | -                                                           | -             | [Keep Alive docs](/docs/language-clients/javascript/usage#keep-alive-configuration-nodejs-only)                                      |
+| **http_agent**?: http.Agent \| https.Agent| Custom HTTP agent for the client.                           | -             | [HTTP agent docs](/docs/language-clients/javascript/usage#custom-httphttps-agent-experimental-nodejs-only)                           |
+| **set_basic_auth_header**?: boolean                                       | Set the `Authorization` header with basic auth credentials. | `true`        | [this setting usage in the HTTP agent docs](/docs/language-clients/javascript/usage#custom-httphttps-agent-experimental-nodejs-only) |
+
+## URL configuration
+
+<Warning>
+URL configuration will _always_ overwrite the hardcoded values and a warning will be logged in this case.
+</Warning>
+
+It is possible to configure most of the client instance parameters with a URL. The URL format is `http[s]://[username:password@]hostname:port[/database][?param1=value1&param2=value2]`. In almost every case, the name of a particular parameter reflects its path in the config options interface, with a few exceptions. The following parameters are supported:
+
+| Parameter                                   | Type                                                              |
+|---------------------------------------------|-------------------------------------------------------------------|
+| `pathname`                                  | an arbitrary string.                                              |
+| `application_id`                            | an arbitrary string.                                              |
+| `session_id`                                | an arbitrary string.                                              |
+| `request_timeout`                           | non-negative number.                                              |
+| `max_open_connections`                      | non-negative number, greater than zero.                           |
+| `compression_request`                       | boolean. See below (1)                                            |
+| `compression_response`                      | boolean.                                                          |
+| `log_level`                                 | allowed values: `OFF`, `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`. |
+| `keep_alive_enabled`                        | boolean.                                                          |
+| `clickhouse_setting_*` or `ch_*`            | see below (2)                                                     |
+| `http_header_*`                             | see below (3)                                                     |
+| (Node.js only) `keep_alive_idle_socket_ttl` | non-negative number.                                              |
+
+- (1) For booleans, valid values will be `true`/`1` and `false`/`0`.
+- (2) Any parameter prefixed with `clickhouse_setting_` or `ch_` will have this prefix removed and the rest added to client's `clickhouse_settings`. For example, `?ch_async_insert=1&ch_wait_for_async_insert=1` will be the same as:
+
+```ts
+createClient({
+  clickhouse_settings: {
+    async_insert: 1,
+    wait_for_async_insert: 1,
+  },
+})
+```
+
+Note: boolean values for `clickhouse_settings` should be passed as `1`/`0` in the URL.
+
+- (3) Similar to (2), but for `http_header` configuration. For example, `?http_header_x-clickhouse-auth=foobar` will be an equivalent of:
+
+```ts
+createClient({
+  http_headers: {
+    'x-clickhouse-auth': 'foobar',
+  },
+})
+```
+
+## Connecting
+
+### Gather your connection details
+
+<GatherYourDetailsHttp />
+
+### Connection overview
+
+The client implements a connection via HTTP(s) protocol. RowBinary support is on track, see the [related issue](https://github.com/ClickHouse/clickhouse-js/issues/216).
+
+The following example demonstrates how to set up a connection against ClickHouse Cloud. It assumes `url` (including
+protocol and port) and `password` values are specified via environment variables, and `default` user is used.
+
+**Example:** Creating a Node.js Client instance using environment variables for configuration.
+
+```ts
+import { createClient } from '@clickhouse/client'
+
+const client = createClient({
+  url: process.env.CLICKHOUSE_HOST ?? 'http://localhost:8123',
+  username: process.env.CLICKHOUSE_USER ?? 'default',
+  password: process.env.CLICKHOUSE_PASSWORD ?? '',
+})
+```
+
+The client repository contains multiple examples that use environment variables, such as [creating a table in ClickHouse Cloud](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/create_table_cloud.ts), [using async inserts](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/async_insert.ts), and quite a few others.
+
+### Connection pool (Node.js only)
+
+To avoid the overhead of establishing a connection on every request, the client creates a pool of connections to ClickHouse to reuse, utilizing a Keep-Alive mechanism. By default, Keep-Alive is enabled, and the size of connection pool is set to `10`, but you can change it with `max_open_connections` [configuration option](#configuration).
+
+There is no guarantee the same connection in a pool will be used for subsequent queries unless the user sets `max_open_connections: 1`. This is rarely needed but may be required for cases where users are using temporary tables.
+
+See also: [Keep-Alive configuration](/docs/language-clients/javascript/usage#keep-alive-configuration-nodejs-only).
+
+## Query ID
+
+Every method that sends a query or a statement (`command`, `exec`, `insert`, `select`) will provide `query_id` in the result. This unique identifier is assigned by the client per query, and might be useful to fetch the data from `system.query_log`,
+if it is enabled in the [server configuration](/operations/server-configuration-parameters/settings), or cancel long-running queries (see [the example](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/cancel_query.ts)). If necessary, `query_id` can be overridden by the user in `command`/`query`/`exec`/`insert` methods params.
+
+<Tip>
+If you are overriding the `query_id` parameter, you need to ensure its uniqueness for every call. A random UUID is a good choice.
+</Tip>
+
+## Base parameters for all client methods
+
+There are several parameters that can be applied to all client methods ([query](#query-method)/[command](#command-method)/[insert](#insert-method)/[exec](#exec-method)).
+
+```ts
+interface BaseQueryParams {
+  // ClickHouse settings that can be applied on query level.
+  clickhouse_settings?: ClickHouseSettings
+  // Parameters for query binding.
+  query_params?: Record<string, unknown>
+  // AbortSignal instance to cancel a query in progress.
+  abort_signal?: AbortSignal
+  // query_id override; if not specified, a random identifier will be generated automatically.
+  query_id?: string
+  // session_id override; if not specified, the session id will be taken from the client configuration.
+  session_id?: string
+  // credentials override; if not specified, the client's credentials will be used.
+  auth?: { username: string, password: string }
+  // A specific list of roles to use for this query. Overrides the roles set in the client configuration.
+  role?: string | Array<string>
+}
+```
+
+## Query method
+
+This is used for most statements that can have a response, such as `SELECT`, or for sending DDLs such as `CREATE TABLE` and should be awaited. The returned result set is expected to be consumed in the application.
+
+<Note>
+There is a dedicated method [insert](#insert-method) for data insertion, and [command](#command-method) for DDLs.
+</Note>
+
+```ts
+interface QueryParams extends BaseQueryParams {
+  // Query to execute that might return some data.
+  query: string
+  // Format of the resulting dataset. Default: JSON.
+  format?: DataFormat
+}
+
+interface ClickHouseClient {
+  query(params: QueryParams): Promise<ResultSet>
+}
+```
+
+See also: [Base parameters for all client methods](#base-parameters-for-all-client-methods).
+
+<Tip>
+Do not specify the FORMAT clause in `query`, use `format` parameter instead.
+</Tip>
+
+### Result set and row abstractions
+
+`ResultSet` provides several convenience methods for data processing in your application.
+
+Node.js `ResultSet` implementation uses `Stream.Readable` under the hood, while the web version uses Web API `ReadableStream`.
+
+You can consume the `ResultSet` by calling either `text` or `json` methods on `ResultSet` and load the entire set of rows returned by the query into memory.
+
+You should start consuming the `ResultSet` as soon as possible, as it holds the response stream open and consequently keeps the underlying connection busy. The client does not buffer the incoming data to avoid potential excessive memory usage by the application.
+
+Alternatively, if it's too large to fit into memory at once, you can call the `stream` method, and process the data in the streaming mode. Each of the response chunks will be transformed into a relatively small arrays of rows instead (the size of this array depends on the size of a particular chunk the client receives from the server, as it may vary, and the size of an individual row), one chunk at a time.
+
+Please refer to the list of the [supported data formats](/docs/language-clients/javascript/usage#supported-data-formats) to determine what the best format is for streaming in your case. For example, if you want to stream JSON objects, you could choose [JSONEachRow](/interfaces/formats/JSONEachRow), and each row will be parsed as a JS object, or, perhaps, a more compact [JSONCompactColumns](/interfaces/formats/JSONCompactColumns) format that will result in each row being a compact array of values. See also: [streaming files](/docs/language-clients/javascript/usage#streaming-files-nodejs-only).
+
+<Warning>
+If the `ResultSet` or its stream is not fully consumed, it will be destroyed after the `request_timeout` period of inactivity.
+</Warning>
+
+```ts
+interface BaseResultSet<Stream> {
+  // See "Query ID" section above
+  query_id: string
+
+  // Consume the entire stream and get the contents as a string
+  // Can be used with any DataFormat
+  // Should be called only once
+  text(): Promise<string>
+
+  // Consume the entire stream and parse the contents as a JS object
+  // Can be used only with JSON formats
+  // Should be called only once
+  json<T>(): Promise<T>
+
+  // Returns a readable stream for responses that can be streamed
+  // Every iteration over the stream provides an array of Row[] in the selected DataFormat
+  // Should be called only once
+  stream(): Stream
+}
+
+interface Row {
+  // Get the content of the row as a plain string
+  text: string
+
+  // Parse the content of the row as a JS object
+  json<T>(): T
+}
+```
+
+**Example:** (Node.js/Web) A query with a resulting dataset in `JSONEachRow` format, consuming the entire stream and parsing the contents as JS objects.
+[Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/array_json_each_row.ts).
+
+```ts
+const resultSet = await client.query({
+  query: 'SELECT * FROM my_table',
+  format: 'JSONEachRow',
+})
+const dataset = await resultSet.json() // or `row.text` to avoid parsing JSON
+```
+
+**Example:** (Node.js only) Streaming query result in `JSONEachRow` format using the classic `on('data')` approach. This is interchangeable with the `for await const` syntax. [Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/select_streaming_json_each_row.ts).
+
+```ts
+const rows = await client.query({
+  query: 'SELECT number FROM system.numbers_mt LIMIT 5',
+  format: 'JSONEachRow', // or JSONCompactEachRow, JSONStringsEachRow, etc.
+})
+const stream = rows.stream()
+stream.on('data', (rows: Row[]) => {
+  rows.forEach((row: Row) => {
+    console.log(row.json()) // or `row.text` to avoid parsing JSON
+  })
+})
+await new Promise((resolve, reject) => {
+  stream.on('end', () => {
+    console.log('Completed!')
+    resolve(0)
+  })
+  stream.on('error', reject)
+})
+```
+
+**Example:** (Node.js only) Streaming query result in `CSV` format using the classic `on('data')` approach. This is interchangeable with the `for await const` syntax.
+[Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/select_streaming_text_line_by_line.ts)
+
+```ts
+const resultSet = await client.query({
+  query: 'SELECT number FROM system.numbers_mt LIMIT 5',
+  format: 'CSV', // or TabSeparated, CustomSeparated, etc.
+})
+const stream = resultSet.stream()
+stream.on('data', (rows: Row[]) => {
+  rows.forEach((row: Row) => {
+    console.log(row.text)
+  })
+})
+await new Promise((resolve, reject) => {
+  stream.on('end', () => {
+    console.log('Completed!')
+    resolve(0)
+  })
+  stream.on('error', reject)
+})
+```
+
+**Example:** (Node.js only) Streaming query result as JS objects in `JSONEachRow` format consumed using `for await const` syntax. This is interchangeable with the classic `on('data')` approach.
+[Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/select_streaming_json_each_row_for_await.ts).
+
+```ts
+const resultSet = await client.query({
+  query: 'SELECT number FROM system.numbers LIMIT 10',
+  format: 'JSONEachRow', // or JSONCompactEachRow, JSONStringsEachRow, etc.
+})
+for await (const rows of resultSet.stream()) {
+  rows.forEach(row => {
+    console.log(row.json())
+  })
+}
+```
+
+<Note>
+`for await const` syntax has a bit less code than the `on('data')` approach, but it may have negative performance impact.
+See [this issue in the Node.js repository](https://github.com/nodejs/node/issues/31979) for more details.
+</Note>
+
+**Example:** (Web only) Iteration over the `ReadableStream` of objects.
+
+```ts
+const resultSet = await client.query({
+  query: 'SELECT * FROM system.numbers LIMIT 10',
+  format: 'JSONEachRow'
+})
+
+const reader = resultSet.stream().getReader()
+while (true) {
+  const { done, value: rows } = await reader.read()
+  if (done) { break }
+  rows.forEach(row => {
+    console.log(row.json())
+  })
+}
+```
+
+## Insert method
+
+This is the primary method for data insertion.
+
+```ts
+export interface InsertResult {
+  query_id: string
+  executed: boolean
+}
+
+interface ClickHouseClient {
+  insert(params: InsertParams): Promise<InsertResult>
+}
+```
+
+The return type is minimal, as we do not expect any data to be returned from the server and drain the response stream immediately.
+
+If an empty array was provided to the insert method, the insert statement will not be sent to the server; instead, the method will immediately resolve with `{ query_id: '...', executed: false }`. If the `query_id` was not provided in the method params in this case, it will be an empty string in the result, as returning a random UUID generated by the client could be confusing, as the query with such `query_id` won't exist in the `system.query_log` table.
+
+If the insert statement was sent to the server, the `executed` flag will be `true`.
+
+### Insert method and streaming in Node.js
+
+It can work with either a `Stream.Readable` or a plain `Array<T>`, depending on the [data format](/docs/language-clients/javascript/usage#supported-data-formats) specified to the `insert` method. See also this section about the [file streaming](/docs/language-clients/javascript/usage#streaming-files-nodejs-only).
+
+Insert method is supposed to be awaited; however, it is possible to specify an input stream and await the `insert` operation later, only when the stream is completed (which will also resolve the `insert` promise). This could potentially be useful for event listeners and similar scenarios, but the error handling might be non-trivial with a lot of edge cases on the client side. Instead, consider using [async inserts](/optimize/asynchronous-inserts) as illustrated in [this example](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/async_insert_without_waiting.ts).
+
+<Tip>
+If you have a custom INSERT statement that is difficult to model with this method, consider using the [command method](#command-method).
+
+You can see how it is used in the [INSERT INTO ... VALUES](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/insert_values_and_functions.ts) or [INSERT INTO ... SELECT](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/insert_from_select.ts) examples.
+</Tip>
+
+```ts
+interface InsertParams<T> extends BaseQueryParams {
+  // Table name to insert the data into
+  table: string
+  // A dataset to insert.
+  values: ReadonlyArray<T> | Stream.Readable
+  // Format of the dataset to insert.
+  format?: DataFormat
+  // Allows to specify which columns the data will be inserted into.
+  // - An array such as `['a', 'b']` will generate: `INSERT INTO table (a, b) FORMAT DataFormat`
+  // - An object such as `{ except: ['a', 'b'] }` will generate: `INSERT INTO table (* EXCEPT (a, b)) FORMAT DataFormat`
+  // By default, the data is inserted into all columns of the table,
+  // and the generated statement will be: `INSERT INTO table FORMAT DataFormat`.
+  columns?: NonEmptyArray<string> | { except: NonEmptyArray<string> }
+}
+```
+
+See also: [Base parameters for all client methods](#base-parameters-for-all-client-methods).
+
+<Warning>
+A request canceled with `abort_signal` does not guarantee that data insertion did not take place, as the server could have received some of the streamed data before the cancellation.
+</Warning>
+
+**Example:** (Node.js/Web) Insert an array of values.
+[Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/array_json_each_row.ts).
+
+```ts
+await client.insert({
+  table: 'my_table',
+  // structure should match the desired format, JSONEachRow in this example
+  values: [
+    { id: 42, name: 'foo' },
+    { id: 42, name: 'bar' },
+  ],
+  format: 'JSONEachRow',
+})
+```
+
+**Example:** (Node.js only) Insert a stream from a CSV file.
+[Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/insert_file_stream_csv.ts). See also: [file streaming](/docs/language-clients/javascript/usage#streaming-files-nodejs-only).
+
+```ts
+await client.insert({
+  table: 'my_table',
+  values: fs.createReadStream('./path/to/a/file.csv'),
+  format: 'CSV',
+})
+```
+
+**Example**: Exclude certain columns from the insert statement.
+
+Given some table definition such as:
+
+```sql
+CREATE OR REPLACE TABLE mytable
+(id UInt32, message String)
+ENGINE MergeTree()
+ORDER BY (id)
+```
+
+Insert only a specific column:
+
+```ts
+// Generated statement: INSERT INTO mytable (message) FORMAT JSONEachRow
+await client.insert({
+  table: 'mytable',
+  values: [{ message: 'foo' }],
+  format: 'JSONEachRow',
+  // `id` column value for this row will be zero (default for UInt32)
+  columns: ['message'],
+})
+```
+
+Exclude certain columns:
+
+```ts
+// Generated statement: INSERT INTO mytable (* EXCEPT (message)) FORMAT JSONEachRow
+await client.insert({
+  table: tableName,
+  values: [{ id: 144 }],
+  format: 'JSONEachRow',
+  // `message` column value for this row will be an empty string
+  columns: {
+    except: ['message'],
+  },
+})
+```
+
+See the [source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/insert_exclude_columns.ts) for additional details.
+
+**Example**: Insert into a database different from the one provided to the client instance. [Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/insert_into_different_db.ts).
+
+```ts
+await client.insert({
+  table: 'mydb.mytable', // Fully qualified name including the database
+  values: [{ id: 42, message: 'foo' }],
+  format: 'JSONEachRow',
+})
+```
+
+### Web version limitations
+
+Currently, inserts in `@clickhouse/client-web` only work with `Array<T>` and `JSON*` formats.
+Inserting streams is not supported in the web version yet due to poor browser compatibility.
+
+Consequently, the `InsertParams` interface for the web version looks slightly different from the Node.js version,
+as `values` are limited to the `ReadonlyArray<T>` type only:
+
+```ts
+interface InsertParams<T> extends BaseQueryParams {
+  // Table name to insert the data into
+  table: string
+  // A dataset to insert.
+  values: ReadonlyArray<T>
+  // Format of the dataset to insert.
+  format?: DataFormat
+  // Allows to specify which columns the data will be inserted into.
+  // - An array such as `['a', 'b']` will generate: `INSERT INTO table (a, b) FORMAT DataFormat`
+  // - An object such as `{ except: ['a', 'b'] }` will generate: `INSERT INTO table (* EXCEPT (a, b)) FORMAT DataFormat`
+  // By default, the data is inserted into all columns of the table,
+  // and the generated statement will be: `INSERT INTO table FORMAT DataFormat`.
+  columns?: NonEmptyArray<string> | { except: NonEmptyArray<string> }
+}
+```
+
+This is a subject to change in the future. See also: [Base parameters for all client methods](#base-parameters-for-all-client-methods).
+
+## Command method
+
+It can be used for statements that do not have any output, when the format clause is not applicable, or when you are not interested in the response at all. An example of such a statement can be `CREATE TABLE` or `ALTER TABLE`.
+
+Should be awaited.
+
+The response stream is destroyed immediately, which means that the underlying socket is released.
+
+```ts
+interface CommandParams extends BaseQueryParams {
+  // Statement to execute.
+  query: string
+}
+
+interface CommandResult {
+  query_id: string
+}
+
+interface ClickHouseClient {
+  command(params: CommandParams): Promise<CommandResult>
+}
+```
+
+See also: [Base parameters for all client methods](#base-parameters-for-all-client-methods).
+
+**Example:** (Node.js/Web) Create a table in ClickHouse Cloud.
+[Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/create_table_cloud.ts).
+
+```ts
+await client.command({
+  query: `
+    CREATE TABLE IF NOT EXISTS my_cloud_table
+    (id UInt64, name String)
+    ORDER BY (id)
+  `,
+  // Recommended for cluster usage to avoid situations where a query processing error occurred after the response code,
+  // and HTTP headers were already sent to the client.
+  // See https://clickhouse.com/docs/interfaces/http/#response-buffering
+  clickhouse_settings: {
+    wait_end_of_query: 1,
+  },
+})
+```
+
+**Example:** (Node.js/Web) Create a table in a self-hosted ClickHouse instance.
+[Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/create_table_single_node.ts).
+
+```ts
+await client.command({
+  query: `
+    CREATE TABLE IF NOT EXISTS my_table
+    (id UInt64, name String)
+    ENGINE MergeTree()
+    ORDER BY (id)
+  `,
+})
+```
+
+**Example:** (Node.js/Web) INSERT FROM SELECT
+
+```ts
+await client.command({
+  query: `INSERT INTO my_table SELECT '42'`,
+})
+```
+
+<Warning>
+A request cancelled with `abort_signal` does not guarantee that the statement wasn't executed by the server.
+</Warning>
+
+## Exec method
+
+If you have a custom query that does not fit into `query`/`insert`,
+and you are interested in the result, you can use `exec` as an alternative to `command`.
+
+`exec` returns a readable stream that MUST be consumed or destroyed on the application side.
+
+```ts
+interface ExecParams extends BaseQueryParams {
+  // Statement to execute.
+  query: string
+}
+
+interface ClickHouseClient {
+  exec(params: ExecParams): Promise<QueryResult>
+}
+```
+
+See also: [Base parameters for all client methods](#base-parameters-for-all-client-methods).
+
+Stream return type is different in Node.js and Web versions.
+
+Node.js:
+
+```ts
+export interface QueryResult {
+  stream: Stream.Readable
+  query_id: string
+}
+```
+
+Web:
+
+```ts
+export interface QueryResult {
+  stream: ReadableStream
+  query_id: string
+}
+```
+
+## Ping
+
+The `ping` method provided to check the connectivity status returns `true` if the server can be reached.
+
+If the server is unreachable, the underlying error is included in the result as well.
+
+```ts
+type PingResult =
+  | { success: true }
+  | { success: false; error: Error }
+
+/** Parameters for the health-check request - using the built-in `/ping` endpoint.
+ *  This is the default behavior for the Node.js version. */
+export type PingParamsWithEndpoint = {
+  select: false
+  /** AbortSignal instance to cancel a request in progress. */
+  abort_signal?: AbortSignal
+  /** Additional HTTP headers to attach to this particular request. */
+  http_headers?: Record<string, string>
+}
+/** Parameters for the health-check request - using a SELECT query.
+ *  This is the default behavior for the Web version, as the `/ping` endpoint does not support CORS.
+ *  Most of the standard `query` method params, e.g., `query_id`, `abort_signal`, `http_headers`, etc. will work,
+ *  except for `query_params`, which does not make sense to allow in this method. */
+export type PingParamsWithSelectQuery = { select: true } & Omit<
+  BaseQueryParams,
+  'query_params'
+>
+export type PingParams = PingParamsWithEndpoint | PingParamsWithSelectQuery
+
+interface ClickHouseClient {
+  ping(params?: PingParams): Promise<PingResult>
+}
+```
+
+Ping might be a useful tool to check if the server is available when the application starts, especially with ClickHouse Cloud, where an instance might be idling and will wake up after a ping: in that case, you might want to retry it a few times with a delay in between.
+
+Note that by default, Node.js version uses the `/ping` endpoint, while the Web version uses a simple `SELECT 1` query to achieve a similar result, as the `/ping` endpoint does not support CORS.
+
+**Example:** (Node.js/Web) A simple ping to the ClickHouse server instance. NB: for the Web version, captured errors will be different.
+[Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/ping.ts).
+
+```ts
+const result = await client.ping();
+if (!result.success) {
+  // process result.error
+}
+```
+
+**Example:** If you want to also check the credentials when calling the `ping` method, or specify additional params such as `query_id`, you could use it as follows:
+
+```ts
+const result = await client.ping({ select: true, /* query_id, abort_signal, http_headers, or any other query params */ });
+```
+
+The ping method will allow most of the standard `query` method parameters - see the `PingParamsWithSelectQuery` typing definition.
+
+## Close (Node.js only)
+
+Closes all the open connections and releases resources. No-op in the web version.
+
+```ts
+await client.close()
+```
