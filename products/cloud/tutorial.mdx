@@ -1,0 +1,184 @@
+# ClickHouse Tutorial
+
+This tutorial will walk you through the basics of using ClickHouse, from creating your first table to running analytical queries.
+
+## Prerequisites
+
+Before you begin, you should have:
+- A running ClickHouse instance (either Cloud or self-managed)
+- Access to the ClickHouse client or SQL console
+
+If you haven't installed ClickHouse yet, see our [Installation Guide](./getting-started/install.mdx) or [Quick Start](./getting-started/quick-start-cloud.mdx).
+
+## Step 1: Connect to ClickHouse
+
+### Using ClickHouse Cloud
+
+If you're using ClickHouse Cloud, you can connect using the SQL Console directly in your browser:
+
+1. Log in to your ClickHouse Cloud account
+2. Navigate to your service
+3. Click "Open SQL Console"
+
+### Using clickhouse-client
+
+For self-managed installations, connect using the command-line client:
+
+```bash
+clickhouse-client --host localhost --port 9000
+```
+
+## Step 2: Create Your First Database
+
+Let's create a database for our tutorial:
+
+```sql
+CREATE DATABASE tutorial;
+USE tutorial;
+```
+
+## Step 3: Create a Table
+
+We'll create a simple table to store web analytics data:
+
+```sql
+CREATE TABLE events (
+    event_time DateTime,
+    event_type String,
+    user_id UInt32,
+    page_url String,
+    country String,
+    device String
+) ENGINE = MergeTree()
+ORDER BY (event_type, event_time);
+```
+
+**Key points:**
+- `MergeTree` is the most commonly used table engine
+- `ORDER BY` defines the primary key and sort order
+- Choose columns that you'll frequently filter on for the ORDER BY clause
+
+## Step 4: Insert Sample Data
+
+Let's insert some sample data:
+
+```sql
+INSERT INTO events VALUES
+    ('2024-01-01 10:00:00', 'page_view', 101, '/home', 'US', 'desktop'),
+    ('2024-01-01 10:05:00', 'page_view', 102, '/products', 'UK', 'mobile'),
+    ('2024-01-01 10:10:00', 'click', 101, '/home', 'US', 'desktop'),
+    ('2024-01-01 10:15:00', 'page_view', 103, '/about', 'CA', 'tablet'),
+    ('2024-01-01 10:20:00', 'purchase', 102, '/checkout', 'UK', 'mobile');
+```
+
+## Step 5: Query Your Data
+
+Now let's run some analytical queries:
+
+### Count events by type
+
+```sql
+SELECT 
+    event_type,
+    count() AS event_count
+FROM events
+GROUP BY event_type
+ORDER BY event_count DESC;
+```
+
+### Analyze events by country
+
+```sql
+SELECT 
+    country,
+    count() AS total_events,
+    countIf(event_type = 'purchase') AS purchases
+FROM events
+GROUP BY country
+ORDER BY total_events DESC;
+```
+
+### Time-based analysis
+
+```sql
+SELECT 
+    toHour(event_time) AS hour,
+    count() AS events_per_hour
+FROM events
+GROUP BY hour
+ORDER BY hour;
+```
+
+## Step 6: More Advanced Queries
+
+### Using aggregate functions
+
+```sql
+SELECT 
+    device,
+    count() AS total_events,
+    uniq(user_id) AS unique_users,
+    countIf(event_type = 'purchase') / count() * 100 AS conversion_rate
+FROM events
+GROUP BY device;
+```
+
+### Window functions
+
+```sql
+SELECT 
+    event_time,
+    event_type,
+    user_id,
+    row_number() OVER (PARTITION BY user_id ORDER BY event_time) AS event_sequence
+FROM events
+ORDER BY user_id, event_time;
+```
+
+## Step 7: Optimize for Performance
+
+### Add a projection for common queries
+
+```sql
+ALTER TABLE events 
+ADD PROJECTION events_by_country (
+    SELECT country, event_type, count()
+    GROUP BY country, event_type
+);
+
+-- Materialize the projection
+ALTER TABLE events MATERIALIZE PROJECTION events_by_country;
+```
+
+### Add a secondary index
+
+```sql
+ALTER TABLE events 
+ADD INDEX user_idx user_id TYPE bloom_filter GRANULARITY 1;
+```
+
+## Best Practices Learned
+
+1. **Choose the right ORDER BY** - Use columns you'll frequently filter on
+2. **Batch inserts** - Insert data in batches for better performance
+3. **Use appropriate data types** - Smaller types mean better performance
+4. **Leverage projections** - Pre-aggregate data for common queries
+5. **Monitor query performance** - Use `EXPLAIN` to understand query execution
+
+## Next Steps
+
+Now that you've completed the tutorial, you can:
+
+- Explore [Best Practices](./best-practices/index.mdx)
+- Learn about [Data Modeling](./guides/schema-design.mdx)
+- Check out [Example Datasets](./getting-started/example-datasets.mdx)
+- Read about [Table Engines](./engines/table-engines.mdx)
+- Understand [Data Types](./sql-reference/data-types.mdx)
+
+## Additional Resources
+
+- [ClickHouse SQL Reference](./sql-reference/index.mdx)
+- [Integration Guides](./integrations/index.mdx)
+- [Cloud Documentation](./cloud/overview.mdx)
+- [Community Slack](https://clickhouse.com/slack)
+

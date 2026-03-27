@@ -1,0 +1,37 @@
+---
+slug: /managing-data/update_mutations
+sidebarTitle: 'Update mutations'
+title: 'Update mutations'
+hide_title: false
+description: 'Page describing update mutations - ALTER queries that manipulate table data through updates'
+doc_type: 'reference'
+keywords: ['update', 'mutations', 'alter table', 'data manipulation', 'modify data']
+---
+
+Update mutations refers to `ALTER` queries that manipulate table data through updates. Most notably they are queries like `ALTER TABLE UPDATE`, etc. Performing such queries will produce new mutated versions of the data parts. This means that such statements would trigger a rewrite of whole data parts for all data that was inserted before the mutation, translating to a large amount of write requests.
+
+<Note>
+For updates, you can avoid these large amounts of write requests by using specialised table engines like [ReplacingMergeTree](/guides/replacing-merge-tree) or [CollapsingMergeTree](/engines/table-engines/mergetree-family/collapsingmergetree) instead of the default MergeTree table engine.
+</Note>
+
+```sql
+ALTER TABLE [db.]table [ON CLUSTER cluster] UPDATE column1 = expr1 [, ...] [IN PARTITION partition_id] WHERE filter_expr
+```
+
+Manipulates data matching the specified filtering expression. Implemented as a [mutation](/sql-reference/statements/alter/index.md#mutations).
+
+<Note>
+The `ALTER TABLE` prefix makes this syntax different from most other systems supporting SQL. It is intended to signify that unlike similar queries in OLTP databases this is a heavy operation not designed for frequent use.
+</Note>
+
+The `filter_expr` must be of type `UInt8`. This query updates values of specified columns to the values of corresponding expressions in rows for which the `filter_expr` takes a non-zero value. Values are cast to the column type using the `CAST` operator. Updating columns that are used in the calculation of the primary or the partition key is not supported.
+
+One query can contain several commands separated by commas.
+
+The synchronicity of the query processing is defined by the [mutations_sync](/operations/settings/settings.md/#mutations_sync) setting. By default, it is asynchronous.
+
+**See also**
+
+- [Mutations](/sql-reference/statements/alter/index.md#mutations)
+- [Synchronicity of ALTER Queries](/sql-reference/statements/alter/index.md#synchronicity-of-alter-queries)
+- [mutations_sync](/operations/settings/settings.md/#mutations_sync) setting
