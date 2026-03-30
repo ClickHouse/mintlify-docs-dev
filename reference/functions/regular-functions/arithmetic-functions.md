@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Arithmetic Functions'
 sidebarTitle: 'Arithmetic'
-slug: /sql-reference/functions/arithmetic-functions
+old-slug: /sql-reference/functions/arithmetic-functions
 title: 'Arithmetic Functions'
 doc_type: 'reference'
 ---

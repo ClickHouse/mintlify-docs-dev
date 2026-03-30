@@ -4,7 +4,7 @@ description: 'Documentation for the CustomSeparated format'
 input_format: true
 keywords: ['CustomSeparated']
 output_format: true
-slug: /interfaces/formats/CustomSeparated
+old-slug: /interfaces/formats/CustomSeparated
 title: 'CustomSeparated'
 doc_type: 'reference'
 ---

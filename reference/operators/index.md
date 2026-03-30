@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Operators'
-slug: /sql-reference/operators/
+old-slug: /sql-reference/operators/
 title: 'Operators'
 doc_type: 'reference'
 ---

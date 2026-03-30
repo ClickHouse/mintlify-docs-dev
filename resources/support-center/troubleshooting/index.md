@@ -32,27 +32,27 @@ Queries running slowly, timeouts, or getting specific error messages like "Memor
 
 ### Query performance
 - [Find which queries are using the most resources](/knowledgebase/find-expensive-queries)
-- [Complete query optimization guide](/docs/optimize/query-optimization)
-- [Optimize JOIN operations](/docs/best-practices/minimize-optimize-joins)
-- [Run diagnostic queries to find bottlenecks](/docs/knowledgebase/useful-queries-for-troubleshooting)
+- [Complete query optimization guide](/optimize/query-optimization)
+- [Optimize JOIN operations](/best-practices/minimize-optimize-joins)
+- [Run diagnostic queries to find bottlenecks](/knowledgebase/useful-queries-for-troubleshooting)
 <br/>
 ### Data insertion performance
-- [Speed up data insertion](/docs/optimize/bulk-inserts)
-- [Set up asynchronous inserts](/docs/optimize/asynchronous-inserts)
+- [Speed up data insertion](/optimize/bulk-inserts)
+- [Set up asynchronous inserts](/optimize/asynchronous-inserts)
 <br/>
 ### Advanced analysis tools
-{/* - [Profile with LLVM XRay](/docs/knowledgebase/profiling-clickhouse-with-llvm-xray) */}
-- [Check what processes are running](/docs/knowledgebase/which-processes-are-currently-running)
-- [Monitor system performance](/docs/operations/system-tables/processes)
+{/* - [Profile with LLVM XRay](/knowledgebase/profiling-clickhouse-with-llvm-xray) */}
+- [Check what processes are running](/knowledgebase/which-processes-are-currently-running)
+- [Monitor system performance](/operations/system-tables/processes)
 <br/>
 ### Error messages
-- **"Memory limit exceeded"** → [Debug memory limit errors](/docs/guides/developer/debugging-memory-issues)
+- **"Memory limit exceeded"** → [Debug memory limit errors](/guides/developer/debugging-memory-issues)
 - **"Connection refused"** → [Fix connection problems](#connections-and-authentication)
-- **"Login failures"** → [Set up users, roles, and permissions](/docs/operations/access-rights)
-- **"SSL certificate errors"** → [Fix certificate problems](/docs/knowledgebase/certificate_verify_failed_error)
-- **"Table/database errors"** → [Database creation guide](/docs/sql-reference/statements/create/database) | [Table UUID problems](/docs/engines/database-engines/atomic)
-- **"Network timeouts"** → [Network troubleshooting](/docs/interfaces/http)
-- **Other issues** → [Track errors across your cluster](/docs/operations/system-tables/errors)
+- **"Login failures"** → [Set up users, roles, and permissions](/operations/access-rights)
+- **"SSL certificate errors"** → [Fix certificate problems](/knowledgebase/certificate_verify_failed_error)
+- **"Table/database errors"** → [Database creation guide](/sql-reference/statements/create/database) | [Table UUID problems](/engines/database-engines/atomic)
+- **"Network timeouts"** → [Network troubleshooting](/interfaces/http)
+- **Other issues** → [Track errors across your cluster](/operations/system-tables/errors)
 </details>
 
 ## Memory and resources
@@ -64,21 +64,21 @@ High memory usage, out-of-memory crashes, or need help sizing your ClickHouse de
 
 ### Memory debugging and monitoring:
 
-- [Identify what's using memory](/docs/guides/developer/debugging-memory-issues)
-- [Check current memory usage](/docs/operations/system-tables/processes)
-- [Memory allocation profiling](/docs/operations/allocation-profiling)
-- [Analyze memory usage patterns](/docs/operations/system-tables/query_log)
+- [Identify what's using memory](/guides/developer/debugging-memory-issues)
+- [Check current memory usage](/operations/system-tables/processes)
+- [Memory allocation profiling](/operations/allocation-profiling)
+- [Analyze memory usage patterns](/operations/system-tables/query_log)
 <br/>
 ### Memory configuration:
 
-- [Configure memory limits](/docs/operations/settings/memory-overcommit)
-- [Server memory settings](/docs/operations/server-configuration-parameters/settings)
-- [Session memory settings](/docs/operations/settings/settings)
+- [Configure memory limits](/operations/settings/memory-overcommit)
+- [Server memory settings](/operations/server-configuration-parameters/settings)
+- [Session memory settings](/operations/settings/settings)
 <br/>
 ### Scaling and sizing:
 
-- [Right-size your service](/docs/operations/tips)
-- [Configure automatic scaling](/docs/manage/scaling)
+- [Right-size your service](/operations/tips)
+- [Configure automatic scaling](/manage/scaling)
 
 </details>
 
@@ -90,20 +90,20 @@ Can't connect to ClickHouse, authentication failures, SSL certificate errors, or
 <summary><strong>Show connection solutions</strong></summary>
 
 ### Basic Connection issues
-- [Fix HTTP interface issues](/docs/interfaces/http)
-- [Handle SSL certificate problems](/docs/knowledgebase/certificate_verify_failed_error)
-- [User authentication setup](/docs/operations/access-rights)
+- [Fix HTTP interface issues](/interfaces/http)
+- [Handle SSL certificate problems](/knowledgebase/certificate_verify_failed_error)
+- [User authentication setup](/operations/access-rights)
 <br/>
 ### Client interfaces
-- [Native ClickHouse clients](/docs/interfaces/natives-clients-and-interfaces)
-- [MySQL interface problems](/docs/interfaces/mysql)
-- [PostgreSQL interface issues](/docs/interfaces/postgresql)
-- [gRPC interface configuration](/docs/interfaces/grpc)
-- [SSH interface setup](/docs/interfaces/ssh)
+- [Native ClickHouse clients](/interfaces/natives-clients-and-interfaces)
+- [MySQL interface problems](/interfaces/mysql)
+- [PostgreSQL interface issues](/interfaces/postgresql)
+- [gRPC interface configuration](/interfaces/grpc)
+- [SSH interface setup](/interfaces/ssh)
 <br/>
 ### Network and data
-- [Network security settings](/docs/operations/server-configuration-parameters/settings)
-- [Data format parsing issues](/docs/interfaces/formats)
+- [Network security settings](/operations/server-configuration-parameters/settings)
+- [Data format parsing issues](/interfaces/formats)
 
 </details>
 
@@ -115,27 +115,27 @@ Initial installation, server configuration, database creation, data ingestion is
 <summary><strong>Show setup and configuration solutions</strong></summary>
 
 ### Initial setup
-- [Configure server settings](/docs/operations/server-configuration-parameters/settings)
-- [Set up security and access control](/docs/operations/access-rights)
-- [Configure hardware properly](/docs/operations/tips)
+- [Configure server settings](/operations/server-configuration-parameters/settings)
+- [Set up security and access control](/operations/access-rights)
+- [Configure hardware properly](/operations/tips)
 <br/>
 ### Database management
-- [Create and manage databases](/docs/sql-reference/statements/create/database)
-- [Choose the right table engine](/docs/engines/table-engines)
-{/* - [Modify schemas safely](/docs/sql-reference/statements/alter/index) */}
+- [Create and manage databases](/sql-reference/statements/create/database)
+- [Choose the right table engine](/engines/table-engines)
+{/* - [Modify schemas safely](/sql-reference/statements/alter/index) */}
 <br/>
 ### Data operations
-- [Optimize bulk data insertion](/docs/optimize/bulk-inserts)
-- [Handle data format problems](/docs/interfaces/formats)
-- [Set up streaming data pipelines](/docs/optimize/asynchronous-inserts)
-- [Improve S3 integration performance](/docs/integrations/s3/performance)
+- [Optimize bulk data insertion](/optimize/bulk-inserts)
+- [Handle data format problems](/interfaces/formats)
+- [Set up streaming data pipelines](/optimize/asynchronous-inserts)
+- [Improve S3 integration performance](/integrations/s3/performance)
 <br/>
 ### Advanced configuration
-- [Set up data replication](/docs/engines/table-engines/mergetree-family/replication)
-- [Configure distributed tables](/docs/engines/table-engines/special/distributed)
-{/* - [ClickHouse Keeper setup](/docs/guides/sre/keeper/index.md) */}
-- [Set up backup and recovery](/docs/operations/backup/overview)
-- [Configure monitoring](/docs/operations/system-tables/overview)
+- [Set up data replication](/engines/table-engines/mergetree-family/replication)
+- [Configure distributed tables](/engines/table-engines/special/distributed)
+{/* - [ClickHouse Keeper setup](/guides/sre/keeper/index.md) */}
+- [Set up backup and recovery](/operations/backup/overview)
+- [Configure monitoring](/operations/system-tables/overview)
 
 </details>
 

@@ -50,7 +50,7 @@ The following endpoints are available:
 <Tabs>
 <Tab title="Managed ClickStack">
 
-Managed ClickStack uses the **ClickHouse Cloud API key** for authentication via [HTTP Basic Authentication](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication). To create and manage API keys, see [Managing API keys](/docs/cloud/manage/openapi).
+Managed ClickStack uses the **ClickHouse Cloud API key** for authentication via [HTTP Basic Authentication](https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication). To create and manage API keys, see [Managing API keys](/cloud/manage/openapi).
 
 Include the key ID and secret using HTTP Basic Authentication:
 

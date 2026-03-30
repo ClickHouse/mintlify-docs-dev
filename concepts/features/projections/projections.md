@@ -1,5 +1,5 @@
 ---
-slug: /data-modeling/projections
+old-slug: /data-modeling/projections
 title: 'Projections'
 description: 'Page describing what projections are, how they can be used to improve
 query performance, and how they differ from materialized views.'
@@ -649,5 +649,5 @@ improving performance while keeping storage overhead low.
 
 ## Related content 
 - [A Practical Introduction to Primary Indexes in ClickHouse](/guides/best-practices/sparse-primary-indexes#option-3-projections)
-- [Materialized Views](/docs/materialized-views)
+- [Materialized Views](/materialized-views)
 - [ALTER PROJECTION](/sql-reference/statements/alter/projection)

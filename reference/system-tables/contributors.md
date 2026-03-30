@@ -1,7 +1,7 @@
 ---
 description: 'System table containing information about contributors.'
 keywords: ['system table', 'contributors']
-slug: /operations/system-tables/contributors
+old-slug: /operations/system-tables/contributors
 title: 'system.contributors'
 doc_type: 'reference'
 ---

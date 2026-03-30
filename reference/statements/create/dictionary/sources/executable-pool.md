@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/executable-pool
+old-slug: /sql-reference/statements/create/dictionary/sources/executable-pool
 title: 'Executable Pool dictionary source'
 description: 'Configure an executable pool as a dictionary source in ClickHouse.'
 doc_type: 'reference'

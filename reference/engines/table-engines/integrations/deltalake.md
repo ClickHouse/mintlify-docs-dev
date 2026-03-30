@@ -3,7 +3,7 @@ description: 'This engine provides a read-only integration with existing Delta L
   tables in Amazon S3.'
 sidebarTitle: 'DeltaLake table engine'
 sidebar_position: 40
-slug: /engines/table-engines/integrations/deltalake
+old-slug: /engines/table-engines/integrations/deltalake
 title: 'DeltaLake table engine'
 doc_type: 'reference'
 ---

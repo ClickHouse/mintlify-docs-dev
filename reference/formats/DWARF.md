@@ -4,7 +4,7 @@ description: 'Documentation for the DWARF format'
 input_format: true
 keywords: ['DWARF']
 output_format: false
-slug: /interfaces/formats/DWARF
+old-slug: /interfaces/formats/DWARF
 title: 'DWARF'
 doc_type: 'reference'
 ---

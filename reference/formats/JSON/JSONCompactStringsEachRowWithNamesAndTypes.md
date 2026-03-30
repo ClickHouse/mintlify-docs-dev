@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for the JSONCompactStringsEachRowWithNamesAndTypes format'
 keywords: ['JSONCompactStringsEachRowWithNamesAndTypes']
-slug: /interfaces/formats/JSONCompactStringsEachRowWithNamesAndTypes
+old-slug: /interfaces/formats/JSONCompactStringsEachRowWithNamesAndTypes
 title: 'JSONCompactStringsEachRowWithNamesAndTypes'
 doc_type: 'reference'
 ---

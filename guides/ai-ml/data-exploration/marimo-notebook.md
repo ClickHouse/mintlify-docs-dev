@@ -17,12 +17,12 @@ import image_6 from '@site/static/images/use-cases/AI_ML/Marimo/6.png';
 import image_7 from '@site/static/images/use-cases/AI_ML/Marimo/7.gif';
 import image_8 from '@site/static/images/use-cases/AI_ML/Marimo/8.gif';
 
-In this guide, you will learn how you can explore a dataset on ClickHouse Cloud data in Marimo notebook with the help of [chDB](/docs/chdb) - a fast in-process SQL OLAP Engine powered by ClickHouse.
+In this guide, you will learn how you can explore a dataset on ClickHouse Cloud data in Marimo notebook with the help of [chDB](/chdb) - a fast in-process SQL OLAP Engine powered by ClickHouse.
 
 **Prerequisites:**
 - Python 3.8 or higher
 - a virtual environment
-- a working ClickHouse Cloud service and your [connection details](/docs/cloud/guides/sql-console/gather-connection-details)
+- a working ClickHouse Cloud service and your [connection details](/cloud/guides/sql-console/gather-connection-details)
 
 :::tip
 If you don't yet have a ClickHouse Cloud account, you can [sign up](https://console.clickhouse.cloud/signUp?loc=docs-marimo-chdb) for
@@ -126,7 +126,7 @@ You should see the result shown underneath the cell you just ran:
 
 With the UK price paid data set up and chDB up and running in a Marimo notebook, we can now get started exploring our data.
 Let's imagine we are interested in checking how price has changed with time for a specific area in the UK such as the capital city, London.
-ClickHouse's [`remoteSecure`](/docs/sql-reference/table-functions/remote) function allows you to easily retrieve the data from ClickHouse Cloud.
+ClickHouse's [`remoteSecure`](/sql-reference/table-functions/remote) function allows you to easily retrieve the data from ClickHouse Cloud.
 You can instruct chDB to return this data in process as a Pandas data frame - which is a convenient and familiar way of working with data.
 
 ### Querying ClickHouse Cloud data

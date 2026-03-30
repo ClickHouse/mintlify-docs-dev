@@ -4,7 +4,7 @@ description: 'This section contains descriptions of server settings i.e settings
 keywords: ['global server settings']
 sidebarTitle: 'Server Settings'
 sidebar_position: 57
-slug: /operations/server-configuration-parameters/settings
+old-slug: /operations/server-configuration-parameters/settings
 title: 'Server settings'
 doc_type: 'reference'
 ---
@@ -368,9 +368,9 @@ Sets the number of threads performing background merges and mutations for tables
 - By adjusting this setting, you manage CPU and disk load.
 </Note>
 
-:::danger
-Smaller pool size utilizes less CPU and disk resources, but background processes advance slower which might eventually impact query performance.
-:::
+<Warning>
+**Smaller pool size utilizes less CPU and disk resources, but background processes advance slower which might eventually impact query performance.**
+</Warning>
 
 Before changing it, please also take a look at related MergeTree settings, such as:
 - [`number_of_free_entries_in_pool_to_lower_max_size_of_merge`](../../operations/settings/merge-tree-settings.md#number_of_free_entries_in_pool_to_lower_max_size_of_merge).

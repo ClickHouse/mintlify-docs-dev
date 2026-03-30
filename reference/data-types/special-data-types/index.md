@@ -3,7 +3,7 @@ description: 'Overview of special data types in ClickHouse that are used for int
   results during query execution'
 sidebarTitle: 'Special Data Types'
 sidebar_position: 55
-slug: /sql-reference/data-types/special-data-types/
+old-slug: /sql-reference/data-types/special-data-types/
 title: 'Special Data Types'
 doc_type: 'reference'
 ---

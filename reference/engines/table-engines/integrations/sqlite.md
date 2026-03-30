@@ -3,7 +3,7 @@ description: 'The engine allows to import and export data to SQLite and supports
   to SQLite tables directly from ClickHouse.'
 sidebarTitle: 'SQLite table engine'
 sidebar_position: 185
-slug: /engines/table-engines/integrations/sqlite
+old-slug: /engines/table-engines/integrations/sqlite
 title: 'SQLite table engine'
 doc_type: 'reference'
 ---

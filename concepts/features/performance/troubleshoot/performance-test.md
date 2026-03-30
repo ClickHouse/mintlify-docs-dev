@@ -2,7 +2,7 @@
 description: 'Guide to testing and benchmarking hardware performance with ClickHouse'
 sidebarTitle: 'Testing Hardware'
 sidebar_position: 54
-slug: /operations/performance-test
+old-slug: /operations/performance-test
 title: 'How to Test Your Hardware with ClickHouse'
 doc_type: 'guide'
 ---

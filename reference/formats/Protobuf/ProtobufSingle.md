@@ -4,7 +4,7 @@ description: 'Documentation for the ProtobufSingle format'
 input_format: true
 keywords: ['ProtobufSingle']
 output_format: true
-slug: /interfaces/formats/ProtobufSingle
+old-slug: /interfaces/formats/ProtobufSingle
 title: 'ProtobufSingle'
 doc_type: 'reference'
 ---

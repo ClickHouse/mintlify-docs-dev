@@ -2,7 +2,7 @@
 description: 'Documentation for Manipulating Constraints'
 sidebarTitle: 'CONSTRAINT'
 sidebar_position: 43
-slug: /sql-reference/statements/alter/constraint
+old-slug: /sql-reference/statements/alter/constraint
 title: 'Manipulating Constraints'
 doc_type: 'reference'
 ---

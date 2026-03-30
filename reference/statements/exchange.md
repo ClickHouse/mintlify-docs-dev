@@ -2,7 +2,7 @@
 description: 'Documentation for EXCHANGE Statement'
 sidebarTitle: 'EXCHANGE'
 sidebar_position: 49
-slug: /sql-reference/statements/exchange
+old-slug: /sql-reference/statements/exchange
 title: 'EXCHANGE Statement'
 doc_type: 'reference'
 ---

@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Functions for Implementing the IN Operator'
 sidebarTitle: 'IN Operator'
-slug: /sql-reference/functions/in-functions
+old-slug: /sql-reference/functions/in-functions
 title: 'Functions for Implementing the IN Operator'
 doc_type: 'reference'
 ---

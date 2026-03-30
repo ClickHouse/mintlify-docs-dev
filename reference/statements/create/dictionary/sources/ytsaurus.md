@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/ytsaurus
+old-slug: /sql-reference/statements/create/dictionary/sources/ytsaurus
 title: 'YTsaurus dictionary source'
 description: 'Configure YTsaurus as a dictionary source in ClickHouse.'
 doc_type: 'reference'
@@ -9,11 +9,11 @@ doc_type: 'reference'
 <ExperimentalBadge/>
 <CloudNotSupportedBadge/>
 
-:::info
-This is an experimental feature that may change in backwards-incompatible ways in future releases.
+<Info>
+**This is an experimental feature that may change in backwards-incompatible ways in future releases.**
 Enable usage of the YTsaurus dictionary source
 using setting [`allow_experimental_ytsaurus_dictionary_source`](/operations/settings/settings#allow_experimental_ytsaurus_dictionary_source).
-:::
+</Info>
 
 Example of settings:
 

@@ -50,7 +50,7 @@ Bindplane solves this by providing:
 - Bindplane account ([create an account at `app.bindplane.com`](https://app.bindplane.com))
 - Installed Bindplane OTel Collector (see [Install Your First Collector](https://docs.bindplane.com/readme/install-your-first-collector))
 - Network connectivity from Bindplane collectors to your ClickStack OTLP endpoint
-- ClickStack API Ingestion Key (found in ClickStack Team Settings > API Keys, [view docs here for reference](/docs/use-cases/observability/clickstack/ingesting-data/opentelemetry#sending-otel-data))
+- ClickStack API Ingestion Key (found in ClickStack Team Settings > API Keys, [view docs here for reference](/use-cases/observability/clickstack/ingesting-data/opentelemetry#sending-otel-data))
 - Appropriate network ports open (`4318` for HTTP/s or `4317` for gRPC)
 
 ## Integrate ClickStack with Bindplane

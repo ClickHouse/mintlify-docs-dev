@@ -2,7 +2,7 @@
 description: 'Documentation for Optimize'
 sidebarTitle: 'OPTIMIZE'
 sidebar_position: 47
-slug: /sql-reference/statements/optimize
+old-slug: /sql-reference/statements/optimize
 title: 'OPTIMIZE Statement'
 doc_type: 'reference'
 ---

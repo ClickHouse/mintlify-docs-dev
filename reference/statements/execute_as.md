@@ -2,7 +2,7 @@
 description: 'Documentation for EXECUTE AS Statement'
 sidebarTitle: 'EXECUTE AS'
 sidebar_position: 53
-slug: /sql-reference/statements/execute_as
+old-slug: /sql-reference/statements/execute_as
 title: 'EXECUTE AS Statement'
 doc_type: 'reference'
 ---

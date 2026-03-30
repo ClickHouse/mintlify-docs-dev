@@ -1,7 +1,7 @@
 ---
 description: 'An experimental technique intended to allow to set more flexible memory
   limits for queries.'
-slug: /operations/settings/memory-overcommit
+old-slug: /operations/settings/memory-overcommit
 title: 'Memory overcommit'
 doc_type: 'reference'
 ---

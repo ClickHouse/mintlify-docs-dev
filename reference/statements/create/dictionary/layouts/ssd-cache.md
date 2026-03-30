@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/layouts/ssd-cache
+old-slug: /sql-reference/statements/create/dictionary/layouts/ssd-cache
 title: 'ssd_cache dictionary layout types'
 description: 'Store dictionary data on SSD with an in-memory index: ssd_cache or complex_key_ssd_cache types'
 doc_type: 'reference'

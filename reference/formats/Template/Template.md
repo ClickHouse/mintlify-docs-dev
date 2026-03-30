@@ -4,7 +4,7 @@ description: 'Documentation for the Template format'
 input_format: true
 keywords: ['Template']
 output_format: true
-slug: /interfaces/formats/Template
+old-slug: /interfaces/formats/Template
 title: 'Template'
 doc_type: 'guide'
 ---

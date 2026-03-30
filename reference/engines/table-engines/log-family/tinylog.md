@@ -1,6 +1,6 @@
 ---
 description: Documentation for the TinyLog table engine
-slug: /engines/table-engines/log-family/tinylog
+old-slug: /engines/table-engines/log-family/tinylog
 toc_priority: 34
 toc_title: TinyLog
 title: TinyLog table engine

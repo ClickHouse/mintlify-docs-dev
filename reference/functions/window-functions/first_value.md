@@ -2,7 +2,7 @@
 description: 'Documentation for the first_value window function'
 sidebarTitle: 'first_value'
 sidebar_position: 3
-slug: /sql-reference/window-functions/first_value
+old-slug: /sql-reference/window-functions/first_value
 title: 'first_value'
 doc_type: 'reference'
 ---

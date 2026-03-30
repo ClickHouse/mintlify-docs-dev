@@ -1,7 +1,7 @@
 ---
 description: 'Controlling behavior on server CPU overload.'
 sidebarTitle: 'Server overload'
-slug: /operations/settings/server-overload
+old-slug: /operations/settings/server-overload
 title: 'Server overload'
 doc_type: 'reference'
 ---

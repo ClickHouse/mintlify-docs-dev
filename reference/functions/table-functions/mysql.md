@@ -3,7 +3,7 @@ description: 'Allows `SELECT` and `INSERT` queries to be performed on data that 
   stored on a remote MySQL server.'
 sidebarTitle: 'mysql'
 sidebar_position: 137
-slug: /sql-reference/table-functions/mysql
+old-slug: /sql-reference/table-functions/mysql
 title: 'mysql'
 doc_type: 'reference'
 ---

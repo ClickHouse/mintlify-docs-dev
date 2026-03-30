@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/table-functions/numbers
+old-slug: /sql-reference/table-functions/numbers
 sidebar_position: 145
 sidebarTitle: 'numbers'
 title: 'numbers'

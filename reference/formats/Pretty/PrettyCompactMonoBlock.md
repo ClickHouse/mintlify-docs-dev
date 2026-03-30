@@ -4,7 +4,7 @@ description: 'Documentation for the PrettyCompactMonoBlock format'
 input_format: false
 keywords: ['PrettyCompactMonoBlock']
 output_format: true
-slug: /interfaces/formats/PrettyCompactMonoBlock
+old-slug: /interfaces/formats/PrettyCompactMonoBlock
 title: 'PrettyCompactMonoBlock'
 doc_type: 'reference'
 ---

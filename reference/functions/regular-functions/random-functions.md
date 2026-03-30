@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for functions used to generate random numbers'
 sidebarTitle: 'Random number'
-slug: /sql-reference/functions/random-functions
+old-slug: /sql-reference/functions/random-functions
 title: 'Functions for generating random numbers'
 doc_type: 'reference'
 ---

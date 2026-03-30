@@ -4,7 +4,7 @@ description: 'Documentation for the TSKV format'
 input_format: true
 keywords: ['TSKV']
 output_format: true
-slug: /interfaces/formats/TSKV
+old-slug: /interfaces/formats/TSKV
 title: 'TSKV'
 doc_type: 'reference'
 ---

@@ -4,7 +4,7 @@ description: 'Documentation for the PrettyCompact format'
 input_format: false
 keywords: ['PrettyCompact']
 output_format: true
-slug: /interfaces/formats/PrettyCompact
+old-slug: /interfaces/formats/PrettyCompact
 title: 'PrettyCompact'
 doc_type: 'reference'
 ---

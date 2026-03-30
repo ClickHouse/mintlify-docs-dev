@@ -2,7 +2,7 @@
 description: 'Documentation for the dense_rank window function'
 sidebarTitle: 'dense_rank'
 sidebar_position: 7
-slug: /sql-reference/window-functions/dense_rank
+old-slug: /sql-reference/window-functions/dense_rank
 title: 'dense_rank'
 doc_type: 'reference'
 ---

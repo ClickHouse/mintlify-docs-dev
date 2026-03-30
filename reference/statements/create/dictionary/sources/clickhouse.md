@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/clickhouse
+old-slug: /sql-reference/statements/create/dictionary/sources/clickhouse
 title: 'ClickHouse dictionary source'
 description: 'Configure a ClickHouse table as a dictionary source.'
 doc_type: 'reference'
@@ -63,6 +63,6 @@ Setting fields:
 | `secure` | Use SSL for connection. |
 | `query` | The custom query. Optional. |
 
-:::note
-The `table` or `where` fields cannot be used together with the `query` field. And either one of the `table` or `query` fields must be declared.
-:::
+<Note>
+**The `table` or `where` fields cannot be used together with the `query` field. And either one of the `table` or `query` fields must be declared.**
+</Note>

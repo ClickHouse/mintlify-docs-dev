@@ -1,6 +1,6 @@
 ---
 description: 'Exactly computes the quantile of a numeric data sequence.'
-slug: /sql-reference/aggregate-functions/reference/quantileExactInclusive
+old-slug: /sql-reference/aggregate-functions/reference/quantileExactInclusive
 title: 'quantileExactInclusive'
 doc_type: 'reference'
 ---

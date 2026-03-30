@@ -1,6 +1,6 @@
 ---
 description: 'Built-in geobase dictionaries in ClickHouse'
-slug: /sql-reference/statements/create/dictionary/embedded
+old-slug: /sql-reference/statements/create/dictionary/embedded
 title: 'Embedded (geobase) dictionaries'
 doc_type: 'reference'
 ---

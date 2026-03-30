@@ -1,7 +1,7 @@
 ---
 description: 'System table containing information about dictionaries'
 keywords: ['system table', 'dictionaries']
-slug: /operations/system-tables/dictionaries
+old-slug: /operations/system-tables/dictionaries
 title: 'system.dictionaries'
 doc_type: 'reference'
 ---

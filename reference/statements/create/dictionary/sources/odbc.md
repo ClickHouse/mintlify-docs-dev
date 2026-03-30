@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/odbc
+old-slug: /sql-reference/statements/create/dictionary/sources/odbc
 title: 'ODBC dictionary source'
 description: 'Configure an ODBC connection as a dictionary source in ClickHouse.'
 doc_type: 'reference'
@@ -53,9 +53,9 @@ Setting fields:
 | `background_reconnect` | Reconnect to replica in background if connection fails. Optional. |
 | `query` | The custom query. Optional. |
 
-:::note
-The `table` and `query` fields cannot be used together. And either one of the `table` or `query` fields must be declared.
-:::
+<Note>
+**The `table` and `query` fields cannot be used together. And either one of the `table` or `query` fields must be declared.**
+</Note>
 
 ClickHouse receives quoting symbols from ODBC-driver and quote all settings in queries to driver, so it's necessary to set table name accordingly to table name case in database.
 
@@ -63,9 +63,9 @@ If you have a problems with encodings when using Oracle, see the corresponding [
 
 ### Known Vulnerability of the ODBC Dictionary Functionality
 
-:::note
-When connecting to the database through the ODBC driver connection parameter `Servername` can be substituted. In this case values of `USERNAME` and `PASSWORD` from `odbc.ini` are sent to the remote server and can be compromised.
-:::
+<Note>
+**When connecting to the database through the ODBC driver connection parameter `Servername` can be substituted. In this case values of `USERNAME` and `PASSWORD` from `odbc.ini` are sent to the remote server and can be compromised.**
+</Note>
 
 **Example of insecure use**
 

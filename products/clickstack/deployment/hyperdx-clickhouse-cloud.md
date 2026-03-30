@@ -20,7 +20,7 @@ import {BetaBadge} from '/snippets/components/BetaBadge/BetaBadge.jsx'
 This feature is in ClickHouse Cloud private preview. If your org is interested in getting priority access,
 [join the waitlist](https://clickhouse.com/cloud/clickstack-private-preview).
 
-If you're new to ClickHouse Cloud, click [here](/docs/cloud/overview) to learn more or [sign up for a free trial](https://clickhouse.cloud/signUp) to get started.
+If you're new to ClickHouse Cloud, click [here](/cloud/overview) to learn more or [sign up for a free trial](https://clickhouse.cloud/signUp) to get started.
 </Note>
 
 This option is designed for users who are using ClickHouse Cloud. In this deployment pattern, both ClickHouse and HyperDX are hosted in ClickHouse Cloud, minimizing the number of components the user needs to self-host.

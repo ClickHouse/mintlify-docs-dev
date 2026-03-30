@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for LIMIT BY Clause'
 sidebarTitle: 'LIMIT BY'
-slug: /sql-reference/statements/select/limit-by
+old-slug: /sql-reference/statements/select/limit-by
 title: 'LIMIT BY Clause'
 doc_type: 'reference'
 ---

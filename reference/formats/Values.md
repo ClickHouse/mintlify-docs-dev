@@ -4,7 +4,7 @@ description: 'Documentation for the Values format'
 input_format: true
 keywords: ['Values']
 output_format: true
-slug: /interfaces/formats/Values
+old-slug: /interfaces/formats/Values
 title: 'Values'
 doc_type: 'guide'
 ---

@@ -1,7 +1,7 @@
 ---
 description: 'With the determined precision computes the quantile of a numeric data
   sequence according to the weight of each sequence member.'
-slug: /sql-reference/aggregate-functions/reference/quantilestimingweighted
+old-slug: /sql-reference/aggregate-functions/reference/quantilestimingweighted
 title: 'quantilesTimingWeighted'
 doc_type: 'reference'
 ---
@@ -27,9 +27,9 @@ The calculation is accurate if:
 
 Otherwise, the result of the calculation is rounded to the nearest multiple of 16 ms.
 
-:::note
-For calculating page loading time quantiles, this function is more effective and accurate than [`quantiles`](/sql-reference/aggregate-functions/reference/quantiles).
-:::
+<Note>
+**For calculating page loading time quantiles, this function is more effective and accurate than [`quantiles`](/sql-reference/aggregate-functions/reference/quantiles).**
+</Note>
     
 
 **Syntax**

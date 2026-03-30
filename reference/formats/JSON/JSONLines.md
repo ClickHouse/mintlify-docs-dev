@@ -2,7 +2,7 @@
 alias: ['JSONEachRow', 'NDJSON']
 description: 'Documentation for the JSONLines format'
 keywords: ['JSONLines']
-slug: /interfaces/formats/JSONLines
+old-slug: /interfaces/formats/JSONLines
 title: 'JSONLines'
 doc_type: 'reference'
 ---

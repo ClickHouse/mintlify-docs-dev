@@ -3,7 +3,7 @@ description: 'Allows for quick writing of object states that are continually cha
   and deleting old object states in the background.'
 sidebarTitle: 'VersionedCollapsingMergeTree'
 sidebar_position: 80
-slug: /engines/table-engines/mergetree-family/versionedcollapsingmergetree
+old-slug: /engines/table-engines/mergetree-family/versionedcollapsingmergetree
 title: 'VersionedCollapsingMergeTree table engine'
 doc_type: 'reference'
 ---

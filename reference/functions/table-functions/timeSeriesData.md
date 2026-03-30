@@ -3,7 +3,7 @@ description: 'timeSeriesData returns the data table used by table `db_name.time_
   whose table engine is TimeSeries.'
 sidebarTitle: 'timeSeriesData'
 sidebar_position: 145
-slug: /sql-reference/table-functions/timeSeriesData
+old-slug: /sql-reference/table-functions/timeSeriesData
 title: 'timeSeriesData'
 doc_type: 'reference'
 ---

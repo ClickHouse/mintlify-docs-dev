@@ -4,7 +4,7 @@ description: 'Documentation for the Avro format'
 input_format: true
 keywords: ['Avro']
 output_format: true
-slug: /interfaces/formats/Avro
+old-slug: /interfaces/formats/Avro
 title: 'Avro'
 doc_type: 'reference'
 ---

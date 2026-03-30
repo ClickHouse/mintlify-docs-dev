@@ -1,6 +1,6 @@
 ---
 description: 'Parses data from arguments according to specified input format. If structure argument is not specified, it''s extracted from the data.'
-slug: /sql-reference/table-functions/format
+old-slug: /sql-reference/table-functions/format
 sidebar_position: 65
 sidebarTitle: 'format'
 title: 'format'

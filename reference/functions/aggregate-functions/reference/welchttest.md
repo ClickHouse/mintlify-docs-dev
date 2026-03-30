@@ -2,7 +2,7 @@
 description: 'Applies Welch''s t-test to samples from two populations.'
 sidebarTitle: 'welchTTest'
 sidebar_position: 214
-slug: /sql-reference/aggregate-functions/reference/welchttest
+old-slug: /sql-reference/aggregate-functions/reference/welchttest
 title: 'welchTTest'
 doc_type: 'reference'
 ---

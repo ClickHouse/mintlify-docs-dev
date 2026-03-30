@@ -1,7 +1,7 @@
 ---
 description: 'Details backup/restore to or from an Azure Blob Storage endpoint'
 sidebarTitle: 'AzureBlobStorage'
-slug: /operations/backup/azure
+old-slug: /operations/backup/azure
 title: 'Backup and restore to/from Azure Blob Storage'
 doc_type: 'guide'
 ---

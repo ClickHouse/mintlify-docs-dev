@@ -2,7 +2,7 @@
 description: 'Documentation for Workload Scheduling'
 sidebarTitle: 'Workload scheduling'
 sidebar_position: 69
-slug: /operations/workload-scheduling
+old-slug: /operations/workload-scheduling
 title: 'Workload scheduling'
 doc_type: 'reference'
 ---

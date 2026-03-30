@@ -3,7 +3,7 @@ description: 'This engine provides an integration with the Azure Blob Storage ec
   allowing streaming data import.'
 sidebarTitle: 'AzureQueue table engine'
 sidebar_position: 181
-slug: /engines/table-engines/integrations/azure-queue
+old-slug: /engines/table-engines/integrations/azure-queue
 title: 'AzureQueue table engine'
 doc_type: 'reference'
 ---

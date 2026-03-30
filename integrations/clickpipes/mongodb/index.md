@@ -51,10 +51,10 @@ Make sure you are logged in to your ClickHouse Cloud account. If you don't have 
 
 4. Fill in the connection details for your source MongoDB database which you configured in the prerequisites step.
 
-   :::info
+   <Info>
    Before you start adding your connection details make sure that you have whitelisted ClickPipes IP addresses in your firewall rules. On the following page you can find a [list of ClickPipes IP addresses](../index.md#list-of-static-ips).
    For more information refer to the source MongoDB setup guides linked at [the top of this page](#prerequisites).
-   :::
+   </Info>
 
    <img src="/images/integrations/data-ingestion/clickpipes/mongodb/mongodb-connection-details.png" alt="Fill in connection details"/>
 

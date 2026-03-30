@@ -2,7 +2,7 @@
 description: 'Documentation for the Tuple data type in ClickHouse'
 sidebarTitle: 'Tuple(T1, T2, ...)'
 sidebar_position: 34
-slug: /sql-reference/data-types/tuple
+old-slug: /sql-reference/data-types/tuple
 title: 'Tuple(T1, T2, ...)'
 doc_type: 'reference'
 ---

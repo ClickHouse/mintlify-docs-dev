@@ -2,7 +2,7 @@
 description: 'Documentation for the Log engine family'
 sidebarTitle: 'Log family'
 sidebar_position: 20
-slug: /engines/table-engines/log-family/
+old-slug: /engines/table-engines/log-family/
 title: 'Log engine family'
 doc_type: 'guide'
 ---

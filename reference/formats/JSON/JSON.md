@@ -4,7 +4,7 @@ description: 'Documentation for the JSON format'
 input_format: true
 keywords: ['JSON']
 output_format: true
-slug: /interfaces/formats/JSON
+old-slug: /interfaces/formats/JSON
 title: 'JSON'
 doc_type: 'reference'
 ---

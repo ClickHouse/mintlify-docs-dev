@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/http
+old-slug: /sql-reference/statements/create/dictionary/sources/http
 title: 'HTTP(S) dictionary source'
 description: 'Configure an HTTP or HTTPS endpoint as a dictionary source in ClickHouse.'
 doc_type: 'reference'

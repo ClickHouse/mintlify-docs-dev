@@ -1,7 +1,7 @@
 ---
 description: 'System table containing information about supported data types'
 keywords: ['system table', 'data_type_families']
-slug: /operations/system-tables/data_type_families
+old-slug: /operations/system-tables/data_type_families
 title: 'system.data_type_families'
 doc_type: 'reference'
 ---

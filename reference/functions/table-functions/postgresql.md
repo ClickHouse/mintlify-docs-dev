@@ -3,7 +3,7 @@ description: 'Allows `SELECT` and `INSERT` queries to be performed on data that 
   stored on a remote PostgreSQL server.'
 sidebarTitle: 'postgresql'
 sidebar_position: 160
-slug: /sql-reference/table-functions/postgresql
+old-slug: /sql-reference/table-functions/postgresql
 title: 'postgresql'
 doc_type: 'reference'
 ---

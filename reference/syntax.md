@@ -3,7 +3,7 @@ description: 'Documentation for Syntax'
 displayed_sidebar: 'sqlreference'
 sidebarTitle: 'Syntax'
 sidebar_position: 2
-slug: sql-reference/syntax
+old-slug: sql-reference/syntax
 title: 'Syntax'
 doc_type: 'reference'
 ---

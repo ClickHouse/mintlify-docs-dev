@@ -2,7 +2,7 @@
 description: 'Guide to using and configuring the query cache feature in ClickHouse'
 sidebarTitle: 'Query cache'
 sidebar_position: 65
-slug: /operations/query-cache
+old-slug: /operations/query-cache
 title: 'Query cache'
 doc_type: 'guide'
 ---

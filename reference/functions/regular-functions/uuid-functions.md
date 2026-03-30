@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Functions for Working with UUIDs'
 sidebarTitle: 'UUIDs'
-slug: /sql-reference/functions/uuid-functions
+old-slug: /sql-reference/functions/uuid-functions
 title: 'Functions for Working with UUIDs'
 doc_type: 'reference'
 ---
@@ -1230,12 +1230,12 @@ SELECT UUIDv7ToDateTime(toUUID('018f05c9-4ab8-7b86-b64e-c9f03fbd45d1'), 'America
 
 <DeprecatedBadge/>
 
-:::warning
-This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](../../operations/settings/settings.md#allow_deprecated_snowflake_conversion_functions) is enabled.
+<Warning>
+**This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](../../operations/settings/settings.md#allow_deprecated_snowflake_conversion_functions) is enabled.**
 The function will be removed at some point in future.
 
 Please use function [dateTime64ToSnowflakeID](#dateTime64ToSnowflakeID) instead.
-:::
+</Warning>
 
 Converts a [DateTime64](../data-types/datetime64.md) to the first [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) at the giving time.
     
@@ -1317,12 +1317,12 @@ SELECT toDateTime64('2025-08-15 18:57:56.493', 3, 'Asia/Shanghai') AS dt, dateTi
 
 <DeprecatedBadge/>
 
-:::warning
-This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](../../operations/settings/settings.md#allow_deprecated_snowflake_conversion_functions) is enabled.
+<Warning>
+**This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](../../operations/settings/settings.md#allow_deprecated_snowflake_conversion_functions) is enabled.**
 The function will be removed at some point in future.
 
 Please use function [dateTimeToSnowflakeID](#dateTimeToSnowflakeID) instead.
-:::
+</Warning>
 
 Converts a [DateTime](../data-types/datetime.md) value to the first [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) at the giving time.
     
@@ -1762,12 +1762,12 @@ SELECT snowflakeIDToDateTime64(7204436857747984384) AS res
 
 <DeprecatedBadge/>
 
-:::warning
-This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](../../operations/settings/settings.md#allow_deprecated_snowflake_conversion_functions) is enabled.
+<Warning>
+**This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](../../operations/settings/settings.md#allow_deprecated_snowflake_conversion_functions) is enabled.**
 The function will be removed at some point in future.
 
 Please use function [`snowflakeIDToDateTime`](#snowflakeIDToDateTime) instead.
-:::
+</Warning>
 
 Extracts the timestamp component of a [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) in [DateTime](../data-types/datetime.md) format.
     
@@ -1809,12 +1809,12 @@ SELECT snowflakeToDateTime(CAST('1426860702823350272', 'Int64'), 'UTC');
 
 <DeprecatedBadge/>
 
-:::warning
-This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](../../operations/settings/settings.md#allow_deprecated_snowflake_conversion_functions) is enabled.
+<Warning>
+**This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](../../operations/settings/settings.md#allow_deprecated_snowflake_conversion_functions) is enabled.**
 The function will be removed at some point in future.
 
 Please use function [`snowflakeIDToDateTime64`](#snowflakeIDToDateTime64) instead.
-:::
+</Warning>
 
 Extracts the timestamp component of a [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) in [DateTime64](../data-types/datetime64.md) format.
 

@@ -6,7 +6,7 @@ doc_type: 'guide'
 keywords: ['ClickStack deployment options', 'external ClickHouse', 'external OTEL', 'minimal deployment', 'Helm configuration']
 ---
 
-This guide covers advanced deployment options for ClickStack using Helm. For basic installation, see the [main Helm deployment guide](/docs/use-cases/observability/clickstack/deployment/helm).
+This guide covers advanced deployment options for ClickStack using Helm. For basic installation, see the [main Helm deployment guide](/use-cases/observability/clickstack/deployment/helm).
 
 ## Overview
 
@@ -178,7 +178,7 @@ hyperdx:
 helm install my-clickstack clickstack/clickstack -f values-external-otel.yaml
 ```
 
-For instructions on exposing OTEL collector endpoints via ingress, see [Ingress Configuration](/docs/use-cases/observability/clickstack/deployment/helm-configuration#otel-collector-ingress).
+For instructions on exposing OTEL collector endpoints via ingress, see [Ingress Configuration](/use-cases/observability/clickstack/deployment/helm-configuration#otel-collector-ingress).
 
 ## Minimal Deployment
 
@@ -218,6 +218,6 @@ helm install my-clickstack clickstack/clickstack -f values-minimal.yaml
 
 ## Next Steps
 
-- [Configuration Guide](/docs/use-cases/observability/clickstack/deployment/helm-configuration) - API keys, secrets, and ingress setup
-- [Cloud Deployments](/docs/use-cases/observability/clickstack/deployment/helm-cloud) - GKE, EKS, and AKS specific configurations
-- [Main Helm Guide](/docs/use-cases/observability/clickstack/deployment/helm) - Basic installation
+- [Configuration Guide](/use-cases/observability/clickstack/deployment/helm-configuration) - API keys, secrets, and ingress setup
+- [Cloud Deployments](/use-cases/observability/clickstack/deployment/helm-cloud) - GKE, EKS, and AKS specific configurations
+- [Main Helm Guide](/use-cases/observability/clickstack/deployment/helm) - Basic installation

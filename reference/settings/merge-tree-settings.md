@@ -1,6 +1,6 @@
 ---
 description: 'Settings for MergeTree which are in `system.merge_tree_settings`'
-slug: /operations/settings/merge-tree-settings
+old-slug: /operations/settings/merge-tree-settings
 title: 'MergeTree tables settings'
 doc_type: 'reference'
 ---
@@ -1015,9 +1015,9 @@ If the number of inactive parts in a single partition in the table exceeds
 the `inactive_parts_to_delay_insert` value, an `INSERT` is artificially
 slowed down.
 
-:::tip
-It is useful when a server fails to clean up parts quickly enough.
-:::
+<Tip>
+**It is useful when a server fails to clean up parts quickly enough.**
+</Tip>
 
 Possible values:
 - Any positive integer.

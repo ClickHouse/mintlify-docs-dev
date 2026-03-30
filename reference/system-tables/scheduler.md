@@ -2,7 +2,7 @@
 description: 'System table containing information about and status of scheduling nodes
   residing on the local server.'
 keywords: ['system table', 'scheduler']
-slug: /operations/system-tables/scheduler
+old-slug: /operations/system-tables/scheduler
 title: 'system.scheduler'
 doc_type: 'reference'
 ---

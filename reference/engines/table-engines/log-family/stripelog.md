@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for the StripeLog table engine'
-slug: /engines/table-engines/log-family/stripelog
+old-slug: /engines/table-engines/log-family/stripelog
 toc_priority: 32
 toc_title: 'StripeLog'
 title: 'StripeLog table engine'

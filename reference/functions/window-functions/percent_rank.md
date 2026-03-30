@@ -2,7 +2,7 @@
 description: 'Documentation for the percent_rank window function'
 sidebarTitle: 'percent_rank'
 sidebar_position: 8
-slug: /sql-reference/window-functions/percent_rank
+old-slug: /sql-reference/window-functions/percent_rank
 title: 'percent_rank'
 doc_type: 'reference'
 ---

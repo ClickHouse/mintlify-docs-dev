@@ -2,7 +2,7 @@
 description: 'Documentation for Settings Profile'
 sidebarTitle: 'SETTINGS PROFILE'
 sidebar_position: 43
-slug: /sql-reference/statements/create/settings-profile
+old-slug: /sql-reference/statements/create/settings-profile
 title: 'CREATE SETTINGS PROFILE'
 doc_type: 'reference'
 ---

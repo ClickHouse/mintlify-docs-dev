@@ -370,7 +370,7 @@ result = ds.sql("""
 ```
 
 ## Next Steps
-- Learn about all [Factory Methods](/docs/chdb/datastore/factory-methods) for creating DataStore
-- Explore [Query Building](/docs/chdb/datastore/query-building) for SQL-style operations
-- Check out [Accessors](/docs/chdb/datastore/accessors) for string, datetime, and more
-- Read the [Performance Guide](/docs/chdb/datastore/guides/pandas-performance) for optimization tips
+- Learn about all [Factory Methods](/chdb/datastore/factory-methods) for creating DataStore
+- Explore [Query Building](/chdb/datastore/query-building) for SQL-style operations
+- Check out [Accessors](/chdb/datastore/accessors) for string, datetime, and more
+- Read the [Performance Guide](/chdb/datastore/guides/pandas-performance) for optimization tips

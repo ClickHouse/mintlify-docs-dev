@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Geometry Functions'
-slug: /sql-reference/functions/geo/geometry
+old-slug: /sql-reference/functions/geo/geometry
 title: 'Functions for Working with Geometry'
 doc_type: 'reference'
 ---

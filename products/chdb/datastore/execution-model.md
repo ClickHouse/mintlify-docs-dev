@@ -190,7 +190,7 @@ Use `verbose=True` for more details:
 query.explain(verbose=True)
 ```
 
-See [Debugging: explain()](/docs/chdb/datastore/debugging/explain) for complete documentation.
+See [Debugging: explain()](/chdb/datastore/debugging/explain) for complete documentation.
 
 ---
 
@@ -308,7 +308,7 @@ config.set_execution_engine('pandas')
 # All operations use pandas
 ```
 
-See [Configuration: Execution Engine](/docs/chdb/datastore/configuration/execution-engine) for details.
+See [Configuration: Execution Engine](/chdb/datastore/configuration/execution-engine) for details.
 
 ---
 

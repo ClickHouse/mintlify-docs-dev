@@ -1,7 +1,7 @@
 ---
 description: 'TCP connection limits.'
 sidebarTitle: 'TCP connection limits'
-slug: /operations/settings/tcp-connection-limits
+old-slug: /operations/settings/tcp-connection-limits
 title: 'TCP connection limits'
 doc_type: 'reference'
 ---

@@ -1,7 +1,7 @@
 ---
 description: Documentation for PREWHERE Clause
 sidebarTitle: PREWHERE
-slug: /sql-reference/statements/select/prewhere
+old-slug: /sql-reference/statements/select/prewhere
 title: PREWHERE clause
 doc_type: reference
 ---

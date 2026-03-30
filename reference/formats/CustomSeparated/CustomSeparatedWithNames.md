@@ -4,7 +4,7 @@ description: 'Documentation for the CustomSeparatedWithNames format'
 input_format: true
 keywords: ['CustomSeparatedWithNames']
 output_format: true
-slug: /interfaces/formats/CustomSeparatedWithNames
+old-slug: /interfaces/formats/CustomSeparatedWithNames
 title: 'CustomSeparatedWithNames'
 doc_type: 'reference'
 ---

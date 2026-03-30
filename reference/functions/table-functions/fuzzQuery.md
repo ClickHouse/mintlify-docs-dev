@@ -2,7 +2,7 @@
 description: 'Perturbs the given query string with random variations.'
 sidebarTitle: 'fuzzQuery'
 sidebar_position: 75
-slug: /sql-reference/table-functions/fuzzQuery
+old-slug: /sql-reference/table-functions/fuzzQuery
 title: 'fuzzQuery'
 doc_type: 'reference'
 ---

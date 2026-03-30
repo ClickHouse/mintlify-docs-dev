@@ -2,7 +2,7 @@
 description: 'Documentation for ClickHouse SQL Statements'
 sidebarTitle: 'List of statements'
 sidebar_position: 1
-slug: /sql-reference/statements/
+old-slug: /sql-reference/statements/
 title: 'ClickHouse SQL Statements'
 doc_type: 'reference'
 ---

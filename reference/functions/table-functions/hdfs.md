@@ -3,7 +3,7 @@ description: 'Creates a table from files in HDFS. This table function is similar
   the url and file table functions.'
 sidebarTitle: 'hdfs'
 sidebar_position: 80
-slug: /sql-reference/table-functions/hdfs
+old-slug: /sql-reference/table-functions/hdfs
 title: 'hdfs'
 doc_type: 'reference'
 ---

@@ -4,7 +4,7 @@ description: 'Documentation for the JSONCompactColumns format'
 input_format: true
 keywords: ['JSONCompactColumns']
 output_format: true
-slug: /interfaces/formats/JSONCompactColumns
+old-slug: /interfaces/formats/JSONCompactColumns
 title: 'JSONCompactColumns'
 doc_type: 'reference'
 ---

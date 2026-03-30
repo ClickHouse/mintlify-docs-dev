@@ -2,7 +2,7 @@
 description: 'Applies the one-sample Student t-test to a sample and a known population mean.'
 sidebarTitle: 'studentTTestOneSample'
 sidebar_position: 195
-slug: /sql-reference/aggregate-functions/reference/studentttestonesample
+old-slug: /sql-reference/aggregate-functions/reference/studentttestonesample
 title: 'studentTTestOneSample'
 doc_type: 'reference'
 ---

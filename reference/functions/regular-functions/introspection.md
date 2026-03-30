@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Introspection Functions'
 sidebarTitle: 'Introspection'
-slug: /sql-reference/functions/introspection
+old-slug: /sql-reference/functions/introspection
 title: 'Introspection Functions'
 doc_type: 'reference'
 ---

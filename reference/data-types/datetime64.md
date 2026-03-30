@@ -3,7 +3,7 @@ description: 'Documentation for the DateTime64 data type in ClickHouse, which st
   timestamps with sub-second precision'
 sidebarTitle: 'DateTime64'
 sidebar_position: 18
-slug: /sql-reference/data-types/datetime64
+old-slug: /sql-reference/data-types/datetime64
 title: 'DateTime64'
 doc_type: 'reference'
 ---

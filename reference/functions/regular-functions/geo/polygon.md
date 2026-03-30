@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Polygon'
 sidebarTitle: 'Polygons'
-slug: /sql-reference/functions/geo/polygons
+old-slug: /sql-reference/functions/geo/polygons
 title: 'Functions for Working with Polygons'
 doc_type: 'reference'
 ---

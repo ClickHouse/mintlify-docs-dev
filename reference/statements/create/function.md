@@ -2,7 +2,7 @@
 description: 'Documentation for Function'
 sidebarTitle: 'FUNCTION'
 sidebar_position: 38
-slug: /sql-reference/statements/create/function
+old-slug: /sql-reference/statements/create/function
 title: 'CREATE FUNCTION -user defined function (UDF)'
 doc_type: 'reference'
 ---

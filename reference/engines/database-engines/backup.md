@@ -3,7 +3,7 @@ description: 'Allows to instantly attach table/database from backups in read-onl
   mode.'
 sidebarTitle: 'Backup'
 sidebar_position: 60
-slug: /engines/database-engines/backup
+old-slug: /engines/database-engines/backup
 title: 'Backup'
 doc_type: 'reference'
 ---

@@ -4,7 +4,7 @@ description: 'Documentation for the RowBinaryWithNamesAndTypes format'
 input_format: true
 keywords: ['RowBinaryWithNamesAndTypes']
 output_format: true
-slug: /interfaces/formats/RowBinaryWithNamesAndTypes
+old-slug: /interfaces/formats/RowBinaryWithNamesAndTypes
 title: 'RowBinaryWithNamesAndTypes'
 doc_type: 'reference'
 ---

@@ -1,7 +1,7 @@
 ---
 description: 'System table used for implementing the `SHOW PROCESSLIST` query.'
 keywords: ['system table', 'processes']
-slug: /operations/system-tables/processes
+old-slug: /operations/system-tables/processes
 title: 'system.processes'
 doc_type: 'reference'
 ---

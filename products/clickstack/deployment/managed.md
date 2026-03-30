@@ -224,9 +224,9 @@ ENGINE = MergeTree
 ORDER BY (toStartOfMinute(time_local), status, remote_addr);
 ```
 
-Your table must align with the output schema produced by Vector. Adjust the schema as needed for your data, following the recommended [schema best practices](/docs/best-practices/select-data-types). 
+Your table must align with the output schema produced by Vector. Adjust the schema as needed for your data, following the recommended [schema best practices](/best-practices/select-data-types). 
 
-We strongly recommend understanding how [Primary keys](/docs/primary-indexes) work in ClickHouse and choosing an ordering key based on your access patterns. See the [ClickStack-specific](/use-cases/observability/clickstack/performance_tuning#choosing-a-primary-key) guidance on choosing a primary key.
+We strongly recommend understanding how [Primary keys](/primary-indexes) work in ClickHouse and choosing an ordering key based on your access patterns. See the [ClickStack-specific](/use-cases/observability/clickstack/performance_tuning#choosing-a-primary-key) guidance on choosing a primary key.
 
 Once the table exists, copy the configuration snippet shown. Adjust the input to consume your existing pipelines, as well as the target table and database if required. Credentials should be pre-populated.
 

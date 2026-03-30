@@ -2,7 +2,7 @@
 description: 'Documentation for Check Table'
 sidebarTitle: 'CHECK TABLE'
 sidebar_position: 41
-slug: /sql-reference/statements/check-table
+old-slug: /sql-reference/statements/check-table
 title: 'CHECK TABLE Statement'
 doc_type: 'reference'
 ---

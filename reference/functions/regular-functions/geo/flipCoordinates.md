@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for flipCoordinates'
-slug: /sql-reference/functions/geo/flipCoordinates
+old-slug: /sql-reference/functions/geo/flipCoordinates
 title: 'Flipping Coordinates'
 doc_type: 'reference'
 ---

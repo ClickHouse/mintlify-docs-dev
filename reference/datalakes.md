@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Data Lakes'
-slug: /sql-reference/datalakes
+old-slug: /sql-reference/datalakes
 title: 'Data Lakes'
 doc_type: 'reference'
 icon: 'warehouse'

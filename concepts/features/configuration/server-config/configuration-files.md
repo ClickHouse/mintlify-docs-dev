@@ -3,7 +3,7 @@ description: 'This page explains how ClickHouse server can be configured with co
   files in XML or YAML syntax.'
 sidebarTitle: 'Configuration Files'
 sidebar_position: 50
-slug: /operations/configuration-files
+old-slug: /operations/configuration-files
 title: 'Configuration Files'
 doc_type: 'guide'
 ---

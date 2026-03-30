@@ -1,5 +1,5 @@
 ---
-slug: /guides/developer/deduplicating-inserts-on-retries
+old-slug: /guides/developer/deduplicating-inserts-on-retries
 title: 'Deduplicating inserts on retries'
 description: 'Preventing duplicate data when retrying insert operations'
 keywords: ['deduplication', 'deduplicate', 'insert retries', 'inserts']

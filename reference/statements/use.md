@@ -2,7 +2,7 @@
 description: Documentation for USE Statement
 sidebarTitle: USE
 sidebar_position: 53
-slug: /sql-reference/statements/use
+old-slug: /sql-reference/statements/use
 title: USE statement
 doc_type: reference
 ---

@@ -2,7 +2,7 @@
 description: 'Documentation for the Data types binary encoding specification'
 sidebarTitle: 'Data types binary encoding specification.'
 sidebar_position: 56
-slug: /sql-reference/data-types/data-types-binary-encoding
+old-slug: /sql-reference/data-types/data-types-binary-encoding
 title: 'Data types binary encoding specification'
 doc_type: 'reference'
 ---

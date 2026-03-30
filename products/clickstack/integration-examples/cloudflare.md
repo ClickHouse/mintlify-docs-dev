@@ -48,9 +48,9 @@ This section assumes you have Cloudflare Logpush configured to export logs to S3
 
 #### Configure S3 authentication
 
-ClickPipes needs permission to read from your S3 bucket. Follow the [Accessing S3 data securely](/docs/cloud/data-sources/secure-s3) guide to configure either IAM role-based access or credentials-based access.
+ClickPipes needs permission to read from your S3 bucket. Follow the [Accessing S3 data securely](/cloud/data-sources/secure-s3) guide to configure either IAM role-based access or credentials-based access.
 
-For full details on ClickPipes S3 authentication and permissions, see the [S3 ClickPipes reference documentation](/docs/integrations/clickpipes/object-storage/s3/overview#access-control).
+For full details on ClickPipes S3 authentication and permissions, see the [S3 ClickPipes reference documentation](/integrations/clickpipes/object-storage/s3/overview#access-control).
 
 #### Create ClickPipes job
 
@@ -212,7 +212,7 @@ SHOW TABLES FROM default LIKE 'cloudflare_http_logs';
 SELECT count() FROM cloudflare_http_logs;
 ```
 
-If the table exists but is empty, check ClickPipes for errors: ClickHouse Cloud Console → **Data Sources** → Your ClickPipe → **Logs**. For authentication issues with private buckets, see the [S3 ClickPipes access control documentation](/docs/integrations/clickpipes/object-storage/s3/overview#access-control).
+If the table exists but is empty, check ClickPipes for errors: ClickHouse Cloud Console → **Data Sources** → Your ClickPipe → **Logs**. For authentication issues with private buckets, see the [S3 ClickPipes access control documentation](/integrations/clickpipes/object-storage/s3/overview#access-control).
 
 ### Logs not appearing in HyperDX
 
@@ -232,6 +232,6 @@ Now that you have Cloudflare logs flowing into ClickStack:
 
 ## Going to production
 
-This guide demonstrates ingesting Cloudflare logs using a public demo dataset. For production deployments, configure Cloudflare Logpush to write to your own S3 bucket and set up ClickPipes with [IAM role-based authentication](/docs/cloud/data-sources/secure-s3) for secure access. Select only the [Logpush fields](https://developers.cloudflare.com/logs/logpush/logpush-job/datasets/zone/http_requests/) you need to reduce storage costs and ingestion volume. Enable daily subfolders in Logpush for better file organization and use `**/*` in your ClickPipes path pattern to match across subdirectories.
+This guide demonstrates ingesting Cloudflare logs using a public demo dataset. For production deployments, configure Cloudflare Logpush to write to your own S3 bucket and set up ClickPipes with [IAM role-based authentication](/cloud/data-sources/secure-s3) for secure access. Select only the [Logpush fields](https://developers.cloudflare.com/logs/logpush/logpush-job/datasets/zone/http_requests/) you need to reduce storage costs and ingestion volume. Enable daily subfolders in Logpush for better file organization and use `**/*` in your ClickPipes path pattern to match across subdirectories.
 
-See the [S3 ClickPipes documentation](/docs/integrations/clickpipes/object-storage/s3/overview) for advanced configuration options including [SQS-based unordered ingestion](/docs/integrations/clickpipes/object-storage/s3/overview#continuous-ingestion-any-order) for handling backfills and out-of-order files.
+See the [S3 ClickPipes documentation](/integrations/clickpipes/object-storage/s3/overview) for advanced configuration options including [SQS-based unordered ingestion](/integrations/clickpipes/object-storage/s3/overview#continuous-ingestion-any-order) for handling backfills and out-of-order files.

@@ -1,5 +1,5 @@
 ---
-slug: /guides/sre/tls/configuring-tls
+old-slug: /guides/sre/tls/configuring-tls
 title: 'Configuring TLS'
 description: 'This guide provides simple and minimal settings to configure ClickHouse to use OpenSSL certificates to validate connections.'
 keywords: ['SSL configuration', 'TLS setup', 'OpenSSL certificates', 'secure connections', 'SRE guide']

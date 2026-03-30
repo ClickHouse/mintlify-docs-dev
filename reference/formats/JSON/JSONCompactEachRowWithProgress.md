@@ -4,7 +4,7 @@ description: 'Documentation for the JSONCompactEachRowWithProgress format'
 input_format: false
 keywords: ['JSONCompactEachRowWithProgress']
 output_format: true
-slug: /interfaces/formats/JSONCompactEachRowWithProgress
+old-slug: /interfaces/formats/JSONCompactEachRowWithProgress
 title: 'JSONCompactEachRowWithProgress'
 doc_type: 'reference'
 ---

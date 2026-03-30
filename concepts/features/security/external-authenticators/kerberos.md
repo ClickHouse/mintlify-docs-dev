@@ -1,7 +1,7 @@
 ---
 description: 'Existing and properly configured ClickHouse users can be authenticated
   via Kerberos authentication protocol.'
-slug: /operations/external-authenticators/kerberos
+old-slug: /operations/external-authenticators/kerberos
 title: 'Kerberos'
 doc_type: 'reference'
 ---

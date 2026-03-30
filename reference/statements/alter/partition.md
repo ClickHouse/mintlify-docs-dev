@@ -2,7 +2,7 @@
 description: 'Documentation for Partition'
 sidebarTitle: 'PARTITION'
 sidebar_position: 38
-slug: /sql-reference/statements/alter/partition
+old-slug: /sql-reference/statements/alter/partition
 title: 'Manipulating Partitions and Parts'
 doc_type: 'reference'
 ---

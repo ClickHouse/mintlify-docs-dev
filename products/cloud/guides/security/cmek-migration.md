@@ -9,7 +9,7 @@ keywords: ['ClickHouse Cloud', 'encryption', 'CMEK']
 
 We're improving the security of customer managed encryption keys (CMEK) services. All services are now configured with a unique AWS role per service to authorize using customer keys to encrypt and decrypt services. This new role is only shown in the service configuration screen.
 
-OpenAPI and Terraform are both supported for this new process. For more information, check out our docs ([Enhanced Encryption](/docs/cloud/security/cmek), [Cloud API](/docs/cloud/manage/api/api-overview), [Official Terraform Provider](https://registry.terraform.io/providers/ClickHouse/clickhouse/latest/docs)). 
+OpenAPI and Terraform are both supported for this new process. For more information, check out our docs ([Enhanced Encryption](/cloud/security/cmek), [Cloud API](/cloud/manage/api/api-overview), [Official Terraform Provider](https://registry.terraform.io/providers/ClickHouse/clickhouse/latest/docs)). 
 
 :::warning
 Customers utilizing CMEK v1 must migrate services no later than June 1st, 2026. After this date customer managed keys will be rotated to ClickHouse managed keys by default. Customers may rotate back to customer managed keys after the default migration.

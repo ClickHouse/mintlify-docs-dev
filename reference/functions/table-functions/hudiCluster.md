@@ -3,7 +3,7 @@ description: 'An extension to the hudi table function. Allows processing files f
   Apache Hudi tables in Amazon S3 in parallel with many nodes in a specified cluster.'
 sidebarTitle: 'hudiCluster'
 sidebar_position: 86
-slug: /sql-reference/table-functions/hudiCluster
+old-slug: /sql-reference/table-functions/hudiCluster
 title: 'hudiCluster Table Function'
 doc_type: 'reference'
 ---

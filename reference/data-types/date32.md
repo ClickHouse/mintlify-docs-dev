@@ -3,7 +3,7 @@ description: 'Documentation for the Date32 data type in ClickHouse, which stores
   with an extended range compared to Date'
 sidebarTitle: 'Date32'
 sidebar_position: 14
-slug: /sql-reference/data-types/date32
+old-slug: /sql-reference/data-types/date32
 title: 'Date32'
 doc_type: 'reference'
 ---

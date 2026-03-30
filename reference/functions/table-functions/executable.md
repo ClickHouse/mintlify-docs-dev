@@ -5,7 +5,7 @@ description: 'The `executable` table function creates a table based on the outpu
 keywords: ['udf', 'user defined function', 'clickhouse', 'executable', 'table', 'function']
 sidebarTitle: 'executable'
 sidebar_position: 50
-slug: /engines/table-functions/executable
+old-slug: /engines/table-functions/executable
 title: 'executable'
 doc_type: 'reference'
 ---

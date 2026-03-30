@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for HAVING Clause'
 sidebarTitle: 'HAVING'
-slug: /sql-reference/statements/select/having
+old-slug: /sql-reference/statements/select/having
 title: 'HAVING Clause'
 doc_type: 'reference'
 ---

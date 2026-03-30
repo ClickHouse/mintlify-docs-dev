@@ -3,7 +3,7 @@ description: 'Documentation for the IPv6 data type in ClickHouse, which stores I
   addresses as 16-byte values'
 sidebarTitle: 'IPv6'
 sidebar_position: 30
-slug: /sql-reference/data-types/ipv6
+old-slug: /sql-reference/data-types/ipv6
 title: 'IPv6'
 doc_type: 'reference'
 ---

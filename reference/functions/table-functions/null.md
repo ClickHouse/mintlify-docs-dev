@@ -3,7 +3,7 @@ description: 'Creates a temporary table of the specified structure with the Null
   engine. The function is used for the convenience of test writing and demonstrations.'
 sidebarTitle: 'null function'
 sidebar_position: 140
-slug: /sql-reference/table-functions/null
+old-slug: /sql-reference/table-functions/null
 title: 'null'
 doc_type: 'reference'
 ---

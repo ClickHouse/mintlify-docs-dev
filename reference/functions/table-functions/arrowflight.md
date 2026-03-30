@@ -2,7 +2,7 @@
 description: 'Allows to perform queries on data exposed via an Apache Arrow Flight server.'
 sidebarTitle: 'arrowFlight'
 sidebar_position: 186
-slug: /sql-reference/table-functions/arrowflight
+old-slug: /sql-reference/table-functions/arrowflight
 title: 'arrowFlight'
 doc_type: 'reference'
 ---

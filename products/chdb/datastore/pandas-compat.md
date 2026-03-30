@@ -407,7 +407,7 @@ result = ds['value'].shift(-1)  # Lead
 | `to_numpy()` | NumPy array |
 | `to_clipboard()` | Clipboard |
 
-See [I/O Operations](/docs/chdb/datastore/io) for detailed documentation.
+See [I/O Operations](/chdb/datastore/io) for detailed documentation.
 
 ---
 
@@ -455,4 +455,4 @@ pd.testing.assert_frame_equal(
 )
 ```
 
-See [Key Differences](/docs/chdb/datastore/guides/pandas-differences) for complete details.
+See [Key Differences](/chdb/datastore/guides/pandas-differences) for complete details.

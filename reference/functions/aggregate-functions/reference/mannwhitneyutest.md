@@ -2,7 +2,7 @@
 description: 'Applies the Mann-Whitney rank test to samples from two populations.'
 sidebarTitle: 'mannWhitneyUTest'
 sidebar_position: 161
-slug: /sql-reference/aggregate-functions/reference/mannwhitneyutest
+old-slug: /sql-reference/aggregate-functions/reference/mannwhitneyutest
 title: 'mannWhitneyUTest'
 doc_type: 'reference'
 ---

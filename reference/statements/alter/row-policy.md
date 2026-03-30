@@ -2,7 +2,7 @@
 description: 'Documentation for ALTER ROW POLICY'
 sidebarTitle: 'ROW POLICY'
 sidebar_position: 47
-slug: /sql-reference/statements/alter/row-policy
+old-slug: /sql-reference/statements/alter/row-policy
 title: 'ALTER ROW POLICY'
 doc_type: 'reference'
 ---

@@ -3,7 +3,7 @@ description: 'creates a temporary storage which fills columns with values.'
 keywords: ['values', 'table function']
 sidebarTitle: 'values'
 sidebar_position: 210
-slug: /sql-reference/table-functions/values
+old-slug: /sql-reference/table-functions/values
 title: 'values'
 doc_type: 'reference'
 ---

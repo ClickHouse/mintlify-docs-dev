@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for string functions'
 sidebarTitle: 'String'
-slug: /sql-reference/functions/string-functions
+old-slug: /sql-reference/functions/string-functions
 title: 'Functions for working with strings'
 doc_type: 'reference'
 ---

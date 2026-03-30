@@ -1,7 +1,7 @@
 ---
 description: 'Page listing various useful ClickHouse tools and utilities.'
 keywords: ['tools', 'utilities']
-slug: /operations/utilities/
+old-slug: /operations/utilities/
 title: 'List of tools and utilities'
 doc_type: 'landing-page'
 ---

@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources
+old-slug: /sql-reference/statements/create/dictionary/sources
 title: 'Dictionary Sources'
 doc_type: 'reference'
 description: 'Dictionary source types configuration'

@@ -4,7 +4,7 @@ description: 'Buffers the data to write in RAM, periodically flushing it to anot
   simultaneously.'
 sidebarTitle: 'Buffer'
 sidebar_position: 120
-slug: /engines/table-engines/special/buffer
+old-slug: /engines/table-engines/special/buffer
 title: 'Buffer table engine'
 doc_type: 'reference'
 ---

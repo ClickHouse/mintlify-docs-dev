@@ -3,7 +3,7 @@ description: '`MergeTree`-family table engines are designed for high data ingest
   and huge data volumes.'
 sidebarTitle: 'MergeTree'
 sidebar_position: 11
-slug: /engines/table-engines/mergetree-family/mergetree
+old-slug: /engines/table-engines/mergetree-family/mergetree
 title: 'MergeTree table engine'
 doc_type: 'reference'
 ---

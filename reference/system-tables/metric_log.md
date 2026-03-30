@@ -2,7 +2,7 @@
 description: 'System table containing history of metrics values from tables `system.metrics`
   and `system.events`, periodically flushed to disk.'
 keywords: ['system table', 'metric_log']
-slug: /operations/system-tables/metric_log
+old-slug: /operations/system-tables/metric_log
 title: 'system.metric_log'
 doc_type: 'reference'
 ---

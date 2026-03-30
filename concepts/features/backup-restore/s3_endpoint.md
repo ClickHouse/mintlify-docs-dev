@@ -1,7 +1,7 @@
 ---
 description: 'Overview of ClickHouse backup and restore'
 sidebarTitle: 'S3 endpoint'
-slug: /operations/backup/s3_endpoint
+old-slug: /operations/backup/s3_endpoint
 title: 'Backup and restore to/from an S3 endpoint'
 doc_type: 'guide'
 ---

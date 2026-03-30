@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Comparison Functions'
 sidebarTitle: 'Comparison'
-slug: /sql-reference/functions/comparison-functions
+old-slug: /sql-reference/functions/comparison-functions
 title: 'Comparison Functions'
 doc_type: 'reference'
 ---

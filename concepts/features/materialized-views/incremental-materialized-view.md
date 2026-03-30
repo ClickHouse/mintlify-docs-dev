@@ -1,5 +1,5 @@
 ---
-slug: /materialized-view/incremental-materialized-view
+old-slug: /materialized-view/incremental-materialized-view
 title: 'Incremental materialized view'
 description: 'How to use incremental materialized views to speed up queries'
 keywords: ['incremental materialized views', 'speed up queries', 'query optimization']
@@ -167,9 +167,9 @@ Peak memory usage: 567.61 KiB.
 
 This has sped up our query from 0.133s to 0.004s – an over 25x improvement!
 
-:::important Important: `ORDER BY` = `GROUP BY`
-In most cases the columns used in the `GROUP BY` clause of the Materialized Views transformation, should be consistent with those used in the `ORDER BY` clause of the target table if using the `SummingMergeTree` or `AggregatingMergeTree` table engines. These engines rely on the `ORDER BY` columns to merge rows with identical values during background merge operations. Misalignment between `GROUP BY` and `ORDER BY` columns can lead to inefficient query performance, suboptimal merges, or even data discrepancies.
-:::
+<Warning>
+**Important: `ORDER BY` = `GROUP BY`** — In most cases the columns used in the `GROUP BY` clause of the Materialized Views transformation, should be consistent with those used in the `ORDER BY` clause of the target table if using the `SummingMergeTree` or `AggregatingMergeTree` table engines. These engines rely on the `ORDER BY` columns to merge rows with identical values during background merge operations. Misalignment between `GROUP BY` and `ORDER BY` columns can lead to inefficient query performance, suboptimal merges, or even data discrepancies.
+</Warning>
 
 ### A more complex example 
 

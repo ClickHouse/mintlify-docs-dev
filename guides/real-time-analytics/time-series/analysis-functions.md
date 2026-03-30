@@ -23,7 +23,7 @@ These can all be achieved through combinations of aggregations, window functions
 
 When analyzing time series data, we often need to understand how values change between time periods. 
 This is essential for both gauge and counter metrics. 
-The [`lagInFrame`](/docs/sql-reference/window-functions/lagInFrame) window function lets us access the previous period's value to calculate these changes.
+The [`lagInFrame`](/sql-reference/window-functions/lagInFrame) window function lets us access the previous period's value to calculate these changes.
 
 The following query demonstrates this by calculating day-over-day changes in views for "Weird Al" Yankovic's Wikipedia page.
 The trend column shows whether traffic increased (positive values) or decreased (negative values) compared to the previous day, helping identify unusual spikes or drops in activity.
@@ -151,7 +151,7 @@ Row 1:
 hist: [(10033,23224.55065359477,60.625),(23224.55065359477,37855.38888888889,15.625),(37855.38888888889,52913.5,3.5),(52913.5,69438,1.25),(69438,83102.16666666666,1.25),(83102.16666666666,94267.66666666666,2.5),(94267.66666666666,116778,1.25),(116778,186175.75,1.125),(186175.75,946963.25,1.75),(946963.25,1655250,1.125)]
 ```
 
-We can then use [`arrayJoin()`](/docs/sql-reference/functions/array-join) to massage the data and `bar()` to visualize it:
+We can then use [`arrayJoin()`](/sql-reference/functions/array-join) to massage the data and `bar()` to visualize it:
 
 ```sql
 WITH histogram(10)(hits) AS hist

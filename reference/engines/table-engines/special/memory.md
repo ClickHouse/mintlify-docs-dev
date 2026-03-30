@@ -4,7 +4,7 @@ description: 'The Memory engine stores data in RAM, in uncompressed form. Data i
   from this table is completely free.'
 sidebarTitle: 'Memory'
 sidebar_position: 110
-slug: /engines/table-engines/special/memory
+old-slug: /engines/table-engines/special/memory
 title: 'Memory table engine'
 doc_type: 'reference'
 ---

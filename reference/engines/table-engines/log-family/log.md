@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Log'
-slug: /engines/table-engines/log-family/log
+old-slug: /engines/table-engines/log-family/log
 toc_priority: 33
 toc_title: 'Log'
 title: 'Log table engine'

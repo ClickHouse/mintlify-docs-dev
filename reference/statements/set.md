@@ -2,7 +2,7 @@
 description: Documentation for SET Statement
 sidebarTitle: SET
 sidebar_position: 50
-slug: /sql-reference/statements/set
+old-slug: /sql-reference/statements/set
 title: SET statement
 doc_type: reference
 ---

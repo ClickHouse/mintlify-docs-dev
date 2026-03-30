@@ -1,5 +1,5 @@
 ---
-slug: /guides/replacing-merge-tree
+old-slug: /guides/replacing-merge-tree
 title: 'ReplacingMergeTree'
 description: 'Using the ReplacingMergeTree engine in ClickHouse'
 keywords: ['replacingmergetree', 'inserts', 'deduplication']

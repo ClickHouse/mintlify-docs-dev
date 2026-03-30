@@ -2,7 +2,7 @@
 description: 'Documentation for Column'
 sidebarTitle: 'COLUMN'
 sidebar_position: 37
-slug: /sql-reference/statements/alter/column
+old-slug: /sql-reference/statements/alter/column
 title: 'Column Manipulations'
 doc_type: 'reference'
 ---

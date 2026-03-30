@@ -2,7 +2,7 @@
 description: 'When performing queries, ClickHouse uses different caches.'
 sidebarTitle: 'Caches'
 sidebar_position: 65
-slug: /operations/caches
+old-slug: /operations/caches
 title: 'Cache types'
 keywords: ['cache']
 doc_type: 'reference'

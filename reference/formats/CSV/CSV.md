@@ -4,7 +4,7 @@ description: 'Documentation for the CSV format'
 input_format: true
 keywords: ['CSV']
 output_format: true
-slug: /interfaces/formats/CSV
+old-slug: /interfaces/formats/CSV
 title: 'CSV'
 doc_type: 'reference'
 ---

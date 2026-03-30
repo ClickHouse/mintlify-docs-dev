@@ -1,5 +1,5 @@
 ---
-slug: /optimize/skipping-indexes
+old-slug: /optimize/skipping-indexes
 sidebarTitle: 'Data skipping indexes'
 sidebar_position: 2
 description: 'Skip indexes enable ClickHouse to skip reading significant chunks of data that are guaranteed to have no matching values.'

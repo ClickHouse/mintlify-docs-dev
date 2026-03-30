@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Array Functions'
 sidebarTitle: 'Arrays'
-slug: /sql-reference/functions/array-functions
+old-slug: /sql-reference/functions/array-functions
 title: 'Array Functions'
 doc_type: 'reference'
 ---
@@ -2155,9 +2155,9 @@ SELECT arrayNormalizedGini([0.9, 0.3, 0.8, 0.7],[6, 1, 0, 2]);
 
 This function is the same as `arrayReverseSort` but with an additional `limit` argument allowing partial sorting.
 
-:::tip
-To retain only the sorted elements use `arrayResize`.
-:::
+<Tip>
+**To retain only the sorted elements use `arrayResize`.**
+</Tip>
     
 
 **Syntax**
@@ -2334,9 +2334,9 @@ SELECT arrayPartialShuffle(materialize([1, 2, 3, 4]), 2, 42), arrayPartialShuffl
 
 This function is the same as `arraySort` but with an additional `limit` argument allowing partial sorting.
 
-:::tip
-To retain only the sorted elements use `arrayResize`.
-:::
+<Tip>
+**To retain only the sorted elements use `arrayResize`.**
+</Tip>
     
 
 **Syntax**
@@ -3703,9 +3703,9 @@ It will then count the number of unique tuples. In this case `2`.
 
 All arrays passed must have the same length.
 
-:::tip
-If you want to get a list of unique items in an array, you can use `arrayReduce('groupUniqArray', arr)`.
-:::
+<Tip>
+**If you want to get a list of unique items in an array, you can use `arrayReduce('groupUniqArray', arr)`.**
+</Tip>
 
 
 **Syntax**

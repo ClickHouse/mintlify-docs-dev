@@ -3,7 +3,7 @@ description: 'This engine allows integrating ClickHouse with NATS to publish or 
   to message subjects, and process new messages as they become available.'
 sidebarTitle: 'NATS table engine'
 sidebar_position: 140
-slug: /engines/table-engines/integrations/nats
+old-slug: /engines/table-engines/integrations/nats
 title: 'NATS table engine'
 doc_type: 'guide'
 ---

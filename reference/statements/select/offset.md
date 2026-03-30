@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Offset'
 sidebarTitle: 'OFFSET'
-slug: /sql-reference/statements/select/offset
+old-slug: /sql-reference/statements/select/offset
 title: 'OFFSET FETCH Clause'
 doc_type: 'reference'
 ---

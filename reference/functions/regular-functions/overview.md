@@ -2,7 +2,7 @@
 description: 'Documentation for Regular Functions'
 sidebarTitle: 'Overview'
 sidebar_position: 1
-slug: /sql-reference/functions/overview
+old-slug: /sql-reference/functions/overview
 title: 'Regular Functions'
 doc_type: 'reference'
 ---

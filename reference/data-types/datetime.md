@@ -3,7 +3,7 @@ description: 'Documentation for the DateTime data type in ClickHouse, which stor
   timestamps with second precision'
 sidebarTitle: 'DateTime'
 sidebar_position: 16
-slug: /sql-reference/data-types/datetime
+old-slug: /sql-reference/data-types/datetime
 title: 'DateTime'
 doc_type: 'reference'
 ---

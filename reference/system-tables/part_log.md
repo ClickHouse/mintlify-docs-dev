@@ -2,7 +2,7 @@
 description: 'System table containing information about events that occurred with
   data parts in the MergeTree family tables, such as adding or merging of data.'
 keywords: ['system table', 'part_log']
-slug: /operations/system-tables/part_log
+old-slug: /operations/system-tables/part_log
 title: 'system.part_log'
 doc_type: 'reference'
 ---

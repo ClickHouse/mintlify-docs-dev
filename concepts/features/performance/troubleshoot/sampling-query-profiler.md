@@ -2,7 +2,7 @@
 description: 'Documentation for the sampling query profiler tool in ClickHouse'
 sidebarTitle: 'Query Profiling'
 sidebar_position: 54
-slug: /operations/optimizing-performance/sampling-query-profiler
+old-slug: /operations/optimizing-performance/sampling-query-profiler
 title: 'Sampling query profiler'
 doc_type: 'reference'
 ---

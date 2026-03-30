@@ -2,7 +2,7 @@
 description: Documentation for SYSTEM Statements
 sidebarTitle: SYSTEM
 sidebar_position: 36
-slug: /sql-reference/statements/system
+old-slug: /sql-reference/statements/system
 title: SYSTEM Statements
 doc_type: reference
 ---

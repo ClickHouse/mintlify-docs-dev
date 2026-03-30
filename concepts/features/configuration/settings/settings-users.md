@@ -2,7 +2,7 @@
 description: 'Settings for configuring users and roles.'
 sidebarTitle: 'User Settings'
 sidebar_position: 63
-slug: /operations/settings/settings-users
+old-slug: /operations/settings/settings-users
 title: 'Users and roles settings'
 doc_type: 'reference'
 ---

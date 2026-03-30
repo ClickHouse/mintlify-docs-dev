@@ -3,7 +3,7 @@ description: 'Documentation for the Dynamic data type in ClickHouse, which can s
   values of different types in a single column'
 sidebarTitle: 'Dynamic'
 sidebar_position: 62
-slug: /sql-reference/data-types/dynamic
+old-slug: /sql-reference/data-types/dynamic
 title: 'Dynamic'
 doc_type: 'guide'
 ---

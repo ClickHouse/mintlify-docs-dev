@@ -4,7 +4,7 @@ description: 'The engine is based on the Atomic engine. It supports replication 
   for a given database.'
 sidebarTitle: 'Replicated'
 sidebar_position: 30
-slug: /engines/database-engines/replicated
+old-slug: /engines/database-engines/replicated
 title: 'Replicated'
 doc_type: 'reference'
 ---

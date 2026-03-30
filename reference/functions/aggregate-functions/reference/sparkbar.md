@@ -3,7 +3,7 @@ description: 'The function plots a frequency histogram for values `x` and the re
   rate `y` of these values over the interval `[min_x, max_x]`.'
 sidebarTitle: 'sparkbar'
 sidebar_position: 187
-slug: /sql-reference/aggregate-functions/reference/sparkbar
+old-slug: /sql-reference/aggregate-functions/reference/sparkbar
 title: 'sparkbar'
 doc_type: 'reference'
 ---

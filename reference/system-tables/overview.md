@@ -3,7 +3,7 @@ description: 'Overview of what system tables are and why they are useful.'
 keywords: ['system tables', 'overview']
 sidebarTitle: 'Overview'
 sidebar_position: 52
-slug: /operations/system-tables/overview
+old-slug: /operations/system-tables/overview
 title: 'System Tables Overview'
 doc_type: 'reference'
 ---

@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/layouts/regexp-tree
+old-slug: /sql-reference/statements/create/dictionary/layouts/regexp-tree
 title: 'Regular expression tree dictionary layout'
 description: 'Configure a regular expression tree dictionary for pattern-based lookups.'
 doc_type: 'reference'

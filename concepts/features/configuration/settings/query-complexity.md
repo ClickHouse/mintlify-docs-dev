@@ -2,7 +2,7 @@
 description: 'Settings which restrict query complexity.'
 sidebarTitle: 'Restrictions on query complexity'
 sidebar_position: 59
-slug: /operations/settings/query-complexity
+old-slug: /operations/settings/query-complexity
 title: 'Restrictions on query complexity'
 doc_type: 'reference'
 ---
@@ -55,7 +55,7 @@ which means that it is "unrestricted".
 | [`read_overflow_mode_leaf`](/operations/settings/settings#read_overflow_mode_leaf)                                     | Sets what happens when the volume of data read exceeds one of the leaf limits                                                                                   |
 | [`max_rows_to_read_leaf`](/operations/settings/settings#max_rows_to_read_leaf)                                         | The maximum number of rows that can be read from a local table on a leaf node when running a distributed query                                                  |
 | [`max_bytes_to_read_leaf`](/operations/settings/settings#max_bytes_to_read_leaf)                                       | The maximum number of bytes (of uncompressed data) that can be read from a local table on a leaf node when running a distributed query.                         |
-| [`read_overflow_mode_leaf`](/docs/operations/settings/settings#read_overflow_mode_leaf)                                | Sets what happens when the volume of data read exceeds one of the leaf limits.                                                                                  |
+| [`read_overflow_mode_leaf`](/operations/settings/settings#read_overflow_mode_leaf)                                | Sets what happens when the volume of data read exceeds one of the leaf limits.                                                                                  |
 | [`max_rows_to_group_by`](/operations/settings/settings#max_rows_to_group_by)                                           | The maximum number of unique keys received from aggregation.                                                                                                    |
 | [`group_by_overflow_mode`](/operations/settings/settings#group_by_overflow_mode)                                       | Sets what happens when the number of unique keys for aggregation exceeds the limit                                                                              |
 | [`max_bytes_before_external_group_by`](/operations/settings/settings#max_bytes_before_external_group_by)               | Enables or disables execution of `GROUP BY` clauses in external memory.                                                                                         |

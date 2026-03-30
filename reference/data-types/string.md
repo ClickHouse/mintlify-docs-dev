@@ -2,7 +2,7 @@
 description: 'Documentation for the String data type in ClickHouse'
 sidebarTitle: 'String'
 sidebar_position: 8
-slug: /sql-reference/data-types/string
+old-slug: /sql-reference/data-types/string
 title: 'String'
 doc_type: 'reference'
 ---

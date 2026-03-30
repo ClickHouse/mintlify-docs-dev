@@ -3,7 +3,7 @@ description: 'Lightweight updates simplify the process of updating data in the d
 keywords: ['update']
 sidebarTitle: 'UPDATE'
 sidebar_position: 39
-slug: /sql-reference/statements/update
+old-slug: /sql-reference/statements/update
 title: 'The Lightweight UPDATE Statement'
 doc_type: 'reference'
 ---

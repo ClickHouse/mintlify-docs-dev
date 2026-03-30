@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Index'
 sidebarTitle: 'Geo'
-slug: /sql-reference/functions/geo/
+old-slug: /sql-reference/functions/geo/
 title: 'Geo Functions'
 doc_type: 'reference'
 ---

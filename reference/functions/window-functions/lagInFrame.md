@@ -2,7 +2,7 @@
 description: 'Documentation for the lagInFrame window function'
 sidebarTitle: 'lagInFrame'
 sidebar_position: 9
-slug: /sql-reference/window-functions/lagInFrame
+old-slug: /sql-reference/window-functions/lagInFrame
 title: 'lagInFrame'
 doc_type: 'reference'
 ---

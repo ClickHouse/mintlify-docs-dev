@@ -1,7 +1,7 @@
 ---
 description: 'Shows the history of ZooKeeper connections (including auxiliary ZooKeepers).'
 keywords: ['system table', 'zookeeper_connection_log']
-slug: /operations/system-tables/zookeeper_connection_log
+old-slug: /operations/system-tables/zookeeper_connection_log
 title: 'system.zookeeper_connection_log'
 doc_type: 'reference'
 ---

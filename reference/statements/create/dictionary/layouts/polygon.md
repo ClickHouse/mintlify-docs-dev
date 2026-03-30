@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/layouts/polygon
+old-slug: /sql-reference/statements/create/dictionary/layouts/polygon
 title: 'Polygon dictionaries'
 description: 'Configure polygon dictionaries for point-in-polygon lookups.'
 doc_type: 'reference'

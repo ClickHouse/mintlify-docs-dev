@@ -4,7 +4,7 @@ description: 'Documentation for the PrettyMonoBlock format'
 input_format: false
 keywords: ['PrettyMonoBlock']
 output_format: true
-slug: /interfaces/formats/PrettyMonoBlock
+old-slug: /interfaces/formats/PrettyMonoBlock
 title: 'PrettyMonoBlock'
 doc_type: 'reference'
 ---

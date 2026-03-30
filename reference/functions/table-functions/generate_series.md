@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/table-functions/generate_series
+old-slug: /sql-reference/table-functions/generate_series
 sidebar_position: 146
 sidebarTitle: 'generate_series'
 title: 'generate_series (generateSeries)'

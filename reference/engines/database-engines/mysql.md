@@ -3,7 +3,7 @@ description: 'Allows connecting to databases on a remote MySQL server and perfor
   `INSERT` and `SELECT` queries to exchange data between ClickHouse and MySQL.'
 sidebarTitle: 'MySQL'
 sidebar_position: 50
-slug: /engines/database-engines/mysql
+old-slug: /engines/database-engines/mysql
 title: 'MySQL'
 doc_type: 'reference'
 ---

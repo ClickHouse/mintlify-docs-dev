@@ -109,7 +109,7 @@ The operator does **not** synchronize:
 ### Recommended: Use Replicated database engine
 
 <Tip>
-Always use the [Replicated](/docs/engines/database-engines/replicated) database engine for production deployments.
+Always use the [Replicated](/engines/database-engines/replicated) database engine for production deployments.
 </Tip>
 
 Benefits:

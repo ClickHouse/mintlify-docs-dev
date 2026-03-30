@@ -12,7 +12,7 @@ Managed Postgres handles PostgreSQL version upgrades to keep your instances secu
 
 Minor version upgrades (e.g., 16.4 to 16.5) include bug fixes and security patches. These are performed via failover and typically result in only a brief disconnect, often lasting just a few seconds.
 
-For instances with [standbys](/docs/managed-postgres/high-availability) enabled, the upgrade is applied to the standby first, followed by a failover to minimize downtime.
+For instances with [standbys](/managed-postgres/high-availability) enabled, the upgrade is applied to the standby first, followed by a failover to minimize downtime.
 
 ## Major version upgrades
 

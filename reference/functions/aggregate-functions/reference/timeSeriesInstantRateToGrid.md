@@ -1,7 +1,7 @@
 ---
 description: 'Aggregate function that calculates PromQL-like irate over time series data on the specified grid.'
 sidebar_position: 223
-slug: /sql-reference/aggregate-functions/reference/timeSeriesInstantRateToGrid
+old-slug: /sql-reference/aggregate-functions/reference/timeSeriesInstantRateToGrid
 title: 'timeSeriesInstantRateToGrid'
 doc_type: 'reference'
 ---

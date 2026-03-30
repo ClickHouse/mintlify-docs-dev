@@ -3,7 +3,7 @@ description: 'Provides a read-only table-like interface to Apache Iceberg tables
   Amazon S3, Azure, HDFS or locally stored.'
 sidebarTitle: 'iceberg'
 sidebar_position: 90
-slug: /sql-reference/table-functions/iceberg
+old-slug: /sql-reference/table-functions/iceberg
 title: 'iceberg'
 doc_type: 'reference'
 ---
@@ -41,9 +41,9 @@ A table with the specified structure for reading data in the specified Iceberg t
 SELECT * FROM icebergS3('http://test.s3.amazonaws.com/clickhouse-bucket/test_table', 'test', 'test')
 ```
 
-:::important
-ClickHouse currently supports reading v1 and v2 of the Iceberg format via the `icebergS3`, `icebergAzure`, `icebergHDFS` and `icebergLocal` table functions and `IcebergS3`, `icebergAzure`, `IcebergHDFS` and `IcebergLocal` table engines.
-:::
+<Warning>
+**ClickHouse currently supports reading v1 and v2 of the Iceberg format via the `icebergS3`, `icebergAzure`, `icebergHDFS` and `icebergLocal` table functions and `IcebergS3`, `icebergAzure`, `IcebergHDFS` and `IcebergLocal` table engines.**
+</Warning>
 
 ## Defining a named collection 
 

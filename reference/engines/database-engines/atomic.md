@@ -4,7 +4,7 @@ description: 'The `Atomic` engine supports non-blocking `DROP TABLE` and `RENAME
   by default.'
 sidebarTitle: 'Atomic'
 sidebar_position: 10
-slug: /engines/database-engines/atomic
+old-slug: /engines/database-engines/atomic
 title: 'Atomic database engine'
 doc_type: 'reference'
 ---

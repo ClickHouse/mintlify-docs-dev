@@ -2,7 +2,7 @@
 description: 'Documentation for the cume_dist window function'
 sidebarTitle: 'cume_dist'
 sidebar_position: 11
-slug: /sql-reference/window-functions/cume_dist
+old-slug: /sql-reference/window-functions/cume_dist
 title: 'cume_dist'
 doc_type: 'reference'
 ---

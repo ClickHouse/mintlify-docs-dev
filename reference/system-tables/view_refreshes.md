@@ -1,7 +1,7 @@
 ---
 description: 'System table containing information about Refreshable Materialized Views.'
 keywords: ['system table', 'view_refreshes']
-slug: /operations/system-tables/view_refreshes
+old-slug: /operations/system-tables/view_refreshes
 title: 'system.view_refreshes'
 doc_type: 'reference'
 ---

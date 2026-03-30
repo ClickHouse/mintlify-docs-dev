@@ -1,5 +1,5 @@
 ---
-slug: /best-practices/avoid-mutations
+old-slug: /best-practices/avoid-mutations
 sidebar_position: 10
 sidebarTitle: 'Avoid mutations'
 title: 'Avoid mutations'

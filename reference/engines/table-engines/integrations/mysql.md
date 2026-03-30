@@ -2,7 +2,7 @@
 description: 'Documentation for MySQL Table Engine'
 sidebarTitle: 'MySQL table engine'
 sidebar_position: 138
-slug: /engines/table-engines/integrations/mysql
+old-slug: /engines/table-engines/integrations/mysql
 title: 'MySQL table engine'
 doc_type: 'reference'
 ---

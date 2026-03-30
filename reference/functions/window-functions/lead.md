@@ -2,7 +2,7 @@
 description: 'Documentation for the lead window function'
 sidebarTitle: 'lead'
 sidebar_position: 10
-slug: /sql-reference/window-functions/lead
+old-slug: /sql-reference/window-functions/lead
 title: 'lead'
 doc_type: 'reference'
 ---

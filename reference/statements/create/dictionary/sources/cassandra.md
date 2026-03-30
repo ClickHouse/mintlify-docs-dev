@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/cassandra
+old-slug: /sql-reference/statements/create/dictionary/sources/cassandra
 title: 'Cassandra dictionary source'
 description: 'Configure Cassandra as a dictionary source in ClickHouse.'
 doc_type: 'reference'
@@ -70,6 +70,6 @@ Setting fields:
 | `max_threads` | The maximum number of threads to use for loading data from multiple partitions in compose key dictionaries. |
 | `query` | The custom query. Optional. |
 
-:::note
-The `column_family` or `where` fields cannot be used together with the `query` field. And either one of the `column_family` or `query` fields must be declared.
-:::
+<Note>
+**The `column_family` or `where` fields cannot be used together with the `query` field. And either one of the `column_family` or `query` fields must be declared.**
+</Note>

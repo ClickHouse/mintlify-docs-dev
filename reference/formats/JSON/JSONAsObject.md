@@ -4,7 +4,7 @@ description: 'Documentation for the JSONAsObject format'
 input_format: true
 keywords: ['JSONAsObject']
 output_format: false
-slug: /interfaces/formats/JSONAsObject
+old-slug: /interfaces/formats/JSONAsObject
 title: 'JSONAsObject'
 doc_type: 'reference'
 ---

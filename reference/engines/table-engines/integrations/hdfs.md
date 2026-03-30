@@ -2,7 +2,7 @@
 description: This engine provides integration with the Apache Hadoop ecosystem by allowing to manage data on HDFS via ClickHouse. This engine is similar to the File and URL engines, but provides Hadoop-specific features.
 sidebarTitle: HDFS table engine
 sidebar_position: 80
-slug: /engines/table-engines/integrations/hdfs
+old-slug: /engines/table-engines/integrations/hdfs
 title: HDFS table engine
 doc_type: reference
 ---
@@ -67,9 +67,9 @@ SELECT * FROM hdfs_engine_table LIMIT 2
   - `ALTER` and `SELECT...SAMPLE` operations.
   - Indexes.
   - [Zero-copy](../../../operations/storing-data.md#zero-copy) replication is possible, but not recommended.
-  :::note Zero-copy replication is not ready for production
-  Zero-copy replication is disabled by default in ClickHouse version 22.8 and higher.  This feature is not recommended for production use.
-  :::
+  <Note>
+  **Zero-copy replication is not ready for production** — Zero-copy replication is disabled by default in ClickHouse version 22.8 and higher.  This feature is not recommended for production use.
+  </Note>
 
 **Globs in path**
 

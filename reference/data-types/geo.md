@@ -3,7 +3,7 @@ description: 'Documentation for geometric data types in ClickHouse used for repr
   geographical objects and locations'
 sidebarTitle: 'Geo'
 sidebar_position: 54
-slug: /sql-reference/data-types/geo
+old-slug: /sql-reference/data-types/geo
 title: 'Geometric'
 doc_type: 'reference'
 ---

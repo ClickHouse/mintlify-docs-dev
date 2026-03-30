@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Functions for Working with Time Series'
 sidebarTitle: 'TimeSeries'
-slug: /sql-reference/functions/time-series-functions
+old-slug: /sql-reference/functions/time-series-functions
 title: 'Functions for Working with Time Series'
 doc_type: 'reference'
 ---

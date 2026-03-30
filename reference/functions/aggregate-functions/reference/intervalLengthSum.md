@@ -3,7 +3,7 @@ description: 'Calculates the total length of union of all ranges (segments on nu
   axis).'
 sidebarTitle: 'intervalLengthSum'
 sidebar_position: 155
-slug: /sql-reference/aggregate-functions/reference/intervalLengthSum
+old-slug: /sql-reference/aggregate-functions/reference/intervalLengthSum
 title: 'intervalLengthSum'
 doc_type: 'reference'
 ---

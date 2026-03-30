@@ -2,7 +2,7 @@
 description: 'Documentation for the last_value window function'
 sidebarTitle: 'last_value'
 sidebar_position: 4
-slug: /sql-reference/window-functions/last_value
+old-slug: /sql-reference/window-functions/last_value
 title: 'last_value'
 doc_type: 'reference'
 ---

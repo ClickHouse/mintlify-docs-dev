@@ -2,7 +2,7 @@
 description: 'Documentation for Row Policy'
 sidebarTitle: 'ROW POLICY'
 sidebar_position: 41
-slug: /sql-reference/statements/create/row-policy
+old-slug: /sql-reference/statements/create/row-policy
 title: 'CREATE ROW POLICY'
 doc_type: 'reference'
 ---

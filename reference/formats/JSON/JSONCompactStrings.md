@@ -4,7 +4,7 @@ description: 'Documentation for the JSONCompactStrings format'
 input_format: false
 keywords: ['JSONCompactStrings']
 output_format: true
-slug: /interfaces/formats/JSONCompactStrings
+old-slug: /interfaces/formats/JSONCompactStrings
 title: 'JSONCompactStrings'
 doc_type: 'reference'
 ---

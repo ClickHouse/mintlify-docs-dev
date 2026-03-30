@@ -2,7 +2,7 @@
 description: 'Documentation for INSERT INTO Statement'
 sidebarTitle: 'INSERT INTO'
 sidebar_position: 33
-slug: /sql-reference/statements/insert-into
+old-slug: /sql-reference/statements/insert-into
 title: 'INSERT INTO Statement'
 doc_type: 'reference'
 ---

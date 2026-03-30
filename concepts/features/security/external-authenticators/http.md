@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Http'
-slug: /operations/external-authenticators/http
+old-slug: /operations/external-authenticators/http
 title: 'HTTP'
 doc_type: 'reference'
 ---

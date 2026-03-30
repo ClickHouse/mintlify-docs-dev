@@ -2,7 +2,7 @@
 description: Documentation for Set Role
 sidebarTitle: SET ROLE
 sidebar_position: 51
-slug: /sql-reference/statements/set-role
+old-slug: /sql-reference/statements/set-role
 title: SET ROLE statement
 doc_type: reference
 ---

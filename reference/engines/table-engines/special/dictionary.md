@@ -3,7 +3,7 @@ description: 'The `Dictionary` engine displays the dictionary data as a ClickHou
   table.'
 sidebarTitle: 'Dictionary'
 sidebar_position: 20
-slug: /engines/table-engines/special/dictionary
+old-slug: /engines/table-engines/special/dictionary
 title: 'Dictionary table engine'
 doc_type: 'reference'
 ---

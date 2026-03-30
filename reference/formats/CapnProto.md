@@ -4,7 +4,7 @@ description: 'Documentation for Capnproto'
 input_format: true
 keywords: ['CapnProto']
 output_format: true
-slug: /interfaces/formats/CapnProto
+old-slug: /interfaces/formats/CapnProto
 title: 'CapnProto'
 doc_type: 'reference'
 ---

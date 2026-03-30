@@ -1,7 +1,7 @@
 ---
 description: 'Aggregate function that calculates PromQL-like derivative over time series data on the specified grid.'
 sidebar_position: 227
-slug: /sql-reference/aggregate-functions/reference/timeSeriesDerivToGrid
+old-slug: /sql-reference/aggregate-functions/reference/timeSeriesDerivToGrid
 title: 'timeSeriesDerivToGrid'
 doc_type: 'reference'
 ---

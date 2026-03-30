@@ -2,7 +2,7 @@
 description: 'Documentation for Table Functions'
 sidebarTitle: 'Table Functions'
 sidebar_position: 1
-slug: /sql-reference/table-functions/
+old-slug: /sql-reference/table-functions/
 title: 'Table Functions'
 doc_type: 'reference'
 ---

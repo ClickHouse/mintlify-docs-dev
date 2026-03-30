@@ -6,7 +6,7 @@ doc_type: 'guide'
 keywords: ['ClickStack GKE', 'ClickStack EKS', 'ClickStack AKS', 'Kubernetes cloud deployment', 'production deployment']
 ---
 
-This guide covers cloud-specific configurations for deploying ClickStack on managed Kubernetes services. For basic installation, see the [main Helm deployment guide](/docs/use-cases/observability/clickstack/deployment/helm).
+This guide covers cloud-specific configurations for deploying ClickStack on managed Kubernetes services. For basic installation, see the [main Helm deployment guide](/use-cases/observability/clickstack/deployment/helm).
 
 ## Google Kubernetes Engine (GKE)
 
@@ -155,10 +155,10 @@ clickhouse:
 
 For HTTP-only deployments (development/testing), some browsers may show crypto API errors due to secure context requirements. For production deployments, always use HTTPS with proper TLS certificates through ingress configuration.
 
-See [Ingress configuration](/docs/use-cases/observability/clickstack/deployment/helm-configuration#ingress-setup) for TLS setup instructions.
+See [Ingress configuration](/use-cases/observability/clickstack/deployment/helm-configuration#ingress-setup) for TLS setup instructions.
 
 ## Next steps
 
-- [Configuration guide](/docs/use-cases/observability/clickstack/deployment/helm-configuration) - API keys, secrets, and ingress
-- [Deployment options](/docs/use-cases/observability/clickstack/deployment/helm-deployment-options) - External systems configuration
-- [Main Helm guide](/docs/use-cases/observability/clickstack/deployment/helm) - Basic installation
+- [Configuration guide](/use-cases/observability/clickstack/deployment/helm-configuration) - API keys, secrets, and ingress
+- [Deployment options](/use-cases/observability/clickstack/deployment/helm-deployment-options) - External systems configuration
+- [Main Helm guide](/use-cases/observability/clickstack/deployment/helm) - Basic installation

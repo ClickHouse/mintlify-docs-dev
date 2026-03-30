@@ -2,7 +2,7 @@
 description: 'Documentation for CREATE Queries'
 sidebarTitle: 'CREATE'
 sidebar_position: 34
-slug: /sql-reference/statements/create/
+old-slug: /sql-reference/statements/create/
 title: 'CREATE Queries'
 doc_type: 'reference'
 ---

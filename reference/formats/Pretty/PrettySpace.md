@@ -4,7 +4,7 @@ description: 'Documentation for the PrettySpace format'
 input_format: false
 keywords: ['PrettySpace']
 output_format: true
-slug: /interfaces/formats/PrettySpace
+old-slug: /interfaces/formats/PrettySpace
 title: 'PrettySpace'
 doc_type: 'reference'
 ---

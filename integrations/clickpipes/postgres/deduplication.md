@@ -136,7 +136,7 @@ SELECT count(*) FROM posts;
 
 #### ROW policy 
 
-An easy way to hide the redundant `_peerdb_is_deleted = 0` filter is to use [ROW policy.](/docs/operations/access-rights#row-policy-management) Below is an example that creates a row policy to exclude the deleted rows from all queries on the table votes.
+An easy way to hide the redundant `_peerdb_is_deleted = 0` filter is to use [ROW policy.](/operations/access-rights#row-policy-management) Below is an example that creates a row policy to exclude the deleted rows from all queries on the table votes.
 
 ```sql
 -- Apply row policy to all users

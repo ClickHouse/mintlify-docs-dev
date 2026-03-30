@@ -4,7 +4,7 @@ description: 'Documentation for the Parquet format'
 input_format: true
 keywords: ['Parquet']
 output_format: true
-slug: /interfaces/formats/Parquet
+old-slug: /interfaces/formats/Parquet
 title: 'Parquet'
 doc_type: 'reference'
 ---

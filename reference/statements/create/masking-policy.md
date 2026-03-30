@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Masking Policy'
-slug: /sql-reference/statements/create/masking-policy
+old-slug: /sql-reference/statements/create/masking-policy
 title: 'CREATE MASKING POLICY'
 doc_type: 'reference'
 ---

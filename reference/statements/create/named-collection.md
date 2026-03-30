@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for CREATE NAMED COLLECTION'
 sidebarTitle: 'NAMED COLLECTION'
-slug: /sql-reference/statements/create/named-collection
+old-slug: /sql-reference/statements/create/named-collection
 title: 'CREATE NAMED COLLECTION'
 doc_type: 'reference'
 ---

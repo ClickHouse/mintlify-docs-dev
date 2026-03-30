@@ -1,6 +1,6 @@
 ---
 description: 'Similar to quantileExact, this computes the exact [quantile](https://en.wikipedia.org/wiki/Quantile) of a numeric data sequence.'
-slug: /sql-reference/aggregate-functions/reference/quantileExactLow
+old-slug: /sql-reference/aggregate-functions/reference/quantileExactLow
 title: 'quantileExactLow'
 doc_type: 'reference'
 ---

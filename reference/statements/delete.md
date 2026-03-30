@@ -3,7 +3,7 @@ description: 'Lightweight deletes simplify the process of deleting data from the
 keywords: ['delete']
 sidebarTitle: 'DELETE'
 sidebar_position: 36
-slug: /sql-reference/statements/delete
+old-slug: /sql-reference/statements/delete
 title: 'The Lightweight DELETE Statement'
 doc_type: 'reference'
 ---

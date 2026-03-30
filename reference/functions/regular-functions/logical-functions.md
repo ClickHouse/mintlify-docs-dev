@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for logical functions'
 sidebarTitle: 'Logical'
-slug: /sql-reference/functions/logical-functions
+old-slug: /sql-reference/functions/logical-functions
 title: 'Logical functions'
 doc_type: 'reference'
 ---

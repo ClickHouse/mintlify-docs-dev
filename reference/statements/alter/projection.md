@@ -2,7 +2,7 @@
 description: 'Documentation for Manipulating Projections'
 sidebarTitle: 'PROJECTION'
 sidebar_position: 49
-slug: /sql-reference/statements/alter/projection
+old-slug: /sql-reference/statements/alter/projection
 title: 'Projections'
 doc_type: 'reference'
 ---

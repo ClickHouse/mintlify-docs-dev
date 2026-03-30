@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for uniqTheta Functions'
 sidebarTitle: 'uniqTheta'
-slug: /sql-reference/functions/uniqtheta-functions
+old-slug: /sql-reference/functions/uniqtheta-functions
 title: 'uniqTheta Functions'
 doc_type: 'reference'
 ---

@@ -2,7 +2,7 @@
 description: 'Documentation for the nth_value window function'
 sidebarTitle: 'nth_value'
 sidebar_position: 5
-slug: /sql-reference/window-functions/nth_value
+old-slug: /sql-reference/window-functions/nth_value
 title: 'nth_value'
 doc_type: 'reference'
 ---

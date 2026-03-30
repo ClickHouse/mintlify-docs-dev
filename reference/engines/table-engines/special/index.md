@@ -2,7 +2,7 @@
 description: 'Documentation for Special Table Engines'
 sidebarTitle: 'Special'
 sidebar_position: 50
-slug: /engines/table-engines/special/
+old-slug: /engines/table-engines/special/
 title: 'Special table engines'
 doc_type: 'reference'
 ---

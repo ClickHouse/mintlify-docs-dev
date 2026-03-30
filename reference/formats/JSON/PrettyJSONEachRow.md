@@ -4,7 +4,7 @@ description: 'Documentation for the PrettyJSONLines format'
 input_format: false
 keywords: ['PrettyJSONEachRow', 'PrettyJSONLines', 'PrettyNDJSON']
 output_format: true
-slug: /interfaces/formats/PrettyJSONEachRow
+old-slug: /interfaces/formats/PrettyJSONEachRow
 title: 'PrettyJSONEachRow'
 doc_type: 'guide'
 ---

@@ -2,7 +2,7 @@
 description: 'Table engine that allows importing data from a YTsaurus cluster.'
 sidebarTitle: 'YTsaurus table engine'
 sidebar_position: 185
-slug: /engines/table-engines/integrations/ytsaurus
+old-slug: /engines/table-engines/integrations/ytsaurus
 title: 'YTsaurus table engine'
 keywords: ['YTsaurus', 'table engine']
 doc_type: 'reference'

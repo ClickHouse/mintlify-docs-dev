@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/layouts/ip-trie
+old-slug: /sql-reference/statements/create/dictionary/layouts/ip-trie
 title: 'ip_trie dictionary layout'
 description: 'Store a dictionary as a trie for fast IP address prefix lookups.'
 doc_type: 'reference'

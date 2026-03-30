@@ -1,7 +1,7 @@
 ---
 description: 'System table containing a single UInt64 column named `prime` that contains prime numbers in ascending order, starting from 2.'
 keywords: ['system table', 'primes']
-slug: /operations/system-tables/primes
+old-slug: /operations/system-tables/primes
 title: 'system.primes'
 doc_type: 'reference'
 ---

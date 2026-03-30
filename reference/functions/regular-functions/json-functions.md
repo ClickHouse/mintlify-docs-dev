@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Json Functions'
 sidebarTitle: 'JSON'
-slug: /sql-reference/functions/json-functions
+old-slug: /sql-reference/functions/json-functions
 title: 'JSON Functions'
 doc_type: 'reference'
 ---

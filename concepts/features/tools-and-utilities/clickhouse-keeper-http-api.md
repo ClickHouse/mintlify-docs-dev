@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for the ClickHouse Keeper HTTP API and embedded dashboard'
-slug: /operations/utilities/clickhouse-keeper-http-api
+old-slug: /operations/utilities/clickhouse-keeper-http-api
 title: 'Keeper HTTP API and Dashboard'
 doc_type: 'reference'
 ---

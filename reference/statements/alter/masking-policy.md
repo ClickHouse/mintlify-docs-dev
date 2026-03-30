@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for ALTER MASKING POLICY'
-slug: /sql-reference/statements/alter/masking-policy
+old-slug: /sql-reference/statements/alter/masking-policy
 title: 'ALTER MASKING POLICY'
 doc_type: 'reference'
 ---

@@ -2,7 +2,7 @@
 description: 'Overview page for window functions'
 sidebarTitle: 'Window Functions'
 sidebar_position: 1
-slug: /sql-reference/window-functions/
+old-slug: /sql-reference/window-functions/
 title: 'Window Functions'
 doc_type: 'reference'
 ---

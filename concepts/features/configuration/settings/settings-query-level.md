@@ -1,7 +1,7 @@
 ---
 description: 'Settings at the query-level'
 sidebarTitle: 'Query-level Session Settings'
-slug: /operations/settings/query-level
+old-slug: /operations/settings/query-level
 title: 'Query-level Session Settings'
 doc_type: 'reference'
 ---

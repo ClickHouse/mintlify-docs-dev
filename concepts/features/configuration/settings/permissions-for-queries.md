@@ -2,7 +2,7 @@
 description: 'Settings for query permissions.'
 sidebarTitle: 'Permissions for queries'
 sidebar_position: 58
-slug: /operations/settings/permissions-for-queries
+old-slug: /operations/settings/permissions-for-queries
 title: 'Permissions for queries'
 doc_type: 'reference'
 ---
@@ -28,9 +28,9 @@ When set to 1, allows:
 When set to 2, allows the above plus:
 - SET and CREATE TEMPORARY TABLE
 
-  :::tip
+  <Tip>
   Queries like EXISTS, DESCRIBE, EXPLAIN, SHOW PROCESSLIST, etc are equivalent to SELECT, because they just do select from system tables.
-  :::
+  </Tip>
 
 Possible values:
 

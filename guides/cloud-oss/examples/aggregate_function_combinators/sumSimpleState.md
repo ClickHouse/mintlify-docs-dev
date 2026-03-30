@@ -11,7 +11,7 @@ doc_type: 'reference'
 
 The [`SimpleState`](/sql-reference/aggregate-functions/combinators#-simplestate) combinator can be applied to the [`sum`](/sql-reference/aggregate-functions/reference/sum)
 function to return the sum across all input values. It returns the result with 
-type [`SimpleAggregateFunction`](/docs/sql-reference/data-types/simpleaggregatefunction).
+type [`SimpleAggregateFunction`](/sql-reference/data-types/simpleaggregatefunction).
 
 ## Example usage
 

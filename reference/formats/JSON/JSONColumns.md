@@ -4,7 +4,7 @@ description: 'Documentation for the JSONColumns format'
 input_format: true
 keywords: ['JSONColumns']
 output_format: true
-slug: /interfaces/formats/JSONColumns
+old-slug: /interfaces/formats/JSONColumns
 title: 'JSONColumns'
 doc_type: 'reference'
 ---

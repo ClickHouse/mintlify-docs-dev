@@ -3,7 +3,7 @@ description: 'This engine provides a read-only integration with existing Apache 
   tables in Amazon S3, Azure, HDFS and locally stored tables.'
 sidebarTitle: 'Iceberg table engine'
 sidebar_position: 90
-slug: /engines/table-engines/integrations/iceberg
+old-slug: /engines/table-engines/integrations/iceberg
 title: 'Iceberg table engine'
 doc_type: 'reference'
 ---

@@ -2,7 +2,7 @@
 description: 'Computes an approximate quantile of a numeric data sequence using the
   t-digest algorithm.'
 sidebar_position: 179
-slug: /sql-reference/aggregate-functions/reference/quantiletdigestweighted
+old-slug: /sql-reference/aggregate-functions/reference/quantiletdigestweighted
 title: 'quantileTDigestWeighted'
 doc_type: 'reference'
 ---

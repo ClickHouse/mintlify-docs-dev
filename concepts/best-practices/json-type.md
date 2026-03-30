@@ -1,5 +1,5 @@
 ---
-slug: /best-practices/use-json-where-appropriate
+old-slug: /best-practices/use-json-where-appropriate
 sidebar_position: 10
 sidebarTitle: 'Using JSON'
 title: 'Use JSON where appropriate'

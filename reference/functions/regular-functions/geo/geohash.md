@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Geohash'
 sidebarTitle: 'Geohash'
-slug: /sql-reference/functions/geo/geohash
+old-slug: /sql-reference/functions/geo/geohash
 title: 'Functions for Working with Geohash'
 doc_type: 'reference'
 ---

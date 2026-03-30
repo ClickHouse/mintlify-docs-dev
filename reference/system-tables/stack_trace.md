@@ -2,7 +2,7 @@
 description: 'System table which contains stack traces of all server threads. Allows
   developers to introspect the server state.'
 keywords: ['system table', 'stack_trace']
-slug: /operations/system-tables/stack_trace
+old-slug: /operations/system-tables/stack_trace
 title: 'system.stack_trace'
 doc_type: 'reference'
 ---

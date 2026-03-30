@@ -1,7 +1,7 @@
 ---
 description: 'Represents the dictionary of a text index in a MergeTree table.
   It can be used for introspection.'
-slug: /sql-reference/table-functions/mergeTreeTextIndex
+old-slug: /sql-reference/table-functions/mergeTreeTextIndex
 title: 'mergeTreeTextIndex'
 doc_type: 'reference'
 ---

@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Apply patches from lightweight updates'
-slug: /sql-reference/statements/alter/apply-patches
+old-slug: /sql-reference/statements/alter/apply-patches
 title: 'Apply patches from lightweight updates'
 doc_type: 'reference'
 ---

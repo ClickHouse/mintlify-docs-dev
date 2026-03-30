@@ -4,7 +4,7 @@ description: 'Documentation for the Buffers format'
 input_format: true
 keywords: ['Buffers']
 output_format: true
-slug: /interfaces/formats/Buffers
+old-slug: /interfaces/formats/Buffers
 title: 'Buffers'
 doc_type: 'reference'
 ---

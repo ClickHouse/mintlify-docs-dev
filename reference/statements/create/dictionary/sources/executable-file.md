@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/executable-file
+old-slug: /sql-reference/statements/create/dictionary/sources/executable-file
 title: 'Executable File dictionary source'
 description: 'Configure an executable file as a dictionary source in ClickHouse.'
 doc_type: 'reference'

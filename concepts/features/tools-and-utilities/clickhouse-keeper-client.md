@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for the ClickHouse Keeper client utility'
-slug: /operations/utilities/clickhouse-keeper-client
+old-slug: /operations/utilities/clickhouse-keeper-client
 title: 'clickhouse-keeper-client utility'
 doc_type: 'reference'
 ---

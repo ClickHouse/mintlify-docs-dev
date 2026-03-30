@@ -1,7 +1,7 @@
 ---
 description: 'quantiles, quantilesExactExclusive, quantilesExactInclusive, quantilesGK'
 sidebar_position: 177
-slug: /sql-reference/aggregate-functions/reference/quantiles
+old-slug: /sql-reference/aggregate-functions/reference/quantiles
 title: 'quantiles Functions'
 doc_type: 'reference'
 ---

@@ -2,7 +2,7 @@
 description: 'Documentation for PARALLEL WITH Clause'
 sidebarTitle: 'PARALLEL WITH'
 sidebar_position: 53
-slug: /sql-reference/statements/parallel_with
+old-slug: /sql-reference/statements/parallel_with
 title: 'PARALLEL WITH Clause'
 doc_type: 'reference'
 ---

@@ -1,5 +1,5 @@
 ---
-slug: /optimize/asynchronous-inserts
+old-slug: /optimize/asynchronous-inserts
 sidebarTitle: 'Asynchronous Inserts'
 title: 'Asynchronous Inserts (async_insert)'
 description: 'Use asynchronous inserts as an alternative to batching data.'

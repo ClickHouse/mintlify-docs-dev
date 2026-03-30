@@ -2,7 +2,7 @@
 description: 'Documentation for Apply mask of deleted rows'
 sidebarTitle: 'APPLY DELETED MASK'
 sidebar_position: 46
-slug: /sql-reference/statements/alter/apply-deleted-mask
+old-slug: /sql-reference/statements/alter/apply-deleted-mask
 title: 'Apply mask of deleted rows'
 doc_type: 'reference'
 ---

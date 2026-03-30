@@ -2,7 +2,7 @@
 description: 'System table containing a single UInt64 column named `number` that contains
   almost all the natural numbers starting from zero.'
 keywords: ['system table', 'numbers']
-slug: /operations/system-tables/numbers
+old-slug: /operations/system-tables/numbers
 title: 'system.numbers'
 doc_type: 'reference'
 ---

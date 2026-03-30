@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Ssl X509'
-slug: /operations/external-authenticators/ssl-x509
+old-slug: /operations/external-authenticators/ssl-x509
 title: 'SSL X.509 certificate authentication'
 doc_type: 'reference'
 ---

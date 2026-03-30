@@ -285,7 +285,7 @@ DataStore is significantly faster for large datasets:
 
 Some pandas operations may not be supported. Check:
 
-1. Is the operation in the [compatibility list](/docs/chdb/datastore/pandas-compat)?
+1. Is the operation in the [compatibility list](/chdb/datastore/pandas-compat)?
 2. Try converting to pandas first: `ds.to_df().operation()`
 
 ### Issue: Different Results

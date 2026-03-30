@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for FROM Clause'
 sidebarTitle: 'FROM'
-slug: /sql-reference/statements/select/from
+old-slug: /sql-reference/statements/select/from
 title: 'FROM Clause'
 doc_type: 'reference'
 ---

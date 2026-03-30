@@ -1,7 +1,7 @@
 ---
 description: 'Details backup/restore to or from a local disk'
 sidebarTitle: 'Local disk / S3 disk'
-slug: /operations/backup/disk
+old-slug: /operations/backup/disk
 title: 'Backup and Restore in ClickHouse'
 doc_type: 'guide'
 ---

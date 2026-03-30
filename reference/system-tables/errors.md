@@ -2,7 +2,7 @@
 description: 'System table containing error codes with the number of times they have
   been triggered.'
 keywords: ['system table', 'errors']
-slug: /operations/system-tables/errors
+old-slug: /operations/system-tables/errors
 title: 'system.errors'
 doc_type: 'reference'
 ---

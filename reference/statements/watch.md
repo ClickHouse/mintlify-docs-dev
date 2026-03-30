@@ -2,7 +2,7 @@
 description: Documentation for WATCH Statement
 sidebarTitle: WATCH
 sidebar_position: 53
-slug: /sql-reference/statements/watch
+old-slug: /sql-reference/statements/watch
 title: WATCH statement
 doc_type: reference
 ---

@@ -2,7 +2,7 @@
 description: Documentation for Show
 sidebarTitle: SHOW
 sidebar_position: 37
-slug: /sql-reference/statements/show
+old-slug: /sql-reference/statements/show
 title: SHOW statements
 doc_type: reference
 ---

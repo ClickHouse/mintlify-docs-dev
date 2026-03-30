@@ -2,7 +2,7 @@
 description: 'Applies the student t-test to samples from two populations.'
 sidebarTitle: 'studentTTest'
 sidebar_position: 194
-slug: /sql-reference/aggregate-functions/reference/studentttest
+old-slug: /sql-reference/aggregate-functions/reference/studentttest
 title: 'studentTTest'
 doc_type: 'reference'
 ---

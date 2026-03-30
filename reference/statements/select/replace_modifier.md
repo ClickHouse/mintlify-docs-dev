@@ -1,7 +1,7 @@
 ---
 description: 'Documentation describing the APPLY modifier which allows you to invoke some function for each row returned by an outer table expression of a query.'
 sidebarTitle: 'REPLACE'
-slug: /sql-reference/statements/select/replace-modifier
+old-slug: /sql-reference/statements/select/replace-modifier
 title: 'Replace modifier'
 keywords: ['REPLACE', 'modifier']
 doc_type: 'reference'

@@ -2,7 +2,7 @@
 description: 'Evaluates a prometheus query using data from a TimeSeries table.'
 sidebarTitle: 'prometheusQueryRange'
 sidebar_position: 145
-slug: /sql-reference/table-functions/prometheusQueryRange
+old-slug: /sql-reference/table-functions/prometheusQueryRange
 title: 'prometheusQueryRange'
 doc_type: 'reference'
 ---

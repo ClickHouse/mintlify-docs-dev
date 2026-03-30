@@ -1,6 +1,6 @@
 ---
 description: 'Describes how to configure ClickHouse to use LDAP for authentication and role mapping'
-slug: /guides/sre/configuring-ldap
+old-slug: /guides/sre/configuring-ldap
 title: 'Configuring ClickHouse to Use LDAP for Authentication and Role Mapping'
 keywords: ['LDAP configuration', 'LDAP authentication', 'role mapping', 'user management', 'SRE guide']
 doc_type: 'guide'

@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Functions for Searching in Strings'
 sidebarTitle: 'String search'
-slug: /sql-reference/functions/string-search-functions
+old-slug: /sql-reference/functions/string-search-functions
 title: 'Functions for Searching in Strings'
 doc_type: 'reference'
 ---

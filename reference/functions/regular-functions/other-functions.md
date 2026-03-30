@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for the "other" functions category'
 sidebarTitle: 'Other'
-slug: /sql-reference/functions/other-functions
+old-slug: /sql-reference/functions/other-functions
 title: 'Other functions'
 doc_type: 'reference'
 ---
@@ -798,10 +798,10 @@ For example:
 - `countDigits(0.04200) = 4`
 </Note>
 
-:::tip
-You can check decimal overflow for `Decimal64` with `countDigits(x) > 18`,
+<Tip>
+**You can check decimal overflow for `Decimal64` with `countDigits(x) > 18`,**
 although it is slower than [`isDecimalOverflow`](#isDecimalOverflow).
-:::
+</Tip>
 
 
 **Syntax**
@@ -4350,11 +4350,12 @@ FROM
 
 Accumulates the states of an aggregate function for each row of a data block.
 
-:::warning Deprecated
+<Warning>
+**Deprecated**
 The state is reset for each new block of data.
 Due to this error-prone behavior the function has been deprecated, and you are advised to use [window functions](/sql-reference/window-functions) instead.
 You can use setting [`allow_deprecated_error_prone_window_functions`](/operations/settings/settings#allow_deprecated_error_prone_window_functions) to allow usage of this function.
-:::
+</Warning>
 
 
 **Syntax**
@@ -4407,16 +4408,18 @@ The start time is included in the event, while the end time is excluded.
 Columns with a start time and an end time must be of the same data type.
 The function calculates the total number of active (concurrent) events for each event start time.
 
-:::tip Requirements
+<Tip>
+**Requirements**
 Events must be ordered by the start time in ascending order.
 If this requirement is violated the function raises an exception.
 Every data block is processed separately.
 If events from different data blocks overlap then they can not be processed correctly.
-:::
+</Tip>
 
-:::warning Deprecated
+<Warning>
+**Deprecated**
 It is advised to use [window functions](/sql-reference/window-functions) instead.
-:::
+</Warning>
 
 
 **Syntax**
@@ -4460,13 +4463,14 @@ SELECT start, runningConcurrency(start, end) FROM example_table;
 Calculates the difference between two consecutive row values in the data block.
 Returns `0` for the first row, and for subsequent rows the difference to the previous row.
 
-:::warning Deprecated
+<Warning>
+**Deprecated**
 Only returns differences inside the currently processed data block.
 Because of this error-prone behavior, the function is deprecated.
 It is advised to use [window functions](/sql-reference/window-functions) instead.
 
 You can use setting [`allow_deprecated_error_prone_window_functions`](/operations/settings/settings#allow_deprecated_error_prone_window_functions) to allow usage of this function.
-:::
+</Warning>
 
 The result of the function depends on the affected data blocks and the order of data in the block.
 The order of rows during calculation of `runningDifference()` can differ from the order of rows returned to the user.
@@ -4547,13 +4551,14 @@ WHERE diff != 1;
 
 Calculates the difference between consecutive row values in a data block, but unlike [`runningDifference`](#runningDifference), it returns the actual value of the first row instead of `0`.
 
-:::warning Deprecated
+<Warning>
+**Deprecated**
 Only returns differences inside the currently processed data block.
 Because of this error-prone behavior, the function is deprecated.
 It is advised to use [window functions](/sql-reference/window-functions) instead.
 
 You can use setting `allow_deprecated_error_prone_window_functions` to allow usage of this function.
-:::
+</Warning>
 
 
 **Syntax**
@@ -4761,9 +4766,9 @@ However, it can be useful in the following scenarios:
 2. **Debugging**: If you need to examine the state of the system or the execution of a query at a specific point in time, you can use `sleep()` to introduce a pause, allowing you to inspect or collect relevant information.
 3. **Simulation**: In some cases, you may want to simulate real-world scenarios where delays or pauses occur, such as network latency or external system dependencies.
 
-:::warning
-It's important to use the `sleep()` function judiciously and only when necessary, as it can potentially impact the overall performance and responsiveness of your ClickHouse system.
-:::
+<Warning>
+**It's important to use the `sleep()` function judiciously and only when necessary, as it can potentially impact the overall performance and responsiveness of your ClickHouse system.**
+</Warning>
 
 For security reasons, the function can only be executed in the default user profile (with `allow_sleep` enabled).
 
@@ -4814,9 +4819,9 @@ It allows you to simulate delays or introduce pauses in the processing of each r
 2. **Debugging**: If you need to examine the state of the system or the execution of a query for each row processed, you can use `sleepEachRow()` to introduce pauses, allowing you to inspect or collect relevant information.
 3. **Simulation**: In some cases, you may want to simulate real-world scenarios where delays or pauses occur for each row processed, such as when dealing with external systems or network latencies.
 
-:::warning
-Like the `sleep()` function, it's important to use `sleepEachRow()` judiciously and only when necessary, as it can significantly impact the overall performance and responsiveness of your ClickHouse system, especially when dealing with large result sets.
-:::
+<Warning>
+**Like the `sleep()` function, it's important to use `sleepEachRow()` judiciously and only when necessary, as it can significantly impact the overall performance and responsiveness of your ClickHouse system, especially when dealing with large result sets.**
+</Warning>
 
 
 **Syntax**

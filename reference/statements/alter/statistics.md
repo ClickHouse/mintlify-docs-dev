@@ -2,7 +2,7 @@
 description: 'Documentation for Manipulating Column Statistics'
 sidebarTitle: 'STATISTICS'
 sidebar_position: 45
-slug: /sql-reference/statements/alter/statistics
+old-slug: /sql-reference/statements/alter/statistics
 title: 'Manipulating Column Statistics'
 doc_type: 'reference'
 ---

@@ -4,7 +4,7 @@ description: 'Documentation for the LineAsStringWithNames format'
 input_format: true
 keywords: ['LineAsStringWithNames']
 output_format: true
-slug: /interfaces/formats/LineAsStringWithNames
+old-slug: /interfaces/formats/LineAsStringWithNames
 title: 'LineAsStringWithNames'
 doc_type: 'reference'
 ---

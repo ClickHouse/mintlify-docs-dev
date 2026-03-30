@@ -2,7 +2,7 @@
 description: 'Allows ClickHouse to connect to external databases via ODBC.'
 sidebarTitle: 'ODBC table engine'
 sidebar_position: 150
-slug: /engines/table-engines/integrations/odbc
+old-slug: /engines/table-engines/integrations/odbc
 title: 'ODBC table engine'
 doc_type: 'reference'
 ---

@@ -1,7 +1,7 @@
 ---
 description: Documentation for SAMPLE Clause
 sidebarTitle: SAMPLE
-slug: /sql-reference/statements/select/sample
+old-slug: /sql-reference/statements/select/sample
 title: SAMPLE clause
 doc_type: reference
 ---

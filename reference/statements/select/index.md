@@ -2,7 +2,7 @@
 description: 'Documentation for SELECT Query'
 sidebarTitle: 'SELECT'
 sidebar_position: 32
-slug: /sql-reference/statements/select/
+old-slug: /sql-reference/statements/select/
 title: 'SELECT Query'
 doc_type: 'reference'
 ---

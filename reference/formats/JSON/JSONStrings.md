@@ -4,7 +4,7 @@ description: 'Documentation for the JSONStrings format'
 input_format: true
 keywords: ['JSONStrings']
 output_format: true
-slug: /interfaces/formats/JSONStrings
+old-slug: /interfaces/formats/JSONStrings
 title: 'JSONStrings'
 doc_type: 'reference'
 ---

@@ -4,7 +4,7 @@ description: 'Documentation for the Form format'
 input_format: true
 keywords: ['Form']
 output_format: false
-slug: /interfaces/formats/Form
+old-slug: /interfaces/formats/Form
 title: 'Form'
 doc_type: 'reference'
 ---

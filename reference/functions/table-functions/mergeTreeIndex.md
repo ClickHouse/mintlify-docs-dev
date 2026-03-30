@@ -3,7 +3,7 @@ description: 'Represents the contents of index and marks files of MergeTree tabl
   It can be used for introspection.'
 sidebarTitle: 'mergeTreeIndex'
 sidebar_position: 77
-slug: /sql-reference/table-functions/mergeTreeIndex
+old-slug: /sql-reference/table-functions/mergeTreeIndex
 title: 'mergeTreeIndex'
 doc_type: 'reference'
 ---

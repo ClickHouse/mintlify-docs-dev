@@ -1,6 +1,6 @@
 ---
 description: 'Calculates the `arg` and `val` value for a minimum `val` value. If there are multiple rows with equal `val` being the minimum, which of the associated `arg` and `val` is returned is not deterministic.'
-slug: /sql-reference/aggregate-functions/reference/argandmin
+old-slug: /sql-reference/aggregate-functions/reference/argandmin
 title: 'argAndMin'
 doc_type: 'reference'
 ---
@@ -15,9 +15,9 @@ Calculates the `arg` and `val` value for a minimum `val` value.
 If there are multiple rows with equal `val` being the minimum, which of the associated `arg` and `val` is returned is not deterministic.
 Both parts the `arg` and the `min` behave as [aggregate functions](/sql-reference/aggregate-functions/index.md), they both [skip `Null`](/sql-reference/aggregate-functions/index.md#null-processing) during processing and return not `Null` values if not `Null` values are available.
 
-:::note
-The only difference with `argMin` is that `argAndMin` returns both argument and value.
-:::
+<Note>
+**The only difference with `argMin` is that `argAndMin` returns both argument and value.**
+</Note>
 
 **See also**
 

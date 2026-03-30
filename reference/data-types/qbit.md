@@ -3,7 +3,7 @@ description: 'Documentation for the QBit data type in ClickHouse, which allows f
 keywords: ['qbit', 'data type']
 sidebarTitle: 'QBit'
 sidebar_position: 64
-slug: /sql-reference/data-types/qbit
+old-slug: /sql-reference/data-types/qbit
 title: 'QBit Data Type'
 doc_type: 'reference'
 ---

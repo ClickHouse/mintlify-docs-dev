@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Distributed DDL'
-slug: /sql-reference/other/distributed-ddl
+old-slug: /sql-reference/other/distributed-ddl
 title: 'Distributed DDL Queries (ON CLUSTER Clause)'
 doc_type: 'reference'
 ---

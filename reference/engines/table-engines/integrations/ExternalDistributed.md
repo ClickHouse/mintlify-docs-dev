@@ -4,7 +4,7 @@ description: 'The `ExternalDistributed` engine allows to perform `SELECT` querie
   PostgreSQL engines as an argument so sharding is possible.'
 sidebarTitle: 'ExternalDistributed table engine'
 sidebar_position: 55
-slug: /engines/table-engines/integrations/ExternalDistributed
+old-slug: /engines/table-engines/integrations/ExternalDistributed
 title: 'ExternalDistributed table engine'
 doc_type: 'reference'
 ---

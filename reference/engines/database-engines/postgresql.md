@@ -2,7 +2,7 @@
 description: 'Allows to connect to databases on a remote PostgreSQL server.'
 sidebarTitle: 'PostgreSQL'
 sidebar_position: 40
-slug: /engines/database-engines/postgresql
+old-slug: /engines/database-engines/postgresql
 title: 'PostgreSQL'
 doc_type: 'guide'
 ---

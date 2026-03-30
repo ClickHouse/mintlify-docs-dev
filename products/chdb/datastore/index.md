@@ -22,7 +22,7 @@ DataStore uses **lazy evaluation** with **dual-engine execution**:
 2. **Smart Engine Selection**: QueryPlanner routes each segment to optimal engine (chDB for SQL, Pandas for complex ops)
 3. **Intermediate Caching**: Results cached at each step for fast iterative exploration
 
-See [Execution Model](/docs/chdb/datastore/execution-model) for details.
+See [Execution Model](/chdb/datastore/execution-model) for details.
 
 ## One-Line migration from Pandas
 ```python
@@ -49,7 +49,7 @@ DataStore delivers significant performance improvements over pandas, especially 
 | Filter+Sort+Head | 1,537ms | 350ms | **4.40x** |
 | GroupBy agg | 406ms | 141ms | **2.88x** |
 
-*Benchmark on 10M rows. See [benchmark script](https://github.com/chdb-io/chdb/blob/main/refs/benchmark_datastore_vs_pandas.py) and [Performance Guide](/docs/chdb/datastore/guides/pandas-performance) for details.*
+*Benchmark on 10M rows. See [benchmark script](https://github.com/chdb-io/chdb/blob/main/refs/benchmark_datastore_vs_pandas.py) and [Performance Guide](/chdb/datastore/guides/pandas-performance) for details.*
 
 ## When to use DataStore
 **Use DataStore when:**
@@ -91,31 +91,31 @@ DataStore delivers significant performance improvements over pandas, especially 
 
 ## Documentation navigation
 ### Getting Started
-- [Quickstart](/docs/chdb/datastore/quickstart) - Installation and basic usage
-- [Migration from Pandas](/docs/chdb/datastore/guides/migration-from-pandas) - Step-by-step migration guide
+- [Quickstart](/chdb/datastore/quickstart) - Installation and basic usage
+- [Migration from Pandas](/chdb/datastore/guides/migration-from-pandas) - Step-by-step migration guide
 
 ### API reference
-- [Factory Methods](/docs/chdb/datastore/factory-methods) - Creating DataStore from various sources
-- [Query Building](/docs/chdb/datastore/query-building) - SQL-style query operations
-- [Pandas Compatibility](/docs/chdb/datastore/pandas-compat) - All 209 pandas-compatible methods
-- [Accessors](/docs/chdb/datastore/accessors) - String, DateTime, Array, JSON, URL, IP, Geo accessors
-- [Aggregation](/docs/chdb/datastore/aggregation) - Aggregate and window functions
-- [I/O Operations](/docs/chdb/datastore/io) - Reading and writing data
+- [Factory Methods](/chdb/datastore/factory-methods) - Creating DataStore from various sources
+- [Query Building](/chdb/datastore/query-building) - SQL-style query operations
+- [Pandas Compatibility](/chdb/datastore/pandas-compat) - All 209 pandas-compatible methods
+- [Accessors](/chdb/datastore/accessors) - String, DateTime, Array, JSON, URL, IP, Geo accessors
+- [Aggregation](/chdb/datastore/aggregation) - Aggregate and window functions
+- [I/O Operations](/chdb/datastore/io) - Reading and writing data
 
 ### Advanced topics
-- [Execution Model](/docs/chdb/datastore/execution-model) - Lazy evaluation and caching
-- [Class Reference](/docs/chdb/datastore/class-reference) - Complete API reference
+- [Execution Model](/chdb/datastore/execution-model) - Lazy evaluation and caching
+- [Class Reference](/chdb/datastore/class-reference) - Complete API reference
 
 ### Configuration & debugging
-- [Configuration](/docs/chdb/datastore/configuration) - All configuration options
-- [Performance Mode](/docs/chdb/datastore/configuration/performance-mode) - SQL-first mode for maximum throughput
-- [Debugging](/docs/chdb/datastore/debugging) - Explain, profiling, and logging
+- [Configuration](/chdb/datastore/configuration) - All configuration options
+- [Performance Mode](/chdb/datastore/configuration/performance-mode) - SQL-first mode for maximum throughput
+- [Debugging](/chdb/datastore/debugging) - Explain, profiling, and logging
 
 ### Pandas user guides
-- [Pandas Cookbook](/docs/chdb/datastore/guides/pandas-cookbook) - Common patterns
-- [Key Differences](/docs/chdb/datastore/guides/pandas-differences) - Important differences from pandas
-- [Performance Guide](/docs/chdb/datastore/guides/pandas-performance) - Optimization tips
-- [SQL for Pandas Users](/docs/chdb/datastore/guides/pandas-to-sql) - Understanding the SQL behind pandas operations
+- [Pandas Cookbook](/chdb/datastore/guides/pandas-cookbook) - Common patterns
+- [Key Differences](/chdb/datastore/guides/pandas-differences) - Important differences from pandas
+- [Performance Guide](/chdb/datastore/guides/pandas-performance) - Optimization tips
+- [SQL for Pandas Users](/chdb/datastore/guides/pandas-to-sql) - Understanding the SQL behind pandas operations
 
 ## Quick example
 ```python
@@ -143,6 +143,6 @@ df = result.to_df()  # Returns pandas DataFrame
 ```
 
 ## Next steps
-- **New to DataStore?** Start with the [Quickstart Guide](/docs/chdb/datastore/quickstart)
-- **Coming from pandas?** Read the [Migration Guide](/docs/chdb/datastore/guides/migration-from-pandas)
-- **Want to learn more?** Explore the [API Reference](/docs/chdb/datastore/class-reference)
+- **New to DataStore?** Start with the [Quickstart Guide](/chdb/datastore/quickstart)
+- **Coming from pandas?** Read the [Migration Guide](/chdb/datastore/guides/migration-from-pandas)
+- **Want to learn more?** Explore the [API Reference](/chdb/datastore/class-reference)

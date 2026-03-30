@@ -4,7 +4,7 @@ description: 'Documentation for the TabSeparatedRawWithNames format'
 input_format: true
 keywords: ['TabSeparatedRawWithNames', 'TSVRawWithNames', 'RawWithNames']
 output_format: true
-slug: /interfaces/formats/TabSeparatedRawWithNames
+old-slug: /interfaces/formats/TabSeparatedRawWithNames
 title: 'TabSeparatedRawWithNames'
 doc_type: 'reference'
 ---

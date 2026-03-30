@@ -4,7 +4,7 @@ description: 'Documentation for the JSONCompactEachRowWithNames format'
 input_format: true
 keywords: ['JSONCompactEachRowWithNames']
 output_format: true
-slug: /interfaces/formats/JSONCompactEachRowWithNames
+old-slug: /interfaces/formats/JSONCompactEachRowWithNames
 title: 'JSONCompactEachRowWithNames'
 doc_type: 'reference'
 ---

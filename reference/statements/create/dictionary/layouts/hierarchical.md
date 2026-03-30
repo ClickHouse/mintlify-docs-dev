@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/layouts/hierarchical
+old-slug: /sql-reference/statements/create/dictionary/layouts/hierarchical
 title: 'Hierarchical dictionaries'
 description: 'Configure hierarchical dictionaries with parent-child key relationships.'
 doc_type: 'reference'

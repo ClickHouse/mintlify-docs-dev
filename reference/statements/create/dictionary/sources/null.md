@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/null
+old-slug: /sql-reference/statements/create/dictionary/sources/null
 title: 'Null dictionary source'
 description: 'Configure a Null (empty) dictionary source in ClickHouse for testing.'
 doc_type: 'reference'

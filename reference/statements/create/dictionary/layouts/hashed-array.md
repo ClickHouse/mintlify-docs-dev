@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/layouts/hashed-array
+old-slug: /sql-reference/statements/create/dictionary/layouts/hashed-array
 title: 'hashed_array dictionary layout types'
 description: 'Store a dictionary in memory using a hash table with attribute arrays.'
 doc_type: 'reference'

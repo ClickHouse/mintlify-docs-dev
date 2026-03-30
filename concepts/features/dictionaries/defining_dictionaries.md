@@ -2,7 +2,7 @@
 description: 'Overview of external dictionaries functionality in ClickHouse'
 sidebarTitle: 'Defining Dictionaries'
 sidebar_position: 35
-slug: /sql-reference/dictionaries
+old-slug: /sql-reference/dictionaries
 title: 'Dictionaries'
 doc_type: 'reference'
 ---

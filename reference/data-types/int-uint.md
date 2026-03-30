@@ -3,7 +3,7 @@ description: 'Documentation for signed and unsigned integer data types in ClickH
   ranging from 8-bit to 256-bit'
 sidebarTitle: 'Int | UInt'
 sidebar_position: 2
-slug: /sql-reference/data-types/int-uint
+old-slug: /sql-reference/data-types/int-uint
 title: 'Int | UInt Types'
 doc_type: 'reference'
 ---

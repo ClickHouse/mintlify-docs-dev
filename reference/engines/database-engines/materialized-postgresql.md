@@ -2,7 +2,7 @@
 description: 'Creates a ClickHouse database with tables from PostgreSQL database.'
 sidebarTitle: 'MaterializedPostgreSQL'
 sidebar_position: 60
-slug: /engines/database-engines/materialized-postgresql
+old-slug: /engines/database-engines/materialized-postgresql
 title: 'MaterializedPostgreSQL'
 doc_type: 'reference'
 ---

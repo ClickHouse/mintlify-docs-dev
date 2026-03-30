@@ -1,5 +1,5 @@
 ---
-slug: /best-practices/choosing-a-primary-key
+old-slug: /best-practices/choosing-a-primary-key
 sidebar_position: 10
 sidebarTitle: 'Choosing a primary key'
 title: 'Choosing a Primary Key'

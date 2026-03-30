@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for INTO OUTFILE Clause'
 sidebarTitle: 'INTO OUTFILE'
-slug: /sql-reference/statements/select/into-outfile
+old-slug: /sql-reference/statements/select/into-outfile
 title: 'INTO OUTFILE Clause'
 doc_type: 'reference'
 ---

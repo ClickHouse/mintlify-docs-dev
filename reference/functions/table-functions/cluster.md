@@ -3,7 +3,7 @@ description: 'Allows accessing all shards (configured in the `remote_servers` se
   of a cluster without creating a Distributed table.'
 sidebarTitle: 'cluster'
 sidebar_position: 30
-slug: /sql-reference/table-functions/cluster
+old-slug: /sql-reference/table-functions/cluster
 title: 'clusterAllReplicas'
 doc_type: 'reference'
 ---

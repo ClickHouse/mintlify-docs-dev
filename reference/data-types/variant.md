@@ -2,7 +2,7 @@
 description: 'Documentation for the Variant data type in ClickHouse'
 sidebarTitle: 'Variant(T1, T2, ...)'
 sidebar_position: 40
-slug: /sql-reference/data-types/variant
+old-slug: /sql-reference/data-types/variant
 title: 'Variant(T1, T2, ...)'
 doc_type: 'reference'
 ---

@@ -3,7 +3,7 @@ description: 'Calculates the `arg` value for a minimum `val` value. If there are
   rows with equal `val` being the maximum, which of the associated `arg` is returned
   is not deterministic.'
 sidebar_position: 110
-slug: /sql-reference/aggregate-functions/reference/argmin
+old-slug: /sql-reference/aggregate-functions/reference/argmin
 title: 'argMin'
 doc_type: 'reference'
 ---

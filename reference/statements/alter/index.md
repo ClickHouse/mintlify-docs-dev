@@ -2,7 +2,7 @@
 description: 'Documentation for ALTER'
 sidebarTitle: 'ALTER'
 sidebar_position: 35
-slug: /sql-reference/statements/alter/
+old-slug: /sql-reference/statements/alter/
 title: 'ALTER'
 doc_type: 'reference'
 ---

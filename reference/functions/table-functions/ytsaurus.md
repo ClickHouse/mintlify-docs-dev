@@ -2,7 +2,7 @@
 description: 'The table function allows to read data from the YTsaurus cluster.'
 sidebarTitle: 'ytsaurus'
 sidebar_position: 85
-slug: /sql-reference/table-functions/ytsaurus
+old-slug: /sql-reference/table-functions/ytsaurus
 title: 'ytsaurus table function'
 doc_type: 'reference'
 ---

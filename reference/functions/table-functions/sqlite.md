@@ -2,7 +2,7 @@
 description: 'Allows to perform queries on data stored in a SQLite database.'
 sidebarTitle: 'sqlite'
 sidebar_position: 185
-slug: /sql-reference/table-functions/sqlite
+old-slug: /sql-reference/table-functions/sqlite
 title: 'sqlite'
 doc_type: 'reference'
 ---

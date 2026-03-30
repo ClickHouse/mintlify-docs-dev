@@ -3,7 +3,7 @@ description: 'The PostgreSQL engine allows `SELECT` and `INSERT` queries on data
   on a remote PostgreSQL server.'
 sidebarTitle: 'PostgreSQL table engine'
 sidebar_position: 160
-slug: /engines/table-engines/integrations/postgresql
+old-slug: /engines/table-engines/integrations/postgresql
 title: 'PostgreSQL table Engine'
 doc_type: 'guide'
 ---

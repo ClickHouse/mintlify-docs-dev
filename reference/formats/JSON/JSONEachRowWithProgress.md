@@ -4,7 +4,7 @@ description: 'Documentation for the JSONEachRowWithProgress format'
 input_format: false
 keywords: ['JSONEachRowWithProgress']
 output_format: true
-slug: /interfaces/formats/JSONEachRowWithProgress
+old-slug: /interfaces/formats/JSONEachRowWithProgress
 title: 'JSONEachRowWithProgress'
 doc_type: 'reference'
 ---

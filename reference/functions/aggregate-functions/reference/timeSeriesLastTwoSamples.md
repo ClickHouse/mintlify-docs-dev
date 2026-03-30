@@ -1,7 +1,7 @@
 ---
 description: 'Aggregate function for re-sampling time series data for PromQL-like irate and idelta calculation'
 sidebar_position: 224
-slug: /sql-reference/aggregate-functions/reference/timeSeriesLastTwoSamples
+old-slug: /sql-reference/aggregate-functions/reference/timeSeriesLastTwoSamples
 title: 'timeSeriesLastTwoSamples'
 doc_type: 'reference'
 ---

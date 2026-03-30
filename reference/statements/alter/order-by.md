@@ -2,7 +2,7 @@
 description: 'Documentation for Manipulating Key Expressions'
 sidebarTitle: 'ORDER BY'
 sidebar_position: 41
-slug: /sql-reference/statements/alter/order-by
+old-slug: /sql-reference/statements/alter/order-by
 title: 'Manipulating Key Expressions'
 doc_type: 'reference'
 ---

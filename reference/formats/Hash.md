@@ -4,7 +4,7 @@ description: 'Documentation for the Hash format'
 input_format: false
 keywords: ['hash', 'format']
 output_format: true
-slug: /interfaces/formats/Hash
+old-slug: /interfaces/formats/Hash
 title: 'Hash'
 doc_type: 'reference'
 ---

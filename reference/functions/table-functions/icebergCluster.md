@@ -3,7 +3,7 @@ description: 'An extension to the iceberg table function which allows processing
   from Apache Iceberg in parallel from many nodes in a specified cluster.'
 sidebarTitle: 'icebergCluster'
 sidebar_position: 91
-slug: /sql-reference/table-functions/icebergCluster
+old-slug: /sql-reference/table-functions/icebergCluster
 title: 'icebergCluster'
 doc_type: 'reference'
 ---

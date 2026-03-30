@@ -11,7 +11,7 @@ doc_type: 'reference'
 
 The [`SimpleState`](/sql-reference/aggregate-functions/combinators#-simplestate) combinator can be applied to the [`min`](/sql-reference/aggregate-functions/reference/min)
 function to return the minimum value across all input values. It returns the 
-result with type [`SimpleAggregateFunction`](/docs/sql-reference/data-types/simpleaggregatefunction).
+result with type [`SimpleAggregateFunction`](/sql-reference/data-types/simpleaggregatefunction).
 
 ## Example usage
 

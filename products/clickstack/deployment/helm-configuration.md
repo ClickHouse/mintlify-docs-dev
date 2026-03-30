@@ -6,7 +6,7 @@ doc_type: 'guide'
 keywords: ['ClickStack configuration', 'Helm secrets', 'API key setup', 'ingress configuration', 'TLS setup']
 ---
 
-This guide covers configuration options for ClickStack Helm deployments. For basic installation, see the [main Helm deployment guide](/docs/use-cases/observability/clickstack/deployment/helm).
+This guide covers configuration options for ClickStack Helm deployments. For basic installation, see the [main Helm deployment guide](/use-cases/observability/clickstack/deployment/helm).
 
 ## API key setup
 
@@ -282,6 +282,6 @@ helm install my-clickstack clickstack/clickstack -f values.yaml
 
 ## Next steps
 
-- [Deployment options](/docs/use-cases/observability/clickstack/deployment/helm-deployment-options) - External systems and minimal deployments
-- [Cloud deployments](/docs/use-cases/observability/clickstack/deployment/helm-cloud) - GKE, EKS, and AKS configurations
-- [Main Helm guide](/docs/use-cases/observability/clickstack/deployment/helm) - Basic installation
+- [Deployment options](/use-cases/observability/clickstack/deployment/helm-deployment-options) - External systems and minimal deployments
+- [Cloud deployments](/use-cases/observability/clickstack/deployment/helm-cloud) - GKE, EKS, and AKS configurations
+- [Main Helm guide](/use-cases/observability/clickstack/deployment/helm) - Basic installation

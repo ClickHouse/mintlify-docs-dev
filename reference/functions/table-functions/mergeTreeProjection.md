@@ -3,7 +3,7 @@ description: 'Represents the contents of some projection in MergeTree tables.
   It can be used for introspection.'
 sidebarTitle: 'mergeTreeProjection'
 sidebar_position: 77
-slug: /sql-reference/table-functions/mergeTreeProjection
+old-slug: /sql-reference/table-functions/mergeTreeProjection
 title: 'mergeTreeProjection'
 doc_type: 'reference'
 ---

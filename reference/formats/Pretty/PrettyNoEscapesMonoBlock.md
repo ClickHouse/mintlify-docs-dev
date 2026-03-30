@@ -4,7 +4,7 @@ description: 'Documentation for the PrettyNoEscapesMonoBlock format'
 input_format: false
 keywords: ['PrettyNoEscapesMonoBlock']
 output_format: true
-slug: /interfaces/formats/PrettyNoEscapesMonoBlock
+old-slug: /interfaces/formats/PrettyNoEscapesMonoBlock
 title: 'PrettyNoEscapesMonoBlock'
 doc_type: 'reference'
 ---

@@ -3,7 +3,7 @@ description: 'This engine allows processing of application log files as a stream
   records.'
 sidebarTitle: 'FileLog'
 sidebar_position: 160
-slug: /engines/table-engines/special/filelog
+old-slug: /engines/table-engines/special/filelog
 title: 'FileLog table engine'
 doc_type: 'reference'
 ---

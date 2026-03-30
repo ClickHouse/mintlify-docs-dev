@@ -1,6 +1,6 @@
 ---
 description: 'Overview of external authentication methods supported by ClickHouse'
-slug: /operations/external-authenticators/
+old-slug: /operations/external-authenticators/
 title: 'External User Authenticators and Directories'
 doc_type: 'reference'
 ---

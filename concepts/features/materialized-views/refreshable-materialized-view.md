@@ -1,5 +1,5 @@
 ---
-slug: /materialized-view/refreshable-materialized-view
+old-slug: /materialized-view/refreshable-materialized-view
 title: 'Refreshable materialized view'
 description: 'How to use materialized views to speed up queries'
 keywords: ['refreshable materialized view', 'refresh', 'materialized views', 'speed up queries', 'query optimization']

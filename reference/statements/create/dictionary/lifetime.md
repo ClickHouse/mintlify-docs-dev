@@ -1,6 +1,6 @@
 ---
 description: 'Dictionary LIFETIME configuration for automatic refresh'
-slug: /sql-reference/statements/create/dictionary/lifetime
+old-slug: /sql-reference/statements/create/dictionary/lifetime
 title: 'Refreshing dictionary data using LIFETIME'
 doc_type: 'reference'
 ---

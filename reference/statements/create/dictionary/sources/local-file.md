@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/local-file
+old-slug: /sql-reference/statements/create/dictionary/sources/local-file
 title: 'Local File dictionary source'
 description: 'Configure a local file as a dictionary source in ClickHouse.'
 doc_type: 'reference'

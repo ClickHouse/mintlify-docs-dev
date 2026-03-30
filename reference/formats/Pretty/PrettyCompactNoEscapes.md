@@ -4,7 +4,7 @@ description: 'Documentation for the PrettyCompactNoEscapes format'
 input_format: false
 keywords: ['PrettyCompactNoEscapes']
 output_format: true
-slug: /interfaces/formats/PrettyCompactNoEscapes
+old-slug: /interfaces/formats/PrettyCompactNoEscapes
 title: 'PrettyCompactNoEscapes'
 doc_type: 'reference'
 ---

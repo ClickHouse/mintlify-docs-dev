@@ -3,7 +3,7 @@ description: 'Documentation for the Enum data type in ClickHouse, which represen
   a set of named constant values'
 sidebarTitle: 'Enum'
 sidebar_position: 20
-slug: /sql-reference/data-types/enum
+old-slug: /sql-reference/data-types/enum
 title: 'Enum'
 doc_type: 'reference'
 ---

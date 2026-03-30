@@ -4,7 +4,7 @@ description: 'Documentation for the JSONAsString format'
 input_format: true
 keywords: ['JSONAsString']
 output_format: false
-slug: /interfaces/formats/JSONAsString
+old-slug: /interfaces/formats/JSONAsString
 title: 'JSONAsString'
 doc_type: 'reference'
 ---

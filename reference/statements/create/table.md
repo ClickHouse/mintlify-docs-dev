@@ -3,7 +3,7 @@ description: 'Documentation for Table'
 keywords: ['compression', 'codec', 'schema', 'DDL']
 sidebarTitle: 'TABLE'
 sidebar_position: 36
-slug: /sql-reference/statements/create/table
+old-slug: /sql-reference/statements/create/table
 title: 'CREATE TABLE'
 doc_type: 'reference'
 ---

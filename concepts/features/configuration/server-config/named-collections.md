@@ -2,7 +2,7 @@
 description: 'Documentation for Named collections'
 sidebarTitle: 'Named collections'
 sidebar_position: 69
-slug: /operations/named-collections
+old-slug: /operations/named-collections
 title: 'Named collections'
 doc_type: 'reference'
 ---

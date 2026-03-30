@@ -4,7 +4,7 @@ description: 'Documentation for the JSONColumnsWithMetadata format'
 input_format: true
 keywords: ['JSONColumnsWithMetadata']
 output_format: true
-slug: /interfaces/formats/JSONColumnsWithMetadata
+old-slug: /interfaces/formats/JSONColumnsWithMetadata
 title: 'JSONColumnsWithMetadata'
 doc_type: 'reference'
 ---

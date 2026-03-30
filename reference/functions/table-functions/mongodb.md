@@ -3,7 +3,7 @@ description: 'Allows `SELECT` queries to be performed on data that is stored on 
   remote MongoDB server.'
 sidebarTitle: 'mongodb'
 sidebar_position: 135
-slug: /sql-reference/table-functions/mongodb
+old-slug: /sql-reference/table-functions/mongodb
 title: 'mongodb'
 doc_type: 'reference'
 ---

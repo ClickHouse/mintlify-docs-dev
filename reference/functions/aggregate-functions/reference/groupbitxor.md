@@ -1,7 +1,7 @@
 ---
 description: 'Applies bit-wise `XOR` for series of numbers.'
 sidebar_position: 153
-slug: /sql-reference/aggregate-functions/reference/groupbitxor
+old-slug: /sql-reference/aggregate-functions/reference/groupbitxor
 title: 'groupBitXor'
 doc_type: 'reference'
 ---

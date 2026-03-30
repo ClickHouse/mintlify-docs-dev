@@ -3,7 +3,7 @@ description: 'Documentation for floating-point data types in ClickHouse: Float32
   Float64, and BFloat16'
 sidebarTitle: 'Float32 | Float64 | BFloat16'
 sidebar_position: 4
-slug: /sql-reference/data-types/float
+old-slug: /sql-reference/data-types/float
 title: 'Float32 | Float64 | BFloat16 Types'
 doc_type: 'reference'
 ---

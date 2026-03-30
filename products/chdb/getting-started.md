@@ -365,14 +365,14 @@ chdb.query(
 9                    RC Cars OFF Road          2.051021
 ```
 
-You can also read more about querying Pandas DataFrames in the [Querying Pandas developer guide](/docs/chdb/guides/querying-pandas).
+You can also read more about querying Pandas DataFrames in the [Querying Pandas developer guide](/chdb/guides/querying-pandas).
 
 ## Next steps
 
 Hopefully, this guide has given you a good overview of chDB.
 To learn more about how to use it, see the following developer guides:
 
-* [Querying Pandas DataFrames](/docs/chdb/guides/querying-pandas)
-* [Querying Apache Arrow](/docs/chdb/guides/querying-apache-arrow)
-* [Using chDB in JupySQL](/docs/chdb/guides/jupysql)
-* [Using chDB with an existing clickhouse-local database](/docs/chdb/guides/clickhouse-local)
+* [Querying Pandas DataFrames](/chdb/guides/querying-pandas)
+* [Querying Apache Arrow](/chdb/guides/querying-apache-arrow)
+* [Using chDB in JupySQL](/chdb/guides/jupysql)
+* [Using chDB with an existing clickhouse-local database](/chdb/guides/clickhouse-local)

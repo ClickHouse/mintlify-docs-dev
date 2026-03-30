@@ -1,5 +1,5 @@
 ---
-slug: /operations/access-rights
+old-slug: /operations/access-rights
 title: 'Access Control and Account Management'
 keywords: ['ClickHouse Cloud', 'Access Control', 'User Management', 'RBAC', 'Security']
 description: 'Describes access control and account management in ClickHouse Cloud'

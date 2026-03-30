@@ -2,7 +2,7 @@
 description: 'Documentation for the Set special data type used in IN expressions'
 sidebarTitle: 'Set'
 sidebar_position: 59
-slug: /sql-reference/data-types/special-data-types/set
+old-slug: /sql-reference/data-types/special-data-types/set
 title: 'Set'
 doc_type: 'reference'
 ---

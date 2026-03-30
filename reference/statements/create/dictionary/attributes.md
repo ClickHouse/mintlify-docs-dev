@@ -1,6 +1,6 @@
 ---
 description: 'Dictionary key and attribute configuration'
-slug: /sql-reference/statements/create/dictionary/attributes
+old-slug: /sql-reference/statements/create/dictionary/attributes
 title: 'Dictionary attributes'
 doc_type: 'reference'
 ---
@@ -60,9 +60,9 @@ ClickHouse supports the following types of keys:
 
 An xml structure can contain either `<id>` or `<key>`. DDL-query must contain single `PRIMARY KEY`.
 
-:::note
-You must not describe key as an attribute.
-:::
+<Note>
+**You must not describe key as an attribute.**
+</Note>
 
 ### Numeric Key
 
@@ -97,9 +97,9 @@ PRIMARY KEY Id
 
 The key can be a `tuple` from any types of fields. The [layout](./layouts/) in this case must be `complex_key_hashed` or `complex_key_cache`.
 
-:::tip
-A composite key can consist of a single element. This makes it possible to use a string as the key, for instance.
-:::
+<Tip>
+**A composite key can consist of a single element. This makes it possible to use a string as the key, for instance.**
+</Tip>
 
 The key structure is set in the element `<key>`. Key fields are specified in the same format as the dictionary [attributes](#attributes). Example:
 

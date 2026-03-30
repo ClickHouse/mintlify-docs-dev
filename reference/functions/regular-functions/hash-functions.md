@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Hash Functions'
 sidebarTitle: 'Hash'
-slug: /sql-reference/functions/hash-functions
+old-slug: /sql-reference/functions/hash-functions
 title: 'Hash Functions'
 doc_type: 'reference'
 ---
@@ -473,11 +473,11 @@ This is a fast non-cryptographic hash function.
 It uses the CityHash algorithm for string parameters and implementation-specific fast non-cryptographic hash function for parameters with other data types.
 The function uses the CityHash combinator to get the final results.
 
-:::info
-Google changed the algorithm of CityHash after it was added to ClickHouse.
+<Info>
+**Google changed the algorithm of CityHash after it was added to ClickHouse.**
 In other words, ClickHouse's cityHash64 and Google's upstream CityHash now produce different results.
 ClickHouse cityHash64 corresponds to CityHash v1.0.2.
-:::
+</Info>
 
 <Note>
 The calculated hash values may be equal for the same input values of different argument types.
@@ -547,9 +547,9 @@ SELECT groupBitXor(cityHash64(*)) FROM users;
 
 Produces a 64-bit [FarmHash](https://github.com/google/farmhash) value using the `Fingerprint64` method.
 
-:::tip
-`farmFingerprint64` is preferred for a stable and portable value over [`farmHash64`](#farmHash64).
-:::
+<Tip>
+**`farmFingerprint64` is preferred for a stable and portable value over [`farmHash64`](#farmHash64).**
+</Tip>
 
 <Note>
 The calculated hash values may be equal for the same input values of different argument types.
@@ -593,9 +593,9 @@ SELECT farmFingerprint64(array('e','x','a'), 'mple', 10, toDateTime('2019-06-15 
 
 Produces a 64-bit [FarmHash](https://github.com/google/farmhash) using the `Hash64` method.
 
-:::tip
-[`farmFingerprint64`](#farmFingerprint64) is preferred for a stable and portable value.
-:::
+<Tip>
+**[`farmFingerprint64`](#farmFingerprint64) is preferred for a stable and portable value.**
+</Tip>
 
 <Note>
 The calculated hash values may be equal for the same input values of different argument types.
@@ -728,10 +728,10 @@ Calculates a "HiveHash" from a string.
 This is just [`JavaHash`](#javaHash) with zeroed out sign bits.
 This function is used in [Apache Hive](https://en.wikipedia.org/wiki/Apache_Hive) for versions before 3.0.
 
-:::caution
-This hash function is unperformant.
+<Warning>
+**This hash function is unperformant.**
 Use it only when this algorithm is already used in another system and you need to calculate the same result.
-:::
+</Warning>
 
 
 **Syntax**
@@ -886,10 +886,10 @@ Calculates JavaHash from:
 - [Integer](https://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/478a4add975b/src/share/classes/java/lang/Integer.java#l959),
 - [Long](https://hg.openjdk.java.net/jdk8u/jdk8u/jdk/file/478a4add975b/src/share/classes/java/lang/Long.java#l1060).
 
-:::caution
-This hash function is unperformant.
+<Warning>
+**This hash function is unperformant.**
 Use it only when this algorithm is already in use in another system and you need to calculate the same result.
-:::
+</Warning>
 
 <Note>
 Java only supports calculating the hash of signed integers,
@@ -1884,11 +1884,12 @@ SELECT ngramSimHashUTF8('ClickHouse') AS Hash;
 
 Like [`sipHash64`](#sipHash64) but produces a 128-bit hash value, i.e. the final xor-folding state is done up to 128 bits.
 
-:::tip use sipHash128Reference for new projects
+<Tip>
+**use sipHash128Reference for new projects**
 This 128-bit variant differs from the reference implementation and is weaker.
 This version exists because, when it was written, there was no official 128-bit extension for SipHash.
 New projects are advised to use [`sipHash128Reference`](#sipHash128Reference).
-:::
+</Tip>
 
 
 **Syntax**
@@ -1927,11 +1928,12 @@ SELECT hex(sipHash128('foo', '\x01', 3));
 
 Same as [`sipHash128`](#sipHash128) but additionally takes an explicit key argument instead of using a fixed key.
 
-:::tip use sipHash128ReferenceKeyed for new projects
+<Tip>
+**use sipHash128ReferenceKeyed for new projects**
 This 128-bit variant differs from the reference implementation and it's weaker.
 This version exists because, when it was written, there was no official 128-bit extension for SipHash.
 New projects should probably use [`sipHash128ReferenceKeyed`](#sipHash128ReferenceKeyed).
-:::
+</Tip>
 
 
 **Syntax**

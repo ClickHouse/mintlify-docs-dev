@@ -2,7 +2,7 @@
 description: 'Documentation for Manipulating Data Skipping Indices'
 sidebarTitle: 'INDEX'
 sidebar_position: 42
-slug: /sql-reference/statements/alter/skipping-index
+old-slug: /sql-reference/statements/alter/skipping-index
 title: 'Manipulating Data Skipping Indices'
 toc_hidden_folder: true
 doc_type: 'reference'

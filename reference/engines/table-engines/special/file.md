@@ -3,7 +3,7 @@ description: 'The File table engine keeps the data in a file in one of the suppo
   file formats (`TabSeparated`, `Native`, etc.).'
 sidebarTitle: 'File'
 sidebar_position: 40
-slug: /engines/table-engines/special/file
+old-slug: /engines/table-engines/special/file
 title: 'File table engine'
 doc_type: 'reference'
 ---

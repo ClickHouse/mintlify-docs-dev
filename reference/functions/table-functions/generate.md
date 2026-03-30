@@ -3,7 +3,7 @@ description: 'Generates random data with a given schema. Allows populating test 
   with that data. Not all types are supported.'
 sidebarTitle: 'generateRandom'
 sidebar_position: 75
-slug: /sql-reference/table-functions/generate
+old-slug: /sql-reference/table-functions/generate
 title: 'generateRandom'
 doc_type: 'reference'
 ---

@@ -4,7 +4,7 @@ description: 'Documentation for the LineAsString format'
 input_format: true
 keywords: ['LineAsString']
 output_format: true
-slug: /interfaces/formats/LineAsString
+old-slug: /interfaces/formats/LineAsString
 title: 'LineAsString'
 doc_type: 'reference'
 ---

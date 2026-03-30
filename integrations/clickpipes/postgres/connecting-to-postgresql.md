@@ -109,9 +109,9 @@ Check the ClickHouse [Cloud Endpoints API](/cloud/get-started/query-endpoints) f
   |user     |username to connect to postgres|clickhouse_user     |
   |password |password to connect to postgres|ClickHouse_123       |
 
-  :::note
+  <Note>
   View the [PostgreSQL table engine](/engines/table-engines/integrations/postgresql) doc page for a complete list of parameters.
-  :::
+  </Note>
 
 ### 3 Test the Integration 
 

@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for clickhouse_backupview'
-slug: /operations/utilities/backupview
+old-slug: /operations/utilities/backupview
 title: 'clickhouse_backupview'
 doc_type: 'reference'
 ---

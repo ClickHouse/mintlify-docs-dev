@@ -4,7 +4,7 @@ description: 'Documentation for the TemplateIgnoreSpaces format'
 input_format: true
 keywords: ['TemplateIgnoreSpaces']
 output_format: false
-slug: /interfaces/formats/TemplateIgnoreSpaces
+old-slug: /interfaces/formats/TemplateIgnoreSpaces
 title: 'TemplateIgnoreSpaces'
 doc_type: 'reference'
 ---

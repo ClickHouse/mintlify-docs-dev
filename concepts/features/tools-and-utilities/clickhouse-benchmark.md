@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for clickhouse-benchmark '
-slug: /operations/utilities/clickhouse-benchmark
+old-slug: /operations/utilities/clickhouse-benchmark
 title: 'clickhouse-benchmark'
 doc_type: 'reference'
 ---

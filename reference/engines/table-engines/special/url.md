@@ -3,7 +3,7 @@ description: 'Queries data to/from a remote HTTP/HTTPS server. This engine is si
   to the File engine.'
 sidebarTitle: 'URL'
 sidebar_position: 80
-slug: /engines/table-engines/special/url
+old-slug: /engines/table-engines/special/url
 title: 'URL table engine'
 doc_type: 'reference'
 ---

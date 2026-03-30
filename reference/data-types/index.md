@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Data Types in ClickHouse'
-slug: /sql-reference/data-types/
+old-slug: /sql-reference/data-types/
 title: 'Data Types in ClickHouse'
 doc_type: 'reference'
 ---

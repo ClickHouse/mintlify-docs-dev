@@ -2,7 +2,7 @@
 description: 'Documentation for GRANT Statement'
 sidebarTitle: 'GRANT'
 sidebar_position: 38
-slug: /sql-reference/statements/grant
+old-slug: /sql-reference/statements/grant
 title: 'GRANT Statement'
 doc_type: 'reference'
 ---

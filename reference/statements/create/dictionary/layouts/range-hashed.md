@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/layouts/range-hashed
+old-slug: /sql-reference/statements/create/dictionary/layouts/range-hashed
 title: 'range_hashed dictionary layout types'
 description: 'Store a dictionary in memory using a hash table with ordered date/time ranges.'
 doc_type: 'reference'
@@ -24,9 +24,9 @@ Example: The table contains discounts for each advertiser in the format:
 
 To use a sample for date ranges, define the `range_min` and `range_max` elements in the [structure](../attributes.md#composite-key). These elements must contain elements `name` and `type` (if `type` is not specified, the default type will be used - Date). `type` can be any numeric type (Date / DateTime / UInt64 / Int32 / others).
 
-:::note
-Values of `range_min` and `range_max` should fit in `Int64` type.
-:::
+<Note>
+**Values of `range_min` and `range_max` should fit in `Int64` type.**
+</Note>
 
 Example:
 

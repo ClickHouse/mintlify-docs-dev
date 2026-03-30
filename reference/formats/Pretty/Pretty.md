@@ -4,7 +4,7 @@ description: 'Documentation for the Pretty format'
 input_format: false
 keywords: ['Pretty']
 output_format: true
-slug: /interfaces/formats/Pretty
+old-slug: /interfaces/formats/Pretty
 title: 'Pretty'
 doc_type: 'reference'
 ---

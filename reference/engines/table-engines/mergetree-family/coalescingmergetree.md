@@ -3,7 +3,7 @@ description: 'CoalescingMergeTree inherits from the MergeTree engine. Its key fe
   is the ability to automatically store last non-null value of each column during part merges.'
 sidebarTitle: 'CoalescingMergeTree'
 sidebar_position: 50
-slug: /engines/table-engines/mergetree-family/coalescingmergetree
+old-slug: /engines/table-engines/mergetree-family/coalescingmergetree
 title: 'CoalescingMergeTree table engine'
 keywords: ['CoalescingMergeTree']
 show_related_blogs: true

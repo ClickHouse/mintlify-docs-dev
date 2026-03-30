@@ -3,7 +3,7 @@ description: 'caching mechanism that allows for caching of
 data in in-process memory rather than relying on the OS page cache.'
 sidebarTitle: 'Userspace page cache'
 sidebar_position: 65
-slug: /operations/userspace-page-cache
+old-slug: /operations/userspace-page-cache
 title: 'Userspace page cache'
 doc_type: 'reference'
 ---
@@ -13,7 +13,7 @@ doc_type: 'reference'
 > The userspace page cache is a new caching mechanism that allows for caching of 
 data in in-process memory rather than relying on the OS page cache.
 
-ClickHouse already offers the [Filesystem cache](/docs/operations/storing-data) 
+ClickHouse already offers the [Filesystem cache](/operations/storing-data) 
 as a way of caching on top of remote object storage such as Amazon S3, Google 
 Cloud Storage (GCS) or Azure Blob Storage. The userspace page cache is designed 
 to speed up access to remote data when the normal OS caching isn't doing a good 
@@ -58,7 +58,7 @@ SET use_page_cache_for_disks_without_file_cache=1;
 |----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|
 | `use_page_cache_for_disks_without_file_cache`            | Use userspace page cache for remote disks that don't have filesystem cache enabled.                                                                                                                                                                                                                                    | `0`         |
 | `use_page_cache_with_distributed_cache`                  | Use userspace page cache when distributed cache is used.                                                                                                                                                                                                                                                               | `0`         |
-| `read_from_page_cache_if_exists_otherwise_bypass_cache`  | Use userspace page cache in passive mode, similar to [`read_from_filesystem_cache_if_exists_otherwise_bypass_cache`](/docs/operations/settings/settings#read_from_filesystem_cache_if_exists_otherwise_bypass_cache).                                                                                                  | `0`         |
+| `read_from_page_cache_if_exists_otherwise_bypass_cache`  | Use userspace page cache in passive mode, similar to [`read_from_filesystem_cache_if_exists_otherwise_bypass_cache`](/operations/settings/settings#read_from_filesystem_cache_if_exists_otherwise_bypass_cache).                                                                                                  | `0`         |
 | `page_cache_inject_eviction`                             | Userspace page cache will sometimes invalidate some pages at random. Intended for testing.                                                                                                                                                                                                                             | `0`         |
 | `page_cache_block_size`                                  | Size of file chunks to store in the userspace page cache, in bytes. All reads that go through the cache will be rounded up to a multiple of this size.                                                                                                                                                                 | `1048576`   |
 | `page_cache_history_window_ms`                           | Delay before freed memory can be used by userspace page cache.                                                                                                                                                                                                                                                         | `1000`      |
@@ -71,5 +71,5 @@ SET use_page_cache_for_disks_without_file_cache=1;
 | `page_cache_shards`                                      | Stripe userspace page cache over this many shards to reduce mutex contention. Experimental, not likely to improve performance.                                                                                                                                                                                         | `4`         |
 
 ## Related content 
-- [Filesystem cache](/docs/operations/storing-data)
+- [Filesystem cache](/operations/storing-data)
 - [ClickHouse v25.3 Release Webinar](https://www.youtube.com/live/iCKEzp0_Z2Q?feature=shared&t=1320)

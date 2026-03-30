@@ -1,7 +1,7 @@
 ---
 description: 'The result is equal to the square root of varPop.'
 sidebar_position: 188
-slug: /sql-reference/aggregate-functions/reference/stddevpop
+old-slug: /sql-reference/aggregate-functions/reference/stddevpop
 title: 'stddevPop'
 doc_type: 'reference'
 ---

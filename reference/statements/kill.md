@@ -2,7 +2,7 @@
 description: 'Documentation for Kill'
 sidebarTitle: 'KILL'
 sidebar_position: 46
-slug: /sql-reference/statements/kill
+old-slug: /sql-reference/statements/kill
 title: 'KILL Statements'
 doc_type: 'reference'
 ---

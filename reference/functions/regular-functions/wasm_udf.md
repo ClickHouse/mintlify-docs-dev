@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for WebAssembly User Defined Functions'
-slug: /sql-reference/functions/wasm_udf
+old-slug: /sql-reference/functions/wasm_udf
 title: 'WebAssembly User Defined Functions'
 doc_type: 'guide'
 ---

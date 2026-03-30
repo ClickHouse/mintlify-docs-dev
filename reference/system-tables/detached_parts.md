@@ -2,7 +2,7 @@
 description: 'System table containing information about detached parts of MergeTree
   tables'
 keywords: ['system table', 'detached_parts']
-slug: /operations/system-tables/detached_parts
+old-slug: /operations/system-tables/detached_parts
 title: 'system.detached_parts'
 doc_type: 'reference'
 ---

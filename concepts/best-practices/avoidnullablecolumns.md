@@ -1,5 +1,5 @@
 ---
-slug: /optimize/avoid-nullable-columns
+old-slug: /optimize/avoid-nullable-columns
 sidebarTitle: 'Avoid nullable Columns'
 title: 'Avoid nullable Columns'
 description: 'Why Nullable Columns should be avoided in ClickHouse'

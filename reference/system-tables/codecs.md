@@ -2,7 +2,7 @@
 description: 'System table containing information about codecs
   in queue.'
 keywords: ['system table', 'codecs', 'compression']
-slug: /operations/system-tables/codecs
+old-slug: /operations/system-tables/codecs
 title: 'system.codecs'
 doc_type: 'reference'
 ---

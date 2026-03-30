@@ -2,7 +2,7 @@
 description: 'Calculations the AND of a bitmap column, return cardinality of type
   UInt64, if add suffix -State, then return a bitmap object.'
 sidebar_position: 149
-slug: /sql-reference/aggregate-functions/reference/groupbitmapand
+old-slug: /sql-reference/aggregate-functions/reference/groupbitmapand
 title: 'groupBitmapAnd'
 doc_type: 'reference'
 ---

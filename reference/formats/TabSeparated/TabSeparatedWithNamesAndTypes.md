@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for the TabSeparatedWithNamesAndTypes format'
 keywords: ['TabSeparatedWithNamesAndTypes']
-slug: /interfaces/formats/TabSeparatedWithNamesAndTypes
+old-slug: /interfaces/formats/TabSeparatedWithNamesAndTypes
 title: 'TabSeparatedWithNamesAndTypes'
 doc_type: 'reference'
 ---

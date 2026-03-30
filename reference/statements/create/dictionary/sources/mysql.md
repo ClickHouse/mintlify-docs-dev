@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/mysql
+old-slug: /sql-reference/statements/create/dictionary/sources/mysql
 title: 'MySQL dictionary source'
 description: 'Configure MySQL as a dictionary source in ClickHouse.'
 doc_type: 'reference'
@@ -75,13 +75,13 @@ Setting fields:
 | `fail_on_connection_loss` | Controls behavior of the server on connection loss. If `true`, an exception is thrown immediately if the connection between client and server was lost. If `false`, the ClickHouse server retries to execute the query three times before throwing an exception. Note that retrying leads to increased response times. Default value: `false`. |
 | `query` | The custom query. Optional. |
 
-:::note
-The `table` or `where` fields cannot be used together with the `query` field. And either one of the `table` or `query` fields must be declared.
-:::
+<Note>
+**The `table` or `where` fields cannot be used together with the `query` field. And either one of the `table` or `query` fields must be declared.**
+</Note>
 
-:::note
-There is no explicit parameter `secure`. When establishing an SSL-connection security is mandatory.
-:::
+<Note>
+**There is no explicit parameter `secure`. When establishing an SSL-connection security is mandatory.**
+</Note>
 
 MySQL can be connected to on a local host via sockets. To do this, set `host` and `socket`.
 

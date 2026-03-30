@@ -2,7 +2,7 @@
 description: 'Documentation for RENAME Statement'
 sidebarTitle: 'RENAME'
 sidebar_position: 48
-slug: /sql-reference/statements/rename
+old-slug: /sql-reference/statements/rename
 title: 'RENAME Statement'
 doc_type: 'reference'
 ---

@@ -2,7 +2,7 @@
 description: 'This engine allows integrating ClickHouse with Redis.'
 sidebarTitle: 'Redis table engine'
 sidebar_position: 175
-slug: /engines/table-engines/integrations/redis
+old-slug: /engines/table-engines/integrations/redis
 title: 'Redis table engine'
 doc_type: 'guide'
 ---

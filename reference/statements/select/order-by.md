@@ -1,7 +1,7 @@
 ---
 description: Documentation for ORDER BY Clause
 sidebarTitle: ORDER BY
-slug: /sql-reference/statements/select/order-by
+old-slug: /sql-reference/statements/select/order-by
 title: ORDER BY clause
 doc_type: reference
 ---

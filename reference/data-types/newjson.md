@@ -4,12 +4,12 @@ description: 'Documentation for the JSON data type in ClickHouse, which provides
 keywords: ['json', 'data type']
 sidebarTitle: 'JSON'
 sidebar_position: 63
-slug: /sql-reference/data-types/newjson
+old-slug: /sql-reference/data-types/newjson
 title: 'JSON Data Type'
 doc_type: 'reference'
 ---
 
-<Card title="Looking for a guide?" icon="book" href="/docs/best-practices/use-json-where-appropriate">
+<Card title="Looking for a guide?" icon="book" href="/best-practices/use-json-where-appropriate">
   Check out our JSON best practice guide for examples, advanced features and considerations for using the JSON type.
 </Card>
 

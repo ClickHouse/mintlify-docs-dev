@@ -2,7 +2,7 @@
 description: 'Documentation for the rank window function'
 sidebarTitle: 'rank'
 sidebar_position: 6
-slug: /sql-reference/window-functions/rank
+old-slug: /sql-reference/window-functions/rank
 title: 'rank'
 doc_type: 'reference'
 ---

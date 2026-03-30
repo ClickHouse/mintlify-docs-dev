@@ -412,7 +412,7 @@ ds = DataStore.from_s3(
 ```
 
 ### GCS, Azure, HDFS
-See [Factory Methods](/docs/chdb/datastore/factory-methods) for cloud storage options.
+See [Factory Methods](/chdb/datastore/factory-methods) for cloud storage options.
 
 ---
 

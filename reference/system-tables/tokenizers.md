@@ -1,7 +1,7 @@
 ---
 description: 'System table which shows all available tokenizers.'
 keywords: ['system table', 'tokenizers']
-slug: /operations/system-tables/tokenizers
+old-slug: /operations/system-tables/tokenizers
 title: 'system.tokenizers'
 doc_type: 'reference'
 ---

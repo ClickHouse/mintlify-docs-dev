@@ -2,7 +2,7 @@
 description: Documentation for Table Settings Manipulations
 sidebarTitle: SETTING
 sidebar_position: 38
-slug: /sql-reference/statements/alter/setting
+old-slug: /sql-reference/statements/alter/setting
 title: Table settings manipulations
 doc_type: reference
 ---

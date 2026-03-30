@@ -5,7 +5,7 @@ description: 'A table engine which provides a table-like interface to SELECT fro
   S3, GCS, or MinIO.'
 sidebarTitle: 'file'
 sidebar_position: 60
-slug: /sql-reference/table-functions/file
+old-slug: /sql-reference/table-functions/file
 title: 'file'
 doc_type: 'reference'
 ---

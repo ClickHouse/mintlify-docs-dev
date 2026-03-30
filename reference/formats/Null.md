@@ -4,7 +4,7 @@ description: 'Documentation for the Null format'
 input_format: false
 keywords: ['Null', 'format']
 output_format: true
-slug: /interfaces/formats/Null
+old-slug: /interfaces/formats/Null
 title: 'Null'
 doc_type: 'reference'
 ---

@@ -2,7 +2,7 @@
 description: 'System table containing information about existing projections in all
   tables.'
 keywords: ['system table', 'projections']
-slug: /operations/system-tables/projections
+old-slug: /operations/system-tables/projections
 title: 'system.projections'
 doc_type: 'reference'
 ---

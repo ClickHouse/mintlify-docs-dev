@@ -3,7 +3,7 @@ description: 'Allows to connect to SQLite databases and perform `INSERT` and `SE
   queries to exchange data between ClickHouse and SQLite.'
 sidebarTitle: 'SQLite'
 sidebar_position: 55
-slug: /engines/database-engines/sqlite
+old-slug: /engines/database-engines/sqlite
 title: 'SQLite'
 doc_type: 'reference'
 ---

@@ -3,7 +3,7 @@ description: 'An extension to the paimon table function which allows processing 
   from Apache Paimon in parallel from many nodes in a specified cluster.'
 sidebarTitle: 'paimonCluster'
 sidebar_position: 91
-slug: /sql-reference/table-functions/paimonCluster
+old-slug: /sql-reference/table-functions/paimonCluster
 title: 'paimonCluster'
 doc_type: 'reference'
 ---

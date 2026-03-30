@@ -8,4 +8,4 @@ title: 'JDBC Driver'
 doc_type: 'guide'
 ---
 
-Use the [official JDBC driver](/docs/integrations/language-clients/java/jdbc) (and Java client) to access ClickHouse from your Java applications.
+Use the [official JDBC driver](/integrations/language-clients/java/jdbc) (and Java client) to access ClickHouse from your Java applications.

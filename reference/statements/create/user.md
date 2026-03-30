@@ -2,7 +2,7 @@
 description: 'Documentation for User'
 sidebarTitle: 'USER'
 sidebar_position: 39
-slug: /sql-reference/statements/create/user
+old-slug: /sql-reference/statements/create/user
 title: 'CREATE USER'
 doc_type: 'reference'
 ---
@@ -85,9 +85,9 @@ In ClickHouse Cloud, by default, passwords must meet the following complexity re
     CREATE USER name2 IDENTIFIED WITH plaintext_password BY 'my_password'
     ```
 
-    :::tip
+    <Tip>
     The password is stored in a SQL text file in `/var/lib/clickhouse/access`, so it's not a good idea to use `plaintext_password`. Try `sha256_password` instead, as demonstrated next...
-    :::
+    </Tip>
 
 3. The most common option is to use a password that is hashed using SHA-256. ClickHouse will hash the password for you when you specify `IDENTIFIED WITH sha256_password`. For example:
 
@@ -102,9 +102,9 @@ In ClickHouse Cloud, by default, passwords must meet the following complexity re
     ATTACH USER name3 IDENTIFIED WITH sha256_hash BY '0C268556C1680BEF0640AAC1E7187566704208398DA31F03D18C74F5C5BE5053' SALT '4FB16307F5E10048196966DD7E6876AE53DE6A1D1F625488482C75F14A5097C7';
     ```
 
-    :::tip
+    <Tip>
     If you have already created a hash value and corresponding salt value for a username, then you can use `IDENTIFIED WITH sha256_hash BY 'hash'` or `IDENTIFIED WITH sha256_hash BY 'hash' SALT 'salt'`. For identification with `sha256_hash` using `SALT` - hash must be calculated from concatenation of 'password' and 'salt'.
-    :::
+    </Tip>
 
 4. The `double_sha1_password` is not typically needed, but comes in handy when working with clients that require it (like the MySQL interface):
 
@@ -133,11 +133,11 @@ In ClickHouse Cloud, by default, passwords must meet the following complexity re
 
     The work factor must be between 4 and 31, with a default value of 12.
 
-   :::warning
+   <Warning>
    For applications with high-frequency authentication,
    consider alternative authentication methods due to
    bcrypt's computational overhead at higher work factors.
-   :::
+   </Warning>
 6. 
 6. The type of the password can also be omitted:
 

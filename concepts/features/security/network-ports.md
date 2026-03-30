@@ -1,5 +1,5 @@
 ---
-slug: /guides/sre/network-ports
+old-slug: /guides/sre/network-ports
 title: 'Network ports'
 description: 'Description of available network ports and what they are used for'
 doc_type: 'reference'

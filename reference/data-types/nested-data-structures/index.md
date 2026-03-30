@@ -2,7 +2,7 @@
 description: 'Overview of nested data structures in ClickHouse'
 sidebarTitle: 'Nested(Name1 Type1, Name2 Type2, ...)'
 sidebar_position: 57
-slug: /sql-reference/data-types/nested-data-structures/nested
+old-slug: /sql-reference/data-types/nested-data-structures/nested
 title: 'Nested'
 doc_type: 'guide'
 ---

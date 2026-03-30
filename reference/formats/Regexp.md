@@ -4,7 +4,7 @@ description: 'Documentation for the Regexp format'
 input_format: true
 keywords: ['Regexp']
 output_format: false
-slug: /interfaces/formats/Regexp
+old-slug: /interfaces/formats/Regexp
 title: 'Regexp'
 doc_type: 'reference'
 ---

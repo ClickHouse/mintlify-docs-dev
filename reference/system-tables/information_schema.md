@@ -2,7 +2,7 @@
 description: 'System database providing an almost standardized DBMS-agnostic view
   on metadata of database objects.'
 keywords: ['system database', 'information_schema']
-slug: /operations/system-tables/information_schema
+old-slug: /operations/system-tables/information_schema
 title: 'INFORMATION_SCHEMA'
 doc_type: 'reference'
 ---

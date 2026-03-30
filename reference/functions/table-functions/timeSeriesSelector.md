@@ -2,7 +2,7 @@
 description: 'Reads time series from a TimeSeries table filtered by a selector and with timestamps in a specified interval.'
 sidebarTitle: 'timeSeriesSelector'
 sidebar_position: 145
-slug: /sql-reference/table-functions/timeSeriesSelector
+old-slug: /sql-reference/table-functions/timeSeriesSelector
 title: 'timeSeriesSelector'
 doc_type: 'reference'
 ---

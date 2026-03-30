@@ -2,7 +2,7 @@
 description: 'Documentation for Distributed Ddl'
 sidebarTitle: 'ON CLUSTER'
 sidebar_position: 3
-slug: /sql-reference/distributed-ddl
+old-slug: /sql-reference/distributed-ddl
 title: 'ON CLUSTER (distributed DDL queries)'
 doc_type: 'reference'
 ---
@@ -19,6 +19,6 @@ In order to run these queries correctly, each host must have the same cluster de
 
 The local version of the query will eventually be executed on each host in the cluster, even if some hosts are currently not available.
 
-:::important    
-The order for executing queries within a single host is guaranteed.
-:::
+<Warning>
+**The order for executing queries within a single host is guaranteed.**
+</Warning>

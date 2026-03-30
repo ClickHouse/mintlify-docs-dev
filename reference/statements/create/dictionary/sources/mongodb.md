@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/mongodb
+old-slug: /sql-reference/statements/create/dictionary/sources/mongodb
 title: 'MongoDB dictionary source'
 description: 'Configure MongoDB as a dictionary source in ClickHouse.'
 doc_type: 'reference'

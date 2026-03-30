@@ -4,7 +4,7 @@ description: 'The Kafka Table Engine can be used to publish works with Apache Ka
   available.'
 sidebarTitle: 'Kafka table engine'
 sidebar_position: 110
-slug: /engines/table-engines/integrations/kafka
+old-slug: /engines/table-engines/integrations/kafka
 title: 'Kafka table engine'
 keywords: ['Kafka', 'table engine']
 doc_type: 'guide'

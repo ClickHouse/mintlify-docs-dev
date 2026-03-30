@@ -3,7 +3,7 @@ description: 'This function implements stochastic logistic regression. It can be
   for binary classification problem, supports the same custom parameters as stochasticLinearRegression
   and works the same way.'
 sidebar_position: 193
-slug: /sql-reference/aggregate-functions/reference/stochasticlogisticregression
+old-slug: /sql-reference/aggregate-functions/reference/stochasticlogisticregression
 title: 'stochasticLogisticRegression'
 doc_type: 'reference'
 ---

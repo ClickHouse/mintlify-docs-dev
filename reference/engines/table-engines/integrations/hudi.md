@@ -3,7 +3,7 @@ description: 'This engine provides a read-only integration with existing Apache 
   tables in Amazon S3.'
 sidebarTitle: 'Hudi table engine'
 sidebar_position: 86
-slug: /engines/table-engines/integrations/hudi
+old-slug: /engines/table-engines/integrations/hudi
 title: 'Hudi table engine'
 doc_type: 'reference'
 ---

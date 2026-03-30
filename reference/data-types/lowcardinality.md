@@ -2,7 +2,7 @@
 description: 'Documentation for the LowCardinality optimization for string columns'
 sidebarTitle: 'LowCardinality(T)'
 sidebar_position: 42
-slug: /sql-reference/data-types/lowcardinality
+old-slug: /sql-reference/data-types/lowcardinality
 title: 'LowCardinality(T)'
 doc_type: 'reference'
 ---

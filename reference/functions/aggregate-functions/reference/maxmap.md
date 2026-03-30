@@ -2,7 +2,7 @@
 description: 'Calculates the maximum from `value` array according to the keys specified
   in the `key` array.'
 sidebar_position: 165
-slug: /sql-reference/aggregate-functions/reference/maxmap
+old-slug: /sql-reference/aggregate-functions/reference/maxmap
 title: 'maxMap'
 doc_type: 'reference'
 ---

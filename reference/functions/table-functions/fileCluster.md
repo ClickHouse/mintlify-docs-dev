@@ -6,7 +6,7 @@ description: 'Enables simultaneous processing of files matching a specified path
   repeating until all tasks are completed (all files are read).'
 sidebarTitle: 'fileCluster'
 sidebar_position: 61
-slug: /sql-reference/table-functions/fileCluster
+old-slug: /sql-reference/table-functions/fileCluster
 title: 'fileCluster'
 doc_type: 'reference'
 ---

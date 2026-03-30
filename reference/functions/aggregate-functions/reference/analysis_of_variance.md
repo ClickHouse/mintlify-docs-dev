@@ -3,7 +3,7 @@ description: 'Provides a statistical test for one-way analysis of variance (ANOV
   test). It is a test over several groups of normally distributed observations to
   find out whether all groups have the same mean or not.'
 sidebar_position: 101
-slug: /sql-reference/aggregate-functions/reference/analysis_of_variance
+old-slug: /sql-reference/aggregate-functions/reference/analysis_of_variance
 title: 'analysisOfVariance'
 doc_type: 'reference'
 ---

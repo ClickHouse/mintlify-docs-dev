@@ -1,7 +1,7 @@
 ---
 description: 'Overview of ClickHouse backup and restore'
 sidebarTitle: 'Overview'
-slug: /operations/backup/overview
+old-slug: /operations/backup/overview
 title: 'Backup and Restore in ClickHouse'
 doc_type: 'reference'
 ---

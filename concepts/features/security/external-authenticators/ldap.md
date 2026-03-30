@@ -1,6 +1,6 @@
 ---
 description: 'Guide to configuring LDAP authentication for ClickHouse'
-slug: /operations/external-authenticators/ldap
+old-slug: /operations/external-authenticators/ldap
 title: 'LDAP'
 doc_type: 'reference'
 ---

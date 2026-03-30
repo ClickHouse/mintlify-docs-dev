@@ -2,7 +2,7 @@
 description: 'Documentation for Detach'
 sidebarTitle: 'DETACH'
 sidebar_position: 43
-slug: /sql-reference/statements/detach
+old-slug: /sql-reference/statements/detach
 title: 'DETACH Statement'
 doc_type: 'reference'
 ---

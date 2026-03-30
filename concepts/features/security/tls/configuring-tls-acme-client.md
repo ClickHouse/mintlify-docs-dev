@@ -1,5 +1,5 @@
 ---
-slug: /guides/sre/configuring-tls-acme-client
+old-slug: /guides/sre/configuring-tls-acme-client
 title: 'Configuring ACME client'
 description: 'This guide provides simple and minimal settings to configure ClickHouse to use OpenSSL certificates to validate connections.'
 keywords: ['ACME configuration', 'TLS setup', 'OpenSSL certificates', 'secure connections', 'SRE guide', 'Let`s Encrypt']

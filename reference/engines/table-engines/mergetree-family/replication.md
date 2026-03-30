@@ -2,7 +2,7 @@
 description: 'Overview of data replication with the Replicated* family of table engines in ClickHouse'
 sidebarTitle: 'Replicated*'
 sidebar_position: 20
-slug: /engines/table-engines/mergetree-family/replication
+old-slug: /engines/table-engines/mergetree-family/replication
 title: 'Replicated* table engines'
 doc_type: 'reference'
 ---

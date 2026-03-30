@@ -4,7 +4,7 @@ description: 'Provides a table-like interface to `SELECT` and `INSERT` data from
 keywords: ['gcs', 'bucket']
 sidebarTitle: 'gcs'
 sidebar_position: 70
-slug: /sql-reference/table-functions/gcs
+old-slug: /sql-reference/table-functions/gcs
 title: 'gcs'
 doc_type: 'reference'
 ---

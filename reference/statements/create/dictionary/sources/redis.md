@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/sources/redis
+old-slug: /sql-reference/statements/create/dictionary/sources/redis
 title: 'Redis dictionary source'
 description: 'Configure Redis as a dictionary source in ClickHouse.'
 doc_type: 'reference'

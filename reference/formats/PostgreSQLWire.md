@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for the PostgreSQLWire format'
 keywords: ['PostgreSQLWire']
-slug: /interfaces/formats/PostgreSQLWire
+old-slug: /interfaces/formats/PostgreSQLWire
 title: 'PostgreSQLWire'
 doc_type: 'reference'
 ---

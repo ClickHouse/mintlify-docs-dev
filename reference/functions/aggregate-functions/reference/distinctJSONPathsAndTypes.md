@@ -1,6 +1,6 @@
 ---
 description: 'Calculates the list of distinct paths and their types stored in JSON'
-slug: /sql-reference/aggregate-functions/reference/distinctJSONPathsAndTypes
+old-slug: /sql-reference/aggregate-functions/reference/distinctJSONPathsAndTypes
 title: 'distinctJSONPathsAndTypes'
 doc_type: 'reference'
 ---
@@ -13,9 +13,9 @@ Introduced in: v24.9.0
 
 Calculates the list of distinct paths and their types stored in [JSON](https://clickhouse.com/docs/sql-reference/data-types/newjson) column.
 
-:::note
-If JSON declaration contains paths with specified types, these paths will be always included in the result of `distinctJSONPaths/distinctJSONPathsAndTypes` functions even if input data didn't have values for these paths.
-:::
+<Note>
+**If JSON declaration contains paths with specified types, these paths will be always included in the result of `distinctJSONPaths/distinctJSONPathsAndTypes` functions even if input data didn't have values for these paths.**
+</Note>
     
 
 **Syntax**

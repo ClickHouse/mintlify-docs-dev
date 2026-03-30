@@ -2,7 +2,7 @@
 description: 'Documentation for highlight-next-line'
 sidebarTitle: 'External disks for storing data'
 sidebar_position: 68
-slug: /operations/storing-data
+old-slug: /operations/storing-data
 title: 'External disks for storing data'
 doc_type: 'guide'
 ---

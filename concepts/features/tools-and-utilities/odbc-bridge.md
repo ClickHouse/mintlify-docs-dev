@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Odbc Bridge'
-slug: /operations/utilities/odbc-bridge
+old-slug: /operations/utilities/odbc-bridge
 title: 'clickhouse-odbc-bridge'
 doc_type: 'reference'
 ---

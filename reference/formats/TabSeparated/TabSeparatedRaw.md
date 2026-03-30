@@ -4,7 +4,7 @@ description: 'Documentation for the TabSeparatedRaw format'
 input_format: true
 keywords: ['TabSeparatedRaw']
 output_format: true
-slug: /interfaces/formats/TabSeparatedRaw
+old-slug: /interfaces/formats/TabSeparatedRaw
 title: 'TabSeparatedRaw'
 doc_type: 'reference'
 ---

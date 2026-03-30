@@ -2,7 +2,7 @@
 description: 'Documentation for Manipulations with Table TTL'
 sidebarTitle: 'TTL'
 sidebar_position: 44
-slug: /sql-reference/statements/alter/ttl
+old-slug: /sql-reference/statements/alter/ttl
 title: 'Manipulations with Table TTL'
 doc_type: 'reference'
 ---

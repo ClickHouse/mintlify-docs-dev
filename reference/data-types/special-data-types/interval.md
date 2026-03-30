@@ -2,7 +2,7 @@
 description: 'Documentation for the Interval special data type'
 sidebarTitle: 'Interval'
 sidebar_position: 61
-slug: /sql-reference/data-types/special-data-types/interval
+old-slug: /sql-reference/data-types/special-data-types/interval
 title: 'Interval'
 doc_type: 'reference'
 ---

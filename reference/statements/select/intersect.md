@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for INTERSECT Clause'
 sidebarTitle: 'INTERSECT'
-slug: /sql-reference/statements/select/intersect
+old-slug: /sql-reference/statements/select/intersect
 title: 'INTERSECT Clause'
 doc_type: 'reference'
 ---

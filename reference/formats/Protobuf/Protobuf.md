@@ -4,7 +4,7 @@ description: 'Documentation for the Protobuf format'
 input_format: true
 keywords: ['Protobuf']
 output_format: true
-slug: /interfaces/formats/Protobuf
+old-slug: /interfaces/formats/Protobuf
 title: 'Protobuf'
 doc_type: 'guide'
 ---

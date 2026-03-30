@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/statements/create/dictionary/layouts/direct
+old-slug: /sql-reference/statements/create/dictionary/layouts/direct
 title: 'direct dictionary layout'
 description: 'A dictionary layout that queries the source directly without caching.'
 doc_type: 'reference'

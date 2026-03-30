@@ -2,7 +2,7 @@
 description: 'Creates a table from the `URL` with given `format` and `structure`'
 sidebarTitle: 'url'
 sidebar_position: 200
-slug: /sql-reference/table-functions/url
+old-slug: /sql-reference/table-functions/url
 title: 'url'
 doc_type: 'reference'
 ---

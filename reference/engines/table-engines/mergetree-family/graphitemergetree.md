@@ -2,7 +2,7 @@
 description: 'Designed for thinning and aggregating/averaging (rollup) Graphite data.'
 sidebarTitle: 'GraphiteMergeTree'
 sidebar_position: 90
-slug: /engines/table-engines/mergetree-family/graphitemergetree
+old-slug: /engines/table-engines/mergetree-family/graphitemergetree
 title: 'GraphiteMergeTree table engine'
 doc_type: 'guide'
 ---
@@ -129,13 +129,13 @@ default
     ...
 ```
 
-:::important
-Patterns must be strictly ordered:
+<Warning>
+**Patterns must be strictly ordered:**
 
 1. Patterns without `function` or `retention`.
 1. Patterns with both `function` and `retention`.
 1. Pattern `default`.
-:::
+</Warning>
 
 When processing a row, ClickHouse checks the rules in the `pattern` sections. Each of `pattern` (including `default`) sections can contain `function` parameter for aggregation, `retention` parameters or both. If the metric name matches the `regexp`, the rules from the `pattern` section (or sections) are applied; otherwise, the rules from the `default` section are used.
 

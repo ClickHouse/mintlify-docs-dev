@@ -3,7 +3,7 @@ description: 'Keeps tables in RAM only `expiration_time_in_seconds` seconds afte
   last access. Can be used only with Log type tables.'
 sidebarTitle: 'Lazy'
 sidebar_position: 20
-slug: /engines/database-engines/lazy
+old-slug: /engines/database-engines/lazy
 title: 'Lazy'
 doc_type: 'reference'
 ---

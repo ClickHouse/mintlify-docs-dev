@@ -3,7 +3,7 @@ description: 'Returns the population variance. Unlike varPop , this function use
   a numerically stable algorithm. It works slower but provides a lower computational
   error.'
 sidebar_position: 211
-slug: /sql-reference/aggregate-functions/reference/varpopstable
+old-slug: /sql-reference/aggregate-functions/reference/varpopstable
 title: 'varPopStable'
 doc_type: 'reference'
 ---

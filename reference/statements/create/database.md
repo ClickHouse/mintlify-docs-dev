@@ -2,7 +2,7 @@
 description: 'Documentation for CREATE DATABASE'
 sidebarTitle: 'DATABASE'
 sidebar_position: 35
-slug: /sql-reference/statements/create/database
+old-slug: /sql-reference/statements/create/database
 title: 'CREATE DATABASE'
 doc_type: 'reference'
 ---

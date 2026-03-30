@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for encoding functions'
 sidebarTitle: 'Encoding'
-slug: /sql-reference/functions/encoding-functions
+old-slug: /sql-reference/functions/encoding-functions
 title: 'Encoding functions'
 keywords: ['encoding', 'regular functions', 'encode', 'decode']
 doc_type: 'reference'

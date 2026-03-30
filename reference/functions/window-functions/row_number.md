@@ -2,7 +2,7 @@
 description: 'Documentation for the row_number window function'
 sidebarTitle: 'row_number'
 sidebar_position: 2
-slug: /sql-reference/window-functions/row_number
+old-slug: /sql-reference/window-functions/row_number
 title: 'row_number'
 doc_type: 'reference'
 ---

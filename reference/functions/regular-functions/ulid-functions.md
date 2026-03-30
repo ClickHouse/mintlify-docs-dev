@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for functions used for working with ULIDs'
 sidebarTitle: 'ULIDs'
-slug: /sql-reference/functions/ulid-functions
+old-slug: /sql-reference/functions/ulid-functions
 title: 'Functions for working with ULIDs'
 doc_type: 'reference'
 ---

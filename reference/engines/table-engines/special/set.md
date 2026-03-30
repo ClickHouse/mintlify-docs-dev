@@ -3,7 +3,7 @@ description: 'A data set that is always in RAM. It is intended for use on the ri
   side of the `IN` operator.'
 sidebarTitle: 'Set'
 sidebar_position: 60
-slug: /engines/table-engines/special/set
+old-slug: /engines/table-engines/special/set
 title: 'Set table engine'
 doc_type: 'reference'
 ---

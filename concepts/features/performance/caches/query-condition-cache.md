@@ -2,7 +2,7 @@
 description: 'Guide to using and configuring the query condition cache feature in ClickHouse'
 sidebarTitle: 'Query condition cache'
 sidebar_position: 64
-slug: /operations/query-condition-cache
+old-slug: /operations/query-condition-cache
 title: 'Query condition cache'
 doc_type: 'guide'
 ---

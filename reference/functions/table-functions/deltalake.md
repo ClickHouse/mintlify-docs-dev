@@ -3,7 +3,7 @@ description: 'Provides a read-only table-like interface to the Delta Lake tables
   Amazon S3.'
 sidebarTitle: 'deltaLake'
 sidebar_position: 45
-slug: /sql-reference/table-functions/deltalake
+old-slug: /sql-reference/table-functions/deltalake
 title: 'deltaLake'
 doc_type: 'reference'
 ---

@@ -1,7 +1,7 @@
 ---
 description: 'System table which outputs introspection of all available keeper nodes.'
 keywords: ['system table', 'zookeeper_info']
-slug: /operations/system-tables/zookeeper_info
+old-slug: /operations/system-tables/zookeeper_info
 title: 'system.zookeeper_info'
 doc_type: 'reference'
 ---

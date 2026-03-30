@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for ALL Clause'
 sidebarTitle: 'ALL'
-slug: /sql-reference/statements/select/all
+old-slug: /sql-reference/statements/select/all
 title: 'ALL Clause'
 doc_type: 'reference'
 ---

@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Functions for Working with Embedded Dictionaries'
 sidebarTitle: 'Embedded dictionary'
-slug: /sql-reference/functions/ym-dict-functions
+old-slug: /sql-reference/functions/ym-dict-functions
 title: 'Functions for Working with Embedded Dictionaries'
 doc_type: 'reference'
 ---

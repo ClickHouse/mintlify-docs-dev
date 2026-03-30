@@ -2,7 +2,7 @@
 description: 'Documentation for REVOKE Statement'
 sidebarTitle: 'REVOKE'
 sidebar_position: 39
-slug: /sql-reference/statements/revoke
+old-slug: /sql-reference/statements/revoke
 title: 'REVOKE Statement'
 doc_type: 'reference'
 ---

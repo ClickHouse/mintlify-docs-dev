@@ -2,7 +2,7 @@
 description: 'Documentation for EXISTS Statement'
 sidebarTitle: 'EXISTS'
 sidebar_position: 45
-slug: /sql-reference/statements/exists
+old-slug: /sql-reference/statements/exists
 title: 'EXISTS statement'
 doc_type: 'reference'
 ---

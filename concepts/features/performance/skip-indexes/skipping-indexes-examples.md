@@ -1,5 +1,5 @@
 ---
-slug: /optimize/skipping-indexes/examples
+old-slug: /optimize/skipping-indexes/examples
 sidebarTitle: 'Data Skipping Indexes - Examples'
 sidebar_position: 2
 description: 'Consolidated Skip Index Examples'

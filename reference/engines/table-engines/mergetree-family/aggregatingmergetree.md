@@ -5,7 +5,7 @@ description: 'Replaces all rows with the same primary key (or more accurately, w
   of aggregate functions.'
 sidebarTitle: 'AggregatingMergeTree'
 sidebar_position: 60
-slug: /engines/table-engines/mergetree-family/aggregatingmergetree
+old-slug: /engines/table-engines/mergetree-family/aggregatingmergetree
 title: 'AggregatingMergeTree table engine'
 doc_type: 'reference'
 ---

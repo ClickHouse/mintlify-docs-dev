@@ -2,7 +2,7 @@
 description: 'Documentation for Check Grant'
 sidebarTitle: 'CHECK GRANT'
 sidebar_position: 56
-slug: /sql-reference/statements/check-grant
+old-slug: /sql-reference/statements/check-grant
 title: 'CHECK GRANT Statement'
 doc_type: 'reference'
 ---

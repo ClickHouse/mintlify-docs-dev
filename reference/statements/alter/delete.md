@@ -2,7 +2,7 @@
 description: 'Documentation for ALTER TABLE ... DELETE Statement'
 sidebarTitle: 'DELETE'
 sidebar_position: 39
-slug: /sql-reference/statements/alter/delete
+old-slug: /sql-reference/statements/alter/delete
 title: 'ALTER TABLE ... DELETE Statement'
 doc_type: 'reference'
 ---

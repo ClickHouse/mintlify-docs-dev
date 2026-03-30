@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Clickhouse-disks'
-slug: /operations/utilities/clickhouse-disks
+old-slug: /operations/utilities/clickhouse-disks
 title: 'Clickhouse-disks'
 doc_type: 'reference'
 ---

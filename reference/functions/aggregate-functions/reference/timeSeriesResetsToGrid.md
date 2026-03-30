@@ -1,7 +1,7 @@
 ---
 description: 'Aggregate function that calculates PromQL-like resets over time series data on the specified grid.'
 sidebar_position: 230
-slug: /sql-reference/aggregate-functions/reference/timeSeriesResetsToGrid
+old-slug: /sql-reference/aggregate-functions/reference/timeSeriesResetsToGrid
 title: 'timeSeriesResetsToGrid'
 doc_type: 'reference'
 ---

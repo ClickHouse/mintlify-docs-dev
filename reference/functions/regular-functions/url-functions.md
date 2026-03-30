@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for functions used to work with URLs'
 sidebarTitle: 'URLs'
-slug: /sql-reference/functions/url-functions
+old-slug: /sql-reference/functions/url-functions
 title: 'Functions for working with URLs'
 doc_type: 'reference'
 ---

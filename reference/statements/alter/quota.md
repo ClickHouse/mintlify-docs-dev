@@ -2,7 +2,7 @@
 description: 'Documentation for Quota'
 sidebarTitle: 'QUOTA'
 sidebar_position: 46
-slug: /sql-reference/statements/alter/quota
+old-slug: /sql-reference/statements/alter/quota
 title: 'ALTER QUOTA'
 doc_type: 'reference'
 ---

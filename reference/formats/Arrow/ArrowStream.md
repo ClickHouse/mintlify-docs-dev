@@ -4,7 +4,7 @@ description: 'Documentation for the ArrowStream format'
 input_format: true
 keywords: ['ArrowStream']
 output_format: true
-slug: /interfaces/formats/ArrowStream
+old-slug: /interfaces/formats/ArrowStream
 title: 'ArrowStream'
 doc_type: 'reference'
 ---

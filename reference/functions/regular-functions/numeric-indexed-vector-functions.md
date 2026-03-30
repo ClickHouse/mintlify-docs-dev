@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for NumericIndexedVector and Its Functions'
 sidebarTitle: 'NumericIndexedVector'
-slug: /sql-reference/functions/numeric-indexed-vector-functions
+old-slug: /sql-reference/functions/numeric-indexed-vector-functions
 title: 'NumericIndexedVector Functions'
 doc_type: 'reference'
 ---

@@ -3,7 +3,7 @@ description: 'Composable protocols allows more flexible configuration of TCP acc
   to the ClickHouse server.'
 sidebarTitle: 'Composable protocols'
 sidebar_position: 64
-slug: /operations/settings/composable-protocols
+old-slug: /operations/settings/composable-protocols
 title: 'Composable protocols'
 doc_type: 'reference'
 ---

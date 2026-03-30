@@ -2,7 +2,7 @@
 description: 'Documentation for Explain'
 sidebarTitle: 'EXPLAIN'
 sidebar_position: 39
-slug: /sql-reference/statements/explain
+old-slug: /sql-reference/statements/explain
 title: 'EXPLAIN Statement'
 doc_type: 'reference'
 ---

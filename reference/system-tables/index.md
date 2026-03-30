@@ -4,7 +4,7 @@ keywords: ['system tables', 'overview']
 pagination_next: operations/system-tables/asynchronous_metric_log
 sidebarTitle: 'Overview'
 sidebar_position: 52
-slug: /operations/system-tables/
+old-slug: /operations/system-tables/
 title: 'System Tables'
 doc_type: 'reference'
 ---

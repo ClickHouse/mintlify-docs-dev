@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for the ParquetMetadata format'
 keywords: ['ParquetMetadata']
-slug: /interfaces/formats/ParquetMetadata
+old-slug: /interfaces/formats/ParquetMetadata
 title: 'ParquetMetadata'
 doc_type: 'reference'
 ---

@@ -4,7 +4,7 @@ description: 'Table function `remote` allows to access remote servers on-the-fly
   as `remote` but over a secure connection.'
 sidebarTitle: 'remote'
 sidebar_position: 175
-slug: /sql-reference/table-functions/remote
+old-slug: /sql-reference/table-functions/remote
 title: 'remote, remoteSecure'
 doc_type: 'reference'
 ---

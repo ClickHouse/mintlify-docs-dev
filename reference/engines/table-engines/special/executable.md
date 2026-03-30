@@ -4,7 +4,7 @@ description: 'The `Executable` and `ExecutablePool` table engines allow you to d
   to **stdout**).'
 sidebarTitle: 'Executable/ExecutablePool'
 sidebar_position: 40
-slug: /engines/table-engines/special/executable
+old-slug: /engines/table-engines/special/executable
 title: 'Executable and ExecutablePool table engines'
 doc_type: 'reference'
 ---

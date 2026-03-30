@@ -4,7 +4,7 @@ description: 'Documentation for the PrettyNoEscapes format'
 input_format: false
 keywords: ['PrettyNoEscapes']
 output_format: true
-slug: /interfaces/formats/PrettyNoEscapes
+old-slug: /interfaces/formats/PrettyNoEscapes
 title: 'PrettyNoEscapes'
 doc_type: 'reference'
 ---

@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for distance functions'
 sidebarTitle: 'Distance'
-slug: /sql-reference/functions/distance-functions
+old-slug: /sql-reference/functions/distance-functions
 title: 'Distance functions'
 keywords: ['distance functions', 'norms', 'distances', 'vectors']
 doc_type: 'reference'

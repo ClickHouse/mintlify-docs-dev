@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for the `EXISTS` operator'
-slug: /sql-reference/operators/exists
+old-slug: /sql-reference/operators/exists
 title: 'EXISTS'
 doc_type: 'reference'
 ---

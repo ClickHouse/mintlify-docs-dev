@@ -1,7 +1,7 @@
 ---
 description: 'Details alternative backup or restore methods'
 sidebarTitle: 'Alternative methods'
-slug: /operations/backup/alternative_methods
+old-slug: /operations/backup/alternative_methods
 title: 'Alternative backup or restore methods'
 doc_type: 'reference'
 ---

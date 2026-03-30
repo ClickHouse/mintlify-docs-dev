@@ -83,7 +83,7 @@ WHERE amount > 1000
 GROUP BY region
 ```
 
-See [explain() Documentation](/docs/chdb/debugging/explain) for details.
+See [explain() Documentation](/chdb/debugging/explain) for details.
 
 ---
 
@@ -130,7 +130,7 @@ to_df (SQL execution)         0.567s      1
 Total                         1.939s      7
 ```
 
-See [Profiling Guide](/docs/chdb/debugging/profiling) for details.
+See [Profiling Guide](/chdb/debugging/profiling) for details.
 
 ---
 
@@ -160,7 +160,7 @@ DEBUG - Execution time: 0.089s
 DEBUG - Cache: Storing result (key: abc123)
 ```
 
-See [Logging Configuration](/docs/chdb/debugging/logging) for details.
+See [Logging Configuration](/chdb/debugging/logging) for details.
 
 ---
 
@@ -295,6 +295,6 @@ print(query.to_sql())
 
 ## Next Steps
 
-- [explain() Method](/docs/chdb/debugging/explain) - Detailed execution plan documentation
-- [Profiling Guide](/docs/chdb/debugging/profiling) - Performance measurement
-- [Logging Configuration](/docs/chdb/debugging/logging) - Log level and format setup
+- [explain() Method](/chdb/debugging/explain) - Detailed execution plan documentation
+- [Profiling Guide](/chdb/debugging/profiling) - Performance measurement
+- [Logging Configuration](/chdb/debugging/logging) - Log level and format setup

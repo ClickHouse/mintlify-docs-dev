@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for the CustomSeparatedIgnoreSpaces format'
 keywords: ['CustomSeparatedIgnoreSpaces']
-slug: /interfaces/formats/CustomSeparatedIgnoreSpaces
+old-slug: /interfaces/formats/CustomSeparatedIgnoreSpaces
 title: 'CustomSeparatedIgnoreSpaces'
 doc_type: 'reference'
 ---

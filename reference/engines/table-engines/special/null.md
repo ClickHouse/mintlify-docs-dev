@@ -3,7 +3,7 @@ description: 'When writing to a `Null` table, data is ignored. When reading from
   `Null` table, the response is empty.'
 sidebarTitle: 'Null'
 sidebar_position: 50
-slug: /engines/table-engines/special/null
+old-slug: /engines/table-engines/special/null
 title: 'Null table engine'
 doc_type: 'reference'
 ---

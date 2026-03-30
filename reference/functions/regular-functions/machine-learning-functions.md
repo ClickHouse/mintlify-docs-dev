@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Machine Learning Functions'
 sidebarTitle: 'Machine Learning'
-slug: /sql-reference/functions/machine-learning-functions
+old-slug: /sql-reference/functions/machine-learning-functions
 title: 'Machine Learning Functions'
 doc_type: 'reference'
 ---

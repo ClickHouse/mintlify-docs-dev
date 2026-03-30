@@ -4,7 +4,7 @@ description: 'Documentation for the AvroConfluent format'
 input_format: true
 keywords: ['AvroConfluent']
 output_format: false
-slug: /interfaces/formats/AvroConfluent
+old-slug: /interfaces/formats/AvroConfluent
 title: 'AvroConfluent'
 doc_type: 'reference'
 ---

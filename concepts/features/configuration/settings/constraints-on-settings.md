@@ -4,7 +4,7 @@ description: 'Constraints on settings can be defined in the `profiles` section o
   with the `SET` query.'
 sidebarTitle: 'Constraints on settings'
 sidebar_position: 62
-slug: /operations/settings/constraints-on-settings
+old-slug: /operations/settings/constraints-on-settings
 title: 'Constraints on settings'
 doc_type: 'reference'
 ---

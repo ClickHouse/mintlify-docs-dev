@@ -4,7 +4,7 @@ description: 'Documentation for the CSVWithNamesAndTypes format'
 input_format: true
 keywords: ['CSVWithNamesAndTypes']
 output_format: true
-slug: /interfaces/formats/CSVWithNamesAndTypes
+old-slug: /interfaces/formats/CSVWithNamesAndTypes
 title: 'CSVWithNamesAndTypes'
 doc_type: 'reference'
 ---

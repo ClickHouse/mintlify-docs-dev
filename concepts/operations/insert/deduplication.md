@@ -1,5 +1,5 @@
 ---
-slug: /guides/developer/deduplication
+old-slug: /guides/developer/deduplication
 sidebarTitle: 'Deduplication strategies'
 sidebar_position: 3
 description: 'Use deduplication when you need to perform frequent upserts, updates and deletes.'

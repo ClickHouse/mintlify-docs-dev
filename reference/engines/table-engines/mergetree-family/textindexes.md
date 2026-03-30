@@ -2,7 +2,7 @@
 description: 'Quickly find search terms in text.'
 keywords: ['full-text search', 'text index', 'index', 'indices']
 sidebar_label: 'Full-text Search with Text Indexes'
-slug: /engines/table-engines/mergetree-family/textindexes
+old-slug: /engines/table-engines/mergetree-family/textindexes
 title: 'Full-text Search with Text Indexes'
 doc_type: 'reference'
 ---
@@ -65,8 +65,8 @@ Text indexes are generally available (GA) in ClickHouse version 26.2 and newer.
 In these versions, no special settings need to be configured to use the text index.
 We strongly recommend using ClickHouse versions >= 26.2 for production use cases.
 
-:::note
-If you have upgraded (or were upgraded, e.g. ClickHouse Cloud) from a ClickHouse version older than 26.2, the presence of a [compatibility](../../../operations/settings/settings#compatibility) setting may still cause the index to be disabled, and/or text-index related performance optimizations to be deactivated.
+<Note>
+**If you have upgraded (or were upgraded, e.g. ClickHouse Cloud) from a ClickHouse version older than 26.2, the presence of a [compatibility](../../../operations/settings/settings#compatibility) setting may still cause the index to be disabled, and/or text-index related performance optimizations to be deactivated.**
 
 If query
 
@@ -83,7 +83,7 @@ SET use_skip_indexes_on_data_read = true;
 ```
 
 Alternatively, you can increment the [compatibility](../../../operations/settings/settings#compatibility) setting to `26.2` or newer but this affects many settings and typically requires prior testing.
-:::
+</Note>
 
 To create a text index use the following syntax:
 
@@ -172,14 +172,14 @@ ALTER TABLE table DROP INDEX text_idx;
 
 All available tokenizers are listed in [system.tokenizers](../../../operations/system-tables/tokenizers.md).
 
-:::note
-The `splitByString` tokenizer applies the split separators left-to-right.
+<Note>
+**The `splitByString` tokenizer applies the split separators left-to-right.**
 This can create ambiguities.
 For example, the separator strings `['%21', '%']` will cause `%21abc` to be tokenized as `['abc']`, whereas switching both separators strings `['%', '%21']` will output `['21abc']`.
 In the most cases, you want that matching prefers longer separators first.
 This can generally be done by passing the separator strings in order of descending length.
 If the separator strings happen to form a [prefix code](https://en.wikipedia.org/wiki/Prefix_code), they can be passed in arbitrary order.
-:::
+</Note>
 
 To understand how a tokenizer split the input string, you can use the [tokens](/sql-reference/functions/splitting-merging-functions.md/#tokens) and [tokensForLikePattern](/sql-reference/functions/splitting-merging-functions.md/#tokensForLikePattern) functions:
 
@@ -199,7 +199,6 @@ Result:
 While text indexes can in principle be build on top of text data in any language and character set, we recommend doing so at the moment only for input in an extended ASCII character sets, i.e. Western languages.
 In particular, Chinese, Japanese, and Korean currently lack comprehensive indexing support, leading to potentially huge index sizes and large query times.
 We plan to add specialized language-specific tokenizers to handle these cases better in future.
-:::
 
 **Preprocessor argument (optional)**. The preprocessor refers to an expression which is applied to the input string before tokenization.
 
@@ -356,11 +355,11 @@ An explicitly specified index granularity is ignored.
 Using a text index in SELECT queries is straightforward as common string search functions will leverage the index automatically.
 If no index exists on a column or table part, the string search functions will fall back to slow brute-force scans.
 
-:::note
-We recommend using functions `hasAnyTokens` and `hasAllTokens` to search the text index, please see [below](#functions-example-hasanytokens-hasalltokens).
+<Note>
+**We recommend using functions `hasAnyTokens` and `hasAllTokens` to search the text index, please see [below](#functions-example-hasanytokens-hasalltokens).**
 These functions work with all available tokenizers and all possible preprocessor expressions.
 As the other supported functions historically preceded the text index, they had to retain their legacy behavior in many cases (e.g. no preprocessor support).
-:::
+</Note>
 
 ### Supported functions
 
@@ -398,9 +397,9 @@ The same restrictions as for `=` and `!=` apply, i.e. `IN` and `NOT IN` only mak
 
 #### `LIKE`, `NOT LIKE` and `match`
 
-:::note
-These functions currently use the text index for filtering only if the index tokenizer is either `splitByNonAlpha`, `ngrams` or `sparseGrams`.
-:::
+<Note>
+**These functions currently use the text index for filtering only if the index tokenizer is either `splitByNonAlpha`, `ngrams` or `sparseGrams`.**
+</Note>
 
 In order to use `LIKE` ([like](/sql-reference/functions/string-search-functions.md/#like)), `NOT LIKE` ([notLike](/sql-reference/functions/string-search-functions.md/#notLike)), and the [match](/sql-reference/functions/string-search-functions.md/#match) function with text indexes, ClickHouse must be able to extract complete tokens from the search term.
 For the index with `ngrams` tokenizer, this is the case if the length of the searched strings between wildcards is equal or longer than the ngram length.
@@ -450,10 +449,10 @@ SELECT count() FROM table WHERE endsWith(comment, ' olap engine');
 
 #### `hasToken` and `hasTokenOrNull`
 
-:::note
-Function `hasToken` looks straightforward to use but it has certain pitfalls with non-default tokenizers and preprocessor expressions.
+<Note>
+**Function `hasToken` looks straightforward to use but it has certain pitfalls with non-default tokenizers and preprocessor expressions.**
 We recommend using functions `hasAnyTokens` and `hasAllTokens` instead.
-:::
+</Note>
 
 Functions [hasToken](/sql-reference/functions/string-search-functions.md/#hasToken) and [hasTokenOrNull](/sql-reference/functions/string-search-functions.md/#hasTokenOrNull) match against a single given token.
 
@@ -881,7 +880,7 @@ If the posting list is larger than `posting_list_block_size`, it is split into m
 When data parts are merged, the text index does not need to be rebuilt from scratch; instead, it can be merged efficiently in a separate step of the merge process.
 During this step, the sorted dictionaries of the text indexes of each input part are read and combined into a new unified dictionary.
 The row numbers in the postings lists are also recalculated to reflect their new positions in the merged data part, using a mapping of old to new row numbers that is created during the initial merge phase.
-This method of merging text indexes is similar to how [projections](/docs/sql-reference/statements/alter/projection#normal-projection-with-part-offset-field) with `_part_offset` column are merged.
+This method of merging text indexes is similar to how [projections](/sql-reference/statements/alter/projection#normal-projection-with-part-offset-field) with `_part_offset` column are merged.
 If index is not materialized in the source part, it is built, written into a temporary file and then merged together with indexes from the other parts and from other temporary index files.
 
 **Debugging**

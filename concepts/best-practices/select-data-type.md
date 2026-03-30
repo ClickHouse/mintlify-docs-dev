@@ -1,5 +1,5 @@
 ---
-slug: /best-practices/select-data-types
+old-slug: /best-practices/select-data-types
 sidebar_position: 10
 sidebarTitle: 'Selecting data types'
 title: 'Selecting data types'

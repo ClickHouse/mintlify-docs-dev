@@ -1,5 +1,5 @@
 ---
-slug: /sql-reference/table-functions/primes
+old-slug: /sql-reference/table-functions/primes
 title: 'primes'
 description: 'Returns a table with a single `prime` column that contains prime numbers.'
 doc_type: 'reference'

@@ -2,7 +2,7 @@
 description: 'Optional prepared data structure for usage in JOIN operations.'
 sidebarTitle: 'Join'
 sidebar_position: 70
-slug: /engines/table-engines/special/join
+old-slug: /engines/table-engines/special/join
 title: 'Join table engine'
 doc_type: 'reference'
 ---

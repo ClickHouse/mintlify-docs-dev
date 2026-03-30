@@ -4,7 +4,7 @@ description: 'Documentation for the Native format'
 input_format: true
 keywords: ['Native']
 output_format: true
-slug: /interfaces/formats/Native
+old-slug: /interfaces/formats/Native
 title: 'Native'
 doc_type: 'reference'
 ---

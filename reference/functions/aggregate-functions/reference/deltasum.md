@@ -1,7 +1,7 @@
 ---
 description: 'Sums the arithmetic difference between consecutive rows.'
 sidebar_position: 129
-slug: /sql-reference/aggregate-functions/reference/deltasum
+old-slug: /sql-reference/aggregate-functions/reference/deltasum
 title: 'deltaSum'
 doc_type: 'reference'
 ---

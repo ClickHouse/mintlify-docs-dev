@@ -1,5 +1,5 @@
 ---
-slug: /best-practices/use-data-skipping-indices-where-appropriate
+old-slug: /best-practices/use-data-skipping-indices-where-appropriate
 sidebar_position: 10
 sidebarTitle: 'Data skipping indices'
 title: 'Use data skipping indices where appropriate'

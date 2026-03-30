@@ -2,7 +2,7 @@
 description: 'Perturbs a JSON string with random variations.'
 sidebarTitle: 'fuzzJSON'
 sidebar_position: 75
-slug: /sql-reference/table-functions/fuzzJSON
+old-slug: /sql-reference/table-functions/fuzzJSON
 title: 'fuzzJSON'
 doc_type: 'reference'
 ---

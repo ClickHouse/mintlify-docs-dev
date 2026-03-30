@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for UDFs User Defined Functions'
 sidebarTitle: 'UDF'
-slug: /sql-reference/functions/udf
+old-slug: /sql-reference/functions/udf
 title: 'UDFs User Defined Functions'
 doc_type: 'reference'
 ---

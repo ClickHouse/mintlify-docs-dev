@@ -4,7 +4,7 @@ description: 'Documentation for the Npy format'
 input_format: true
 keywords: ['Npy']
 output_format: true
-slug: /interfaces/formats/Npy
+old-slug: /interfaces/formats/Npy
 title: 'Npy'
 doc_type: 'reference'
 ---

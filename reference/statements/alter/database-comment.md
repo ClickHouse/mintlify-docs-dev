@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for ALTER DATABASE ... MODIFY COMMENT statements
 which allow adding, modifying, or removing database comments.'
-slug: /sql-reference/statements/alter/database-comment
+old-slug: /sql-reference/statements/alter/database-comment
 sidebar_position: 51
 sidebarTitle: 'ALTER DATABASE ... MODIFY COMMENT'
 title: 'ALTER DATABASE ... MODIFY COMMENT Statements'
