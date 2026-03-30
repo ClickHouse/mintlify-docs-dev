@@ -1,0 +1,998 @@
+---
+title: 'Release Notes'
+sidebarTitle: 'Release Notes'
+description: 'Release notes for the ClickHouse Python client.'
+keywords: ['clickhouse', 'python', 'release notes', 'changelog']
+---
+
+
+
+
+<Update label="2025-11-14" description="v0.10.0">
+## What's Changed
+
+### Improvements
+- Added SQLAlchemy core API support for `ARRAY JOIN` and `FINAL` modifier. Closes [#579](https://github.com/ClickHouse/clickhouse-connect/issues/579)
+- Added Python 3.14 support 🎉  (non-free-threaded build only; free-threaded builds are not yet supported). Closes [#574](https://github.com/ClickHouse/clickhouse-connect/issues/574)
+- Added `utc_tz_aware` parameter to client and query methods to opt in to returning timezone-aware UTC objects for `DateTime`/`DateTime64` columns. Default behavior remains the same and returns tz naive objects for backward compatibility.
+  - Note: this parameter will likely be removed and only return tz-aware dts in some future release. Closes [#566](https://github.com/ClickHouse/clickhouse-connect/issues/566)
+- Added `executor` parameter to `AsyncClient` constructor to allow passing a custom executor for async operations. This allows users to control the concurrency and thread pool used by the async client.
+
+### Bug Fixes
+- Fixed DST fallback bug in `DateTime` and `DateTime64` types caused by passing potentially ambiguous times to `pd.DateTimeIndex` constructor. Closes [#585](https://github.com/ClickHouse/clickhouse-connect/issues/585)
+- Fixed issue with JSON key dot escaping. Closes [#571](https://github.com/ClickHouse/clickhouse-connect/issues/571)
+
+## New Contributors
+* @prokofyevDmitry made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/569
+* @wiese-m made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/583
+* @meirdev made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/578
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.9.2...v0.10.0
+</Update>
+
+<Update label="2025-09-25" description="v0.9.2">
+## What's Changed
+- Updated `python_requires` to drop Python 3.8 and advertise support for 3.9–3.13
+- Allow passing `role` as a field in the `settings` keyword argument to set a role for a specific query
+
+## New Contributors
+* @svix-jbrown made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/550
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.9.1...v0.9.2
+</Update>
+
+<Update label="2025-09-17" description="v0.9.1">
+## What's Changed
+* Fixed typing issue that required numpy to be installed during clickhouse_connect import
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.9.0...v0.9.1
+</Update>
+
+<Update label="2025-09-16" description="v0.9.0">
+## What's Changed
+### Breaking Changes
+- **WARNING: BREAKING CHANGE** — Removed support for sqlalchemy 1.3 which reached its EOL in 2021. The minimum required version is now 1.4.40.
+- **WARNING: BREAKING CHANGE** — Behavior for reading from IPv6 columns has changed:
+  - With `read_format='native'`, the client will **always** return [`ipaddress.IPv6Address`](https://docs.python.org/3/library/ipaddress.html#ipaddress.IPv6Address) objects, even for IPv4-mapped addresses (e.g., `"::ffff:192.168.1.1"`). Previously, the client returned [`ipaddress.IPv4Address`](https://docs.python.org/3/library/ipaddress.html#ipaddress.IPv4Address) objects for these cases. This change enforces type consistency and avoids surprising implicit conversions. If your application requires IPv4 objects, you can explicitly convert using the [`ipv4_mapped`](https://docs.python.org/3/library/ipaddress.html#ipaddress.IPv6Address.ipv4_mapped) attribute of `IPv6Address`.
+  - With `read_format='string'`, the client will **always** return IPv6 string representations, e.g., `"::ffff:192.168.1.1"` instead of `"192.168.1.1"`, for the same reasons as above. If you require only the IPv4 string, you can parse or truncate this in your application code.
+  - Closes [#493](https://github.com/ClickHouse/clickhouse-connect/issues/493)
+
+### Major Features
+- Added support for SQLAlchemy 2.x. The minimum required version is 1.4.40. Closes [#263](https://github.com/ClickHouse/clickhouse-connect/issues/263)
+- Added Polars support for Arrow-based query and insert methods (`query_df_arrow`, `query_df_arrow_stream`, `insert_df_arrow`). This initial implementation provides basic dataframe conversion through the Arrow format, similar to how we support the pyarrow-backed pandas dataframes. Closes [#111](https://github.com/ClickHouse/clickhouse-connect/issues/111) and [#542](https://github.com/ClickHouse/clickhouse-connect/issues/542)
+- Added support for querying/inserting pyarrow-backed DataFrames:
+  - `query_df_arrow()`: returns a pandas DataFrame with PyArrow dtype backend. Note that Arrow data types are preserved without additional conversions.
+  - `query_df_arrow_stream()`: Streaming version of `query_df_arrow()` for processing large result sets.
+  - `insert_df_arrow()`: Optimized insertion method for pandas DataFrames with PyArrow backend, which should provide better performance than standard `insert_df()`.
+- Added Time and Time64 type support. Closes [#509](https://github.com/ClickHouse/clickhouse-connect/issues/509)
+- Support for both pandas 1.x and 2.x.
+- Added support for Nullable(JSON) types
+- Added support for BFloat16 types
+
+### Improvements
+- Add support for lightweight `DELETE` in sqlalchemy. Closes [#382](https://github.com/ClickHouse/clickhouse-connect/issues/382)
+- Added support for `SELECT`/`JOIN` operations via SQLAlchemy's core API (table operations and explicit statements--not ORM sessions-based queries)
+- Added client connection option `rename_response_column` (default `None`) that allows the user to define how response columns are automatically renamed according to a predefined scheme. Helpful for stripping alias prefixes, etc. in potentially complex queries. Closes [#228](https://github.com/ClickHouse/clickhouse-connect/issues/228)
+- Add third-party library identifiers (name/version) in the User-Agent, e.g. pandas/2.2.5. Users can opt out by changing the common setting `send_integration_tags` to `False`.
+- Added support for form encoding query parameters when using HTTP interface. This addresses [#342](https://github.com/ClickHouse/clickhouse-connect/issues/342). Query parameters can now be sent as form-encoded data in the request body by setting `form_encode_query_params=True` when creating the client. This is particularly useful for queries with large parameter payloads that might exceed URL length limits.
+- Added support for special [interval types](https://clickhouse.com/docs/en/sql-reference/data-types/special-data-types/interval). Closes [#391](https://github.com/ClickHouse/clickhouse-connect/issues/391)
+- Added new common setting option "preserve_pandas_datetime_resolution" (default is `False`) allowing pandas 2.x users to opt into (when set to `True`) using the additional pandas 2.x datetime64/timedelta64 resolutions of "s", "ms", "us". If set to `False` or using pandas 1.x, all datetime64/timedelta64 resolutions will be coerced to "ns". (See [here](https://pandas.pydata.org/docs/whatsnew/v2.0.0.html#construction-with-datetime64-or-timedelta64-dtype-with-unsupported-resolution) for more info). Closes [#165](https://github.com/ClickHouse/clickhouse-connect/issues/165) and [#531](https://github.com/ClickHouse/clickhouse-connect/issues/531)
+- Tightens up type consistency of date-like objects when using `query_df`
+- When writing to an IPv6 column type, the client will "promote" IPv4 addresses to IPv4-mapped IPv6 addresses to prevent write errors. Closes [#498](https://github.com/ClickHouse/clickhouse-connect/issues/498)
+- Changed `AsyncClient.settings` typing to `Optional[Dict[str, Any]]` to accept None inputs.
+- Added more robust error handling and tests. Closes [#508](https://github.com/ClickHouse/clickhouse-connect/issues/508)
+- Replace the use of deprecated `datetime.utcfromtimestamp`
+
+### Bug Fixes
+- Fixed an AttributeError on `http.client` when importing `clickhouse_connect` under certain circumstances
+- Fixes problem with df inserts of Time and Time64 types. Closes [#524](https://github.com/ClickHouse/clickhouse-connect/issues/524)
+
+## New Contributors
+* @herbert-allium made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/512
+* @SkytAsul made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/518
+* @janwijbrand made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/545
+* @sanjams2 made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/543
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.18...v0.9.0
+</Update>
+
+<Update label="2025-06-24" description="v0.8.18">
+## What's Changed
+* Fix SQLAlchemy execution error by using text() function by @lakako in https://github.com/ClickHouse/clickhouse-connect/pull/491
+* Test fixes for main by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/497
+* Ensure types are returned even if there are no rows by @orian in https://github.com/ClickHouse/clickhouse-connect/pull/500
+* Fix some issues with cursor behavior by @joe-clickhouse in https://github.com/ClickHouse/clickhouse-connect/pull/506
+    - Reset cursor location after performing an execute.
+    - Fix behavior of `fetchall` to only return rows from the current cursor location.
+    - Fixes logic of `fetchmany` to respect size parameter.
+* Added a standalone test file (`tests/unit_tests/test_driver/test_cursor.py`) for testing cursor behavior
+
+## New Contributors
+* @lakako made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/491
+* @joe-clickhouse made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/506
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.17...v0.8.18
+</Update>
+
+<Update label="2025-04-13" description="v0.8.17">
+## What's Changed
+* Updates for 0.8.17 release by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/488
+* Add param extra_http_headers to query/command methods by @orian in https://github.com/ClickHouse/clickhouse-connect/pull/489
+* Change extra_http_headers to transport_settings by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/490
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.16...v0.8.17
+</Update>
+
+<Update label="2025-03-28" description="v0.8.16">
+## What's Changed
+* Gg/update test matrix by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/464
+* Fix CI tests with default user by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/465
+* Replace removal of ; in the loop line with rstrip by @sbobryshev in https://github.com/ClickHouse/clickhouse-connect/pull/472
+* Docker test fixes by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/473
+* Update README.md doc link by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/476
+* Correct typing of create_client(host, username) by @biggerfisch in https://github.com/ClickHouse/clickhouse-connect/pull/482
+* Release 0 8 16 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/485
+
+## New Contributors
+* @sbobryshev made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/472
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.15...v0.8.16
+</Update>
+
+<Update label="2025-01-25" description="v0.8.15">
+## What's Changed
+* Update `test_tls.py` reference by @emmanuel-ferdman in https://github.com/ClickHouse/clickhouse-connect/pull/455
+* Gg/update test jwt by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/458
+* Fix memory leak in AsyncClient by @pufit in https://github.com/ClickHouse/clickhouse-connect/pull/457
+* 0.8.15 release by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/459
+* Exclude 3.8 Aarch64 builds by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/460
+
+## New Contributors
+* @emmanuel-ferdman made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/455
+* @pufit made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/457
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.14...v0.8.15
+</Update>
+
+<Update label="2025-01-14" description="v0.8.14">
+## What's Changed
+* Make all None by default arguments accept None value by @orian in https://github.com/ClickHouse/clickhouse-connect/pull/450
+* Fix pandas large ints by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/454
+
+## New Contributors
+* @orian made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/450
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.13...v0.8.14
+</Update>
+
+<Update label="2025-01-07" description="v0.8.13">
+## What's Changed
+* fix: add default value for access token in HttpClient init by @lukasthalerINNIO in https://github.com/ClickHouse/clickhouse-connect/pull/448
+* Bump version for release by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/449
+
+## New Contributors
+* @lukasthalerINNIO made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/448
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.12...v0.8.13
+</Update>
+
+<Update label="2025-01-06" description="v0.8.12">
+## What's Changed
+* JWT auth support by @slvrtrn in https://github.com/ClickHouse/clickhouse-connect/pull/442
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.11...v0.8.12
+</Update>
+
+<Update label="2024-12-22" description="v0.8.11">
+## What's Changed
+* Add a write into file example by @slvrtrn in https://github.com/ClickHouse/clickhouse-connect/pull/437
+* Add support of ISO8601 timestamp strings for columns with `DateTime64` type by @rnv812 in https://github.com/ClickHouse/clickhouse-connect/pull/440
+* Dynamic type serialization fixes by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/443
+
+## New Contributors
+* @rnv812 made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/440
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.10...v0.8.11
+</Update>
+
+<Update label="2024-12-15" description="v0.8.10">
+## What's Changed
+* Update experimental JSON support by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/438
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.9...v0.8.10
+</Update>
+
+<Update label="2024-12-02" description="v0.8.9">
+## What's Changed
+* Gg/release 0 8 9 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/434
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.8...v0.8.9
+</Update>
+
+<Update label="2024-11-27" description="v0.8.8">
+## What's Changed
+* Gg/fix source dist name by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/430
+* Gg/handle stream exception by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/431
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.7...v0.8.8
+</Update>
+
+<Update label="2024-11-22" description="v0.8.7">
+## What's Changed
+* Gg/release 0 8 7 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/428
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.6...v0.8.7
+</Update>
+
+<Update label="2024-11-01" description="v0.8.6">
+## What's Changed
+* Fix chunked streaming and wait_end_of_query bug by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/421
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.5...v0.8.6
+</Update>
+
+<Update label="2024-10-24" description="v0.8.5">
+## What's Changed
+* Move type conversion to specific datatypes by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/415
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.4...v0.8.5
+</Update>
+
+<Update label="2024-10-23" description="v0.8.4">
+## What's Changed
+* Gg/release 0 8 4 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/413
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.3...v0.8.4
+</Update>
+
+<Update label="2024-10-08" description="v0.8.3">
+## What's Changed
+* Test workflow updates by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/406
+* Add executor_threads parameter to async client by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/408
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.2...v0.8.3
+</Update>
+
+<Update label="2024-10-04" description="v0.8.2">
+## What's Changed
+* Arrow compression plus another http buffer tweak by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/404
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/V0.8.1...v0.8.2
+</Update>
+
+<Update label="2024-09-29" description="V0.8.1">
+## What's Changed
+* Clean up http buffer by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/402
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.8.0...V0.8.1
+</Update>
+
+<Update label="2024-09-26" description="v0.8.0">
+## What's Changed
+* Include the column name in the error message for an unexpected NULL by @angusholder in https://github.com/ClickHouse/clickhouse-connect/pull/397
+* 0.8.0 Release by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/400
+
+## New Contributors
+* @angusholder made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/397
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.19...v0.8.0
+</Update>
+
+<Update label="2024-08-21" description="v0.7.19">
+## What's Changed
+* Fix insert large string by @bakwc in https://github.com/ClickHouse/clickhouse-connect/pull/388
+
+## New Contributors
+* @bakwc made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/388
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.18...v0.7.19
+</Update>
+
+<Update label="2024-07-30" description="v0.7.18">
+## What's Changed
+* Don't throw exception if unable to get os_user by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/381
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.17...v0.7.18
+</Update>
+
+<Update label="2024-07-24" description="v0.7.17">
+## What's Changed
+* Fix server_tz, add os_user by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/378
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.16...v0.7.17
+</Update>
+
+<Update label="2024-07-08" description="v0.7.16">
+### Improvement
+- Added the `AsyncClient` wrapper which is intended for `asyncio` environment usage. `AsyncClient` has the same methods with the same parameters as the standard `Client`, but they are coroutines when applicable. Internally, these methods from the `Client` that perform I/O operations are wrapped in a [run_in_executor](https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.run_in_executor) call. 
+See also the updated [run_async example](./examples/run_async.py).
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.15...v0.7.16
+</Update>
+
+<Update label="2024-07-01" description="v0.7.15">
+## What's Changed
+* Allow using client cert and key with mutual TLS proxy by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/373
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.14...v0.7.15
+</Update>
+
+<Update label="2024-06-24" description="v0.7.14">
+## What's Changed
+* Add an example of how to run async by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/359
+* Added minimum version for tzlocal by @drew-talon in https://github.com/ClickHouse/clickhouse-connect/pull/362
+* Sercurity issue: remove clickhouse server ip & port in the exception by @andy1xx8 in https://github.com/ClickHouse/clickhouse-connect/pull/364
+* Add the ability to bind binary data parameters by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/365
+* Update version for v0.7.13 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/366
+* Update version for v0.7.14, fix UUID dashes by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/369
+
+## New Contributors
+* @drew-talon made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/362
+* @andy1xx8 made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/364
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.12...v0.7.14
+</Update>
+
+<Update label="2024-06-04" description="v0.7.12">
+## What's Changed
+* Fix FixedString pandas type by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/357
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.11...v0.7.122
+</Update>
+
+<Update label="2024-05-27" description="v0.7.11">
+## What's Changed
+* Fix precision loss in Float to Decimal conversion by @feychenie in https://github.com/ClickHouse/clickhouse-connect/pull/354
+* Housekeeping for v0.7.11 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/355
+
+## New Contributors
+* @feychenie made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/354
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.10...v0.7.11
+</Update>
+
+<Update label="2024-05-22" description="v0.7.10">
+Attempt fix of a pandas concatenation exception for some kinds of empty responses.
+</Update>
+
+<Update label="2024-05-21" description="v0.7.9">
+## What's Changed
+* added missing parameter to tzname by @tstenson in https://github.com/ClickHouse/clickhouse-connect/pull/341
+* Add show_clickhouse_errors parameter, various other tweaks by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/351
+
+## New Contributors
+* @tstenson made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/341
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.8...v0.7.9
+</Update>
+
+<Update label="2024-04-14" description="v0.7.8">
+## What's Changed
+* Client timezone update by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/339
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.7...v0.7.8
+</Update>
+
+<Update label="2024-04-03" description="v0.7.7">
+## What's Changed
+* Fix complex numeric query binds, clean up raw API by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/336
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.6...v0.7.7
+</Update>
+
+<Update label="2024-04-02" description="v0.7.6">
+## What's Changed
+* Fix sqlalchemy Point by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/333
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.5...v0.7.6
+</Update>
+
+<Update label="2024-03-28" description="v0.7.5">
+## What's Changed
+* Add async_insert=0 for tests by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/323
+* Smt cleanup test by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/324
+* fix(external-data): allow empty data external data by @martijnthe in https://github.com/ClickHouse/clickhouse-connect/pull/328
+* Client side binding fix by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/329
+
+## New Contributors
+* @martijnthe made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/328
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.4...v0.7.5
+</Update>
+
+<Update label="2024-03-24" description="v0.7.4">
+## What's Changed
+* Skip json tests by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/319
+* Add query_arrow_stream by @NotSimone in https://github.com/ClickHouse/clickhouse-connect/pull/321
+* Housekeeping for 0.7.4 release by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/322
+
+## New Contributors
+* @NotSimone made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/321
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.3...v0.7.4
+</Update>
+
+<Update label="2024-03-14" description="v0.7.3">
+## What's Changed
+* Add summary field to the Cursor object by @elchyn-cheliabiyeu in https://github.com/ClickHouse/clickhouse-connect/pull/317
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.2...v0.7.3
+</Update>
+
+<Update label="2024-03-08" description="v0.7.2">
+## What's Changed
+* Improve query_df, update pylint by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/311
+* fix issue with multibyte UTF8 column names by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/313
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.1...v0.7.2
+</Update>
+
+<Update label="2024-02-28" description="v0.7.1">
+## What's Changed
+* Correct typing of Client.query*(query) by @biggerfisch in https://github.com/ClickHouse/clickhouse-connect/pull/301
+* Release 0 7 1 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/306
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.7.0...v0.7.1
+</Update>
+
+<Update label="2024-01-22" description="v0.7.0">
+Drop Python 3.7 builds, minor updates
+
+## What's Changed
+* Pass init params by @aastafiev in https://github.com/ClickHouse/clickhouse-connect/pull/291
+* 0.7.0 fixes and changelog by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/294
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.23...v0.7.0
+</Update>
+
+<Update label="2023-12-15" description="v0.6.23">
+## What's Changed
+* Add missing Nothing datatype for SQLAlchemy by @elchyn-cheliabiyeu in https://github.com/ClickHouse/clickhouse-connect/pull/279
+* Fix Pandas Concatenation Warning by @DylanModesitt in https://github.com/ClickHouse/clickhouse-connect/pull/280
+
+## New Contributors
+* @elchyn-cheliabiyeu made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/279
+* @DylanModesitt made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/280
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.22...v0.6.23
+</Update>
+
+<Update label="2023-12-01" description="v0.6.22">
+## What's Changed
+* fix the small logging message typo by @reijnnn in https://github.com/ClickHouse/clickhouse-connect/pull/275
+* Add ATTACH to commands by @alekseipalshin in https://github.com/ClickHouse/clickhouse-connect/pull/276
+* Release 0 6 22 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/277
+
+## New Contributors
+* @alekseipalshin made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/276
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.21...v0.6.22
+</Update>
+
+<Update label="2023-11-23" description="v0.6.21">
+## What's Changed
+* add point type by @Dhruvit96 in https://github.com/ClickHouse/clickhouse-connect/pull/273
+* Release 0 6 21 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/274
+
+## New Contributors
+* @Dhruvit96 made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/273
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.20...v0.6.21
+</Update>
+
+<Update label="2023-11-09" description="v0.6.20">
+## What's Changed
+* Fix datetime parameter binding with timezones by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/269
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.19...v0.6.20
+</Update>
+
+<Update label="2023-11-07" description="v0.6.19">
+## What's Changed
+* Release 0 6 19 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/266
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.18...v0.6.19
+</Update>
+
+<Update label="2023-10-25" description="v0.6.18">
+This reduces the block size for chunked inserts to avoid timeouts over HTTPS
+</Update>
+
+<Update label="2023-10-21" description="v0.6.17">
+## What's Changed
+* Release 0 6 17 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/255
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.16...v0.6.17
+</Update>
+
+<Update label="2023-10-18" description="v0.6.16">
+Fixes an import problem on some Python installations, including RHEL
+</Update>
+
+<Update label="2023-10-17" description="v0.6.15">
+Build and CI tests for Python 3.12
+</Update>
+
+<Update label="2023-09-22" description="v0.6.14">
+Fix Python 3.7 import issue, 0 length FixedString Inserts
+</Update>
+
+<Update label="2023-09-20" description="v0.6.13">
+## What's Changed
+* Add py.typed file (PEP 561) by @biggerfisch in https://github.com/ClickHouse/clickhouse-connect/pull/243
+
+## New Contributors
+* @biggerfisch made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/243
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.12...v0.6.13
+</Update>
+
+<Update label="2023-09-16" description="v0.6.12">
+Fixes index error on nested empty maps using native protocol
+</Update>
+
+<Update label="2023-08-30" description="v0.6.11">
+## What's Changed
+* Release 0 6 11 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/235
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.10...v0.6.11
+</Update>
+
+<Update label="2023-08-27" description="v0.6.10">
+Allow use of the Object(Nullable('json')) type, which is sometimes generated as a result of schema inference.
+</Update>
+
+<Update label="2023-08-22" description="v0.6.9">
+Improved insert error diagnostics, small packaging improvements.
+</Update>
+
+<Update label="2023-07-18" description="v0.6.8">
+## What's Changed
+* Insert compression issues by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/224
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.7...v0.6.8
+</Update>
+
+<Update label="2023-07-18" description="v0.6.7">
+Fixes an issue with reading some LowCardinality columns.  Updates Cython to 3.0.0
+</Update>
+
+<Update label="2023-07-07" description="v0.6.6">
+## What's Changed
+* Fix Pandas integer enum insert by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/220
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.5...v0.6.6
+</Update>
+
+<Update label="2023-07-06" description="v0.6.5">
+Adds QuerySummary to insert queries, fixes several small issues
+
+## What's Changed
+* Added a numeric condition in the min_version() method of the client for Altinity Stable versions by @lesandie in https://github.com/ClickHouse/clickhouse-connect/pull/217
+* Optional max_error_chars parameter added to HTTP Client class  by @RamlahAziz in https://github.com/ClickHouse/clickhouse-connect/pull/199
+* refactor: pkg_resources -> importlib.metadata by @cwegener in https://github.com/ClickHouse/clickhouse-connect/pull/214
+* 0 6 5 release by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/218
+
+## New Contributors
+* @lesandie made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/217
+* @RamlahAziz made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/199
+* @cwegener made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/214
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.4...v0.6.5
+</Update>
+
+<Update label="2023-06-22" description="v0.6.4">
+## What's Changed
+* Fix issue when ClickHouse has no `default`database
+* Fix SQLAlchemy dialect `get_table_names` method when database contains special characters
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.3...v0.6.4
+</Update>
+
+<Update label="2023-06-16" description="v0.6.3">
+Fix float rounding for Decimal columns, and broken datetime64 dates before 1970
+</Update>
+
+<Update label="2023-06-10" description="v0.6.2">
+## What's Changed
+* fix _MAXHEADERS property by @istrebitel-1 in https://github.com/ClickHouse/clickhouse-connect/pull/197
+* Improve string insertion performance by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/200
+
+## New Contributors
+* @istrebitel-1 made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/197
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.6.1...v0.6.2
+</Update>
+
+<Update label="2023-06-06" description="v0.6.1">
+Update Superset instructions
+</Update>
+
+<Update label="2023-06-06" description="v0.6.0">
+## What's Changed
+Superset engine spec removed, multiprocessing fix with uuid4 session ids and urllib3 PoolManager per client, low level insert improvements.
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.25...v0.6.0
+</Update>
+
+<Update label="2023-05-23" description="v0.5.25">
+Fixes an issue with using clickhouse-connect with CHProxy and recent ClickHouse versions related to the client_protocol_version setting
+</Update>
+
+<Update label="2023-05-11" description="v0.5.24">
+Fixes bugs with external data, SimpleAggregateFunction inserts, and date/datetime server side parameter binding.
+</Update>
+
+<Update label="2023-05-03" description="v0.5.23">
+Some minor bug fixes, plus a new common setting `max_connection_age`
+
+## What's Changed
+* V0.5.23 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/185
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/0.5.22...v0.5.23
+</Update>
+
+<Update label="2023-04-27" description="0.5.22">
+## What's Changed
+zstd compression was broken with urllib3 (both the library and clickhouse-connect were decompressing the payload)
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.21...0.5.22
+</Update>
+
+<Update label="2023-04-26" description="v0.5.21">
+## What's Changed
+* nit: change unexpected http error log to warning level by @alexandrosandre in https://github.com/ClickHouse/clickhouse-connect/pull/173
+* 0_5_21 Release by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/174
+
+## New Contributors
+* @alexandrosandre made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/173
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.20...v0.5.21
+</Update>
+
+<Update label="2023-04-06" description="v0.5.20">
+## What's Changed
+* Fix http settings and row dataframe inserts by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/168
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.19...v0.5.20
+</Update>
+
+<Update label="2023-04-05" description="v0.5.19">
+## What's Changed
+* Fixes #159 - quoting and escaping string literals inside lists by @ewjoachim in https://github.com/ClickHouse/clickhouse-connect/pull/161
+* bug fixes for v0.5.19 by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/166
+
+## New Contributors
+* @ewjoachim made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/161
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.18...v0.5.19
+</Update>
+
+<Update label="2023-03-30" description="v0.5.18">
+## What's Changed
+* Same timezone fix by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/158
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.17...v0.5.18
+</Update>
+
+<Update label="2023-03-27" description="v0.5.17">
+## What's Changed
+* Timezone updates and external data by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/156
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.16...v0.5.17
+</Update>
+
+<Update label="2023-03-15" description="v0.5.16">
+## What's Changed
+* fix key error in connection with no available settings from server by @Barsoomx in https://github.com/ClickHouse/clickhouse-connect/pull/147
+* Bytes strings by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/149
+
+## New Contributors
+* @Barsoomx made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/147
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.15...v0.5.16
+</Update>
+
+<Update label="2023-03-10" description="v0.5.15">
+## What's Changed
+* Allows connect to server version 19.16.19.85 by @aastafiev in https://github.com/ClickHouse/clickhouse-connect/pull/140
+* Fix temp table inserts by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/146
+
+## New Contributors
+* @aastafiev made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/140
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.14...v0.5.15
+</Update>
+
+<Update label="2023-03-02" description="v0.5.14">
+Fixed bad pandas import, made optional import failure message less noisy.
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.13...v0.5.14
+</Update>
+
+<Update label="2023-02-27" description="v0.5.13">
+## What's Changed
+* Panda nulls by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/137
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.12...v0.5.13
+</Update>
+
+<Update label="2023-02-16" description="v0.5.12">
+## What's Changed
+* Server host name by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/134
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.11...v0.5.12
+</Update>
+
+<Update label="2023-02-15" description="v0.5.11">
+## What's Changed
+* Better error message for invalid numpy DateTime64 types by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/127
+* Added column_oriented check to the named_results function by @reijnnn in https://github.com/ClickHouse/clickhouse-connect/pull/129
+* SSH Tunnel example, support for client_protocol_version by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/131
+
+## New Contributors
+* @reijnnn made their first contribution in https://github.com/ClickHouse/clickhouse-connect/pull/129
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.10...v0.5.11
+</Update>
+
+<Update label="2023-02-13" description="v0.5.10">
+## What's Changed
+* Optimize null strings, bug fixes by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/125
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.9...v0.5.10
+</Update>
+
+<Update label="2023-02-11" description="v0.5.9">
+## What's Changed
+* Streaming fixes by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/124
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.8...v0.5.9
+</Update>
+
+<Update label="2023-02-10" description="v0.5.8">
+## What's Changed
+* Return empty df instead of list by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/119
+* Add query_tz and column_tzs query arguments by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/121
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.7...v0.5.8
+</Update>
+
+<Update label="2023-02-04" description="v0.5.7">
+## What's Changed
+* Restore proxy support by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/115
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.6...v0.5.7
+</Update>
+
+<Update label="2023-02-03" description="v0.5.6">
+## What's Changed
+* Fix dataframe insert mutation by @genzgd in https://github.com/ClickHouse/clickhouse-connect/pull/113
+
+
+**Full Changelog**: https://github.com/ClickHouse/clickhouse-connect/compare/v0.5.5...v0.5.6
+</Update>
+
+<Update label="2023-02-01" description="v0.5.5">
+
+</Update>
+
+<Update label="2023-02-01" description="v0.5.4">
+Several performance improvements, especially for Pandas Dataframes.
+</Update>
+
+<Update label="2023-01-23" description="v0.5.3">
+
+</Update>
+
+<Update label="2023-01-17" description="v0.5.2">
+This fixes issues where the client.database is set to None (that is not a common use case, but it can affect automated tests, such as for dbt-clickhouse).
+</Update>
+
+<Update label="2023-01-16" description="v0.5.1">
+
+</Update>
+
+<Update label="2023-01-14" description="v0.5.0">
+
+</Update>
+
+<Update label="2023-01-02" description="v0.4.8">
+
+</Update>
+
+<Update label="2022-12-05" description="v0.4.7">
+
+</Update>
+
+<Update label="2022-11-29" description="v0.4.6">
+
+</Update>
+
+<Update label="2022-11-24" description="v0.4.5">
+
+</Update>
+
+<Update label="2022-11-22" description="v0.4.4">
+
+</Update>
+
+<Update label="2022-11-22" description="v0.4.3">
+
+</Update>
+
+<Update label="2022-11-22" description="v0.4.2">
+
+</Update>
+
+<Update label="2022-11-14" description="v04.1">
+Better support for Numpy arrays, including both object arrays and resizable matrices.  Fix for an issue migrating Superset from clickhouse-sqlalchemy to clickhouse-connect
+</Update>
+
+<Update label="2022-11-07" description="v0.4.0">
+
+</Update>
+
+<Update label="2022-11-04" description="v0.3.8">
+
+</Update>
+
+<Update label="2022-11-04" description="v0.3.7">
+Improvs insert performance (and prevents timeouts) by using chunked transfer encoding and gzip compression (if compression is enabled)
+</Update>
+
+<Update label="2022-11-02" description="v0.3.6">
+
+</Update>
+
+<Update label="2022-10-28" description="v0.3.5">
+
+</Update>
+
+<Update label="2022-10-27" description="v0.3.4">
+Fix insert into JSON column from SQLAlchemy, and fix some SQLAlchemy 1.4 issues.
+</Update>
+
+<Update label="2022-10-21" description="v0.3.3">
+
+</Update>
+
+<Update label="2022-10-20" description="v0.3.2">
+
+</Update>
+
+<Update label="2022-10-19" description="v0.3.1">
+Fix for Superset large integers (now rendered as strings)
+Fix for UInt64 type being incorrectly signed
+</Update>
+
+<Update label="2022-10-15" description="v0.3.0">
+This release removes the deprecated row binary serialization for ClickHouse communications and fixes some Superset issues.
+</Update>
+
+<Update label="2022-09-28" description="v0.2.10">
+
+</Update>
+
+<Update label="2022-09-25" description="v0.2.9">
+This release fixes a minor bug where the Superset connection dialog would incorrectly display connection errors if using the default port
+</Update>
+
+<Update label="2022-09-21" description="v0.2.8">
+This release now creates binary wheels for most Python platforms.
+</Update>
+
+<Update label="2022-09-08" description="v0.2.6">
+
+</Update>
+
+<Update label="2022-08-30" description="v0.2.5">
+
+</Update>
+
+<Update label="2022-08-19" description="v0.2.4">
+
+</Update>
+
+<Update label="2022-08-14" description="v0.2.3">
+
+</Update>
+
+<Update label="2022-08-07" description="v0.2.2">
+
+</Update>
+
+<Update label="2022-08-04" description="v0.2.1">
+
+</Update>
+
+<Update label="2022-08-04" description="v0.2.0">
+This release adds JSON support, fixes some SQLAlchemy related bugs, and introduces a new system for formatting query results.
+</Update>
+
+<Update label="2022-07-06" description="v0.1.6">
+Add support for Nested columns, small bug fixes
+</Update>
+
+<Update label="2022-06-27" description="v0.1.5">
+
+</Update>
+
+<Update label="2022-06-17" description="v0.1.4">
+This fixes a breaking change where readonly settings would be sent to the ClickHouse server and cause queries to fail.
+</Update>
+
+<Update label="2022-06-17" description="v0.1.3">
+
+</Update>
+
+<Update label="2022-06-16" description="v0.1.2">
+
+</Update>
+
+<Update label="2022-06-11" description="v0.1.1">
+
+</Update>
+
+<Update label="2022-06-09" description="v0.1.0">
+Beta release with improvements to client.command allowing separation of query from data.
+</Update>
+
+<Update label="2022-06-06" description="v0.0.15">
+Minor fixes to address deprecated APIs
+</Update>
+
+<Update label="2022-06-02" description="v0.0.14">
+
+</Update>
+
+<Update label="2022-05-31" description="v0.0.13">
+Using the setting "metadata_only" or setting a query LIMIT of 0 will now correctly return column names and types in the QueryResult
+</Update>
+
+<Update label="2022-05-30" description="v0.0.12">
+Fix for PyPI release versions
+</Update>
