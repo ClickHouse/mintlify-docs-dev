@@ -49,8 +49,7 @@
   function injectMobileButton() {
     if (document.getElementById(MOBILE_BTN_ID)) return true;
 
-    // Find the mobile search icon button in the navbar
-    var mobileSearchBtn = document.querySelector('#navbar-transition-maple button[aria-label="Search"]');
+    var mobileSearchBtn = document.getElementById('search-bar-entry-mobile');
 
     if (!mobileSearchBtn) return false;
 
@@ -59,7 +58,7 @@
     var btn = document.createElement('button');
     btn.id = MOBILE_BTN_ID;
     btn.type = 'button';
-    btn.className = 'lg:hidden flex items-center justify-center p-2';
+    btn.className = 'text-gray-500 w-8 h-8 flex items-center justify-center hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300';
     btn.setAttribute('aria-label', 'Ask AI');
     btn.innerHTML = sparkleSvg;
     btn.addEventListener('click', function (e) {

@@ -3,6 +3,7 @@ title: 'ClickHouse Operator'
 slug: /clickhouse-operator/overview
 description: 'Overview page for the ClickHouse Operator - a Kubernetes operator that automates the deployment, configuration, and management of ClickHouse clusters and ClickHouse Keeper clusters on Kubernetes.'
 keywords: ['kubernetes']
+sidebarTitle: "Overview"
 ---
 
 The ClickHouse Operator is a Kubernetes operator that automates the deployment, configuration, and management of ClickHouse clusters and ClickHouse Keeper clusters on Kubernetes.
