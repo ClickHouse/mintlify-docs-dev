@@ -634,7 +634,7 @@ Reference: [https://clickhouse.com/docs/best-practices/use-json-where-appropriat
 
 ### 1.12 Use LowCardinality for Repeated Strings
 
-**Impact: HIGH (Dictionary encoding for <10K unique values; significant storage reduction)**
+**Impact: HIGH (Dictionary encoding for under 10K unique values; significant storage reduction)**
 
 String columns with repeated values store each value repeatedly. LowCardinality uses dictionary encoding for significant storage reduction.
 
