@@ -265,13 +265,19 @@
 
     // In the Maple theme, #content-container is a flex-row, so appending
     // there makes the footer a horizontal sibling of the content columns.
-    // Instead, walk up to the nearest block-level ancestor so the footer
-    // renders as a full-width block below the sidebar + content row.
-    var scrollContainer = contentContainer.parentElement;       // .flex.scroll-mt
-    var blockParent = scrollContainer && scrollContainer.parentElement; // lg:flex-1 (display:block)
-    var target = (blockParent && getComputedStyle(blockParent).display === 'block')
-      ? blockParent
-      : contentContainer;
+    // Walk up to the nearest block-level ancestor so the footer renders as
+    // a full-width block below the sidebar + content row. Some intermediate
+    // ancestors use display:contents on mobile, so keep walking until we
+    // find a real block-level container.
+    var target = contentContainer;
+    var ancestor = contentContainer.parentElement;
+    while (ancestor && ancestor !== document.body) {
+      if (getComputedStyle(ancestor).display === 'block') {
+        target = ancestor;
+        break;
+      }
+      ancestor = ancestor.parentElement;
+    }
 
     target.appendChild(wrapper);
     return true;
