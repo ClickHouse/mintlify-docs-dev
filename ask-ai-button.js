@@ -72,9 +72,51 @@
     return true;
   }
 
+  function isAskAiOption(el) {
+    if (!el || el.nodeType !== 1) return false;
+    var option = el.closest && el.closest('[role="option"]');
+    if (!option) return false;
+    return /^\s*Can you tell me about\b/i.test(option.textContent || '');
+  }
+
+  function getSearchQuery() {
+    var input = document.querySelector('input[placeholder="Search..."]');
+    return input ? input.value.trim() : '';
+  }
+
+  function openCustomAskAi() {
+    var query = getSearchQuery();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    if (!window.RagChatWidget || typeof window.RagChatWidget.open !== 'function') return;
+    window.RagChatWidget.open(query ? { initialMessage: query } : undefined);
+  }
+
+  function interceptAskAi(e) {
+    if (!isAskAiOption(e.target)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    if (e.type === 'keydown' && e.key !== 'Enter') return;
+    openCustomAskAi();
+  }
+
   function init() {
     injectButton();
     injectMobileButton();
+
+    document.addEventListener('click', interceptAskAi, true);
+    document.addEventListener('mousedown', interceptAskAi, true);
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var active = document.querySelector('[role="option"][data-headlessui-state*="active"], [role="option"][aria-selected="true"]');
+      if (active && /^\s*Can you tell me about\b/i.test(active.textContent || '')) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        openCustomAskAi();
+      }
+    }, true);
 
     var observer = new MutationObserver(function () {
       injectButton();
