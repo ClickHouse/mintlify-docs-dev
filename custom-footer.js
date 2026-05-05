@@ -241,9 +241,39 @@
     + '</div>';
   }
 
+  function findFooterTarget() {
+    var contentContainer = document.getElementById('content-container');
+    if (!contentContainer) return null;
+    // Walk up to the nearest block-level ancestor so the footer renders as a
+    // full-width block below the sidebar + content row. Some intermediate
+    // ancestors use display:contents on mobile, so keep walking until we
+    // find a real block-level container.
+    var ancestor = contentContainer.parentElement;
+    while (ancestor && ancestor !== document.body) {
+      if (getComputedStyle(ancestor).display === 'block') {
+        return ancestor;
+      }
+      ancestor = ancestor.parentElement;
+    }
+    return contentContainer;
+  }
+
+  function ensureFooterAtEnd() {
+    var existing = document.getElementById(FOOTER_ID);
+    if (!existing) return false;
+    var target = findFooterTarget();
+    // If the target was replaced or the footer drifted, move it to the end of the right parent.
+    if (target && (existing.parentElement !== target || existing !== target.lastElementChild)) {
+      target.appendChild(existing);
+    }
+    return true;
+  }
+
   function injectFooter() {
-    // Don't inject twice
-    if (document.getElementById(FOOTER_ID)) return true;
+    // Already injected — just make sure it's still positioned at the end.
+    if (document.getElementById(FOOTER_ID)) {
+      return ensureFooterAtEnd();
+    }
 
     // Find the scrollable content container
     var contentContainer = document.getElementById('content-container');
@@ -266,19 +296,8 @@
     // In the Maple theme, #content-container is a flex-row, so appending
     // there makes the footer a horizontal sibling of the content columns.
     // Walk up to the nearest block-level ancestor so the footer renders as
-    // a full-width block below the sidebar + content row. Some intermediate
-    // ancestors use display:contents on mobile, so keep walking until we
-    // find a real block-level container.
-    var target = contentContainer;
-    var ancestor = contentContainer.parentElement;
-    while (ancestor && ancestor !== document.body) {
-      if (getComputedStyle(ancestor).display === 'block') {
-        target = ancestor;
-        break;
-      }
-      ancestor = ancestor.parentElement;
-    }
-
+    // a full-width block below the sidebar + content row.
+    var target = findFooterTarget() || contentContainer;
     target.appendChild(wrapper);
     return true;
   }
