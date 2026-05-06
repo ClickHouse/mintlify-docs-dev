@@ -84,12 +84,37 @@
     return input ? input.value.trim() : '';
   }
 
+  // The widget renders inside a shadow root at #rag-chat-host, so document
+  // queries don't see it. Submit by setting the textarea value via the native
+  // setter (so React's controlled input picks it up) then clicking send.
+  function submitToWidget(query) {
+    var host = document.getElementById('rag-chat-host');
+    var sr = host && host.shadowRoot;
+    if (!sr) return false;
+    var ta = sr.querySelector('.rag-composer-input');
+    var btn = sr.querySelector('.rag-composer-send');
+    if (!ta || !btn) return false;
+    ta.focus();
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+    setter.call(ta, query);
+    ta.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    btn.click();
+    return true;
+  }
+
   function openCustomAskAi() {
     var query = getSearchQuery();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
     if (!window.RagChatWidget || typeof window.RagChatWidget.open !== 'function') return;
-    window.RagChatWidget.open(query ? { initialMessage: query } : undefined);
+    window.RagChatWidget.open();
+
+    if (!query) return;
+    var attempts = 0;
+    var iv = setInterval(function () {
+      attempts++;
+      if (submitToWidget(query) || attempts > 40) clearInterval(iv);
+    }, 50);
   }
 
   function interceptAskAi(e) {
