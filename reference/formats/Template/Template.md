@@ -4,14 +4,16 @@ description: 'Documentation for the Template format'
 input_format: true
 keywords: ['Template']
 output_format: true
-old-slug: /interfaces/formats/Template
+slug: /interfaces/formats/Template
 title: 'Template'
 doc_type: 'guide'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 For cases where you need more customization than other standard formats offer, 
 the `Template` format allows the user to specify their own custom format string with placeholders for values,
@@ -28,9 +30,9 @@ It uses the following settings:
 | `format_template_resultset_format`                                                                       | Specifies the result set format string [in-line](#inline_specification).                                                   |
 | Some settings of other formats (e.g.`output_format_json_quote_64bit_integers` when using `JSON` escaping |                                                                                                                            |
 
-## Settings and escaping rules 
+## Settings and escaping rules {#settings-and-escaping-rules}
 
-### format_template_row 
+### format_template_row {#format_template_row}
 
 The setting `format_template_row` specifies the path to the file which contains format strings for rows with the following syntax:
 
@@ -56,9 +58,9 @@ The following escaping rules are supported:
 | `Raw`                | Without escaping, similar to `TSVRaw`    |   
 | `None`               | No escaping rule - see note below        |
 
-<Note>
+:::note
 If an escaping rule is omitted, then `None` will be used. `XML` is suitable only for output.
-</Note>
+:::
 
 Let's look at an example. Given the following format string:
 
@@ -82,11 +84,11 @@ For example:
 Search phrase: 'bathroom interior design', count: 2166, ad price: $3;
 ```
 
-### format_template_rows_between_delimiter 
+### format_template_rows_between_delimiter {#format_template_rows_between_delimiter}
 
 The setting `format_template_rows_between_delimiter` setting specifies the delimiter between rows, which is printed (or expected) after every row except the last one (`\n` by default)
 
-### format_template_resultset 
+### format_template_resultset {#format_template_resultset}
 
 The setting `format_template_resultset` specifies the path to the file, which contains a format string for the result set. 
 
@@ -105,13 +107,13 @@ It allows for specifying a prefix, a suffix and a way to print some additional i
 
 The placeholders `data`, `totals`, `min` and `max` must not have escaping rule specified (or `None` must be specified explicitly). The remaining placeholders may have any escaping rule specified.
 
-<Note>
+:::note
 If the `format_template_resultset` setting is an empty string, `${data}` is used as the default value.
-</Note>
+:::
 
 For insert queries format allows skipping some columns or fields if prefix or suffix (see example).
 
-### In-line specification 
+### In-line specification {#inline_specification}
 
 Often times it is challenging or not possible to deploy the format configurations
 (set by `format_template_row`, `format_template_resultset`) for the template format to a directory on all nodes in a cluster. 
@@ -120,17 +122,17 @@ Furthermore, the format may be so trivial that it does not require being placed 
 For these cases, `format_template_row_format` (for `format_template_row`) and `format_template_resultset_format` (for `format_template_resultset`) can be used to set the template string directly in the query, 
 rather than as a path to the file which contains it.
 
-<Note>
+:::note
 The rules for format strings and escape sequences are the same as those for:
 - [`format_template_row`](#format_template_row) when using `format_template_row_format`.
 - [`format_template_resultset`](#format_template_resultset) when using `format_template_resultset_format`.
-</Note>
+:::
 
-## Example usage 
+## Example usage {#example-usage}
 
 Let's look at two examples of how we can use the `Template` format, first for selecting data and then for inserting data.
 
-### Selecting data 
+### Selecting data {#selecting-data}
 
 ```sql
 SELECT SearchPhrase, count() AS c FROM test.hits GROUP BY SearchPhrase ORDER BY c DESC LIMIT 5 FORMAT Template SETTINGS
@@ -179,7 +181,7 @@ Result:
 </html>
 ```
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 ```text
 Some header
@@ -205,7 +207,7 @@ Page views: ${PageViews:CSV}, User id: ${UserID:CSV}, Useless field: ${:CSV}, Du
 `PageViews`, `UserID`, `Duration` and `Sign` inside placeholders are names of columns in the table. Values after `Useless field` in rows and after `\nTotal rows:` in suffix will be ignored.
 All delimiters in the input data must be strictly equal to delimiters in specified format strings.
 
-### In-line specification 
+### In-line specification {#in-line-specification}
 
 Tired of manually formatting markdown tables? In this example we'll look at how we can use the `Template` format and in-line specification settings to achieve a simple task - `SELECT`ing the names of some ClickHouse formats from the `system.formats` table and formatting them as a markdown table. This can be easily achieved using the `Template` format and settings `format_template_row_format` and `format_template_resultset_format`.
 

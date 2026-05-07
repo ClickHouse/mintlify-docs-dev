@@ -1,6 +1,6 @@
 ---
 description: 'Guide to using clickhouse-local for processing data without a server'
-old-slug: /operations/utilities/clickhouse-local
+slug: /operations/utilities/clickhouse-local
 title: 'clickhouse-local'
 doc_type: 'reference'
 ---

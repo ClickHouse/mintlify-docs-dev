@@ -2,7 +2,7 @@
 description: 'Guide to configuring and managing resource usage quotas in ClickHouse'
 sidebarTitle: 'Quotas'
 sidebar_position: 51
-old-slug: /operations/quotas
+slug: /operations/quotas
 title: 'Quotas'
 doc_type: 'guide'
 ---

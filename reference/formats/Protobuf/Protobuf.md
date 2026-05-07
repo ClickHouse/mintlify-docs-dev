@@ -4,14 +4,16 @@ description: 'Documentation for the Protobuf format'
 input_format: true
 keywords: ['Protobuf']
 output_format: true
-old-slug: /interfaces/formats/Protobuf
+slug: /interfaces/formats/Protobuf
 title: 'Protobuf'
 doc_type: 'guide'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 The `Protobuf` format is the [Protocol Buffers](https://protobuf.dev/) format.
 
@@ -82,7 +84,8 @@ SELECT * FROM string_or_string
    └─────────┴─────────┴──────────────┘
 ```
 
-Name of the column that indicates presence must be the same as the name of oneof. Nested messages are supported (see  [basic-examples](#basic-examples)).
+Name of the column that indicates presence must be the same as the name of oneof.
+Nested messages are supported (see  [basic-examples](#basic-examples)). Empty messages are supported as well.
 Allowed types are Int8, UInt8, Int16, UInt16, Int32, UInt32, Int64, UInt64, Enum, Enum8 or Enum16.
 Enum (as well as Enum8 or Enum16) must contain all oneof' possible tags plus 0 to indicate absence, string representations does not matter.
 
@@ -91,46 +94,47 @@ The setting [`input_format_protobuf_oneof_presence`](/operations/settings/settin
 ClickHouse inputs and outputs protobuf messages in the `length-delimited` format.
 This means that before every message its length should be written as a [variable width integer (varint)](https://developers.google.com/protocol-buffers/docs/encoding#varints).
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Reading and writing data 
+### Reading and writing data {#basic-examples}
 
-<Note title="Example files">
+:::note Example files
 The files used in this example are available in the [examples repository](https://github.com/ClickHouse/formats/ProtoBuf)
-</Note>
+:::
 
 In this example we will read some data from a file `protobuf_message.bin` into a ClickHouse table. We'll then write it
-back out to a file called `protobuf_message_from_clickhouse.bin` using the `Protobuf` format. 
+back out to a file called `protobuf_message_from_clickhouse.bin` using the `Protobuf` format.
 
 Given the file `schemafile.proto`:
 
 ```capnp
-syntax = "proto3";  
-  
-message MessageType {  
-  string name = 1;  
-  string surname = 2;  
-  uint32 birthDate = 3;  
-  repeated string phoneNumbers = 4;  
+syntax = "proto3";
+
+message MessageType {
+  string name = 1;
+  string surname = 2;
+  uint32 birthDate = 3;
+  repeated string phoneNumbers = 4;
 };
 ```
 
-<AccordionGroup>
-<Accordion title="Generating the binary file">
+<details>
+<summary>Generating the binary file</summary>
+
 If you already know how to serialize and deserialize data in the `Protobuf` format, you can skip this step.
 
 We'll use Python to serialize some data into `protobuf_message.bin` and read it into ClickHouse.
 If there is another language you want to use, see also: ["How to read/write length-delimited Protobuf messages in popular languages"](https://cwiki.apache.org/confluence/display/GEODE/Delimiting+Protobuf+Messages).
 
-Run the following command to generate a Python file named `schemafile_pb2.py` in 
-the same directory as `schemafile.proto`. This file contains the Python classes 
+Run the following command to generate a Python file named `schemafile_pb2.py` in
+the same directory as `schemafile.proto`. This file contains the Python classes
 that represent your `UserData` Protobuf message:
 
 ```bash
 protoc --python_out=. schemafile.proto
 ```
 
-Now, create a new Python file named `generate_protobuf_data.py`, in the same 
+Now, create a new Python file named `generate_protobuf_data.py`, in the same
 directory as `schemafile_pb2.py`. Paste the following code into it:
 
 ```python
@@ -197,7 +201,7 @@ with open(output_filename, "rb") as f:
         # Decode the varint length prefix
         msg_len, new_pos = _DecodeVarint32(buf, n)
         n = new_pos
-        
+
         # Extract the message data
         message_data = buf[n:n+msg_len]
         n += msg_len
@@ -208,7 +212,7 @@ with open(output_filename, "rb") as f:
         print(text_format.MessageToString(decoded_message, as_utf8=True))
 ```
 
-Now run the script from the command line. It is recommended to run it from a 
+Now run the script from the command line. It is recommended to run it from a
 python virtual environment, for example using `uv`:
 
 ```bash
@@ -227,8 +231,9 @@ Run the script to generate the binary file:
 ```bash
 python generate_protobuf_data.py
 ```
-</Accordion>
-</AccordionGroup>
+
+</details>
+
 Create a ClickHouse table matching the schema:
 
 ```sql
@@ -257,9 +262,9 @@ SELECT * FROM test.protobuf_messages INTO OUTFILE 'protobuf_message_from_clickho
 
 With your Protobuf schema, you can now deserialize the data which was written out from ClickHouse to file `protobuf_message_from_clickhouse.bin`.
 
-### Reading and writing data using ClickHouse Cloud 
+### Reading and writing data using ClickHouse Cloud {#basic-examples-cloud}
 
-With ClickHouse Cloud you are not able to upload a Protobuf schema file. However, you can use the `format_protobuf_schema` 
+With ClickHouse Cloud you are not able to upload a Protobuf schema file. However, you can use the `format_protobuf_schema`
 setting to specify the schema in the query. In this example, we show you how to read serialized data from your local
 machine and insert it into a table in ClickHouse Cloud.
 
@@ -284,7 +289,7 @@ Possible values:
 - 'string': The `format_schema` is the literal content of the schema.
 - 'query': The `format_schema` is a query to retrieve the schema.
 
-### `format_schema_source='string'` 
+### `format_schema_source='string'` {#format-schema-source-string}
 
 Insert the data into ClickHouse Cloud, specifying the schema as a string, run:
 
@@ -304,7 +309,7 @@ Javier Rodriguez 20001015 ['(555) 891-2046','(555) 738-5129']
 Mei Ling 19980616 ['(555) 956-1834','(555) 403-7682']
 ```
 
-### `format_schema_source='query'` 
+### `format_schema_source='query'` {#format-schema-source-query}
 
 You can also store your Protobuf schema in a table.
 
@@ -340,9 +345,9 @@ Javier Rodriguez 20001015 ['(555) 891-2046','(555) 738-5129']
 Mei Ling 19980616 ['(555) 956-1834','(555) 403-7682']
 ```
 
-### Using autogenerated schema 
+### Using autogenerated schema {#using-autogenerated-protobuf-schema}
 
-If you don't have an external Protobuf schema for your data, you can still output/input data in the Protobuf format 
+If you don't have an external Protobuf schema for your data, you can still output/input data in the Protobuf format
 using an autogenerated schema. For this use the `format_protobuf_use_autogenerated_schema` setting.
 
 For example:
@@ -351,7 +356,7 @@ For example:
 SELECT * FROM test.hits format Protobuf SETTINGS format_protobuf_use_autogenerated_schema=1
 ```
 
-In this case, ClickHouse will autogenerate the Protobuf schema according to the table structure using function 
+In this case, ClickHouse will autogenerate the Protobuf schema according to the table structure using function
 [`structureToProtobufSchema`](/sql-reference/functions/other-functions#structureToProtobufSchema). It will then use this schema to serialize data in the Protobuf format.
 
 You can also read a Protobuf file with the autogenerated schema. In this case it is necessary for the file to be created using the same schema:
@@ -370,7 +375,7 @@ SELECT * FROM test.hits format Protobuf SETTINGS format_protobuf_use_autogenerat
 
 In this case autogenerated Protobuf schema will be saved in file `path/to/schema/schema.capnp`.
 
-### Drop protobuf cache 
+### Drop protobuf cache {#drop-protobuf-cache}
 
 To reload the Protobuf schema loaded from [`format_schema_path`](/operations/server-configuration-parameters/settings.md/#format_schema_path) use the [`SYSTEM DROP ... FORMAT CACHE`](/sql-reference/statements/system.md/#system-drop-schema-format) statement.
 

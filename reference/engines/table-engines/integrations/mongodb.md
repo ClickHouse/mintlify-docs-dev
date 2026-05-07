@@ -1,19 +1,21 @@
 ---
 description: 'MongoDB engine is read-only table engine which allows to read data from
   a remote collection.'
-sidebarTitle: 'MongoDB table engine'
+sidebar_label: 'MongoDB'
 sidebar_position: 135
-old-slug: /engines/table-engines/integrations/mongodb
+slug: /engines/table-engines/integrations/mongodb
 title: 'MongoDB table engine'
 doc_type: 'reference'
 ---
+
+# MongoDB table engine
 
 MongoDB engine is read-only table engine which allows to read data from a remote [MongoDB](https://www.mongodb.com/) collection.
 
 Only MongoDB v3.6+ servers are supported.
 [Seed list(`mongodb+srv`)](https://www.mongodb.com/docs/manual/reference/glossary/#std-term-seed-list) is not yet supported.
 
-## Creating a table 
+## Creating a table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name
@@ -36,10 +38,10 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name
 | `options`     | Optional. MongoDB connection string [options](https://www.mongodb.com/docs/manual/reference/connection-string-options/#connection-options) as a URL formatted string. e.g. `'authSource=admin&ssl=true'` |
 | `oid_columns` | Comma-separated list of columns that should be treated as `oid` in the WHERE clause. `_id` by default.                                                                                                   |
 
-<Tip>
+:::tip
 If you are using the MongoDB Atlas cloud offering connection url can be obtained from 'Atlas SQL' option.
 Seed list(`mongodb**+srv**`) is not yet supported, but will be added in future releases.
-</Tip>
+:::
 
 Alternatively, you can pass a URI:
 
@@ -55,7 +57,7 @@ ENGINE = MongoDB(uri, collection[, oid_columns]);
 | `collection`  | Remote collection name.                                                                                |
 | `oid_columns` | Comma-separated list of columns that should be treated as `oid` in the WHERE clause. `_id` by default. |
 
-## Types mappings 
+## Types mappings {#types-mappings}
 
 | MongoDB                 | ClickHouse                                                            |
 |-------------------------|-----------------------------------------------------------------------|
@@ -72,7 +74,7 @@ ENGINE = MongoDB(uri, collection[, oid_columns]);
 
 If key is not found in MongoDB document (for example, column name doesn't match), default value or `NULL` (if the column is nullable) will be inserted.
 
-### OID 
+### OID {#oid}
 
 If you want a `String` to be treated as `oid` in the WHERE clause, just put the column's name in the last argument of the table engine.
 This may be necessary when querying a record by the `_id` column, which by default has `oid` type in MongoDB.
@@ -125,14 +127,14 @@ CREATE TABLE sample_oid
 SELECT count() FROM sample_oid WHERE another_oid_column = '67bf6cc40000000000ea41b1'; -- will output 1 now
 ```
 
-## Supported clauses 
+## Supported clauses {#supported-clauses}
 
 Only queries with simple expressions are supported (for example, `WHERE field = <constant> ORDER BY field2 LIMIT <constant>`).
 Such expressions are translated to MongoDB query language and executed on the server side.
 You can disable all these restriction, using [mongodb_throw_on_unsupported_query](../../../operations/settings/settings.md#mongodb_throw_on_unsupported_query).
 In that case ClickHouse tries to convert query on best effort basis, but it can lead to full table scan and processing on ClickHouse side.
 
-<Note>
+:::note
 It's always better to explicitly set type of literal because Mongo requires strict typed filters.\
 For example you want to filter by `Date`:
 
@@ -148,9 +150,9 @@ SELECT * FROM mongo_table WHERE date = '2024-01-01'::Date OR date = toDate('2024
 
 This applied for `Date`, `Date32`, `DateTime`, `Bool`, `UUID`.
 
-</Note>
+:::
 
-## Usage example 
+## Usage example {#usage-example}
 
 Assuming MongoDB has [sample_mflix](https://www.mongodb.com/docs/atlas/sample-data/sample-mflix) dataset loaded
 
@@ -230,7 +232,7 @@ LIMIT 3;
    └────────────────────────┴────────┘
 ```
 
-## Troubleshooting 
+## Troubleshooting {#troubleshooting}
 You can see the generated MongoDB query in DEBUG level logs.
 
 Implementation details can be found in [mongocxx](https://github.com/mongodb/mongo-cxx-driver) and [mongoc](https://github.com/mongodb/mongo-c-driver) documentations.

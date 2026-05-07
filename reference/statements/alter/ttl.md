@@ -1,17 +1,19 @@
 ---
 description: 'Documentation for Manipulations with Table TTL'
-sidebarTitle: 'TTL'
+sidebar_label: 'TTL'
 sidebar_position: 44
-old-slug: /sql-reference/statements/alter/ttl
+slug: /sql-reference/statements/alter/ttl
 title: 'Manipulations with Table TTL'
 doc_type: 'reference'
 ---
 
-<Note>
-If you are looking for details on using TTL for managing old data, check out the [Manage Data with TTL](/guides/developer/ttl.md) user guide. The docs below demonstrate how to alter or remove an existing TTL rule.
-</Note>
+# Manipulations with Table TTL
 
-## MODIFY TTL 
+:::note
+If you are looking for details on using TTL for managing old data, check out the [Manage Data with TTL](/guides/developer/ttl.md) user guide. The docs below demonstrate how to alter or remove an existing TTL rule.
+:::
+
+## MODIFY TTL {#modify-ttl}
 
 You can change [table TTL](../../../engines/table-engines/mergetree-family/mergetree.md#mergetree-table-ttl) with a request of the following form:
 
@@ -19,7 +21,7 @@ You can change [table TTL](../../../engines/table-engines/mergetree-family/merge
 ALTER TABLE [db.]table_name [ON CLUSTER cluster] MODIFY TTL ttl_expression;
 ```
 
-## REMOVE TTL 
+## REMOVE TTL {#remove-ttl}
 
 TTL-property can be removed from table with the following query:
 

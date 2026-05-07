@@ -1,26 +1,32 @@
 ---
-old-slug: /guides/sre/tls/configuring-tls
+slug: /guides/sre/tls/configuring-tls
+sidebar_label: 'Configuring TLS'
+sidebar_position: 20
 title: 'Configuring TLS'
 description: 'This guide provides simple and minimal settings to configure ClickHouse to use OpenSSL certificates to validate connections.'
 keywords: ['SSL configuration', 'TLS setup', 'OpenSSL certificates', 'secure connections', 'SRE guide']
 doc_type: 'guide'
 ---
 
-import SelfManaged from '/snippets/_self_managed_only_automated.mdx';
+import SelfManaged from '@site/docs/_snippets/_self_managed_only_automated.md';
+import configuringSsl01 from '@site/static/images/guides/sre/configuring-ssl_01.png';
+import Image from '@theme/IdealImage';
 
+# Configuring TLS
 
 <SelfManaged />
 
 This guide provides simple and minimal settings to configure ClickHouse to use OpenSSL certificates to validate connections. For this demonstration, a self-signed Certificate Authority (CA) certificate and key are created with node certificates to make the connections with appropriate settings.
 
-<Note>
+:::note
 TLS implementation is complex and there are many options to consider to ensure a fully secure and robust deployment. This is a basic tutorial with basic TLS configuration examples. Consult with your PKI/security team to generate the correct certificates for your organization.
 
 Review this [basic tutorial on certificate usage](https://ubuntu.com/server/docs/security-certificates) for an introductory overview.
-</Note>
+:::
 
+<VerticalStepper headerLevel="h2">
 
-## Create a ClickHouse Deployment
+## Create a ClickHouse Deployment {#1-create-a-clickhouse-deployment}
 
 This guide was written using Ubuntu 20.04 and ClickHouse installed on the following hosts using the DEB package (using apt). The domain is `marsnet.local`:
 
@@ -30,14 +36,14 @@ This guide was written using Ubuntu 20.04 and ClickHouse installed on the follow
 |`chnode2` |192.168.1.222|
 |`chnode3` |192.168.1.223|
 
-<Note>
-View the [Quick Start](/getting-started/install) for more details on how to install ClickHouse.
-</Note>
+:::note
+View the [Quick Start](/getting-started/install/install.mdx) for more details on how to install ClickHouse.
+:::
 
-## Create TLS certificates
-<Note>
+## Create TLS certificates {#2-create-tls-certificates}
+:::note
 Using self-signed certificates are for demonstration purposes only and shouldn't used in production. Certificate requests should be created to be signed by the organization and validated using the CA chain that will be configured in the settings. However, these steps can be used to configure and test settings, then can be replaced by the actual certificates that will be used.
-</Note>
+:::
 
 1. Generate a key that will be used for the new CA:
     ```bash
@@ -49,9 +55,9 @@ Using self-signed certificates are for demonstration purposes only and shouldn't
     openssl req -x509 -subj "/CN=marsnet.local CA" -nodes -key marsnet_ca.key -days 1095 -out marsnet_ca.crt
     ```
 
-    <Note>
+    :::note
     Backup the key and CA certificate in a secure location not in the cluster. After generating the node certificates, the key should be deleted from the cluster nodes.
-    </Note>
+    :::
 
 3. Verify the contents of the new CA certificate:
     ```bash
@@ -83,11 +89,11 @@ Using self-signed certificates are for demonstration purposes only and shouldn't
     chnode1.crt: OK
     ```
 
-## Create and Configure a directory to store certificates and keys.
+## Create and Configure a directory to store certificates and keys. {#3-create-and-configure-a-directory-to-store-certificates-and-keys}
 
-<Note>
+:::note
 This must be done on each node. Use appropriate certificates and keys on each host.
-</Note>
+:::
 
 1. Create a folder in a directory accessible by ClickHouse in each node. We recommend the default configuration directory (e.g. `/etc/clickhouse-server`):
     ```bash
@@ -113,22 +119,22 @@ This must be done on each node. Use appropriate certificates and keys on each ho
     -rw------- 1 clickhouse clickhouse 1131 Apr 12 20:23 marsnet_ca.crt
     ```
 
-## Configure the environment with basic clusters using ClickHouse Keeper
+## Configure the environment with basic clusters using ClickHouse Keeper {#4-configure-the-environment-with-basic-clusters-using-clickhouse-keeper}
 
 For this deployment environment, the following ClickHouse Keeper settings are used in each node. Each server will have its own `<server_id>`. (For example, `<server_id>1</server_id>` for node `chnode1`, and so on.)
 
-<Note>
+:::note
 Recommended port is `9281` for ClickHouse Keeper. However, the port is configurable and can be set if this port is in use already by another application in the environment.
 
 For a full explanation of all options, visit https://clickhouse.com/docs/operations/clickhouse-keeper/
-</Note>
+:::
 
 1. Add the following inside the `<clickhouse>` tag in ClickHouse server `config.xml`
 
-    <Note>
+    :::note
     For production environments, it is recommended to use a separate `.xml` config file in the `config.d` directory.
     For more information, visit https://clickhouse.com/docs/operations/configuration-files/
-    </Note>
+    :::
 
     ```xml
     <keeper_server>
@@ -164,9 +170,9 @@ For a full explanation of all options, visit https://clickhouse.com/docs/operati
     </keeper_server>
     ```
 
-    <Note>
+    :::note
     When ClickHouse Keeper is embedded in ClickHouse server (as shown above), Keeper uses the server's OpenSSL configuration defined in the OpenSSL section of [Configure TLS interfaces on ClickHouse nodes](#5-configure-tls-interfaces-on-clickhouse-nodes). If you run ClickHouse Keeper as a standalone process, you must add an `<openSSL>` section to the Keeper configuration file with the same CA certificate and node certificate/key settings. See [Configure OpenSSL for standalone ClickHouse Keeper](#configure-openssl-for-standalone-clickhouse-keeper) below for details.
-    </Note>
+    :::
 
 2. Uncomment and update the keeper settings on all nodes and set the `<secure>` flag to 1:
     ```xml
@@ -191,9 +197,9 @@ For a full explanation of all options, visit https://clickhouse.com/docs/operati
 
 3. Update and add the following cluster settings to `chnode1` and `chnode2`. `chnode3` will be used for the ClickHouse Keeper quorum.
 
-    <Note>
+    :::note
     For this configuration, only one example cluster is configured. The test sample clusters must be either removed, commented out or if an existing cluster exists that is being tested, then the port must be updated and the `<secure>` option must be added. The `<user` and `<password>` must be set if the `default` user was initially configured to have a password in the installation or in the `users.xml` file.
-    </Note>
+    :::
 
     The following creates a cluster with one shard replica on two servers (one on each node).
     ```xml
@@ -235,7 +241,7 @@ For a full explanation of all options, visit https://clickhouse.com/docs/operati
     </macros>
     ```
 
-## Configure TLS interfaces on ClickHouse nodes
+## Configure TLS interfaces on ClickHouse nodes {#5-configure-tls-interfaces-on-clickhouse-nodes}
 The settings below are configured in the ClickHouse server `config.xml`
 
 1.  Set the display name for the deployment (optional):
@@ -268,10 +274,10 @@ The settings below are configured in the ClickHouse server `config.xml`
 
 6. Configure OpenSSL with certificates and paths
 
-    <Note>
+    :::note
     Each filename and path must be updated to match the node that it is being configured on.
     For example, update the `<certificateFile>` entry to be `chnode2.crt` when configuring in `chnode2` host.
-    </Note>
+    :::
 
     ```xml
     <openSSL>
@@ -340,7 +346,7 @@ The settings below are configured in the ClickHouse server `config.xml`
     <!--postgresql_port>9005</postgresql_port-->
     ```
 
-## Testing
+## Testing {#6-testing}
 1. Start all nodes, one at a time:
     ```bash
     service clickhouse-server start
@@ -378,7 +384,7 @@ The settings below are configured in the ClickHouse server `config.xml`
     |9444 | ClickHouse Keeper Raft port |
 
 3. Verify ClickHouse Keeper health
-The typical [4 letter word (4lW)](/guides/sre/keeper#four-letter-word-commands) commands won't work using `echo` without TLS, here is how to use the commands with `openssl`.
+The typical [4 letter word (4lW)](/guides/sre/keeper/index.md#four-letter-word-commands) commands won't work using `echo` without TLS, here is how to use the commands with `openssl`.
    - Start an interactive session with `openssl`
 
   ```bash
@@ -417,12 +423,14 @@ The typical [4 letter word (4lW)](/guides/sre/keeper#four-letter-word-commands) 
   read R BLOCK
   zk_version      v22.7.3.5-stable-e140b8b5f3a5b660b6b576747063fd040f583cf3
   zk_avg_latency  0
+  # highlight-next-line
   zk_max_latency  4087
   zk_min_latency  0
   zk_packets_received     4565774
   zk_packets_sent 4565773
   zk_num_alive_connections        2
   zk_outstanding_requests 0
+  # highlight-next-line
   zk_server_state leader
   zk_znode_count  1087
   zk_watch_count  26
@@ -432,6 +440,7 @@ The typical [4 letter word (4lW)](/guides/sre/keeper#four-letter-word-commands) 
   zk_latest_snapshot_size 0
   zk_open_file_descriptor_count   187
   zk_max_file_descriptor_count    18446744073709551615
+  # highlight-next-line
   zk_followers    2
   zk_synced_followers     1
   closed
@@ -449,12 +458,12 @@ The typical [4 letter word (4lW)](/guides/sre/keeper#four-letter-word-commands) 
 
 5. Log into the Play UI using the `https` interface at `https://chnode1.marsnet.local:8443/play`.
 
-    <img src="/images/guides/sre/configuring-ssl_01.png" alt="Configuring TLS" />
+    <Image img={configuringSsl01} alt="Configuring TLS" size="md" border />
 
-    <Note>
+    :::note
     the browser will show an untrusted certificate since it is being reached from a workstation and the certificates aren't in the root CA stores on the client machine.
     When using certificates issued from a public authority or enterprise CA, it should show trusted.
-    </Note>
+    :::
 
 6. Create a replicated table:
     ```sql
@@ -496,17 +505,18 @@ The typical [4 letter word (4lW)](/guides/sre/keeper#four-letter-word-commands) 
     └────┴────────────┴─────────┘
     ```
 
+</VerticalStepper>
 
-## Configure OpenSSL for standalone ClickHouse Keeper
+## Configure OpenSSL for standalone ClickHouse Keeper {#configure-openssl-for-standalone-clickhouse-keeper}
 
 When running ClickHouse Keeper as a standalone process (rather than embedded within ClickHouse server), the OpenSSL certificates and settings must be configured separately in the Keeper configuration file. Without this, Keeper will not be able to establish secure connections for client communication (`tcp_port_secure`) or Raft replication between Keeper nodes.
 
 Add the following `<openSSL>` section to the standalone ClickHouse Keeper configuration file on each node:
 
-<Note>
+:::note
 Each filename must be updated to match the node that it is being configured on.
 For example, update the `<certificateFile>` entry to be `chnode2.crt` when configuring on the `chnode2` host.
-</Note>
+:::
 
 ```xml
 <openSSL>
@@ -535,10 +545,10 @@ For example, update the `<certificateFile>` entry to be `chnode2.crt` when confi
 
 The `<server>` section is used for incoming client connections on the secure Keeper port (`tcp_port_secure`). The `<client>` section is used for outgoing connections between Keeper nodes during Raft replication.
 
-<Note>
+:::note
 The certificate paths above use `/etc/clickhouse-keeper/certs/` which is the typical path for standalone Keeper installations. If you installed Keeper using a different path, adjust accordingly. The certificates themselves are the same ones created in [step 2](#2-create-tls-certificates).
-</Note>
+:::
 
-## Summary
+## Summary {#summary}
 
 This article focused on getting a ClickHouse environment configured with TLS. The settings will differ for different requirements in production environments; for example, certificate verification levels, protocols, ciphers, etc. But you should now have a good understanding of the steps involved in configuring and implementing secure connections.

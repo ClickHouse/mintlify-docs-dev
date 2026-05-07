@@ -1,13 +1,17 @@
 ---
 description: 'Dictionary layout types for storing dictionaries in memory'
-old-slug: /sql-reference/statements/create/dictionary/layouts
+sidebar_label: 'Overview'
+sidebar_position: 1
+slug: /sql-reference/statements/create/dictionary/layouts
 title: 'Dictionary layouts'
 doc_type: 'reference'
 ---
 
-import CloudDetails from '/snippets/sql-reference/_snippet_dictionary_in_cloud.mdx';
+import CloudDetails from '@site/docs/sql-reference/statements/create/dictionary/_snippet_dictionary_in_cloud.md';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-## Dictionary layout types
+## Dictionary layout types {#storing-dictionaries-in-memory}
 
 There are a variety of ways to store dictionaries in memory, each with CPU and RAM-usage trade-offs.
 
@@ -30,20 +34,19 @@ There are a variety of ways to store dictionaries in memory, each with CPU and R
 | [complex_key_direct](./direct.md#complex_key_direct) | Like `direct`, for composite keys. |
 | [ip_trie](./ip-trie.md) | Trie structure for fast IP prefix lookups (CIDR-based). |
 
-<Tip>
-**Recommended layouts**
+:::tip Recommended layouts
 [flat](./flat.md), [hashed](./hashed.md), and [complex_key_hashed](./hashed.md#complex_key_hashed) provide the best query performance.
 Caching layouts are not recommended due to potentially poor performance and difficulty tuning parameters — see [cache](./cache.md) for details.
-</Tip>
+:::
 
-## Specify dictionary layout
+## Specify dictionary layout {#specify-dictionary-layout}
 
 <CloudDetails />
 
 You can configure a dictionary layout with the `LAYOUT` clause (for DDL) or the `layout` setting for configuration file definitions.
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY (...)
@@ -52,8 +55,8 @@ LAYOUT(LAYOUT_TYPE(param value)) -- layout settings
 ...
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <clickhouse>
@@ -69,7 +72,7 @@ LAYOUT(LAYOUT_TYPE(param value)) -- layout settings
 </clickhouse>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
@@ -80,7 +83,7 @@ Dictionaries without word `complex-key*` in a layout have a key with [UInt64](/s
 **Numeric key example** (column key_column has [UInt64](/sql-reference/data-types/int-uint.md) type):
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY dict_name (
@@ -90,8 +93,8 @@ CREATE DICTIONARY dict_name (
 PRIMARY KEY key_column
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <structure>
@@ -102,14 +105,14 @@ PRIMARY KEY key_column
 </structure>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
 **Composite key example** (key has one element with [String](/sql-reference/data-types/string.md) type):
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY dict_name (
@@ -119,8 +122,8 @@ CREATE DICTIONARY dict_name (
 PRIMARY KEY country_code
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <structure>
@@ -134,10 +137,10 @@ PRIMARY KEY country_code
 </structure>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 
-## Improve dictionary performance
+## Improve dictionary performance {#improve-performance}
 
 There are several ways to improve dictionary performance:
 

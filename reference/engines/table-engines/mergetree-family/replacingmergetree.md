@@ -1,12 +1,14 @@
 ---
 description: 'differs from MergeTree in that it removes duplicate entries with the
   same sorting key value (`ORDER BY` table section, not `PRIMARY KEY`).'
-sidebarTitle: 'ReplacingMergeTree'
+sidebar_label: 'ReplacingMergeTree'
 sidebar_position: 40
-old-slug: /engines/table-engines/mergetree-family/replacingmergetree
+slug: /engines/table-engines/mergetree-family/replacingmergetree
 title: 'ReplacingMergeTree table engine'
 doc_type: 'reference'
 ---
+
+# ReplacingMergeTree table engine
 
 The engine differs from [MergeTree](/engines/table-engines/mergetree-family/versionedcollapsingmergetree) in that it removes duplicate entries with the same [sorting key](../../../engines/table-engines/mergetree-family/mergetree.md) value (`ORDER BY` table section, not `PRIMARY KEY`).
 
@@ -14,11 +16,11 @@ Data deduplication occurs only during a merge. Merging occurs in the background 
 
 Thus, `ReplacingMergeTree` is suitable for clearing out duplicate data in the background in order to save space, but it does not guarantee the absence of duplicates.
 
-<Note>
+:::note
 A detailed guide on ReplacingMergeTree, including best practices and how to optimize performance, is available [here](/guides/replacing-merge-tree).
-</Note>
+:::
 
-## Creating a table 
+## Creating a table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -36,13 +38,13 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 
 For a description of request parameters, see [statement description](../../../sql-reference/statements/create/table.md).
 
-<Note>
+:::note
 Uniqueness of rows is determined by the `ORDER BY` table section, not `PRIMARY KEY`.
-</Note>
+:::
 
-## ReplacingMergeTree parameters 
+## ReplacingMergeTree parameters {#replacingmergetree-parameters}
 
-### `ver` 
+### `ver` {#ver}
 
 `ver` — column with the version number. Type `UInt*`, `Date`, `DateTime` or `DateTime64`. Optional parameter.
 
@@ -94,13 +96,13 @@ SELECT * FROM mySecondReplacingMT FINAL;
 └─────┴─────────┴─────────────────────┘
 ```
 
-### `is_deleted` 
+### `is_deleted` {#is_deleted}
 
 `is_deleted` —  Name of a column used during a merge to determine whether the data in this row represents the state or is to be deleted; `1` is a "deleted" row, `0` is a "state" row.
 
   Column data type — `UInt8`.
 
-<Note>
+:::note
 `is_deleted` can only be enabled when `ver` is used.
 
 No matter the operation on the data, the version should be increased. If two inserted rows have the same version number, the last inserted row is kept.
@@ -114,7 +116,7 @@ To permanently drop such delete rows, enable the table setting `allow_experiment
 all into a single part and remove any delete rows.
 
 2. Manually run `OPTIMIZE TABLE table [PARTITION partition | PARTITION ID 'partition_id'] FINAL CLEANUP`.
-</Note>
+:::
 
 Example:
 ```sql
@@ -149,17 +151,17 @@ select * from myThirdReplacingMT final;
 └─────┴─────────┴─────────────────────┴────────────┘
 ```
 
-## Query clauses 
+## Query clauses {#query-clauses}
 
 When creating a `ReplacingMergeTree` table the same [clauses](../../../engines/table-engines/mergetree-family/mergetree.md) are required, as when creating a `MergeTree` table.
 
+<details markdown="1">
 
+<summary>Deprecated Method for Creating a Table</summary>
 
-<AccordionGroup>
-<Accordion title="Deprecated Method for Creating a Table">
-<Note>
+:::note
 Do not use this method in new projects and, if possible, switch old projects to the method described above.
-</Note>
+:::
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -173,9 +175,10 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 All of the parameters excepting `ver` have the same meaning as in `MergeTree`.
 
 - `ver` - column with the version. Optional parameter. For a description, see the text above.
-</Accordion>
-</AccordionGroup>
-## Query time de-duplication & FINAL 
+
+</details>
+
+## Query time de-duplication & FINAL {#query-time-de-duplication--final}
 
 At merge time, the ReplacingMergeTree identifies duplicate rows, using the values of the `ORDER BY` columns (used to create the table) as a unique identifier, and retains only the highest version. This, however, offers eventual correctness only - it does not guarantee rows will be deduplicated, and you should not rely on it. Queries can, therefore, produce incorrect answers due to update and delete rows being considered in queries.
 

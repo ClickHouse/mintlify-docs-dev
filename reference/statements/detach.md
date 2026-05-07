@@ -1,8 +1,8 @@
 ---
 description: 'Documentation for Detach'
-sidebarTitle: 'DETACH'
+sidebar_label: 'DETACH'
 sidebar_position: 43
-old-slug: /sql-reference/statements/detach
+slug: /sql-reference/statements/detach
 title: 'DETACH Statement'
 doc_type: 'reference'
 ---
@@ -35,7 +35,7 @@ Creating a table:
 Query:
 
 ```sql
-CREATE TABLE test ENGINE = Log AS SELECT * FROM numbers(10);
+CREATE TABLE test ENGINE = MergeTree ORDER BY () AS SELECT * FROM numbers(10);
 SELECT * FROM test;
 ```
 
@@ -72,11 +72,11 @@ Received exception from server (version 21.4.1):
 Code: 60. DB::Exception: Received from localhost:9000. DB::Exception: Table default.test does not exist.
 ```
 
-<Note>
+:::note
 In ClickHouse Cloud users should use the `PERMANENTLY` clause e.g. `DETACH TABLE <table> PERMANENTLY`. If this clause is not used, tables will be reattached on cluster restart e.g. during upgrades.
-</Note>
+:::
 
 **See Also**
 
 - [Materialized View](/sql-reference/statements/create/view#materialized-view)
-- [Dictionaries](../../sql-reference/dictionaries/index.md)
+- [Dictionaries](./create/dictionary/overview.md)

@@ -1,12 +1,14 @@
 ---
 description: 'Calculates Cramer''s V, but uses a bias correction.'
-sidebar_position: 128
-old-slug: /sql-reference/aggregate-functions/reference/cramersvbiascorrected
+slug: /sql-reference/aggregate-functions/reference/cramersvbiascorrected
 title: 'cramersVBiasCorrected'
 doc_type: 'reference'
 ---
 
-Cramer's V is a measure of association between two columns in a table. The result of the [`cramersV` function](./cramersv.md) ranges from 0 (corresponding to no association between the variables) to 1 and can reach 1 only when each value is completely determined by the other. The function can be heavily biased, so this version of Cramer's V uses the [bias correction](https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V#Bias_correction).
+Cramer's V is a measure of association between two columns in a table.
+The result of the [`cramersV` function](/sql-reference/aggregate-functions/reference/cramersv) ranges from 0 (corresponding to no association between the variables) to 1 and can reach 1 only when each value is completely determined by the other.
+The function can be heavily biased, so this version of Cramer's V uses the [bias correction](https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V#Bias_correction).
+    
 
 **Syntax**
 
@@ -14,27 +16,24 @@ Cramer's V is a measure of association between two columns in a table. The resul
 cramersVBiasCorrected(column1, column2)
 ```
 
-**Parameters**
+**Arguments**
 
-- `column1`: first column to be compared.
-- `column2`: second column to be compared.
+- `column1` — First column to be compared. [`Any`](/sql-reference/data-types)
+- `column2` — Second column to be compared. [`Any`](/sql-reference/data-types)
+
 
 **Returned value**
 
-- a value between 0 (corresponding to no association between the columns' values) to 1 (complete association).
+Returns a value between 0 (corresponding to no association between the columns' values) to 1 (complete association). [`Float64`](/sql-reference/data-types/float)
 
-Type: always [Float64](../../../sql-reference/data-types/float.md).
+**Examples**
 
-**Example**
+**Comparison with regular cramersV**
 
-The following two columns being compared below have a moderate association with each other. Notice the result of `cramersVBiasCorrected` is smaller than the result of `cramersV`:
-
-Query:
-
-```sql
+```sql title=Query
 SELECT
     cramersV(a, b),
-    cramersVBiasCorrected(a ,b)
+    cramersVBiasCorrected(a, b)
 FROM
     (
         SELECT
@@ -45,10 +44,11 @@ FROM
     );
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─────cramersV(a, b)─┬─cramersVBiasCorrected(a, b)─┐
 │ 0.5798088336225178 │          0.5305112825189074 │
 └────────────────────┴─────────────────────────────┘
 ```
+
+
+

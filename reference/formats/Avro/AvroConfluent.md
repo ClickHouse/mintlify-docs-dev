@@ -4,27 +4,29 @@ description: 'Documentation for the AvroConfluent format'
 input_format: true
 keywords: ['AvroConfluent']
 output_format: false
-old-slug: /interfaces/formats/AvroConfluent
+slug: /interfaces/formats/AvroConfluent
 title: 'AvroConfluent'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge>
+import DataTypesMatching from './_snippets/data-types-matching.md'
 
-import DataTypeMapping from '/snippets/products/reference/formats/Avro/_snippets/data-types-matching.mdx'
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✗      |       |
 
-## Description 
+## Description {#description}
 
 [Apache Avro](https://avro.apache.org/) is a row-oriented serialization format that uses binary encoding for efficient data processing. The `AvroConfluent` format supports decoding single-object, Avro-encoded Kafka messages serialized using the [Confluent Schema Registry](https://docs.confluent.io/current/schema-registry/index.html) (or API-compatible services).
 
 Each Avro message embeds a schema ID that ClickHouse automatically resolves by querying the configured schema registry. Once resolved, schemas are cached for optimal performance.
 
 <a id="data-types-matching"></a>
-## Data type mapping 
+## Data type mapping {#data-type-mapping}
 
 <DataTypesMatching/>
 
-## Format settings 
+## Format settings {#format-settings}
 
 [//]: # "NOTE These settings can be set at a session-level, but this isn't common and documenting it too prominently can be confusing to users."
 
@@ -34,9 +36,9 @@ Each Avro message embeds a schema ID that ClickHouse automatically resolves by q
 | `input_format_avro_null_as_default`         | Whether to use a default value instead of throwing an error when inserting a `null` value into a non-nullable column. |   `0`   |
 | `format_avro_schema_registry_url`           | The Confluent Schema Registry URL. For basic authentication, URL-encoded credentials can be included directly in the URL path. |         |
 
-## Examples 
+## Examples {#examples}
 
-### Using a schema registry 
+### Using a schema registry {#using-a-schema-registry}
 
 To read an Avro-encoded Kafka topic using the [Kafka table engine](/engines/table-engines/integrations/kafka.md), use the `format_avro_schema_registry_url` setting to provide the URL of the schema registry.
 
@@ -57,7 +59,7 @@ format_avro_schema_registry_url = 'http://schema-registry-url';
 SELECT * FROM topic1_stream;
 ```
 
-#### Using basic authentication 
+#### Using basic authentication {#using-basic-authentication}
 
 If your schema registry requires basic authentication (e.g., if you're using Confluent Cloud), you can provide URL-encoded credentials in the `format_avro_schema_registry_url` setting.
 
@@ -76,7 +78,7 @@ kafka_format = 'AvroConfluent',
 format_avro_schema_registry_url = 'https://<username>:<password>@schema-registry-url';
 ```
 
-## Troubleshooting 
+## Troubleshooting {#troubleshooting}
 
 To monitor ingestion progress and debug errors with the Kafka consumer, you can query the [`system.kafka_consumers` system table](../../../operations/system-tables/kafka_consumers.md). If your deployment has multiple replicas (e.g., ClickHouse Cloud), you must use the [`clusterAllReplicas`](../../../sql-reference/table-functions/cluster.md) table function.
 

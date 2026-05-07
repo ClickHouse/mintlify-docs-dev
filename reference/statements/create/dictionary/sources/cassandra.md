@@ -1,15 +1,19 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/cassandra
+slug: /sql-reference/statements/create/dictionary/sources/cassandra
 title: 'Cassandra dictionary source'
+sidebar_position: 11
+sidebar_label: 'Cassandra'
 description: 'Configure Cassandra as a dictionary source in ClickHouse.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(CASSANDRA(
@@ -28,8 +32,8 @@ SOURCE(CASSANDRA(
 ))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -50,7 +54,7 @@ SOURCE(CASSANDRA(
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 
 Setting fields:
@@ -70,6 +74,6 @@ Setting fields:
 | `max_threads` | The maximum number of threads to use for loading data from multiple partitions in compose key dictionaries. |
 | `query` | The custom query. Optional. |
 
-<Note>
-**The `column_family` or `where` fields cannot be used together with the `query` field. And either one of the `column_family` or `query` fields must be declared.**
-</Note>
+:::note
+The `column_family` or `where` fields cannot be used together with the `query` field. And either one of the `column_family` or `query` fields must be declared.
+:::

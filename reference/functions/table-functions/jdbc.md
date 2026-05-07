@@ -1,23 +1,25 @@
 ---
 description: 'Returns a table that is connected via JDBC driver.'
-sidebarTitle: 'jdbc'
+sidebar_label: 'jdbc'
 sidebar_position: 100
-old-slug: /sql-reference/table-functions/jdbc
+slug: /sql-reference/table-functions/jdbc
 title: 'jdbc'
 doc_type: 'reference'
 ---
 
-<Note>
+# jdbc Table Function
+
+:::note
 clickhouse-jdbc-bridge contains experimental codes and is no longer supported. It may contain reliability issues and security vulnerabilities. Use it at your own risk. 
 ClickHouse recommend using built-in table functions in ClickHouse which provide a better alternative for ad-hoc querying scenarios (Postgres, MySQL, MongoDB, etc).
-</Note>
+:::
 
 JDBC table function returns table that is connected via JDBC driver.
 
 This table function requires separate [clickhouse-jdbc-bridge](https://github.com/ClickHouse/clickhouse-jdbc-bridge) program to be running.
 It supports Nullable types (based on DDL of remote table that is queried).
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 jdbc(datasource, external_database, external_table)
@@ -25,7 +27,7 @@ jdbc(datasource, external_table)
 jdbc(named_collection)
 ```
 
-## Examples 
+## Examples {#examples}
 
 Instead of an external database name, a schema can be specified:
 

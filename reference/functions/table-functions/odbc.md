@@ -1,15 +1,17 @@
 ---
 description: 'Returns the table that is connected via ODBC.'
-sidebarTitle: 'odbc'
+sidebar_label: 'odbc'
 sidebar_position: 150
-old-slug: /sql-reference/table-functions/odbc
+slug: /sql-reference/table-functions/odbc
 title: 'odbc'
 doc_type: 'reference'
 ---
 
+# odbc Table Function
+
 Returns table that is connected via [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity).
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 odbc(datasource, external_database, external_table)
@@ -17,7 +19,7 @@ odbc(datasource, external_table)
 odbc(named_collection)
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 | Argument            | Description                                                            |
 |---------------------|------------------------------------------------------------------------|
@@ -31,7 +33,7 @@ To safely implement ODBC connections, ClickHouse uses a separate program `clickh
 
 The fields with the `NULL` values from the external table are converted into the default values for the base data type. For example, if a remote MySQL table field has the `INT NULL` type it is converted to 0 (the default value for ClickHouse `Int32` data type).
 
-## Usage Example 
+## Usage Example {#usage-example}
 
 **Getting data from the local MySQL installation via ODBC**
 
@@ -108,7 +110,7 @@ SELECT * FROM odbc('DSN=mysqlconn', 'test', 'test')
 └────────┴──────────────┴───────┴────────────────┘
 ```
 
-## Related 
+## Related {#see-also}
 
-- [ODBC dictionaries](/sql-reference/dictionaries#dbms)
+- [ODBC dictionaries](/sql-reference/statements/create/dictionary/sources/odbc)
 - [ODBC table engine](/engines/table-engines/integrations/odbc).

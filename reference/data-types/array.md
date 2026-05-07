@@ -1,15 +1,17 @@
 ---
 description: 'Documentation for the Array data type in ClickHouse'
-sidebarTitle: 'Array(T)'
+sidebar_label: 'Array(T)'
 sidebar_position: 32
-old-slug: /sql-reference/data-types/array
+slug: /sql-reference/data-types/array
 title: 'Array(T)'
 doc_type: 'reference'
 ---
 
+# Array(T)
+
 An array of `T`-type items, with the starting array index as 1. `T` can be any data type, including an array.
 
-## Creating an Array 
+## Creating an Array {#creating-an-array}
 
 You can use a function to create an array:
 
@@ -17,7 +19,7 @@ You can use a function to create an array:
 array(T)
 ```
 
-You can also use square brackets.
+You can also use `[]`.
 
 ```sql
 []
@@ -45,7 +47,7 @@ SELECT [1, 2] AS x, toTypeName(x)
 └───────┴────────────────────┘
 ```
 
-## Working with Data Types 
+## Working with Data Types {#working-with-data-types}
 
 When creating an array on the fly, ClickHouse automatically defines the argument type as the narrowest data type that can store all the listed arguments. If there are any [Nullable](/sql-reference/data-types/nullable) or literal [NULL](/operations/settings/formats#input_format_null_as_default) values, the type of an array element also becomes [Nullable](../../sql-reference/data-types/nullable.md).
 
@@ -74,7 +76,7 @@ Received exception from server (version 1.1.54388):
 Code: 386. DB::Exception: Received from localhost:9000, 127.0.0.1. DB::Exception: There is no supertype for types UInt8, String because some of them are String/FixedString and some of them are not.
 ```
 
-## Array Size 
+## Array Size {#array-size}
 
 It is possible to find the size of an array by using the `size0` subcolumn without reading the whole column. For multi-dimensional arrays you can use `sizeN-1`, where `N` is the wanted dimension.
 
@@ -98,7 +100,7 @@ Result:
 └───────────┴───────────┴───────────┘
 ```
 
-## Reading nested subcolumns from Array 
+## Reading nested subcolumns from Array {#reading-nested-subcolumns-from-array}
 
 If nested type `T` inside `Array` has subcolumns (for example, if it's a [named tuple](./tuple.md)), you can read its subcolumns from an `Array(T)` type with the same subcolumn names. The type of a subcolumn will be `Array` of the type of original subcolumn.
 

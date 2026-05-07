@@ -1,8 +1,7 @@
 ---
 description: 'Computes an approximate quantile of a numeric data sequence using the
   t-digest algorithm.'
-sidebar_position: 178
-old-slug: /sql-reference/aggregate-functions/reference/quantiletdigest
+slug: /sql-reference/aggregate-functions/reference/quantiletdigest
 title: 'quantileTDigest'
 doc_type: 'reference'
 ---
@@ -11,9 +10,10 @@ Computes an approximate [quantile](https://en.wikipedia.org/wiki/Quantile) of a 
 
 Memory consumption is `log(n)`, where `n` is a number of values. The result depends on the order of running the query, and is nondeterministic.
 
-The performance of the function is lower than performance of [quantile](/sql-reference/aggregate-functions/reference/quantile) or [quantileTiming](/sql-reference/aggregate-functions/reference/quantiletiming). In terms of the ratio of State size to precision, this function is much better than `quantile`.
+The performance of the function is lower than performance of [`quantile`](/sql-reference/aggregate-functions/reference/quantile) or [`quantileTiming`](/sql-reference/aggregate-functions/reference/quantiletiming). In terms of the ratio of State size to precision, this function is much better than `quantile`.
 
-When using multiple `quantile*` functions with different levels in a query, the internal states are not combined (that is, the query works less efficiently than it could). In this case, use the [quantiles](../../../sql-reference/aggregate-functions/reference/quantiles.md#quantiles) function.
+When using multiple `quantile*` functions with different levels in a query, the internal states are not combined (that is, the query works less efficiently than it could). In this case, use the [`quantiles`](/sql-reference/aggregate-functions/reference/quantiles#quantiles) function.
+    
 
 **Syntax**
 
@@ -21,38 +21,37 @@ When using multiple `quantile*` functions with different levels in a query, the 
 quantileTDigest(level)(expr)
 ```
 
-Alias: `medianTDigest`.
+**Aliases**: `medianTDigest`
+
+**Parameters**
+
+- `level` — Optional. Level of quantile. Constant floating-point number from 0 to 1. We recommend using a `level` value in the range of `[0.01, 0.99]`. Default value: 0.5. At `level=0.5` the function calculates median. [`Float*`](/sql-reference/data-types/float)
+
 
 **Arguments**
 
-- `level` — Level of quantile. Optional parameter. Constant floating-point number from 0 to 1. We recommend using a `level` value in the range of `[0.01, 0.99]`. Default value: 0.5. At `level=0.5` the function calculates [median](https://en.wikipedia.org/wiki/Median).
-- `expr` — Expression over the column values resulting in numeric [data types](/sql-reference/data-types), [Date](../../../sql-reference/data-types/date.md) or [DateTime](../../../sql-reference/data-types/datetime.md).
+- `expr` — Expression over the column values resulting in numeric data types, Date or DateTime. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal) or [`Date`](/sql-reference/data-types/date) or [`DateTime`](/sql-reference/data-types/datetime)
+
 
 **Returned value**
 
-- Approximate quantile of the specified level.
+Approximate quantile of the specified level. [`Float64`](/sql-reference/data-types/float) or [`Date`](/sql-reference/data-types/date) or [`DateTime`](/sql-reference/data-types/datetime)
 
-Type:
+**Examples**
 
-- [Float64](../../../sql-reference/data-types/float.md) for numeric data type input.
-- [Date](../../../sql-reference/data-types/date.md) if input values have the `Date` type.
-- [DateTime](../../../sql-reference/data-types/datetime.md) if input values have the `DateTime` type.
+**Computing quantile with t-digest**
 
-**Example**
-
-Query:
-
-```sql
-SELECT quantileTDigest(number) FROM numbers(10)
+```sql title=Query
+SELECT quantileTDigest(number) FROM numbers(10);
 ```
 
-Result:
-
-```text
+```response title=Response
 ┌─quantileTDigest(number)─┐
 │                     4.5 │
 └─────────────────────────┘
 ```
+
+
 
 **See Also**
 

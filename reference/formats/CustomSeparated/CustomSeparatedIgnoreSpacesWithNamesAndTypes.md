@@ -1,18 +1,20 @@
 ---
 description: 'Documentation for the CustomSeparatedIgnoreSpacesWithNamesAndTypes format'
 keywords: ['CustomSeparatedIgnoreSpacesWithNamesAndTypes']
-old-slug: /interfaces/formats/CustomSeparatedIgnoreSpacesWithNamesAndTypes
+slug: /interfaces/formats/CustomSeparatedIgnoreSpacesWithNamesAndTypes
 title: 'CustomSeparatedIgnoreSpacesWithNamesAndTypes'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     |        |       |
 
-## Description 
+## Description {#description}
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using the following txt file, named as `football.txt`:
 
@@ -36,4 +38,4 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.txt' FORMAT CustomSeparatedIgnoreSpacesWithNamesAndTypes;
 ```
 
-## Format settings 
+## Format settings {#format-settings}

@@ -2,25 +2,27 @@
 description: 'An extension to the s3 table function, which allows processing files
   from Amazon S3 and Google Cloud Storage in parallel with many nodes in a specified
   cluster.'
-sidebarTitle: 's3Cluster'
+sidebar_label: 's3Cluster'
 sidebar_position: 181
-old-slug: /sql-reference/table-functions/s3Cluster
+slug: /sql-reference/table-functions/s3Cluster
 title: 's3Cluster'
 doc_type: 'reference'
 ---
+
+# s3Cluster Table Function
 
 This is an extension to the [s3](sql-reference/table-functions/s3.md) table function.
 
 Allows processing files from [Amazon S3](https://aws.amazon.com/s3/) and Google Cloud Storage [Google Cloud Storage](https://cloud.google.com/storage/) in parallel with many nodes in a specified cluster. On initiator it creates a connection to all nodes in the cluster, discloses asterisks in S3 file path, and dispatches each file dynamically. On the worker node it asks the initiator about the next task to process and processes it. This is repeated until all tasks are finished.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 s3Cluster(cluster_name, url[, NOSIGN | access_key_id, secret_access_key,[session_token]][, format][, structure][, compression_method][, headers][, extra_credentials])
 s3Cluster(cluster_name, named_collection[, option=value [,..]])
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 | Argument                              | Description                                                                                                                                                                                             |
 |---------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -44,11 +46,11 @@ Arguments can also be passed using [named collections](operations/named-collecti
 | `no_sign_request`              | disabled by default.                                                                                                                                                                                                              |
 | `expiration_window_seconds`    | default value is 120.                                                                                                                                                                                                             |
 
-## Returned value 
+## Returned value {#returned_value}
 
 A table with the specified structure for reading or writing data in the specified file.
 
-## Examples 
+## Examples {#examples}
 
 Select the data from all the files in the `/root/data/clickhouse` and `/root/data/database/` folders, using all the nodes in the `cluster_simple` cluster:
 
@@ -65,9 +67,9 @@ SELECT * FROM s3Cluster(
 
 Count the total amount of rows in all files in the cluster `cluster_simple`:
 
-<Tip>
+:::tip
 If your listing of files contains number ranges with leading zeros, use the construction with braces for each digit separately or use `?`.
-</Tip>
+:::
 
 For production use cases, it is recommended to use [named collections](operations/named-collections.md). Here is the example:
 ```sql
@@ -81,15 +83,15 @@ SELECT count(*) FROM s3Cluster(
 )
 ```
 
-## Accessing private and public buckets 
+## Accessing private and public buckets {#accessing-private-and-public-buckets}
 
 Users can use the same approaches as document for the s3 function [here](/sql-reference/table-functions/s3#accessing-public-buckets).
 
-## Optimizing performance 
+## Optimizing performance {#optimizing-performance}
 
 For details on optimizing the performance of the s3 function see [our detailed guide](/integrations/s3/performance).
 
-## Related 
+## Related {#related}
 
 - [S3 engine](../../engines/table-engines/integrations/s3.md)
 - [s3 table function](../../sql-reference/table-functions/s3.md)

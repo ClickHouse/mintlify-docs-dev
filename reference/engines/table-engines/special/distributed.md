@@ -3,22 +3,24 @@ description: 'Tables with Distributed engine do not store any data of their own,
   allow distributed query processing on multiple servers. Reading is automatically
   parallelized. During a read, the table indexes on remote servers are used, if there
   are any.'
-sidebarTitle: 'Distributed'
+sidebar_label: 'Distributed'
 sidebar_position: 10
-old-slug: /engines/table-engines/special/distributed
+slug: /engines/table-engines/special/distributed
 title: 'Distributed table engine'
 doc_type: 'reference'
 ---
 
-<Warning title="Distributed engine in Cloud">
+# Distributed table engine
+
+:::warning Distributed engine in Cloud
 To create a distributed table engine in ClickHouse Cloud, you can use the [`remote` and `remoteSecure`](../../../sql-reference/table-functions/remote) table functions. 
 The `Distributed(...)` syntax cannot be used in ClickHouse Cloud.
-</Warning>
+:::
 
 Tables with Distributed engine do not store any data of their own, but allow distributed query processing on multiple servers. 
 Reading is automatically parallelized. During a read, the table indexes on remote servers are used if they exist.
 
-## Creating a table 
+## Creating a table {#distributed-creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -30,7 +32,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 [SETTINGS name=value, ...]
 ```
 
-### From a table 
+### From a table {#distributed-from-a-table}
 
 When the `Distributed` table is pointing to a table on the current server you can adopt that table's schema:
 
@@ -38,7 +40,7 @@ When the `Distributed` table is pointing to a table on the current server you ca
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster] AS [db2.]name2 ENGINE = Distributed(cluster, database, table[, sharding_key[, policy_name]]) [SETTINGS name=value, ...]
 ```
 
-### Distributed parameters 
+### Distributed parameters {#distributed-parameters}
 
 | Parameter                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 |---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -52,7 +54,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster] AS [db2.]name2
 
 - [distributed_foreground_insert](../../../operations/settings/settings.md#distributed_foreground_insert) setting
 - [MergeTree](../../../engines/table-engines/mergetree-family/mergetree.md#table_engine-mergetree-multiple-volumes) for the examples
-### Distributed settings 
+### Distributed settings {#distributed-settings}
 
 | Setting                                    | Description                                                                                                                                                                                                                           | Default value |
 |--------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
@@ -68,7 +70,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster] AS [db2.]name2
 | `background_insert_max_sleep_time_ms`      | The same as [`distributed_background_insert_max_sleep_time_ms`](../../../operations/settings/settings.md#distributed_background_insert_max_sleep_time_ms)                                                                             | `0`           |
 | `flush_on_detach`                          | Flush data to remote nodes on `DETACH`/`DROP`/server shutdown.                                                                                                                                                                        | `true`        |
 
-<Note>
+:::note
 **Durability settings** (`fsync_...`):
 
 - Affect only background `INSERT`s (i.e. `distributed_foreground_insert=false`) when data is first stored on the initiator node disk and later, in the background, when sent to shards.
@@ -80,7 +82,7 @@ For **Insert limit settings** (`..._insert`) see also:
 - [`distributed_foreground_insert`](../../../operations/settings/settings.md#distributed_foreground_insert) setting
 - [`prefer_localhost_replica`](/operations/settings/settings#prefer_localhost_replica) setting
 - `bytes_to_throw_insert` handled before `bytes_to_delay_insert`, so you should not set it to the value less then `bytes_to_delay_insert`
-</Note>
+:::
 
 **Example**
 
@@ -96,14 +98,14 @@ Data will be read from all servers in the `logs` cluster, from the `default.hits
 
 Instead of the database name, you can use a constant expression that returns a string. For example: `currentDatabase()`.
 
-## Clusters 
+## Clusters {#distributed-clusters}
 
 Clusters are configured in the [server configuration file](../../../operations/configuration-files.md):
 
 ```xml
 <remote_servers>
     <logs>
-        {/* <!-- Inter-server per-cluster secret for Distributed queries
+        <!-- Inter-server per-cluster secret for Distributed queries
              default: no secret (no authentication will be performed)
 
              If set, then Distributed queries will be validated on shards, so at least:
@@ -112,21 +114,21 @@ Clusters are configured in the [server configuration file](../../../operations/c
 
              And also (and which is more important), the initial_user will
              be used as current user for the query.
-        --> */}
-        {/* <!-- <secret></secret> --> */}
+        -->
+        <!-- <secret></secret> -->
         
-        {/* <!-- Optional. Whether distributed DDL queries (ON CLUSTER clause) are allowed for this cluster. Default: true (allowed). --> */}        
-        {/* <!-- <allow_distributed_ddl_queries>true</allow_distributed_ddl_queries> --> */}
+        <!-- Optional. Whether distributed DDL queries (ON CLUSTER clause) are allowed for this cluster. Default: true (allowed). -->        
+        <!-- <allow_distributed_ddl_queries>true</allow_distributed_ddl_queries> -->
         
         <shard>
-            {/* <!-- Optional. Shard weight when writing data. Default: 1. --> */}
+            <!-- Optional. Shard weight when writing data. Default: 1. -->
             <weight>1</weight>
-            {/* <!-- Optional. The shard name.  Must be non-empty and unique among shards in the cluster. If not specified, will be empty. --> */}
+            <!-- Optional. The shard name.  Must be non-empty and unique among shards in the cluster. If not specified, will be empty. -->
             <name>shard_01</name>
-            {/* <!-- Optional. Whether to write data to just one of the replicas. Default: false (write data to all replicas). --> */}
+            <!-- Optional. Whether to write data to just one of the replicas. Default: false (write data to all replicas). -->
             <internal_replication>false</internal_replication>
             <replica>
-                {/* <!-- Optional. Priority of the replica for load balancing (see also load_balancing setting). Default: 1 (less value has more priority). --> */}
+                <!-- Optional. Priority of the replica for load balancing (see also load_balancing setting). Default: 1 (less value has more priority). -->
                 <priority>1</priority>
                 <host>example01-01-1</host>
                 <port>9000</port>
@@ -182,7 +184,7 @@ The `Distributed` engine allows working with a cluster like a local server. Howe
 
 If you need to send a query to an unknown set of shards and replicas each time, you do not need to create a `Distributed` table – use the `remote` table function instead. See the section [Table functions](../../../sql-reference/table-functions/index.md).
 
-## Writing data 
+## Writing data {#distributed-writing-data}
 
 There are two methods for writing data to a cluster:
 
@@ -211,7 +213,7 @@ Data is written in background. When inserted in the table, the data block is jus
 
 If the server ceased to exist or had a rough restart (for example, due to a hardware failure) after an `INSERT` to a `Distributed` table, the inserted data might be lost. If a damaged data part is detected in the table directory, it is transferred to the `broken` subdirectory and no longer used.
 
-## Reading data 
+## Reading data {#distributed-reading-data}
 
 When querying a `Distributed` table, `SELECT` queries are sent to all shards and work regardless of how data is distributed across the shards (they can be distributed completely randomly). When you add a new shard, you do not have to transfer old data into it. Instead, you can write new data to it by using a heavier weight – the data will be distributed slightly unevenly, but queries will work correctly and efficiently.
 
@@ -219,15 +221,15 @@ When the `max_parallel_replicas` option is enabled, query processing is parallel
 
 To learn more about how distributed `in` and `global in` queries are processed, refer to [this](/sql-reference/operators/in#distributed-subqueries) documentation.
 
-## Virtual columns 
+## Virtual columns {#virtual-columns}
 
-#### _Shard_num 
+#### _Shard_num {#_shard_num}
 
 `_shard_num` — Contains the `shard_num` value from the table `system.clusters`. Type: [UInt32](../../../sql-reference/data-types/int-uint.md).
 
-<Note>
+:::note
 Since [`remote`](../../../sql-reference/table-functions/remote.md) and [`cluster](../../../sql-reference/table-functions/cluster.md) table functions internally create temporary Distributed table, `_shard_num` is available there too.
-</Note>
+:::
 
 **See Also**
 

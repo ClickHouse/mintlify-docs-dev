@@ -4,18 +4,20 @@ description: 'Documentation for the ORC format'
 input_format: true
 keywords: ['ORC']
 output_format: true
-old-slug: /interfaces/formats/ORC
+slug: /interfaces/formats/ORC
 title: 'ORC'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 [Apache ORC](https://orc.apache.org/) is a columnar storage format widely used in the [Hadoop](https://hadoop.apache.org/) ecosystem.
 
-## Data types matching 
+## Data types matching {#data-types-matching-orc}
 
 The table below compares supported ORC data types and their corresponding ClickHouse [data types](/sql-reference/data-types/index.md) in `INSERT` and `SELECT` queries.
 
@@ -42,11 +44,11 @@ The table below compares supported ORC data types and their corresponding ClickH
 
 - Other types are not supported.
 - Arrays can be nested and can have a value of the `Nullable` type as an argument. `Tuple` and `Map` types also can be nested.
-- The data types of ClickHouse table columns do not have to match the corresponding ORC data fields. When inserting data, ClickHouse interprets data types according to the table above and then [casts](/sql-reference/functions/type-conversion-functions#cast) the data to the data type set for the ClickHouse table column.
+- The data types of ClickHouse table columns do not have to match the corresponding ORC data fields. When inserting data, ClickHouse interprets data types according to the table above and then [casts](/sql-reference/functions/type-conversion-functions#CAST) the data to the data type set for the ClickHouse table column.
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using an ORC file with the following data, named as `football.orc`:
 
@@ -78,7 +80,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.orc' FORMAT ORC;
 ```
 
-### Reading data 
+### Reading data {#reading-data}
 
 Read data using the `ORC` format:
 
@@ -89,11 +91,11 @@ INTO OUTFILE 'football.orc'
 FORMAT ORC
 ```
 
-<Tip>
+:::tip
 ORC is a binary format that does not display in a human-readable form on the terminal. Use the `INTO OUTFILE` to output ORC files.
-</Tip>
+:::
 
-## Format settings 
+## Format settings {#format-settings}
 
 | Setting                                                                                                                                                                                                      | Description                                                                            | Default |
 |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|---------|

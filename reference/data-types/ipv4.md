@@ -1,17 +1,17 @@
 ---
 description: 'Documentation for the IPv4 data type in ClickHouse'
-sidebarTitle: 'IPv4'
+sidebar_label: 'IPv4'
 sidebar_position: 28
-old-slug: /sql-reference/data-types/ipv4
+slug: /sql-reference/data-types/ipv4
 title: 'IPv4'
 doc_type: 'reference'
 ---
 
-## IPv4 
+## IPv4 {#ipv4}
 
 IPv4 addresses. Stored in 4 bytes as UInt32.
 
-### Basic Usage 
+### Basic Usage {#basic-usage}
 
 ```sql
 CREATE TABLE hits (url String, from IPv4) ENGINE = MergeTree() ORDER BY url;

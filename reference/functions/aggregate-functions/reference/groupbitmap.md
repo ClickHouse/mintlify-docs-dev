@@ -1,47 +1,47 @@
 ---
 description: 'Bitmap or Aggregate calculations from a unsigned integer column, return
   cardinality of type UInt64, if add suffix -State, then return a bitmap object'
-sidebar_position: 148
-old-slug: /sql-reference/aggregate-functions/reference/groupbitmap
+slug: /sql-reference/aggregate-functions/reference/groupbitmap
 title: 'groupBitmap'
 doc_type: 'reference'
 ---
 
-Bitmap or Aggregate calculations from a unsigned integer column, return cardinality of type UInt64, if add suffix -State, then return [bitmap object](../../../sql-reference/functions/bitmap-functions.md).
+Creates a bitmap (bit array) from a column of unsigned integers, then returns the count of unique values (cardinality) in that bitmap.
+By appending the `-State` combinator suffix, instead of returning the count, it returns the actual [bitmap object](/sql-reference/functions/bitmap-functions).
+    
+
+**Syntax**
 
 ```sql
 groupBitmap(expr)
+groupBitmapState(expr)
 ```
 
 **Arguments**
 
-`expr` – An expression that results in `UInt*` type.
+- `expr` — Expression that results in a `UInt*` type. [`UInt*`](/sql-reference/data-types/int-uint)
 
-**Return value**
 
-Value of the `UInt64` type.
+**Returned value**
 
-**Example**
+Returns the count of type UInt64 type, or a bitmap object when using `-State`. [`UInt64`](/sql-reference/data-types/int-uint)
 
-Test data:
+**Examples**
 
-```text
-UserID
-1
-1
-2
-3
+**Usage example**
+
+```sql title=Query
+CREATE TABLE t (UserID UInt32) ENGINE = Memory;
+INSERT INTO t VALUES (1), (1), (2), (3);
+
+SELECT groupBitmap(UserID) AS num FROM t;
 ```
 
-Query:
-
-```sql
-SELECT groupBitmap(UserID) AS num FROM t
+```response title=Response
+┌─num─┐
+│   3 │
+└─────┘
 ```
 
-Result:
 
-```text
-num
-3
-```
+

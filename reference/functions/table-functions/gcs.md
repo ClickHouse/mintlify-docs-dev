@@ -2,12 +2,14 @@
 description: 'Provides a table-like interface to `SELECT` and `INSERT` data from Google
   Cloud Storage. Requires the `Storage Object User` IAM role.'
 keywords: ['gcs', 'bucket']
-sidebarTitle: 'gcs'
+sidebar_label: 'gcs'
 sidebar_position: 70
-old-slug: /sql-reference/table-functions/gcs
+slug: /sql-reference/table-functions/gcs
 title: 'gcs'
 doc_type: 'reference'
 ---
+
+# gcs Table Function
 
 Provides a table-like interface to `SELECT` and `INSERT` data from [Google Cloud Storage](https://cloud.google.com/storage/). Requires the [`Storage Object User` IAM role](https://cloud.google.com/storage/docs/access-control/iam-roles).
 
@@ -15,19 +17,19 @@ This is an alias of the [s3 table function](../../sql-reference/table-functions/
 
 If you have multiple replicas in your cluster, you can use the [s3Cluster function](../../sql-reference/table-functions/s3Cluster.md) (which works with GCS) instead to parallelize inserts.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 gcs(url [, NOSIGN | hmac_key, hmac_secret] [,format] [,structure] [,compression_method])
 gcs(named_collection[, option=value [,..]])
 ```
 
-<Tip title="GCS">
+:::tip GCS
 The GCS Table Function integrates with Google Cloud Storage by using the GCS XML API and HMAC keys. 
 See the [Google interoperability docs]( https://cloud.google.com/storage/docs/interoperability) for more details about the endpoint and HMAC.
-</Tip>
+:::
 
-## Arguments 
+## Arguments {#arguments}
 
 | Argument                     | Description                                                                                                                                                                              |
 |------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -38,7 +40,7 @@ See the [Google interoperability docs]( https://cloud.google.com/storage/docs/in
 | `structure`                  | Structure of the table. Format `'column1_name column1_type, column2_name column2_type, ...'`.                                                                                            |
 | `compression_method`         | Parameter is optional. Supported values: `none`, `gzip` or `gz`, `brotli` or `br`, `xz` or `LZMA`, `zstd` or `zst`. By default, it will autodetect compression method by file extension. |
 
-<Note title="GCS">
+:::note GCS
 The GCS path is in this format as the endpoint for the Google XML API is different than the JSON API:
 
 ```text
@@ -46,7 +48,7 @@ The GCS path is in this format as the endpoint for the Google XML API is differe
 ```
 
 and not ~~https://storage.cloud.google.com~~.
-</Note>
+:::
 
 Arguments can also be passed using [named collections](operations/named-collections.md). In this case `url`, `format`, `structure`, `compression_method` work in the same way, and some extra parameters are supported:
 
@@ -59,11 +61,11 @@ Arguments can also be passed using [named collections](operations/named-collecti
 | `no_sign_request`             | Disabled by default.                                                                                                                                                                                                              |
 | `expiration_window_seconds`   | Default value is 120.                                                                                                                                                                                                             |
 
-## Returned value 
+## Returned value {#returned_value}
 
 A table with the specified structure for reading or writing data in the specified file.
 
-## Examples 
+## Examples {#examples}
 
 Selecting the first two rows from the table from GCS file `https://storage.googleapis.com/my-test-bucket-768/data.csv`:
 
@@ -95,7 +97,7 @@ LIMIT 2;
 └─────────┴─────────┴─────────┘
 ```
 
-## Usage 
+## Usage {#usage}
 
 Suppose that we have several files with following URIs on GCS:
 
@@ -134,9 +136,9 @@ FROM gcs('https://storage.googleapis.com/clickhouse_public_datasets/my-test-buck
 └─────────┘
 ```
 
-<Warning>
+:::warning
 If your listing of files contains number ranges with leading zeros, use the construction with braces for each digit separately or use `?`.
-</Warning>
+:::
 
 Count the total amount of rows in files named `file-000.csv`, `file-001.csv`, ... , `file-999.csv`:
 
@@ -187,7 +189,7 @@ SELECT count(*)
 FROM gcs(creds, url='https://s3-object-url.csv')
 ```
 
-## Partitioned Write 
+## Partitioned Write {#partitioned-write}
 
 If you specify `PARTITION BY` expression when inserting data into `GCS` table, a separate file is created for each partition value. Splitting the data into separate files helps to improve reading operations efficiency.
 
@@ -211,6 +213,6 @@ INSERT INTO TABLE FUNCTION
 ```
 As a result, the data is written into three files in different buckets: `my_bucket_1/file.csv`, `my_bucket_10/file.csv`, and `my_bucket_20/file.csv`.
 
-## Related 
+## Related {#related}
 - [S3 table function](s3.md)
 - [S3 engine](../../engines/table-engines/integrations/s3.md)

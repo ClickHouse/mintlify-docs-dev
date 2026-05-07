@@ -1,11 +1,13 @@
 ---
 description: 'Dictionary LIFETIME configuration for automatic refresh'
-old-slug: /sql-reference/statements/create/dictionary/lifetime
+sidebar_label: 'LIFETIME'
+sidebar_position: 5
+slug: /sql-reference/statements/create/dictionary/lifetime
 title: 'Refreshing dictionary data using LIFETIME'
 doc_type: 'reference'
 ---
 
-import CloudDetails from '/snippets/sql-reference/_snippet_dictionary_in_cloud.mdx';
+import CloudDetails from '@site/docs/sql-reference/statements/create/dictionary/_snippet_dictionary_in_cloud.md';
 
 ClickHouse periodically updates dictionaries based on the `LIFETIME` tag (defined in seconds).
 `LIFETIME` is the update interval for fully downloaded dictionaries and the invalidation interval for cached dictionaries.

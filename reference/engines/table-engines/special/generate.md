@@ -1,12 +1,14 @@
 ---
 description: 'The GenerateRandom table engine produces random data for given table
   schema.'
-sidebarTitle: 'GenerateRandom'
+sidebar_label: 'GenerateRandom'
 sidebar_position: 140
-old-slug: /engines/table-engines/special/generate
+slug: /engines/table-engines/special/generate
 title: 'GenerateRandom table engine'
 doc_type: 'reference'
 ---
+
+# GenerateRandom table engine
 
 The GenerateRandom table engine produces random data for given table schema.
 
@@ -15,7 +17,7 @@ Usage examples:
 - Use in test to populate reproducible large table.
 - Generate random input for fuzzing tests.
 
-## Usage in ClickHouse Server 
+## Usage in ClickHouse Server {#usage-in-clickhouse-server}
 
 ```sql
 ENGINE = GenerateRandom([random_seed [,max_string_length [,max_array_length]]])
@@ -28,7 +30,7 @@ Generate table engine supports only `SELECT` queries.
 
 It supports all [DataTypes](../../../sql-reference/data-types/index.md) that can be stored in a table except `AggregateFunction`.
 
-## Example 
+## Example {#example}
 
 **1.** Set up the `generate_engine_table` table:
 
@@ -50,7 +52,7 @@ SELECT * FROM generate_engine_table LIMIT 3
 └──────┴────────────┘
 ```
 
-## Details of Implementation 
+## Details of Implementation {#details-of-implementation}
 
 - Not supported:
   - `ALTER`

@@ -4,21 +4,23 @@ description: 'Documentation for the Hash format'
 input_format: false
 keywords: ['hash', 'format']
 output_format: true
-old-slug: /interfaces/formats/Hash
+slug: /interfaces/formats/Hash
 title: 'Hash'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✗     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 The `Hash` output format calculates a single hash value for all columns and rows of the result.
 This is useful for calculating a "fingerprint" of the result, for example in situations where data transfer is the bottleneck.
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Reading data 
+### Reading data {#reading-data}
 
 Consider a table `football` with the following data:
 
@@ -60,4 +62,4 @@ df2ec2f0669b000edff6adee264e7d68
 1 rows in set. Elapsed: 0.154 sec.
 ```
 
-## Format settings 
+## Format settings {#format-settings}

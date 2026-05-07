@@ -1,22 +1,26 @@
 ---
 description: 'Represents the dictionary of a text index in a MergeTree table.
   It can be used for introspection.'
-old-slug: /sql-reference/table-functions/mergeTreeTextIndex
+sidebar_label: 'mergeTreeTextIndex'
+sidebar_position: 77
+slug: /sql-reference/table-functions/mergeTreeTextIndex
 title: 'mergeTreeTextIndex'
 doc_type: 'reference'
 ---
+
+# mergeTreeTextIndex Table Function
 
 Represents the dictionary of a text index in MergeTree tables.
 Returns tokens with their posting list metadata.
 It can be used for introspection.
 
-## Syntax
+## Syntax {#syntax}
 
 ```sql
 mergeTreeTextIndex(database, table, index_name)
 ```
 
-## Arguments
+## Arguments {#arguments}
 
 | Argument     | Description                                |
 |--------------|--------------------------------------------|
@@ -24,11 +28,11 @@ mergeTreeTextIndex(database, table, index_name)
 | `table`      | The table name to read text index from.    |
 | `index_name` | The text index to read from.               |
 
-## Returned value
+## Returned value {#returned_value}
 
 A table object with tokens and their posting list metadata.
 
-## Usage Example
+## Usage Example {#usage-example}
 
 ```sql
 CREATE TABLE tab

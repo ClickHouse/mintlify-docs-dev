@@ -1,12 +1,16 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/layouts/hashed
+slug: /sql-reference/statements/create/dictionary/layouts/hashed
 title: 'hashed dictionary layout types'
+sidebar_label: 'hashed'
+sidebar_position: 3
 description: 'Store a dictionary in memory using hash tables: hashed, sparse_hashed, complex_key_hashed, complex_key_sparse_hashed'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-## hashed
+## hashed {#hashed}
 
 The dictionary is completely stored in memory in the form of a hash table. The dictionary can contain any number of elements with any identifiers. In practice, the number of keys can reach tens of millions of items.
 
@@ -17,14 +21,14 @@ All types of sources are supported. When updating, data (from a file or from a t
 Configuration example:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 LAYOUT(HASHED())
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <layout>
@@ -32,21 +36,21 @@ LAYOUT(HASHED())
 </layout>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
 Configuration example with settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 LAYOUT(HASHED([SHARDS 1] [SHARD_LOAD_QUEUE_BACKLOG 10000] [MAX_LOAD_FACTOR 0.5]))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <layout>
@@ -77,11 +81,11 @@ LAYOUT(HASHED([SHARDS 1] [SHARD_LOAD_QUEUE_BACKLOG 10000] [MAX_LOAD_FACTOR 0.5])
 </layout>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
-## sparse_hashed
+## sparse_hashed {#sparse_hashed}
 
 Similar to `hashed`, but uses less memory in favor more CPU usage.
 
@@ -90,14 +94,14 @@ The dictionary key has the [UInt64](/sql-reference/data-types/int-uint.md) type.
 Configuration example:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 LAYOUT(SPARSE_HASHED([SHARDS 1] [SHARD_LOAD_QUEUE_BACKLOG 10000] [MAX_LOAD_FACTOR 0.5]))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <layout>
@@ -109,27 +113,27 @@ LAYOUT(SPARSE_HASHED([SHARDS 1] [SHARD_LOAD_QUEUE_BACKLOG 10000] [MAX_LOAD_FACTO
 </layout>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
 It is also possible to use `shards` for this type of dictionary, and again it is more important for `sparse_hashed` then for `hashed`, since `sparse_hashed` is slower.
 
-## complex_key_hashed
+## complex_key_hashed {#complex_key_hashed}
 
 This type of storage is for use with composite [keys](../attributes.md#composite-key). Similar to `hashed`.
 
 Configuration example:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 LAYOUT(COMPLEX_KEY_HASHED([SHARDS 1] [SHARD_LOAD_QUEUE_BACKLOG 10000] [MAX_LOAD_FACTOR 0.5]))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <layout>
@@ -141,25 +145,25 @@ LAYOUT(COMPLEX_KEY_HASHED([SHARDS 1] [SHARD_LOAD_QUEUE_BACKLOG 10000] [MAX_LOAD_
 </layout>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
-## complex_key_sparse_hashed
+## complex_key_sparse_hashed {#complex_key_sparse_hashed}
 
 This type of storage is for use with composite [keys](../attributes.md#composite-key). Similar to [sparse_hashed](#sparse_hashed).
 
 Configuration example:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 LAYOUT(COMPLEX_KEY_SPARSE_HASHED([SHARDS 1] [SHARD_LOAD_QUEUE_BACKLOG 10000] [MAX_LOAD_FACTOR 0.5]))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <layout>
@@ -171,6 +175,6 @@ LAYOUT(COMPLEX_KEY_SPARSE_HASHED([SHARDS 1] [SHARD_LOAD_QUEUE_BACKLOG 10000] [MA
 </layout>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>

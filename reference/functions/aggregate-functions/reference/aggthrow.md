@@ -1,13 +1,13 @@
 ---
 description: 'This function can be used for the purpose of testing exception safety.
   It will throw an exception on creation with the specified probability.'
-sidebar_position: 101
-old-slug: /sql-reference/aggregate-functions/reference/aggthrow
+slug: /sql-reference/aggregate-functions/reference/aggthrow
 title: 'aggThrow'
 doc_type: 'reference'
 ---
 
 This function can be used for the purpose of testing exception safety. It will throw an exception on creation with the specified probability.
+    
 
 **Syntax**
 
@@ -17,23 +17,25 @@ aggThrow(throw_prob)
 
 **Arguments**
 
-- `throw_prob` — Probability to throw on creation. [Float64](../../data-types/float.md).
+- `throw_prob` — Probability to throw on creation. [`Float64`](/sql-reference/data-types/float)
+
 
 **Returned value**
 
-- An exception: `Code: 503. DB::Exception: Aggregate function aggThrow has thrown exception successfully`.
+Returns an exception: `Code: 503. DB::Exception: Aggregate function aggThrow has thrown exception successfully`.
 
-**Example**
+**Examples**
 
-Query:
+**Usage example**
 
-```sql
+```sql title=Query
 SELECT number % 2 AS even, aggThrow(number) FROM numbers(10) GROUP BY even;
 ```
 
-Result:
-
-```response
+```response title=Response
 Received exception:
 Code: 503. DB::Exception: Aggregate function aggThrow has thrown exception successfully: While executing AggregatingTransform. (AGGREGATE_FUNCTION_THROW)
 ```
+
+
+

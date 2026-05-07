@@ -2,12 +2,14 @@
 description: 'The `Executable` and `ExecutablePool` table engines allow you to define
   a table whose rows are generated from a script that you define (by writing rows
   to **stdout**).'
-sidebarTitle: 'Executable/ExecutablePool'
+sidebar_label: 'Executable/ExecutablePool'
 sidebar_position: 40
-old-slug: /engines/table-engines/special/executable
+slug: /engines/table-engines/special/executable
 title: 'Executable and ExecutablePool table engines'
 doc_type: 'reference'
 ---
+
+# Executable and ExecutablePool table engines
 
 The `Executable` and `ExecutablePool` table engines allow you to define a table whose rows are generated from a script that you define (by writing rows to **stdout**). The executable script is stored in the `users_scripts` directory and can read data from any source.
 
@@ -16,7 +18,7 @@ The `Executable` and `ExecutablePool` table engines allow you to define a table 
 
 You can optionally include one or more input queries that stream their results to **stdin** for the script to read.
 
-## Creating an `Executable` table 
+## Creating an `Executable` table {#creating-an-executable-table}
 
 The `Executable` table engine requires two parameters: the name of the script and the format of the incoming data. You can optionally pass in one or more input queries:
 
@@ -98,11 +100,11 @@ SELECT * FROM my_executable_table
 └───┴────────────┘
 ```
 
-## Passing query results to a script 
+## Passing query results to a script {#passing-query-results-to-a-script}
 
 Users of the Hacker News website leave comments. Python contains a natural language processing toolkit (`nltk`) with a `SentimentIntensityAnalyzer` for determining if comments are positive, negative, or neutral - including assigning a value between -1 (a very negative comment) and 1 (a very positive comment). Let's create an `Executable` table that computes the sentiment of Hacker News comments using `nltk`.
 
-This example uses the `hackernews` table described [here](/engines/table-engines/mergetree-family/invertedindexes/#hacker-news-dataset). The `hackernews` table includes an `id` column of type `UInt64` and a `String` column named `comment`. Let's start by defining the `Executable` table:
+This example uses the `hackernews` table described [here](/engines/table-engines/mergetree-family/textindexes/#hacker-news-dataset). The `hackernews` table includes an `id` column of type `UInt64` and a `String` column named `comment`. Let's start by defining the `Executable` table:
 
 ```sql
 CREATE TABLE sentiment (
@@ -197,7 +199,7 @@ The response looks like:
 └──────────┴───────────┘
 ```
 
-## Creating an `ExecutablePool` table 
+## Creating an `ExecutablePool` table {#creating-an-executablepool-table}
 
 The syntax for `ExecutablePool` is similar to `Executable`, but there are a couple of relevant settings unique to an `ExecutablePool` table:
 

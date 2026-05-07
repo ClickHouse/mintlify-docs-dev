@@ -1,13 +1,13 @@
 ---
 description: 'The result is equal to the square root of varSamp. Unlike this function
   uses a numerically stable algorithm.'
-sidebar_position: 191
-old-slug: /sql-reference/aggregate-functions/reference/stddevsampstable
+slug: /sql-reference/aggregate-functions/reference/stddevsampstable
 title: 'stddevSampStable'
 doc_type: 'reference'
 ---
 
-The result is equal to the square root of [varSamp](../../../sql-reference/aggregate-functions/reference/varsamp.md). Unlike [`stddevSamp`](../reference/stddevsamp.md) this function uses a numerically stable algorithm. It works slower but provides a lower computational error.
+The result is equal to the square root of [varSamp](../../../sql-reference/aggregate-functions/reference/varSamp.md). Unlike [stddevSamp](../reference/stddevSamp.md) this function uses a numerically stable algorithm. It works slower but provides a lower computational error.
+    
 
 **Syntax**
 
@@ -15,19 +15,20 @@ The result is equal to the square root of [varSamp](../../../sql-reference/aggre
 stddevSampStable(x)
 ```
 
-**Parameters**
+**Arguments**
 
-- `x`: Values for which to find the square root of sample variance. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal*](../../data-types/decimal.md).
+- `x` — Values for which to find the square root of sample variance. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
+
 
 **Returned value**
 
-Square root of sample variance of `x`. [Float64](../../data-types/float.md).
+Returns the square root of sample variance of `x`. [`Float64`](/sql-reference/data-types/float)
 
-**Example**
+**Examples**
 
-Query:
+**Basic usage**
 
-```sql
+```sql title=Query
 DROP TABLE IF EXISTS test_data;
 CREATE TABLE test_data
 (
@@ -42,10 +43,11 @@ SELECT
 FROM test_data;
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─stddevSampStable(population)─┐
 │                            4 │
 └──────────────────────────────┘
 ```
+
+
+

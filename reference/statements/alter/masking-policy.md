@@ -1,13 +1,17 @@
 ---
 description: 'Documentation for ALTER MASKING POLICY'
-old-slug: /sql-reference/statements/alter/masking-policy
+sidebar_label: 'MASKING POLICY'
+sidebar_position: 48
+slug: /sql-reference/statements/alter/masking-policy
 title: 'ALTER MASKING POLICY'
 doc_type: 'reference'
 ---
 
-import {CloudOnlyBadge} from '/snippets/components/CloudOnlyBadge/CloudOnlyBadge.jsx'
+import CloudOnlyBadge from '@theme/badges/CloudOnlyBadge';
 
 <CloudOnlyBadge/>
+
+# ALTER MASKING POLICY
 
 Modifies an existing masking policy.
 

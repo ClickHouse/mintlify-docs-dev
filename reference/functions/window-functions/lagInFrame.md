@@ -1,19 +1,21 @@
 ---
 description: 'Documentation for the lagInFrame window function'
-sidebarTitle: 'lagInFrame'
+sidebar_label: 'lagInFrame'
 sidebar_position: 9
-old-slug: /sql-reference/window-functions/lagInFrame
+slug: /sql-reference/window-functions/lagInFrame
 title: 'lagInFrame'
 doc_type: 'reference'
 ---
 
+# lagInFrame
+
 Returns a value evaluated at the row that is at a specified physical offset row before the current row within the ordered frame.
 
-<Warning>
+:::warning
 `lagInFrame` behavior differs from the standard SQL `lag` window function.
 Clickhouse window function `lagInFrame` respects the window frame.
 To get behavior identical to the `lag`, use `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`.
-</Warning>
+:::
 
 **Syntax**
 

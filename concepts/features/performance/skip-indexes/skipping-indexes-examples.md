@@ -1,12 +1,14 @@
 ---
-old-slug: /optimize/skipping-indexes/examples
-sidebarTitle: 'Data Skipping Indexes - Examples'
+slug: /optimize/skipping-indexes/examples
+sidebar_label: 'Data skipping indexes - examples'
 sidebar_position: 2
 description: 'Consolidated Skip Index Examples'
-title: 'Data Skipping Index Examples'
+title: 'Data skipping index examples'
 doc_type: 'guide'
 keywords: ['skipping indexes', 'data skipping', 'performance', 'indexing', 'best practices']
 ---
+
+# Data skipping index examples {#data-skipping-index-examples}
 
 This page consolidates ClickHouse data skipping index examples, showing how to declare each type, when to use them, and how to verify they're applied. All features work with [MergeTree-family tables](/engines/table-engines/mergetree-family/mergetree).
 
@@ -16,19 +18,20 @@ This page consolidates ClickHouse data skipping index examples, showing how to d
 INDEX name expr TYPE type(...) [GRANULARITY N]
 ```
 
-ClickHouse supports five skip index types:
+ClickHouse supports six skip index types:
 
 | Index Type | Description |
 |------------|-------------|
 | **minmax** | Tracks minimum and maximum values in each granule |
 | **set(N)** | Stores up to N distinct values per granule |
+| **text**       | Inverted index over tokenized string data for full text search |
 | **bloom_filter([false_positive_rate])** | Probabilistic filter for existence checks |
 | **ngrambf_v1** | N-gram bloom filter for substring searches |
 | **tokenbf_v1** | Token-based bloom filter for full-text searches |
 
 Each section provides examples with sample data and demonstrates how to verify index usage in query execution.
 
-## MinMax index 
+## MinMax index {#minmax-index}
 
 The`minmax` index is best for range predicates on loosely sorted data or columns correlated with `ORDER BY`.
 
@@ -58,7 +61,7 @@ SELECT count() FROM events WHERE ts >= now() - 3600;
 
 See a [worked example](/best-practices/use-data-skipping-indices-where-appropriate#example) with `EXPLAIN` and pruning.
 
-## Set index 
+## Set index {#set-index}
 
 Use the `set` index when local (per-block) cardinality is low; not helpful if each block has many distinct values.
 
@@ -74,7 +77,26 @@ SELECT * FROM events WHERE user_id IN (101, 202);
 
 A creation/materialization workflow and the before/after effect are shown in the [basic operation guide](/optimize/skipping-indexes#basic-operation).
 
-## Generic Bloom filter (scalar) 
+## Text index (text) for full text search {#textindex-for-full-text-search}
+
+`text` is an inverted index over tokenized text data.
+Designed specifically for full-text search workloads, enabling efficient and deterministic token and term lookup.
+Recommended for natural language or large-scale text search use cases.
+
+Just see [Full-text Search with Text Indexes](/engines/table-engines/mergetree-family/textindexes) for more details and examples.
+
+```sql
+ALTER TABLE logs ADD INDEX msg_text msg TYPE text(tokenizer = splitByNonAlpha);
+ALTER TABLE logs MATERIALIZE INDEX msg_text;
+
+SELECT count() FROM logs WHERE hasAllTokens(msg, 'exception');
+```
+
+See a more complete observability example [here](/use-cases/observability/schema-design#text-index-for-full-text-search) documentation.
+
+The text index is totally deterministic and fully tunable in terms of tokenization and text processing at a cost of some more storage consumption compared with bloom filter–based indexes, 
+
+## Generic Bloom filter (scalar) {#generic-bloom-filter-scalar}
 
 The `bloom_filter` index is good for "needle in a haystack" equality/IN membership. It accepts an optional parameter which is the false-positive rate (default 0.025). 
 
@@ -88,7 +110,11 @@ EXPLAIN indexes = 1
 SELECT * FROM events WHERE value IN (7, 42, 99);
 ```
 
-## N-gram Bloom filter (ngrambf\_v1) for substring search 
+## N-gram Bloom filter (ngrambf\_v1) for substring search *(Deprecated)* {#n-gram-bloom-filter-ngrambf-v1-for-substring-search}
+
+:::note
+The usage of `ngrambf_v1` indexes for full-text search is deprecated in ClickHouse versions `>= 26.2` in favor of `text` indexes (see [here](/engines/table-engines/mergetree-family/textindexes) for further details).
+:::
 
 The `ngrambf_v1` index splits strings into n-grams. It works well for `LIKE '%...%'` queries. It supports String/FixedString/Map (via mapKeys/mapValues), as well as tunable size, hash count, and seed. See the documentation for [N-gram bloom filter](/engines/table-engines/mergetree-family/mergetree#n-gram-bloom-filter) for further details.
 
@@ -104,7 +130,7 @@ EXPLAIN indexes = 1
 SELECT count() FROM logs WHERE msg LIKE '%timeout%';
 ```
 
-[This guide](/use-cases/observability/schema-design#bloom-filters-for-text-search) shows practical examples and when to use token vs ngram.
+[This guide](/use-cases/observability/schema-design#text-index-for-full-text-search) shows practical examples and when to use token vs ngram.
 
 **Parameter optimization helpers:**
 
@@ -124,7 +150,11 @@ SELECT bfEstimateFunctions(4300, bfEstimateBmSize(4300, 0.0001)) AS k; -- ~13
 
 See [parameter docs](/engines/table-engines/mergetree-family/mergetree#n-gram-bloom-filter) for complete tuning guidance.  
 
-## Token Bloom filter (tokenbf\_v1) for word-based search 
+## Token Bloom filter (tokenbf\_v1) for word-based search *(Deprecated)* {#token-bloom-filter-tokenbf-v1-for-word-based-search}
+
+:::note
+The usage of `tokenbf_v1` indexes for full-text search is deprecated in ClickHouse versions `>= 26.2` in favor of `text` indexes (see [here](/engines/table-engines/mergetree-family/textindexes) for further details).
+:::
 
 `tokenbf_v1` indexes tokens separated by non-alphanumeric characters. You should use it with [`hasToken`](/sql-reference/functions/string-search-functions#hasToken), `LIKE` word patterns or equals/IN. It supports `String`/`FixedString`/`Map` types.
 
@@ -141,9 +171,9 @@ EXPLAIN indexes = 1
 SELECT count() FROM logs WHERE hasToken(lower(msg), 'exception');
 ```
 
-See observability examples and guidance on token vs ngram [here](/use-cases/observability/schema-design#bloom-filters-for-text-search).
+See observability examples and guidance on token vs ngram [here](/use-cases/observability/schema-design#text-index-for-full-text-search).
 
-## Add indexes during CREATE TABLE (multiple examples) 
+## Add indexes during CREATE TABLE (multiple examples) {#add-indexes-during-create-table-multiple-examples}
 
 Skipping indexes also support composite expressions and `Map`/`Tuple`/`Nested` types. This is demonstrated in the example below:
 
@@ -164,7 +194,7 @@ ENGINE = MergeTree
 ORDER BY u64;
 ```
 
-## Materializing on existing data and verifying 
+## Materializing on existing data and verifying {#materializing-on-existing-data-and-verifying}
 
 You can add an index to existing data parts using `MATERIALIZE`, and inspect pruning with `EXPLAIN` or trace logs, as shown below:
 
@@ -180,7 +210,7 @@ SET send_logs_level = 'trace';
 
 This [worked minmax example](/best-practices/use-data-skipping-indices-where-appropriate#example) demonstrates EXPLAIN output structure and pruning counts.
 
-## When to use and when to avoid skipping indexes 
+## When to use and when to avoid skipping indexes {#when-use-and-when-to-avoid}
 
 **Use skip indexes when:**
 
@@ -193,11 +223,11 @@ This [worked minmax example](/best-practices/use-data-skipping-indices-where-app
 * Most blocks likely contain at least one matching value (blocks will be read regardless)  
 * Filtering on high-cardinality columns with no correlation to data ordering
 
-<Note title="Important considerations">
+:::note Important considerations
 If a value appears even once in a data block, ClickHouse must read the entire block. Test indexes with realistic datasets and adjust granularity and type-specific parameters based on actual performance measurements.
-</Note>
+:::
 
-## Temporarily ignore or force indexes 
+## Temporarily ignore or force indexes {#temporarily-ignore-or-force-indexes}
 
 Disable specific indexes by name for individual queries during testing and troubleshooting. Settings also exist to force index usage when needed. See [`ignore_data_skipping_indices`](/operations/settings/settings#ignore_data_skipping_indices).
 
@@ -208,13 +238,13 @@ WHERE hasToken(lower(msg), 'exception')
 SETTINGS ignore_data_skipping_indices = 'msg_token';
 ```
 
-## Notes and caveats 
+## Notes and caveats {#notes-and-caveats}
 
 * Skipping indexes are only supported on [MergeTree-family tables](/engines/table-engines/mergetree-family/mergetree); pruning happens at the granule/block level.  
 * Bloom-filter-based indexes are probabilistic (false positives cause extra reads but won't skip valid data).  
 * Bloom filters and other skip indexes should be validated with `EXPLAIN` and tracing; adjust granularity to balance pruning vs. index size.
 
-## Related docs 
+## Related docs {#related-docs}
 - [Data skipping index guide](/optimize/skipping-indexes)
 - [Best practices guide](/best-practices/use-data-skipping-indices-where-appropriate)
 - [Manipulating data skipping indices](/sql-reference/statements/alter/skipping-index)

@@ -1,10 +1,12 @@
 ---
-description: Documentation for ORDER BY Clause
-sidebarTitle: ORDER BY
-old-slug: /sql-reference/statements/select/order-by
-title: ORDER BY clause
-doc_type: reference
+description: 'Documentation for ORDER BY Clause'
+sidebar_label: 'ORDER BY'
+slug: /sql-reference/statements/select/order-by
+title: 'ORDER BY Clause'
+doc_type: 'reference'
 ---
+
+# ORDER BY Clause
 
 The `ORDER BY` clause contains
 
@@ -12,20 +14,25 @@ The `ORDER BY` clause contains
 - a list of numbers referring to columns in the `SELECT` clause, e.g. `ORDER BY 2, 1`, or
 - `ALL` which means all columns of the `SELECT` clause, e.g. `ORDER BY ALL`.
 
-To disable sorting by column numbers, set setting [enable\_positional\_arguments](/operations/settings/settings#enable_positional_arguments) = 0. To disable sorting by `ALL`, set setting [enable\_order\_by\_all](/operations/settings/settings#enable_order_by_all) = 0.
+To disable sorting by column numbers, set setting [enable_positional_arguments](/operations/settings/settings#enable_positional_arguments) = 0.
+To disable sorting by `ALL`, set setting [enable_order_by_all](/operations/settings/settings#enable_order_by_all) = 0.
 
-The `ORDER BY` clause can be attributed by a `DESC` (descending) or `ASC` (ascending) modifier which determines the sorting direction. Unless an explicit sort order is specified, `ASC` is used by default. The sorting direction applies to a single expression, not to the entire list, e.g. `ORDER BY Visits DESC, SearchPhrase`. Also, sorting is performed case-sensitively.
+The `ORDER BY` clause can be attributed by a `DESC` (descending) or `ASC` (ascending) modifier which determines the sorting direction.
+Unless an explicit sort order is specified, `ASC` is used by default.
+The sorting direction applies to a single expression, not to the entire list, e.g. `ORDER BY Visits DESC, SearchPhrase`.
+Also, sorting is performed case-sensitively.
 
-Rows with identical values for a sort expressions are returned in an arbitrary and non-deterministic order. If the `ORDER BY` clause is omitted in a `SELECT` statement, the row order is also arbitrary and non-deterministic.
+Rows with identical values for a sort expressions are returned in an arbitrary and non-deterministic order.
+If the `ORDER BY` clause is omitted in a `SELECT` statement, the row order is also arbitrary and non-deterministic.
 
-## Sorting of Special Values \
+## Sorting of Special Values {#sorting-of-special-values}
 
 There are two approaches to `NaN` and `NULL` sorting order:
 
 - By default or with the `NULLS LAST` modifier: first the values, then `NaN`, then `NULL`.
 - With the `NULLS FIRST` modifier: first `NULL`, then `NaN`, then other values.
 
-### Example \
+### Example {#example}
 
 For the table
 
@@ -63,7 +70,7 @@ Run the query `SELECT * FROM t_null_nan ORDER BY y NULLS FIRST` to get:
 
 When floating point numbers are sorted, NaNs are separate from the other values. Regardless of the sorting order, NaNs come at the end. In other words, for ascending sorting they are placed as if they are larger than all the other numbers, while for descending sorting they are placed as if they are smaller than the rest.
 
-## Collation Support \
+## Collation Support {#collation-support}
 
 For sorting by [String](../../../sql-reference/data-types/string.md) values, you can specify collation (comparison). Example: `ORDER BY SearchPhrase COLLATE 'tr'` - for sorting by keyword in ascending order, using the Turkish alphabet, case insensitive, assuming that strings are UTF-8 encoded. `COLLATE` can be specified or not for each expression in ORDER BY independently. If `ASC` or `DESC` is specified, `COLLATE` is specified after it. When using `COLLATE`, sorting is always case-insensitive.
 
@@ -71,7 +78,7 @@ Collate is supported in [LowCardinality](../../../sql-reference/data-types/lowca
 
 We only recommend using `COLLATE` for final sorting of a small number of rows, since sorting with `COLLATE` is less efficient than normal sorting by bytes.
 
-## Collation Examples \
+## Collation Examples {#collation-examples}
 
 Example only with [String](../../../sql-reference/data-types/string.md) values:
 
@@ -247,7 +254,7 @@ Result:
 └───┴─────────┘
 ```
 
-## Implementation Details \
+## Implementation Details {#implementation-details}
 
 Less RAM is used if a small enough [LIMIT](../../../sql-reference/statements/select/limit.md) is specified in addition to `ORDER BY`. Otherwise, the amount of memory spent is proportional to the volume of data for sorting. For distributed query processing, if [GROUP BY](/sql-reference/statements/select/group-by) is omitted, sorting is partially done on remote servers, and the results are merged on the requestor server. This means that for distributed sorting, the volume of data to sort can be greater than the amount of memory on a single server.
 
@@ -257,11 +264,11 @@ Running a query may use more memory than `max_bytes_before_external_sort`. For t
 
 External sorting works much less effectively than sorting in RAM.
 
-## Optimization of Data Reading \
+## Optimization of Data Reading {#optimization-of-data-reading}
 
-If `ORDER BY` expression has a prefix that coincides with the table sorting key, you can optimize the query by using the [optimize\_read\_in\_order](../../../operations/settings/settings.md#optimize_read_in_order) setting.
+ If `ORDER BY` expression has a prefix that coincides with the table sorting key, you can optimize the query by using the [optimize_read_in_order](../../../operations/settings/settings.md#optimize_read_in_order) setting.
 
-When the `optimize_read_in_order` setting is enabled, the ClickHouse server uses the table index and reads the data in order of the `ORDER BY` key. This allows to avoid reading all data in case of specified [LIMIT](../../../sql-reference/statements/select/limit.md). So queries on big data with small limit are processed faster.
+ When the `optimize_read_in_order` setting is enabled, the ClickHouse server uses the table index and reads the data in order of the `ORDER BY` key. This allows to avoid reading all data in case of specified [LIMIT](../../../sql-reference/statements/select/limit.md). So queries on big data with small limit are processed faster.
 
 Optimization works with both `ASC` and `DESC` and does not work together with [GROUP BY](/sql-reference/statements/select/group-by) clause and [FINAL](/sql-reference/statements/select/from#final-modifier) modifier.
 
@@ -277,11 +284,12 @@ Optimization is supported in the following table engines:
 
 In `MaterializedView`-engine tables the optimization works with views like `SELECT ... FROM merge_tree_table ORDER BY pk`. But it is not supported in the queries like `SELECT ... FROM view ORDER BY pk` if the view query does not have the `ORDER BY` clause.
 
-## ORDER BY Expr WITH FILL Modifier \
+## ORDER BY Expr WITH FILL Modifier {#order-by-expr-with-fill-modifier}
 
 This modifier also can be combined with [LIMIT ... WITH TIES modifier](/sql-reference/statements/select/limit#limit--with-ties-modifier).
 
-`WITH FILL` modifier can be set after `ORDER BY expr` with optional `FROM expr`, `TO expr` and `STEP expr` parameters. All missed values of `expr` column will be filled sequentially and other columns will be filled as defaults.
+`WITH FILL` modifier can be set after `ORDER BY expr` with optional `FROM expr`, `TO expr` and `STEP expr` parameters.
+All missed values of `expr` column will be filled sequentially and other columns will be filled as defaults.
 
 To fill multiple columns, add `WITH FILL` modifier with optional parameters after each field name in `ORDER BY` section.
 
@@ -290,7 +298,13 @@ ORDER BY expr [WITH FILL] [FROM const_expr] [TO const_expr] [STEP const_numeric_
 [INTERPOLATE [(col [AS expr], ... colN [AS exprN])]]
 ```
 
-`WITH FILL` can be applied for fields with Numeric (all kinds of float, decimal, int) or Date/DateTime types. When applied for `String` fields, missed values are filled with empty strings. When `FROM const_expr` not defined sequence of filling use minimal `expr` field value from `ORDER BY`. When `TO const_expr` not defined sequence of filling use maximum `expr` field value from `ORDER BY`. When `STEP const_numeric_expr` defined then `const_numeric_expr` interprets `as is` for numeric types, as `days` for Date type, as `seconds` for DateTime type. It also supports [INTERVAL](/sql-reference/data-types/special-data-types/interval/) data type representing time and date intervals. When `STEP const_numeric_expr` omitted then sequence of filling use `1.0` for numeric type, `1 day` for Date type and `1 second` for DateTime type. When `STALENESS const_numeric_expr` is defined, the query will generate rows until the difference from the previous row in the original data exceeds `const_numeric_expr`. `INTERPOLATE` can be applied to columns not participating in `ORDER BY WITH FILL`. Such columns are filled based on previous fields values by applying `expr`. If `expr` is not present will repeat previous value. Omitted list will result in including all allowed columns.
+`WITH FILL` can be applied for fields with Numeric (all kinds of float, decimal, int) or Date/DateTime types. When applied for `String` fields, missed values are filled with empty strings.
+When `FROM const_expr` not defined sequence of filling use minimal `expr` field value from `ORDER BY`.
+When `TO const_expr` not defined sequence of filling use maximum `expr` field value from `ORDER BY`.
+When `STEP const_numeric_expr` defined then `const_numeric_expr` interprets `as is` for numeric types, as `days` for Date type, as `seconds` for DateTime type. It also supports [INTERVAL](/sql-reference/data-types/special-data-types/interval/) data type representing time and date intervals.
+When `STEP const_numeric_expr` omitted then sequence of filling use `1.0` for numeric type, `1 day` for Date type and `1 second` for DateTime type.
+When `STALENESS const_numeric_expr` is defined, the query will generate rows until the difference from the previous row in the original data exceeds `const_numeric_expr`.
+`INTERPOLATE` can be applied to columns not participating in `ORDER BY WITH FILL`. Such columns are filled based on previous fields values by applying `expr`. If `expr` is not present will repeat previous value. Omitted list will result in including all allowed columns.
 
 Example of a query without `WITH FILL`:
 
@@ -421,7 +435,6 @@ ORDER BY
 ```
 
 Result:
-
 ```response
 ┌─────────d1─┬─────────d2─┬─source───┐
 │ 1970-01-11 │ 1970-01-02 │ original │
@@ -604,10 +617,10 @@ Result:
 └─────┴──────────┴───────┘
 ```
 
-## Filling grouped by sorting prefix \
+## Filling grouped by sorting prefix {#filling-grouped-by-sorting-prefix}
 
-It can be useful to fill rows which have the same values in particular columns independently, - a good example is filling missing values in time series. Assume there is the following time series table:
-
+It can be useful to fill rows which have the same values in particular columns independently, - a good example is filling missing values in time series.
+Assume there is the following time series table:
 ```sql
 CREATE TABLE timeseries
 (
@@ -626,9 +639,8 @@ SELECT * FROM timeseries;
 │       432 │ 2021-12-01 00:00:05.000 │     5 │
 └───────────┴─────────────────────────┴───────┘
 ```
-
-And we'd like to fill missing values for each sensor independently with 1 second interval. The way to achieve it is to use `sensor_id` column as sorting prefix for filling column `timestamp`:
-
+And we'd like to fill missing values for each sensor independently with 1 second interval.
+The way to achieve it is to use `sensor_id` column as sorting prefix for filling column `timestamp`:
 ```sql
 SELECT *
 FROM timeseries
@@ -650,9 +662,9 @@ INTERPOLATE ( value AS 9999 )
 │       432 │ 2021-12-01 00:00:05.000 │     5 │
 └───────────┴─────────────────────────┴───────┘
 ```
+Here, the `value` column was interpolated with `9999` just to make filled rows more noticeable.
+This behavior is controlled by setting `use_with_fill_by_sorting_prefix` (enabled by default)
 
-Here, the `value` column was interpolated with `9999` just to make filled rows more noticeable. This behavior is controlled by setting `use_with_fill_by_sorting_prefix` (enabled by default)
-
-## Related content \
+## Related content {#related-content}
 
 - Blog: [Working with time series data in ClickHouse](https://clickhouse.com/blog/working-with-time-series-data-and-functions-ClickHouse)

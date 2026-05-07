@@ -1,22 +1,25 @@
 ---
 description: 'Documentation for Table'
 keywords: ['compression', 'codec', 'schema', 'DDL']
-sidebarTitle: 'TABLE'
+sidebar_label: 'TABLE'
 sidebar_position: 36
-old-slug: /sql-reference/statements/create/table
+slug: /sql-reference/statements/create/table
 title: 'CREATE TABLE'
 doc_type: 'reference'
 ---
 
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
+import ExperimentalBadge from '@theme/badges/ExperimentalBadge';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Creates a new table. This query can have various syntax forms depending on a use case.
 
 By default, tables are created only on the current server. Distributed DDL queries are implemented as `ON CLUSTER` clause, which is [described separately](../../../sql-reference/distributed-ddl.md).
 
-## Syntax Forms 
+## Syntax Forms {#syntax-forms}
 
-### With Explicit Schema 
+### With Explicit Schema {#with-explicit-schema}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -29,7 +32,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 ```
 
 Creates a table named `table_name` in the `db` database or the current database if `db` is not set, with the structure specified in brackets and the `engine` engine.
-The structure of the table is a list of column descriptions, secondary indexes and constraints . If [primary key](#primary-key) is supported by the engine, it will be indicated as parameter for the table engine.
+The structure of the table is a list of column descriptions, secondary indexes, projections and constraints . If [primary key](#primary-key) is supported by the engine, it will be indicated as parameter for the table engine.
 
 A column description is `name type` in the simplest case. Example: `RegionID UInt32`.
 
@@ -39,28 +42,35 @@ If necessary, primary key can be specified, with one or more key expressions.
 
 Comments can be added for columns and for the table.
 
-### With a Schema Similar to Other Table 
+### With Schema of Existing Table {#with-a-schema-similar-to-other-table}
+
+ClickHouse supports the ability to copy the schema and data of an existing table. 
+
+For replicating the schema of an existing table:
 
 ```sql
-CREATE TABLE [IF NOT EXISTS] [db.]table_name AS [db2.]name2 [ENGINE = engine]
+CREATE TABLE [IF NOT EXISTS] [db2.]table_clone AS [db.]table [ENGINE = engine]
 ```
 
-Creates a table with the same structure as another table. You can specify a different engine for the table. If the engine is not specified, the same engine will be used as for the `db2.name2` table.
+This creates a table with the same structure as another table. 
 
-### With a Schema and Data Cloned from Another Table 
+### With Schema and Data of Existing Table {#with-a-schema-and-data-cloned-from-another-table}
+
+For replicating the schema and data of an existing table:
+```sql
+CREATE TABLE [IF NOT EXISTS] [db2.]table_clone CLONE AS [db.]table [ENGINE = engine]
+```
+
+This creates a table with the same schema and data as an existing table.  After the new table is created, all partitions from `db.table` are attached to it. In other words, the data of `db.table` is cloned into `db2.table_clone` upon creation. This query is equivalent to the following:
 
 ```sql
-CREATE TABLE [IF NOT EXISTS] [db.]table_name CLONE AS [db2.]name2 [ENGINE = engine]
+CREATE TABLE [IF NOT EXISTS] [db2.]table_clone AS [db.]table [ENGINE = engine];
+ALTER TABLE [db2.]table_clone ATTACH PARTITION ALL FROM [db.]table;
 ```
 
-Creates a table with the same structure as another table. You can specify a different engine for the table. If the engine is not specified, the same engine will be used as for the `db2.name2` table. After the new table is created, all partitions from `db2.name2` are attached to it. In other words, the data of `db2.name2` is cloned into `db.table_name` upon creation. This query is equivalent to the following:
+For both features, you can specify a different engine for the table. If the engine is not specified, the same engine will be used as for the original table (`db.table`).
 
-```sql
-CREATE TABLE [IF NOT EXISTS] [db.]table_name AS [db2.]name2 [ENGINE = engine];
-ALTER TABLE [db.]table_name ATTACH PARTITION ALL FROM [db2].name2;
-```
-
-### From a Table Function 
+### From a Table Function {#from-a-table-function}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name AS table_function()
@@ -68,7 +78,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name AS table_function()
 
 Creates a table with the same result as that of the [table function](/sql-reference/table-functions) specified. The created table will also work in the same way as the corresponding table function that was specified.
 
-### From SELECT query 
+### From SELECT query {#from-select-query}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name[(name1 [type1], name2 [type2], ...)] ENGINE = engine AS SELECT ...
@@ -97,7 +107,7 @@ Result:
 └───┴───────────────┘
 ```
 
-## NULL Or NOT NULL Modifiers 
+## NULL Or NOT NULL Modifiers {#null-or-not-null-modifiers}
 
 `NULL` and `NOT NULL` modifiers after data type in column definition allow or do not allow it to be [Nullable](/sql-reference/data-types/nullable).
 
@@ -105,7 +115,7 @@ If the type is not `Nullable` and if `NULL` is specified, it will be treated as 
 
 See also [data_type_default_nullable](../../../operations/settings/settings.md#data_type_default_nullable) setting.
 
-## Default Values 
+## Default Values {#default_values}
 
 The column description can specify a default value expression in the form of `DEFAULT expr`, `MATERIALIZED expr`, or `ALIAS expr`. Example: `URLDomain String DEFAULT domain(URL)`.
 
@@ -117,7 +127,7 @@ If both a data type and a default value expression are specified, an implicit ty
 
 A default value expression `expr` may reference arbitrary table columns and constants. ClickHouse checks that changes of the table structure do not introduce loops in the expression calculation. For INSERT, it checks that expressions are resolvable – that all columns they can be calculated from have been passed.
 
-### DEFAULT 
+### DEFAULT {#default}
 
 `DEFAULT expr`
 
@@ -143,7 +153,7 @@ SELECT * FROM test;
 └────┴─────────────────────┴─────────────────┘
 ```
 
-### MATERIALIZED 
+### MATERIALIZED {#materialized}
 
 `MATERIALIZED expr`
 
@@ -181,7 +191,7 @@ SELECT * FROM test SETTINGS asterisk_include_materialized_columns=1;
 └────┴─────────────────────┴─────────────────┘
 ```
 
-### EPHEMERAL 
+### EPHEMERAL {#ephemeral}
 
 `EPHEMERAL [expr]`
 
@@ -217,7 +227,7 @@ hexed:      Z��
 hex(hexed): 5A90B714
 ```
 
-### ALIAS 
+### ALIAS {#alias}
 
 `ALIAS expr`
 
@@ -254,14 +264,14 @@ SELECT * FROM test SETTINGS asterisk_include_alias_columns=1;
 └────┴────────────┴──────────┘
 ```
 
-## Primary Key 
+## Primary Key {#primary-key}
 
 You can define a [primary key](../../../engines/table-engines/mergetree-family/mergetree.md#primary-keys-and-indexes-in-queries) when creating a table. Primary key can be specified in two ways:
 
 - Inside the column list
 
 ```sql
-CREATE TABLE db.table_name
+CREATE TABLE [db.]table_name
 (
     name1 type1, name2 type2, ...,
     PRIMARY KEY(expr1[, expr2,...])
@@ -272,7 +282,7 @@ ENGINE = engine;
 - Outside the column list
 
 ```sql
-CREATE TABLE db.table_name
+CREATE TABLE [db.]table_name
 (
     name1 type1, name2 type2, ...
 )
@@ -280,15 +290,15 @@ ENGINE = engine
 PRIMARY KEY(expr1[, expr2,...]);
 ```
 
-<Tip>
+:::tip
 You can't combine both ways in one query.
-</Tip>
+:::
 
-## Constraints 
+## Constraints {#constraints}
 
 Along with columns descriptions constraints could be defined:
 
-### CONSTRAINT 
+### CONSTRAINT {#constraint}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -304,7 +314,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 
 Adding large amount of constraints can negatively affect performance of big `INSERT` queries.
 
-### ASSUME 
+### ASSUME {#assume}
 
 The `ASSUME` clause is used to define a `CONSTRAINT` on a table that is assumed to be true. This constraint can then be used by the optimizer to enhance the performance of SQL queries.
 
@@ -328,11 +338,11 @@ Then, when executing the query `SELECT name FROM users_a WHERE length(name) < 5;
 
 `ASSUME CONSTRAINT` **does not enforce the constraint**, it merely informs the optimizer that the constraint holds true. If the constraint is not actually true, the results of the queries may be incorrect. Therefore, you should only use `ASSUME CONSTRAINT` if you are sure that the constraint is true.
 
-## TTL Expression 
+## TTL Expression {#ttl-expression}
 
 Defines storage time for values. Can be specified only for MergeTree-family tables. For the detailed description, see [TTL for columns and tables](../../../engines/table-engines/mergetree-family/mergetree.md#table_engine-mergetree-ttl).
 
-## Column Compression Codecs 
+## Column Compression Codecs {#column_compression_codec}
 
 By default, ClickHouse applies `lz4` compression in the self-managed version, and `zstd` in ClickHouse Cloud. 
 
@@ -364,9 +374,9 @@ ALTER TABLE codec_example MODIFY COLUMN float_value CODEC(Default);
 
 Codecs can be combined in a pipeline, for example, `CODEC(Delta, Default)`.
 
-<Tip>
+:::tip
 You can't decompress ClickHouse database files with external utilities like `lz4`. Instead, use the special [clickhouse-compressor](https://github.com/ClickHouse/ClickHouse/tree/master/programs/compressor) utility.
-</Tip>
+:::
 
 Compression is supported for the following table engines:
 
@@ -377,72 +387,69 @@ Compression is supported for the following table engines:
 
 ClickHouse supports general purpose codecs and specialized codecs.
 
-### General Purpose Codecs 
+### General Purpose Codecs {#general-purpose-codecs}
 
-#### NONE 
+#### NONE {#none}
 
 `NONE` — No compression.
 
-#### LZ4 
+#### LZ4 {#lz4}
 
 `LZ4` — Lossless [data compression algorithm](https://github.com/lz4/lz4) used by default. Applies LZ4 fast compression.
 
-#### LZ4HC 
+#### LZ4HC {#lz4hc}
 
 `LZ4HC[(level)]` — LZ4 HC (high compression) algorithm with configurable level. Default level: 9. Setting `level <= 0` applies the default level. Possible levels: \[1, 12\]. Recommended level range: \[4, 9\].
 
-#### ZSTD 
+#### ZSTD {#zstd}
 
 `ZSTD[(level)]` — [ZSTD compression algorithm](https://en.wikipedia.org/wiki/Zstandard) with configurable `level`. Possible levels: \[1, 22\]. Default level: 1.
 
 High compression levels are useful for asymmetric scenarios, like compress once, decompress repeatedly. Higher levels mean better compression and higher CPU usage.
 
-#### ZSTD_QAT 
+#### Obsolete: ZSTD_QAT {#zstd_qat}
 
 <CloudNotSupportedBadge/>
 
-`ZSTD_QAT[(level)]` — [ZSTD compression algorithm](https://en.wikipedia.org/wiki/Zstandard) with configurable level, implemented by [Intel® QATlib](https://github.com/intel/qatlib) and [Intel® QAT ZSTD Plugin](https://github.com/intel/QAT-ZSTD-Plugin). Possible levels: \[1, 12\]. Default level: 1. Recommended level range: \[6, 12\]. Some limitations apply:
-
-- ZSTD_QAT is disabled by default and can only be used after enabling configuration setting [enable_zstd_qat_codec](../../../operations/settings/settings.md#enable_zstd_qat_codec).
-- For compression, ZSTD_QAT tries to use an Intel® QAT offloading device ([QuickAssist Technology](https://www.intel.com/content/www/us/en/developer/topic-technology/open/quick-assist-technology/overview.html)). If no such device was found, it will fallback to ZSTD compression in software.
-- Decompression is always performed in software.
-
-#### DEFLATE_QPL 
+#### Obsolete: DEFLATE_QPL {#deflate_qpl}
 
 <CloudNotSupportedBadge/>
 
-`DEFLATE_QPL` — [Deflate compression algorithm](https://github.com/intel/qpl) implemented by Intel® Query Processing Library. Some limitations apply:
-
-- DEFLATE_QPL is disabled by default and can only be used after enabling configuration setting [enable_deflate_qpl_codec](../../../operations/settings/settings.md#enable_deflate_qpl_codec).
-- DEFLATE_QPL requires a ClickHouse build compiled with SSE 4.2 instructions (by default, this is the case). Refer to [Build Clickhouse with DEFLATE_QPL](/development/building_and_benchmarking_deflate_qpl) for more details.
-- DEFLATE_QPL works best if the system has a Intel® IAA (In-Memory Analytics Accelerator) offloading device. Refer to [Accelerator Configuration](https://intel.github.io/qpl/documentation/get_started_docs/installation.html#accelerator-configuration) and [Benchmark with DEFLATE_QPL](/development/building_and_benchmarking_deflate_qpl) for more details.
-- DEFLATE_QPL-compressed data can only be transferred between ClickHouse nodes compiled with SSE 4.2 enabled.
-
-### Specialized Codecs 
+### Specialized Codecs {#specialized-codecs}
 
 These codecs are designed to make compression more effective by exploiting specific features of the data. Some of these codecs do not compress data themselves, they instead preprocess the data such that a second compression stage using a general-purpose codec can achieve a higher data compression rate.
 
-#### Delta 
+#### Delta {#delta}
 
 `Delta(delta_bytes)` — Compression approach in which raw values are replaced by the difference of two neighboring values, except for the first value that stays unchanged. `delta_bytes` is the maximum size of raw values, the default value is `sizeof(type)`. Specifying `delta_bytes` as an argument is deprecated and support will be removed in a future release. Delta is a data preparation codec, i.e. it cannot be used stand-alone.
 
-#### DoubleDelta 
+#### DoubleDelta {#doubledelta}
 
 `DoubleDelta(bytes_size)` — Calculates delta of deltas and writes it in compact binary form. The `bytes_size` has a similar meaning than `delta_bytes` in [Delta](#delta) codec. Specifying `bytes_size` as an argument is deprecated and support will be removed in a future release. Optimal compression rates are achieved for monotonic sequences with a constant stride, such as time series data. Can be used with any numeric type. Implements the algorithm used in Gorilla TSDB, extending it to support 64-bit types. Uses 1 extra bit for 32-bit deltas: 5-bit prefixes instead of 4-bit prefixes. For additional information, see Compressing Time Stamps in [Gorilla: A Fast, Scalable, In-Memory Time Series Database](http://www.vldb.org/pvldb/vol8/p1816-teller.pdf). DoubleDelta is a data preparation codec, i.e. it cannot be used stand-alone.
 
-#### GCD 
+#### GCD {#gcd}
 
 `GCD()` - - Calculates the greatest common denominator (GCD) of the values in the column, then divides each value by the GCD. Can be used with integer, decimal and date/time columns. The codec is well suited for columns with values that change (increase or decrease) in multiples of the GCD, e.g. 24, 28, 16, 24, 8, 24 (GCD = 4). GCD is a data preparation codec, i.e. it cannot be used stand-alone.
 
-#### Gorilla 
+#### Gorilla {#gorilla}
 
 `Gorilla(bytes_size)` — Calculates XOR between current and previous floating point value and writes it in compact binary form. The smaller the difference between consecutive values is, i.e. the slower the values of the series changes, the better the compression rate. Implements the algorithm used in Gorilla TSDB, extending it to support 64-bit types. Possible `bytes_size` values: 1, 2, 4, 8, the default value is `sizeof(type)` if equal to 1, 2, 4, or 8. In all other cases, it's 1. For additional information, see section 4.1 in [Gorilla: A Fast, Scalable, In-Memory Time Series Database](https://doi.org/10.14778/2824032.2824078).
 
-#### FPC 
+#### ALP {#alp}
+
+<ExperimentalBadge/>
+
+`ALP()` — Adaptive lossless compression for floating-point data based on decimal scaling. ALP attempts to represent each value as an exact scaled integer using decimal powers, then compresses the resulting integers with Frame-of-Reference and bit-packing. Values that cannot be represented exactly are stored as raw exceptions. Works best for numbers originating from decimals (e.g., measurements, currency). Supports `Float32` and `Float64`. For details, see [ALP: Adaptive lossless floating-point compression](https://ir.cwi.nl/pub/33334).
+
+:::note
+This codec is experimental and requires `SET allow_experimental_codecs = 1` to use.
+:::
+
+#### FPC {#fpc}
 
 `FPC(level, float_size)` - Repeatedly predicts the next floating point value in the sequence using the better of two predictors, then XORs the actual with the predicted value, and leading-zero compresses the result. Similar to Gorilla, this is efficient when storing a series of floating point values that change slowly. For 64-bit values (double), FPC is faster than Gorilla, for 32-bit values your mileage may vary. Possible `level` values: 1-28, the default value is 12.  Possible `float_size` values: 4, 8, the default value is `sizeof(type)` if type is Float. In all other cases, it's 4. For a detailed description of the algorithm see [High Throughput Compression of Double-Precision Floating-Point Data](https://userweb.cs.txstate.edu/~burtscher/papers/dcc07a.pdf).
 
-#### T64 
+#### T64 {#t64}
 
 `T64` — Compression approach that crops unused high bits of values in integer data types (including `Enum`, `Date` and `DateTime`). At each step of its algorithm, codec takes a block of 64 values, puts them into 64x64 bit matrix, transposes it, crops the unused bits of values and returns the rest as a sequence. Unused bits are the bits, that do not differ between maximum and minimum values in the whole data part for which the compression is used.
 
@@ -457,29 +464,29 @@ CREATE TABLE codec_example
 ENGINE = MergeTree()
 ```
 
-### Encryption Codecs 
+### Encryption Codecs {#encryption-codecs}
 
 These codecs don't actually compress data, but instead encrypt data on disk. These are only available when an encryption key is specified by [encryption](/operations/server-configuration-parameters/settings#encryption) settings. Note that encryption only makes sense at the end of codec pipelines, because encrypted data usually can't be compressed in any meaningful way.
 
 Encryption codecs:
 
-#### AES_128_GCM_SIV 
+#### AES_128_GCM_SIV {#aes_128_gcm_siv}
 
 `CODEC('AES-128-GCM-SIV')` — Encrypts data with AES-128 in [RFC 8452](https://tools.ietf.org/html/rfc8452) GCM-SIV mode.
 
-#### AES-256-GCM-SIV 
+#### AES-256-GCM-SIV {#aes-256-gcm-siv}
 
 `CODEC('AES-256-GCM-SIV')` — Encrypts data with AES-256 in GCM-SIV mode.
 
 These codecs use a fixed nonce and encryption is therefore deterministic. This makes it compatible with deduplicating engines such as [ReplicatedMergeTree](../../../engines/table-engines/mergetree-family/replication.md) but has a weakness: when the same data block is encrypted twice, the resulting ciphertext will be exactly the same so an adversary who can read the disk can see this equivalence (although only the equivalence, without getting its content).
 
-<Note>
+:::note
 Most engines including the "\*MergeTree" family create index files on disk without applying codecs. This means plaintext will appear on disk if an encrypted column is indexed.
-</Note>
+:::
 
-<Note>
+:::note
 If you perform a SELECT query mentioning a specific value in an encrypted column (such as in its WHERE clause), the value may appear in [system.query_log](../../../operations/system-tables/query_log.md). You may want to disable the logging.
-</Note>
+:::
 
 **Example**
 
@@ -491,9 +498,9 @@ CREATE TABLE mytable
 ENGINE = MergeTree ORDER BY x;
 ```
 
-<Note>
+:::note
 If compression needs to be applied, it must be explicitly specified. Otherwise, only encryption will be applied to data.
-</Note>
+:::
 
 **Example**
 
@@ -505,11 +512,11 @@ CREATE TABLE mytable
 ENGINE = MergeTree ORDER BY x;
 ```
 
-## Temporary Tables 
+## Temporary Tables {#temporary-tables}
 
-<Note>
+:::note
 Please note that temporary tables are not replicated. As a result, there is no guarantee that data inserted into a temporary table will be available in other replicas. The primary use case where temporary tables can be useful is for querying or joining small external datasets during a single session.
-</Note>
+:::
 
 ClickHouse supports temporary tables which have the following characteristics:
 
@@ -535,14 +542,14 @@ In most cases, temporary tables are not created manually, but when using externa
 
 It's possible to use tables with [ENGINE = Memory](../../../engines/table-engines/special/memory.md) instead of temporary tables.
 
-## REPLACE TABLE 
+## REPLACE TABLE {#replace-table}
 
 The `REPLACE` statement allows you to update a table [atomically](/concepts/glossary#atomicity).
 
-<Note>
+:::note
 This statement is supported for the [`Atomic`](../../../engines/database-engines/atomic.md) and [`Replicated`](../../../engines/database-engines/replicated.md) database engines, 
 which are the default database engines for ClickHouse and ClickHouse Cloud respectively.
-</Note>
+:::
 
 Ordinarily, if you need to delete some data from a table, 
 you can create a new table and fill it with a `SELECT` statement that does not retrieve unwanted data, 
@@ -572,20 +579,20 @@ SELECT * FROM myOldTable
 WHERE CounterID <12345;
 ```
 
-### Syntax 
+### Syntax {#syntax}
 
 ```sql
 {CREATE [OR REPLACE] | REPLACE} TABLE [db.]table_name
 ```
 
-<Note>
+:::note
 All syntax forms for the `CREATE` statement also work for this statement. Invoking `REPLACE` for a non-existent table will cause an error.
-</Note>
+:::
 
-### Examples: 
+### Examples: {#examples}
 
 <Tabs>
-<Tab title="Local">
+<TabItem value="clickhouse_replace_example" label="Local" default>
 
 Consider the following table:
 
@@ -645,8 +652,8 @@ SELECT * FROM base.t1;
 │ 3 │
 └───┘
 ```  
-</Tab>
-<Tab title="Cloud">
+</TabItem>
+<TabItem value="cloud_replace_example" label="Cloud">
 
 Consider the following table on ClickHouse Cloud: 
 
@@ -699,23 +706,35 @@ SELECT * FROM base.t1;
 
 3
 ```    
-</Tab>
+</TabItem>
 </Tabs>
 
-## COMMENT Clause 
+## COMMENT Clause {#comment-clause}
 
 You can add a comment to the table when creating it.
 
 **Syntax**
 
 ```sql
-CREATE TABLE db.table_name
+CREATE TABLE [db.]table_name
 (
     name1 type1, name2 type2, ...
 )
 ENGINE = engine
 COMMENT 'Comment'
 ```
+
+:::note
+The `COMMENT` clause must be specified **after** any storage-specific clauses such as `PARTITION BY`, `ORDER BY`, and storage-specific `SETTINGS`.
+
+After the `COMMENT` clause, only query-specific `SETTINGS` (like `max_threads`, etc.) will be parsed, not storage-related settings.
+
+This means the correct clause order is:
+- `ENGINE`
+- storage clauses
+- `COMMENT`
+- query settings (if any)
+:::
 
 **Example**
 
@@ -734,7 +753,7 @@ Result:
 └──────┴─────────────────────┘
 ```
 
-## Related content 
+## Related content {#related-content}
 
 - Blog: [Optimizing ClickHouse with Schemas and Codecs](https://clickhouse.com/blog/optimize-clickhouse-codecs-compression-schema)
 - Blog: [Working with time series data in ClickHouse](https://clickhouse.com/blog/working-with-time-series-data-and-functions-ClickHouse)

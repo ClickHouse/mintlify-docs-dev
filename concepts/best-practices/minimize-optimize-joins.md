@@ -1,5 +1,5 @@
 ---
-old-slug: /best-practices/minimize-optimize-joins
+slug: /best-practices/minimize-optimize-joins
 sidebar_position: 10
 sidebarTitle: 'Minimize and optimize JOINs'
 title: 'Minimize and optimize JOINs'

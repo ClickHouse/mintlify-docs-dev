@@ -1,18 +1,21 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/layouts/regexp-tree
+slug: /sql-reference/statements/create/dictionary/layouts/regexp-tree
 title: 'Regular expression tree dictionary layout'
+sidebar_label: 'Regexp Tree'
+sidebar_position: 12
 description: 'Configure a regular expression tree dictionary for pattern-based lookups.'
 doc_type: 'reference'
 ---
 
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
 
-## Overview
+## Overview {#overview}
 The `regexp_tree` dictionary lets you map keys to values based on hierarchical regular-expression patterns.
 It's optimized for pattern-match lookups (e.g. classifying strings like user agent strings by matching regex patterns) rather than exact key matching.
 
 <iframe width="1024" height="576" src="https://www.youtube.com/embed/ESlAhUJMoz8?si=sY2OVm-zcuxlDRaX" title="An intro to ClickHouse regex tree dictionaries" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-## Use the regular expression tree dictionary with YAMLRegExpTree source
+## Use the regular expression tree dictionary with YAMLRegExpTree source {#use-regular-expression-tree-dictionary-in-clickhouse-open-source}
 
 <CloudNotSupportedBadge/>
 
@@ -77,7 +80,7 @@ As a result, the value of attribute `name` is `Android` (defined in the first la
 With a sophisticated YAML configuration file, you can use a regexp tree dictionaries as a user agent string parser.
 ClickHouse supports [uap-core](https://github.com/ua-parser/uap-core) and you can see how to use it in the functional test [02504_regexp_dictionary_ua_parser](https://github.com/ClickHouse/ClickHouse/blob/master/tests/queries/0_stateless/02504_regexp_dictionary_ua_parser.sh)
 
-### Collecting attribute values
+### Collecting attribute values {#collecting-attribute-values}
 
 Sometimes it is useful to return values from multiple regular expressions that matched, rather than just the value of a leaf node. In these cases, the specialized [`dictGetAll`](/sql-reference/functions/ext-dict-functions.md#dictGetAll) function can be used. If a node has an attribute value of type `T`, `dictGetAll` will return an `Array(T)` containing zero or more values.
 
@@ -138,13 +141,13 @@ Result:
 └────────────────────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Matching modes
+### Matching modes {#matching-modes}
 
 Pattern matching behavior can be modified with certain dictionary settings:
 - `regexp_dict_flag_case_insensitive`: Use case-insensitive matching (defaults to `false`). Can be overridden in individual expressions with `(?i)` and `(?-i)`.
 - `regexp_dict_flag_dotall`: Allow '.' to match newline characters (defaults to `false`).
 
-## Use regular expression tree dictionary in ClickHouse Cloud
+## Use regular expression tree dictionary in ClickHouse Cloud {#use-regular-expression-tree-dictionary-in-clickhouse-cloud}
 
 The [`YAMLRegExpTree`](../sources/yamlregexptree.md) source works in ClickHouse Open Source but not in ClickHouse Cloud.
 To use regexp tree dictionaries in ClickHouse Cloud, first create a regexp tree dictionary from a YAML file locally in ClickHouse Open Source, then dump this dictionary into a CSV file using the `dictionary` table function and the [INTO OUTFILE](/sql-reference/statements/select/into-outfile.md) clause.

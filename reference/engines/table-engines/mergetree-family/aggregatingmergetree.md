@@ -3,12 +3,14 @@ description: 'Replaces all rows with the same primary key (or more accurately, w
   the same [sorting key](../../../engines/table-engines/mergetree-family/mergetree.md))
   with a single row (within a single data part) that stores a combination of states
   of aggregate functions.'
-sidebarTitle: 'AggregatingMergeTree'
+sidebar_label: 'AggregatingMergeTree'
 sidebar_position: 60
-old-slug: /engines/table-engines/mergetree-family/aggregatingmergetree
+slug: /engines/table-engines/mergetree-family/aggregatingmergetree
 title: 'AggregatingMergeTree table engine'
 doc_type: 'reference'
 ---
+
+# AggregatingMergeTree table engine
 
 The engine inherits from [MergeTree](/engines/table-engines/mergetree-family/versionedcollapsingmergetree), altering the logic for data parts merging. ClickHouse replaces all rows with the same primary key (or more accurately, with the same [sorting key](../../../engines/table-engines/mergetree-family/mergetree.md)) with a single row (within a single data part) that stores a combination of states of aggregate functions.
 
@@ -26,7 +28,7 @@ The engine processes all columns with the following types:
 
 It is appropriate to use `AggregatingMergeTree` if it reduces the number of rows by orders.
 
-## Creating a table 
+## Creating a table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -48,11 +50,13 @@ For a description of request parameters, see [request description](../../../sql-
 
 When creating an `AggregatingMergeTree` table, the same [clauses](../../../engines/table-engines/mergetree-family/mergetree.md) are required as when creating a `MergeTree` table.
 
-<AccordionGroup>
-<Accordion title="Deprecated Method for Creating a Table">
-<Note>
+<details markdown="1">
+
+<summary>Deprecated Method for Creating a Table</summary>
+
+:::note
 Do not use this method in new projects and, if possible, switch the old projects to the method described above.
-</Note>
+:::
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -64,16 +68,16 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 ```
 
 All of the parameters have the same meaning as in `MergeTree`.
-</Accordion>
-</AccordionGroup>
-## SELECT and INSERT 
+</details>
+
+## SELECT and INSERT {#select-and-insert}
 
 To insert data, use [INSERT SELECT](../../../sql-reference/statements/insert-into.md) query with aggregate -State- functions.
 When selecting data from `AggregatingMergeTree` table, use `GROUP BY` clause and the same aggregate functions as when inserting data, but using the `-Merge` suffix.
 
 In the results of `SELECT` query, the values of `AggregateFunction` type have implementation-specific binary representation for all of the ClickHouse output formats. For example, if you dump data into `TabSeparated` format with a `SELECT` query, then this dump can be loaded back using an `INSERT` query.
 
-## Example of an aggregated materialized view 
+## Example of an aggregated materialized view {#example-of-an-aggregated-materialized-view}
 
 The following example assumes that you have a database named `test`. Create it if it doesn't already exist using the command below:
 
@@ -179,12 +183,12 @@ AS SELECT
 FROM test.visits;
 ```
 
-<Note>
+:::note
 When using `initializeAggregation`, an aggregate state is created for each individual row without grouping.
 Each source row produces one row in the materialized view, and the actual aggregation happens later when the
 `AggregatingMergeTree` merges parts. This is only true if `optimize_on_insert = 0`.
-</Note>
+:::
 
-## Related content 
+## Related content {#related-content}
 
 - Blog: [Using Aggregate Combinators in ClickHouse](https://clickhouse.com/blog/aggregate-functions-combinators-in-clickhouse-for-arrays-maps-and-states)

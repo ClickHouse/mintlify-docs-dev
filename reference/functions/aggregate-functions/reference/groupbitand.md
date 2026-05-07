@@ -1,48 +1,57 @@
 ---
 description: 'Applies bit-wise `AND` for series of numbers.'
-sidebar_position: 147
-old-slug: /sql-reference/aggregate-functions/reference/groupbitand
+slug: /sql-reference/aggregate-functions/reference/groupbitand
 title: 'groupBitAnd'
 doc_type: 'reference'
 ---
 
-Applies bit-wise `AND` for series of numbers.
+Applies bitwise AND for series of numbers.
+    
+
+**Syntax**
 
 ```sql
 groupBitAnd(expr)
 ```
 
+**Aliases**: `BIT_AND`
+
 **Arguments**
 
-`expr` – An expression that results in `UInt*` or `Int*` type.
+- `expr` — Expression of `(U)Int*` type. [`(U)Int*`](/sql-reference/data-types/int-uint)
 
-**Return value**
 
-Value of the `UInt*` or `Int*` type.
+**Returned value**
 
-**Example**
+Returns a value of `(U)Int*` type. [`(U)Int*`](/sql-reference/data-types/int-uint)
 
-Test data:
+**Examples**
 
-```text
-binary     decimal
-00101100 = 44
-00011100 = 28
-00001101 = 13
-01010101 = 85
+**Bitwise AND example**
+
+```sql title=Query
+CREATE TABLE t (num UInt32) ENGINE = Memory;
+INSERT INTO t VALUES (44), (28), (13), (85);
+
+-- Test data:
+-- binary     decimal
+-- 00101100 = 44
+-- 00011100 = 28
+-- 00001101 = 13
+-- 01010101 = 85
+
+SELECT groupBitAnd(num) FROM t;
 ```
 
-Query:
+```response title=Response
+-- Result:
+-- binary     decimal
+-- 00000100 = 4
 
-```sql
-SELECT groupBitAnd(num) FROM t
+┌─groupBitAnd(num)─┐
+│                4 │
+└──────────────────┘
 ```
 
-Where `num` is the column with the test data.
 
-Result:
 
-```text
-binary     decimal
-00000100 = 4
-```

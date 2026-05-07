@@ -1,8 +1,8 @@
 ---
 description: 'Documentation for highlight-next-line'
-sidebarTitle: 'External disks for storing data'
+sidebar_label: 'External disks for storing data'
 sidebar_position: 68
-old-slug: /operations/storing-data
+slug: /operations/storing-data
 title: 'External disks for storing data'
 doc_type: 'guide'
 ---
@@ -16,7 +16,7 @@ which can be expensive. To avoid storing data locally, various storage options a
 
 <br/>
 
-<Note>
+:::note 
 ClickHouse also has support for external table engines, which are different from 
 the external storage option described on this page, as they allow reading data 
 stored in some general file format (like Parquet). On this page we are describing 
@@ -25,9 +25,9 @@ storage configuration for the ClickHouse `MergeTree` family or `Log` family tabl
 1. to work with data stored on `Amazon S3` disks, use the [S3](/engines/table-engines/integrations/s3.md) table engine.
 2. to work with data stored in Azure Blob Storage, use the [AzureBlobStorage](/engines/table-engines/integrations/azureBlobStorage.md) table engine.
 3. to work with data in the Hadoop Distributed File System (unsupported), use the [HDFS](/engines/table-engines/integrations/hdfs.md) table engine.
-</Note>
+:::
 
-## Configure external storage 
+## Configure external storage {#configuring-external-storage}
 
 [`MergeTree`](/engines/table-engines/mergetree-family/mergetree.md) and [`Log`](/engines/table-engines/log-family/log.md) 
 family table engines can store data to `S3`, `AzureBlobStorage`, `HDFS` (unsupported) using a disk with types `s3`,
@@ -175,7 +175,27 @@ ENGINE = MergeTree() ORDER BY a
 SETTINGS disk = 's3';
 ```
 
-## Dynamic Configuration 
+## refresh_parts_interval and table_disk {#refresh-parts-interval-and-table-disk}
+
+This setting is intended for non-Replicated MergeTree tables where parts may be written externally and metadata discovery must be refreshed from storage.
+
+The MergeTree setting `refresh_parts_interval` enables periodic refresh of the list of data parts from the underlying storage (e.g. to pick up parts written externally). The important distinction is **shared metadata across replicas** vs **replica-local metadata** (e.g. S3 with local metadata per replica): only when metadata is shared will new parts be visible to all replicas. Using object storage alone does not imply shared metadata.
+
+- **Object storage (e.g. `disk = 's3'`) does not imply shared metadata.** When metadata is stored locally per replica (the default), each replica independently manages its pointers to blobs in object storage. Changes made on one replica are not visible to others. In that case, `refresh_parts_interval` does not make new parts visible across replicas, because the metadata each replica reads is replica-local.
+
+- **Automatic part refreshing requires that the filesystem metadata be shared** (or that the table use table-owned, readonly metadata so that refresh is applicable). Setting `table_disk = true` together with a table-local disk (e.g. `SETTINGS disk = disk(type=object_storage, ...), table_disk = true`) is one way to get the correct semantics: the table owns the metadata life cycle and the storage is treated as readonly, so `refresh_parts_interval` runs and externally added parts can be discovered.
+
+- **With a globally defined disk** (e.g. `disk = 's3'` in `storage_configuration`) and default local metadata, each replica has its own metadata state. Even though blobs may be in S3, the storage is not considered shared for the purpose of `refresh_parts_interval`, and new parts created outside ClickHouse or on another replica will not be detected.
+
+For automatic part refreshing, ensure the metadata is shared or use a table-level disk with `table_disk = true` as above. Relying only on `refresh_parts_interval` with replica-local metadata will not refresh parts as expected.
+
+:::note
+`refresh_parts_interval` is not used for ReplicatedMergeTree tables.
+Replicated tables already synchronize parts through the replication mechanism.
+This setting is only applicable to non-replicated MergeTree tables where parts are written externally and metadata refresh is required.
+:::
+
+## Dynamic Configuration {#dynamic-configuration}
 
 There is also a possibility to specify storage configuration without a predefined
 disk in configuration in a configuration file, but can be configured in the 
@@ -250,12 +270,12 @@ ORDER BY (postcode1, postcode2, addr1, addr2)
 In the settings highlighted below notice that the disk of `type=web` is nested within
 the disk of `type=cache`.
 
-<Note>
+:::note
 The example uses `type=web`, but any disk type can be configured as dynamic, 
 including local disk. Local disks require a path argument to be inside the 
 server config parameter `custom_local_disks_base_directory`, which has no 
 default, so set that also when using local disk.
-</Note>
+:::
 
 A combination of config-based configuration and sql-defined configuration is 
 also possible:
@@ -306,9 +326,9 @@ where `web` is from the server configuration file:
 </storage_configuration>
 ```
 
-### Using S3 Storage 
+### Using S3 Storage {#s3-storage}
 
-#### Required parameters 
+#### Required parameters {#required-parameters-s3}
 
 | Parameter           | Description                                                                                                                                                                            |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -316,13 +336,13 @@ where `web` is from the server configuration file:
 | `access_key_id`     | S3 access key ID used for authentication.                                                                                                                                              |
 | `secret_access_key` | S3 secret access key used for authentication.                                                                                                                                          |
 
-#### Optional parameters 
+#### Optional parameters {#optional-parameters-s3}
 
 | Parameter                                       | Description                                                                                                                                                                                                                                   | Default Value                            |
 |-------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|
 | `region`                                        | S3 region name.                                                                                                                                                                                                                               | -                                        |
 | `support_batch_delete`                          | Controls whether to check for batch delete support. Set to `false` when using Google Cloud Storage (GCS) as GCS doesn't support batch deletes.                                                                                                | `true`                                   |
-| `use_environment_credentials`                   | Reads AWS credentials from environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` if they exist.                                                                                                        | `false`                                  |
+| `use_environment_credentials`                   | Reads AWS credentials from environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` if they exist. Note: environment credentials are shared across all S3 disks. To use different credentials for different disks, specify explicit `access_key_id` and `secret_access_key` per disk instead. | `false`                                  |
 | `use_insecure_imds_request`                     | If `true`, uses insecure IMDS request when obtaining credentials from Amazon EC2 metadata.                                                                                                                                                    | `false`                                  |
 | `expiration_window_seconds`                     | Grace period (in seconds) for checking if expiration-based credentials have expired.                                                                                                                                                          | `120`                                    |
 | `proxy`                                         | Proxy configuration for S3 endpoint. Each `uri` element inside `proxy` block should contain a proxy URL.                                                                                                                                      | -                                        |
@@ -347,11 +367,11 @@ where `web` is from the server configuration file:
 | `key_template`                                  | Defines object key generation format using [re2](https://github.com/google/re2/wiki/Syntax) syntax. Requires `storage_metadata_write_full_object_key` flag. Incompatible with `root path` in `endpoint`. Requires `key_compatibility_prefix`. | -                                        |
 | `key_compatibility_prefix`                      | Required with `key_template`. Specifies the previous `root path` from `endpoint` for reading older metadata versions.                                                                                                                         | -                                        |
 | `read_only`                                      | Only allowing reading from the disk.                                                                                                                                                                                                          | -                                        |
-<Note>
+:::note
 Google Cloud Storage (GCS) is also supported using the type `s3`. See [GCS backed MergeTree](/integrations/gcs).
-</Note>
+:::
 
-### Using Plain Storage 
+### Using Plain Storage {#plain-storage}
 
 In `22.10` a new disk type `s3_plain` was introduced, which provides a write-once storage.
 Configuration parameters for it are the same as for the `s3` disk type.
@@ -392,7 +412,7 @@ Configuration:
 </s3_plain>
 ```
 
-### Using S3 Plain Rewritable Storage 
+### Using S3 Plain Rewritable Storage {#s3-plain-rewritable-storage}
 
 A new disk type `s3_plain_rewritable` was introduced in `24.4`.
 Similar to the `s3_plain` disk type, it does not require additional storage for 
@@ -432,7 +452,7 @@ is equal to
 Starting from `24.5` it is possible to configure any object storage disk 
 (`s3`, `azure`, `local`) using the `plain_rewritable` metadata type.
 
-### Using Azure Blob Storage 
+### Using Azure Blob Storage {#azure-blob-storage}
 
 `MergeTree` family table engines can store data to [Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/blobs/) 
 using a disk with type `azure_blob_storage`.
@@ -458,7 +478,7 @@ Configuration markup:
 </storage_configuration>
 ```
 
-#### Connection parameters 
+#### Connection parameters {#azure-blob-storage-connection-parameters}
 
 | Parameter                        | Description                                                                                                                                                                                      | Default Value       |
 |----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------|
@@ -474,7 +494,7 @@ Authentication parameters (the disk will try all available methods **and** Manag
 | `account_name`      | For authentication using Shared Key (used with `account_key`).  |
 | `account_key`       | For authentication using Shared Key (used with `account_name`). |
 
-#### Limit parameters 
+#### Limit parameters {#azure-blob-storage-limit-parameters}
 
 | Parameter                            | Description                                                                 |
 |--------------------------------------|-----------------------------------------------------------------------------|
@@ -485,7 +505,7 @@ Authentication parameters (the disk will try all available methods **and** Manag
 | `thread_pool_size`                   | Maximum number of threads for `IDiskRemote` instantiation.                  |
 | `s3_max_inflight_parts_for_one_file` | Maximum number of concurrent put requests for a single object.              |
 
-#### Other parameters 
+#### Other parameters {#azure-blob-storage-other-parameters}
 
 | Parameter                        | Description                                                                        | Default Value                            |
 |----------------------------------|------------------------------------------------------------------------------------|------------------------------------------|
@@ -497,11 +517,11 @@ Authentication parameters (the disk will try all available methods **and** Manag
 
 Examples of working configurations can be found in integration tests directory (see e.g. [test_merge_tree_azure_blob_storage](https://github.com/ClickHouse/ClickHouse/blob/master/tests/integration/test_merge_tree_azure_blob_storage/configs/config.d/storage_conf.xml) or [test_azure_blob_storage_zero_copy_replication](https://github.com/ClickHouse/ClickHouse/blob/master/tests/integration/test_azure_blob_storage_zero_copy_replication/configs/config.d/storage_conf.xml)).
 
-<Note title="Zero-copy replication is not ready for production">
+:::note Zero-copy replication is not ready for production
 Zero-copy replication is disabled by default in ClickHouse version 22.8 and higher.  This feature is not recommended for production use.
-</Note>
+:::
 
-## Using HDFS storage (Unsupported) 
+## Using HDFS storage (Unsupported) {#using-hdfs-storage-unsupported}
 
 In this sample configuration:
 - the disk is of type `hdfs` (unsupported)
@@ -541,7 +561,7 @@ By the way, HDFS is unsupported and therefore there might be issues when using i
 
 Keep in mind that HDFS may not work in corner cases.
 
-### Using Data Encryption 
+### Using Data Encryption {#encrypted-virtual-file-system}
 
 You can encrypt the data stored on [S3](/engines/table-engines/mergetree-family/mergetree.md/#table_engine-mergetree-s3), or [HDFS](#using-hdfs-storage-unsupported) (unsupported) external disks, or on a local disk. To turn on the encryption mode, in the configuration file you must define a disk with the type `encrypted` and choose a disk on which the data will be saved. An `encrypted` disk ciphers all written files on the fly, and when you read files from an `encrypted` disk it deciphers them automatically. So you can work with an `encrypted` disk like with a normal one.
 
@@ -566,7 +586,7 @@ For example, when ClickHouse writes data from some table to a file `store/all_1_
 
 When writing the same file to `disk2`, it will actually be written to the physical disk at the path `/path1/path2/store/all_1_1_0/data.bin` in encrypted mode.
 
-### Required Parameters 
+### Required Parameters {#required-parameters-encrypted-disk}
 
 | Parameter  | Type   | Description                                                                                                                                  |
 |------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------|
@@ -574,7 +594,7 @@ When writing the same file to `disk2`, it will actually be written to the physic
 | `disk`     | String | Type of disk to use for underlying storage.                                                                                                  |
 | `key`      | Uint64 | Key for encryption and decryption. Can be specified in hexadecimal using `key_hex`. Multiple keys can be specified using the `id` attribute. |
 
-### Optional Parameters 
+### Optional Parameters {#optional-parameters-encrypted-disk}
 
 | Parameter        | Type   | Default        | Description                                                                                                                             |
 |------------------|--------|----------------|-----------------------------------------------------------------------------------------------------------------------------------------|
@@ -605,7 +625,7 @@ Example of disk configuration:
 </clickhouse>
 ```
 
-### Using local cache 
+### Using local cache {#using-local-cache}
 
 It is possible to configure local cache over disks in storage configuration starting from version 22.3.
 For versions 22.3 - 22.7 cache is supported only for `s3` disk type. For versions >= 22.8 cache is supported for any disk type: S3, Azure, Local, Encrypted, etc.
@@ -685,10 +705,12 @@ These settings should be defined in the disk configuration section.
 | `max_file_segment_size`               | Size    | `8Mi`      | Maximum size of a single cache file in bytes or readable format.                                                                                                                             |
 | `max_elements`                        | Integer | `10000000` | Maximum number of cache files.                                                                                                                                                               |
 | `load_metadata_threads`               | Integer | `16`       | Number of threads for loading cache metadata at startup.                                                                                                                                     |
+| `use_split_cache`                     | Boolean | `false`    | Use separation of files to system/data.                                                                                                                                     |
+| `split_cache_ratio`                   | Double | `0.1`    | Ratio of system segment to total size of cache for split_cache.                                                                                                                                     |
 
 > **Note**: Size values support units like `ki`, `Mi`, `Gi`, etc. (e.g., `10Gi`).
 
-## File Cache Query/Profile Settings 
+## File Cache Query/Profile Settings {#file-cache-query-profile-settings}
 
 | Setting                                                       | Type    | Default                 | Description                                                                                                                                                    |
 |---------------------------------------------------------------|---------|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -696,28 +718,29 @@ These settings should be defined in the disk configuration section.
 | `read_from_filesystem_cache_if_exists_otherwise_bypass_cache` | Boolean | `false`                 | When enabled, uses cache only if data exists; new data won't be cached.                                                                                        |
 | `enable_filesystem_cache_on_write_operations`                 | Boolean | `false` (Cloud: `true`) | Enables write-through cache. Requires `cache_on_write_operations` in cache config.                                                                             |
 | `enable_filesystem_cache_log`                                 | Boolean | `false`                 | Enables detailed cache usage logging to `system.filesystem_cache_log`.                                                                                         |
+| `filesystem_cache_allow_background_download`                  | Boolean | `true`                  | Allows partially downloaded segments to be finished in the background. Disable to keep downloads in the foreground for the current query/session.             |
 | `max_query_cache_size`                                        | Size    | `false`                 | Maximum cache size per query. Requires `enable_filesystem_query_cache_limit` in cache config.                                                                  |
-| `skip_download_if_exceeds_query_cache`                        | Boolean | `true`                  | Controls behavior when `max_query_cache_size` is reached: <br/>- `true`: Stops downloading new data <br/>- `false`: Evicts old data to make space for new data |
+| `filesystem_cache_skip_download_if_exceeds_per_query_cache_write_limit` | Boolean | `true`          | Controls behavior when `max_query_cache_size` is reached: <br/>- `true`: Stops downloading new data <br/>- `false`: Evicts old data to make space for new data |
 
-<Warning>
+:::warning
 Cache configuration settings and cache query settings correspond to the latest ClickHouse version, 
 for earlier versions something might not be supported.
-</Warning>
+:::
 
-#### Cache system tables 
+#### Cache system tables {#cache-system-tables-file-cache}
 
 | Table Name                    | Description                                         | Requirements                                  |
 |-------------------------------|-----------------------------------------------------|-----------------------------------------------|
 | `system.filesystem_cache`     | Displays the current state of the filesystem cache. | None                                          |
 | `system.filesystem_cache_log` | Provides detailed cache usage statistics per query. | Requires `enable_filesystem_cache_log = true` |
 
-#### Cache commands 
+#### Cache commands {#cache-commands-file-cache}
 
-##### `SYSTEM DROP FILESYSTEM CACHE (<cache_name>) (ON CLUSTER)` -- `ON CLUSTER` 
+##### `SYSTEM CLEAR|DROP FILESYSTEM CACHE (<cache_name>) (ON CLUSTER)` -- `ON CLUSTER` {#system-clear-filesystem-cache-on-cluster}
 
 This command is only supported when no `<cache_name>` is provided
 
-##### `SHOW FILESYSTEM CACHES` 
+##### `SHOW FILESYSTEM CACHES` {#show-filesystem-caches}
 
 Show a list of filesystem caches which were configured on the server. 
 (For versions less than or equal to `22.8` the command is named `SHOW CACHES`)
@@ -732,7 +755,7 @@ SHOW FILESYSTEM CACHES
 └───────────┘
 ```
 
-##### `DESCRIBE FILESYSTEM CACHE '<cache_name>'` 
+##### `DESCRIBE FILESYSTEM CACHE '<cache_name>'` {#describe-filesystem-cache}
 
 Show cache configuration and some general statistics for a specific cache. 
 Cache name can be taken from `SHOW FILESYSTEM CACHES` command. (For versions less
@@ -755,7 +778,7 @@ DESCRIBE FILESYSTEM CACHE 's3_cache'
 |                           |                            | `CachedReadBufferCacheWriteBytes`, `CachedReadBufferCacheWriteMicroseconds`               |
 |                           |                            | `CachedWriteBufferCacheWriteBytes`, `CachedWriteBufferCacheWriteMicroseconds`             |
 
-### Using static Web storage (read-only) 
+### Using static Web storage (read-only) {#web-storage}
 
 This is a read-only disk. Its data is only read and never modified. A new table 
 is loaded to this disk via `ATTACH TABLE` query (see example below). Local disk 
@@ -811,14 +834,14 @@ In this sample configuration:
 </clickhouse>
 ```
 
-<Tip>
+:::tip
 Storage can also be configured temporarily within a query, if a web dataset is 
 not expected to be used routinely, see [dynamic configuration](#dynamic-configuration) and skip 
 editing the configuration file.
 
 A [demo dataset](https://github.com/ClickHouse/web-tables-demo) is hosted in GitHub.  To prepare your own tables for web 
 storage see the tool [clickhouse-static-files-uploader](/operations/utilities/static-files-disk-uploader)
-</Tip>
+:::
 
 In this `ATTACH TABLE` query the `UUID` provided matches the directory name of the data, and the endpoint is the URL for the raw GitHub content.
 
@@ -1022,14 +1045,14 @@ SAMPLE BY intHash32(UserID)
 SETTINGS storage_policy='web';
 ```
 
-#### Required parameters 
+#### Required parameters {#static-web-storage-required-parameters}
 
 | Parameter  | Description                                                                                                       |
 |------------|-------------------------------------------------------------------------------------------------------------------|
 | `type`     | `web`. Otherwise the disk is not created.                                                                         |
 | `endpoint` | The endpoint URL in `path` format. Endpoint URL must contain a root path to store data, where they were uploaded. |
 
-#### Optional parameters 
+#### Optional parameters {#optional-parameters-web}
 
 | Parameter                           | Description                                                                  | Default Value   |
 |-------------------------------------|------------------------------------------------------------------------------|-----------------|
@@ -1048,10 +1071,10 @@ If URL is not reachable on disk load when the server is starting up tables, then
 
 Use [http_max_single_read_retries](/operations/storing-data#web-storage) setting to limit the maximum number of retries during a single HTTP read.
 
-### Zero-copy Replication (not ready for production) 
+### Zero-copy Replication (not ready for production) {#zero-copy}
 
 Zero-copy replication is possible, but not recommended, with  `S3` and `HDFS` (unsupported) disks. Zero-copy replication means that if the data is stored remotely on several machines and needs to be synchronized, then only the metadata is replicated (paths to the data parts), but not the data itself.
 
-<Note title="Zero-copy replication is not ready for production">
+:::note Zero-copy replication is not ready for production
 Zero-copy replication is disabled by default in ClickHouse version 22.8 and higher.  This feature is not recommended for production use.
-</Note>
+:::

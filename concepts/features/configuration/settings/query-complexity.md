@@ -1,13 +1,15 @@
 ---
 description: 'Settings which restrict query complexity.'
-sidebarTitle: 'Restrictions on query complexity'
+sidebar_label: 'Restrictions on query complexity'
 sidebar_position: 59
-old-slug: /operations/settings/query-complexity
+slug: /operations/settings/query-complexity
 title: 'Restrictions on query complexity'
 doc_type: 'reference'
 ---
 
-## Overview 
+# Restrictions on query complexity
+
+## Overview {#overview}
 
 As part of the [settings](/operations/settings/overview), ClickHouse offers
 the ability to place restrictions on query complexity. This helps protect against
@@ -22,7 +24,7 @@ fully processed, rather than checking the restrictions for each row. This can
 result in a situation where restrictions are violated while the part is being
 processed.
 
-## `overflow_mode` settings 
+## `overflow_mode` settings {#overflow_mode_setting}
 
 Most restrictions also have an `overflow_mode` setting, which defines what happens
 when the limit is exceeded, and can take one of two values:
@@ -30,21 +32,21 @@ when the limit is exceeded, and can take one of two values:
 - `break`: stop executing the query and return the partial result, as if the 
            source data ran out.
 
-## `group_by_overflow_mode` settings 
+## `group_by_overflow_mode` settings {#group_by_overflow_mode_settings}
 
 The `group_by_overflow_mode` setting also has
 the value `any`:
 - `any` : continue aggregation for the keys that got into the set, but do not 
           add new keys to the set.
 
-## List of settings 
+## List of settings {#relevant-settings}
 
 The following settings are used for applying restrictions on query complexity.
 
-<Note>
+:::note
 Restrictions on the "maximum amount of something" can take a value of `0`,
 which means that it is "unrestricted".
-</Note>
+:::
 
 | Setting                                                                                                                | Short description                                                                                                                                               |
 |------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -55,7 +57,7 @@ which means that it is "unrestricted".
 | [`read_overflow_mode_leaf`](/operations/settings/settings#read_overflow_mode_leaf)                                     | Sets what happens when the volume of data read exceeds one of the leaf limits                                                                                   |
 | [`max_rows_to_read_leaf`](/operations/settings/settings#max_rows_to_read_leaf)                                         | The maximum number of rows that can be read from a local table on a leaf node when running a distributed query                                                  |
 | [`max_bytes_to_read_leaf`](/operations/settings/settings#max_bytes_to_read_leaf)                                       | The maximum number of bytes (of uncompressed data) that can be read from a local table on a leaf node when running a distributed query.                         |
-| [`read_overflow_mode_leaf`](/operations/settings/settings#read_overflow_mode_leaf)                                | Sets what happens when the volume of data read exceeds one of the leaf limits.                                                                                  |
+| [`read_overflow_mode_leaf`](/docs/operations/settings/settings#read_overflow_mode_leaf)                                | Sets what happens when the volume of data read exceeds one of the leaf limits.                                                                                  |
 | [`max_rows_to_group_by`](/operations/settings/settings#max_rows_to_group_by)                                           | The maximum number of unique keys received from aggregation.                                                                                                    |
 | [`group_by_overflow_mode`](/operations/settings/settings#group_by_overflow_mode)                                       | Sets what happens when the number of unique keys for aggregation exceeds the limit                                                                              |
 | [`max_bytes_before_external_group_by`](/operations/settings/settings#max_bytes_before_external_group_by)               | Enables or disables execution of `GROUP BY` clauses in external memory.                                                                                         |
@@ -103,13 +105,13 @@ which means that it is "unrestricted".
 | [`max_sessions_for_user`](/operations/settings/settings#max_sessions_for_user)                                         | Maximum number of simultaneous sessions per authenticated user to the ClickHouse server.                                                                        |
 | [`max_partitions_to_read`](/operations/settings/settings#max_partitions_to_read)                                       | Limits the maximum number of partitions that can be accessed in a single query.                                                                                 |
 
-## Obsolete settings 
+## Obsolete settings {#obsolete-settings}
 
-<Note>
+:::note
 The following settings are obsolete
-</Note>
+:::
 
-### max_pipeline_depth 
+### max_pipeline_depth {#max-pipeline-depth}
 
 Maximum pipeline depth. It Corresponds to the number of transformations that each 
 data block goes through during query processing. Counted within the limits of a 

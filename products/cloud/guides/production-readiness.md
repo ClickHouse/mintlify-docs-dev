@@ -90,7 +90,7 @@ Configure quotas, limits, and settings profiles to manage resource usage for dif
 
 ClickHouse Cloud doesn't currently support SCIM or automated provisioning/deprovisioning via identity providers. Users must be manually removed from the ClickHouse Cloud console after being removed from your IdP. Plan for manual user management processes until these features become available.
 
-Learn more about [Cloud Access Management](/cloud/security/cloud_access_management) and [SAML SSO setup](/cloud/security/saml-setup).
+Learn more about [Cloud Access Management](/cloud/security/cloud-access-management) and [SAML SSO setup](/cloud/security/saml-setup).
 
 ## Infrastructure as code and automation
 

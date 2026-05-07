@@ -46,6 +46,14 @@ def normalize_slug(slug: str) -> str:
     return slug.strip().strip("/").lower()
 
 
+# Specific files (relative to scan root) that should be skipped even if they
+# have a slug. Vale lint fixtures contain intentionally-invalid content with
+# placeholder slugs and shouldn't show up in the mapping report.
+SKIP_FILES = (
+    "scripts/vale/test/test_headings_must_fail.md",
+)
+
+
 def scan_docs(root: Path, skip_dirs: tuple = ("snippets", "_snippets", "__pycache__", "en", "i18n", "src")) -> dict:
     """Scan a docs directory and return {normalized_slug: {slug, title, path}}."""
     pages = {}
@@ -59,6 +67,10 @@ def scan_docs(root: Path, skip_dirs: tuple = ("snippets", "_snippets", "__pycach
                 continue
 
             filepath = Path(dirpath) / fname
+            rel_path = str(filepath.relative_to(root))
+            if rel_path in SKIP_FILES:
+                continue
+
             try:
                 content = filepath.read_text(encoding="utf-8")
             except Exception as e:
@@ -72,7 +84,6 @@ def scan_docs(root: Path, skip_dirs: tuple = ("snippets", "_snippets", "__pycach
 
             title = fm.get("title", filepath.stem)
             norm = normalize_slug(slug)
-            rel_path = str(filepath.relative_to(root))
 
             if norm in pages:
                 duplicates.append((norm, pages[norm]["path"], rel_path))

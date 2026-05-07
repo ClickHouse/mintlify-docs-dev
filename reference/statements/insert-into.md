@@ -1,11 +1,13 @@
 ---
 description: 'Documentation for INSERT INTO Statement'
-sidebarTitle: 'INSERT INTO'
+sidebar_label: 'INSERT INTO'
 sidebar_position: 33
-old-slug: /sql-reference/statements/insert-into
+slug: /sql-reference/statements/insert-into
 title: 'INSERT INTO Statement'
 doc_type: 'reference'
 ---
+
+# INSERT INTO Statement
 
 Inserts data into a table.
 
@@ -90,21 +92,60 @@ INSERT INTO t FORMAT TabSeparated
 22  Qwerty
 ```
 
-You can insert data separately from the query by using the [command-line client](/operations/utilities/clickhouse-local) or the [HTTP interface](/interfaces/http/).
+You can insert data separately from the query by using the [command-line client](/operations/utilities/clickhouse-local) or the [HTTP interface](/interfaces/http).
 
-<Note>
+:::note
 If you want to specify `SETTINGS` for `INSERT` query then you have to do it _before_ the `FORMAT` clause since everything after `FORMAT format_name` is treated as data. For example:
 
 ```sql
 INSERT INTO table SETTINGS ... FORMAT format_name data_set
 ```
-</Note>
+:::
 
-## Constraints 
+## Constraints {#constraints}
 
 If a table has [constraints](../../sql-reference/statements/create/table.md#constraints), their expressions will be checked for each row of inserted data. If any of those constraints is not satisfied — the server will raise an exception containing the constraint name and expression, and the query will be stopped.
 
-## Inserting the Results of SELECT 
+## Data Type Validation {#data-type-validation}
+
+ClickHouse validates allowed data types (controlled by settings like `enable_time_time64_type`, `allow_suspicious_low_cardinality_types`, `allow_suspicious_fixed_string_types`, etc.) only during table creation (`CREATE TABLE`) and schema modification (`ALTER TABLE`), not during `INSERT`.
+
+This means that if a table with a disallowed data type already exists, data can be inserted into it even when the corresponding setting is disabled on the server. This is by design — once a table is created, inserts should not be blocked by settings that control type creation.
+
+For example:
+
+```sql
+SET enable_time_time64_type = 1;
+
+CREATE TABLE events
+(
+    `id` UInt64,
+    `event_time` Time
+)
+ENGINE = MergeTree()
+ORDER BY id;
+
+SET enable_time_time64_type = 0;
+
+-- This works even though the setting is now disabled.
+-- The table already exists, so inserts are not blocked.
+INSERT INTO events VALUES (1, '14:30:25');
+
+-- But creating a new table with the Time type will fail.
+CREATE TABLE events_new
+(
+    `id` UInt64,
+    `event_time` Time
+)
+ENGINE = MergeTree()
+ORDER BY id; -- ERR: TYPE_TIME_TIME64_IS_NOT_ENABLED
+```
+
+:::note
+As a consequence, a client with a newer version (where a setting is enabled by default) can insert data with disallowed data types into a server with an older version (where the setting is disabled), as long as the target table already has the corresponding column types. The validation is enforced at the DDL level, not at the DML level.
+:::
+
+## Inserting the Results of SELECT {#inserting-the-results-of-select}
 
 **Syntax**
 
@@ -130,7 +171,7 @@ INSERT INTO x WITH y AS (SELECT * FROM numbers(10)) SELECT * FROM y;
 WITH y AS (SELECT * FROM numbers(10)) INSERT INTO x SELECT * FROM y;
 ```
 
-## Inserting Data from a File 
+## Inserting Data from a File {#inserting-data-from-a-file}
 
 **Syntax**
 
@@ -142,13 +183,13 @@ Use the syntax above to insert data from a file, or files, stored on the **clien
 
 Compressed files are supported. The compression type is detected by the extension of the file name. Or it can be explicitly specified in a `COMPRESSION` clause. Supported types are: `'none'`, `'gzip'`, `'deflate'`, `'br'`, `'xz'`, `'zstd'`, `'lz4'`, `'bz2'`.
 
-This functionality is available in the [command-line client](../../interfaces/cli.md) and [clickhouse-local](../../operations/utilities/clickhouse-local.md).
+This functionality is available in the [command-line client](../../interfaces/client.md) and [clickhouse-local](../../operations/utilities/clickhouse-local.md).
 
 **Examples**
 
-### Single file with FROM INFILE 
+### Single file with FROM INFILE {#single-file-with-from-infile}
 
-Execute the following queries using [command-line client](../../interfaces/cli.md):
+Execute the following queries using [command-line client](../../interfaces/client.md):
 
 ```bash
 echo 1,A > input.csv ; echo 2,B >> input.csv
@@ -166,7 +207,7 @@ Result:
 └────┴──────┘
 ```
 
-### Multiple files with FROM INFILE using globs 
+### Multiple files with FROM INFILE using globs {#multiple-files-with-from-infile-using-globs}
 
 This example is very similar to the previous one but inserts are performed from multiple files using `FROM INFILE 'input_*.csv`.
 
@@ -177,7 +218,7 @@ clickhouse-client --query="INSERT INTO infile_globs FROM INFILE 'input_*.csv' FO
 clickhouse-client --query="SELECT * FROM infile_globs FORMAT PrettyCompact;"
 ```
 
-<Tip>
+:::tip
 In addition to selecting multiple files with `*`, you can use ranges (`{1,2}` or `{1..9}`) and other [glob substitutions](/sql-reference/table-functions/file.md/#globs-in-path). These three all would work with the example above:
 
 ```sql
@@ -185,9 +226,9 @@ INSERT INTO infile_globs FROM INFILE 'input_*.csv' FORMAT CSV;
 INSERT INTO infile_globs FROM INFILE 'input_{1,2}.csv' FORMAT CSV;
 INSERT INTO infile_globs FROM INFILE 'input_?.csv' FORMAT CSV;
 ```
-</Tip>
+:::
 
-## Inserting using a Table Function 
+## Inserting using a Table Function {#inserting-using-a-table-function}
 
 Data can be inserted into tables referenced by [table functions](../../sql-reference/table-functions/index.md).
 
@@ -216,7 +257,7 @@ Result:
 └─────┴───────────────────────┘
 ```
 
-## Inserting into ClickHouse Cloud 
+## Inserting into ClickHouse Cloud {#inserting-into-clickhouse-cloud}
 
 By default, services on ClickHouse Cloud provide multiple replicas for high availability. When you connect to a service, a connection is established to one of these replicas.
 
@@ -230,13 +271,13 @@ SELECT .... SETTINGS select_sequential_consistency = 1;
 
 Note that using `select_sequential_consistency` will increase the load on ClickHouse Keeper (used by ClickHouse Cloud internally) and may result in slower performance depending on the load on the service. We recommend against enabling this setting unless necessary. The recommended approach is to execute read/writes in the same session or to use a client driver that uses the native protocol (and thus supports sticky connections).
 
-## Inserting into a replicated setup 
+## Inserting into a replicated setup {#inserting-into-a-replicated-setup}
 
 In a replicated setup, data will be visible on other replicas after it has been replicated. Data begins being replicated (downloaded on other replicas) immediately after an `INSERT`. This differs from ClickHouse Cloud, where data is immediately written to shared storage and replicas subscribe to metadata changes.
 
 Note that for replicated setups, `INSERTs` can sometimes take a considerable amount of time (in the order of one second) as it requires committing to ClickHouse Keeper for distributed consensus. Using S3 for storage also adds additional latency.
 
-## Performance Considerations 
+## Performance Considerations {#performance-considerations}
 
 `INSERT` sorts the input data by primary key and splits them into partitions by a partition key. If you insert data into several partitions at once, it can significantly reduce the performance of the `INSERT` query. To avoid this:
 
@@ -248,13 +289,13 @@ Performance will not decrease if:
 - Data is added in real time.
 - You upload data that is usually sorted by time.
 
-### Asynchronous inserts 
+### Asynchronous inserts {#asynchronous-inserts}
 
 It is possible to asynchronously insert data in small but frequent inserts. The data from such insertions is combined into batches and then safely inserted into a table. To use asynchronous inserts, enable the [`async_insert`](/operations/settings/settings#async_insert) setting.
 
 Using `async_insert` or the [`Buffer` table engine](/engines/table-engines/special/buffer) results in additional buffering.
 
-### Large or long-running inserts 
+### Large or long-running inserts {#large-or-long-running-inserts}
 
 When you are inserting large amounts of data, ClickHouse will optimize write performance through a process called "squashing". Small blocks of inserted data in memory are merged and squashed into larger blocks before being written to disk. Squashing reduces the overhead associated with each write operation. In this process, inserted data will be available to query after ClickHouse completes writing each [`max_insert_block_size`](/operations/settings/settings#max_insert_block_size) rows.
 

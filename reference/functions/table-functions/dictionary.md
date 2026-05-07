@@ -1,30 +1,32 @@
 ---
 description: 'Displays the dictionary data as a ClickHouse table. Works the same way
   as the Dictionary engine.'
-sidebarTitle: 'dictionary'
+sidebar_label: 'dictionary'
 sidebar_position: 47
-old-slug: /sql-reference/table-functions/dictionary
+slug: /sql-reference/table-functions/dictionary
 title: 'dictionary'
 doc_type: 'reference'
 ---
 
-Displays the [dictionary](../../sql-reference/dictionaries/index.md) data as a ClickHouse table. Works the same way as [Dictionary](../../engines/table-engines/special/dictionary.md) engine.
+# dictionary Table Function
 
-## Syntax 
+Displays the [dictionary](../statements/create/dictionary/overview.md) data as a ClickHouse table. Works the same way as [Dictionary](../../engines/table-engines/special/dictionary.md) engine.
+
+## Syntax {#syntax}
 
 ```sql
 dictionary('dict')
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 - `dict` — A dictionary name. [String](../../sql-reference/data-types/string.md).
 
-## Returned value 
+## Returned value {#returned_value}
 
 A ClickHouse table.
 
-## Examples 
+## Examples {#examples}
 
 Input table `dictionary_source_table`:
 
@@ -57,6 +59,6 @@ Result:
 └────┴───────┘
 ```
 
-## Related 
+## Related {#related}
 
 - [Dictionary engine](/engines/table-engines/special/dictionary)

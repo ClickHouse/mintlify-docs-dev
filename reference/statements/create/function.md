@@ -1,8 +1,8 @@
 ---
 description: 'Documentation for Function'
-sidebarTitle: 'FUNCTION'
+sidebar_label: 'FUNCTION'
 sidebar_position: 38
-old-slug: /sql-reference/statements/create/function
+slug: /sql-reference/statements/create/function
 title: 'CREATE FUNCTION -user defined function (UDF)'
 doc_type: 'reference'
 ---
@@ -12,7 +12,7 @@ Creates a user defined function (UDF) from a lambda expression. The expression m
 **Syntax**
 
 ```sql
-CREATE FUNCTION name [ON CLUSTER cluster] AS (parameter0, ...) -> expression
+CREATE [OR REPLACE] FUNCTION name [ON CLUSTER cluster] AS (parameter0, ...) -> expression
 ```
 A function can have an arbitrary number of parameters.
 
@@ -60,8 +60,29 @@ Result:
 └────────┴──────────────────────────────────────┘
 ```
 
-## Related Content 
+Replace an existing UDF:
 
-### [Executable UDFs](/sql-reference/functions/udf.md). 
+```sql
+CREATE FUNCTION exampleReplaceFunction AS frame -> frame;
+SELECT create_query FROM system.functions WHERE name = 'exampleReplaceFunction';
+CREATE OR REPLACE FUNCTION exampleReplaceFunction AS frame -> frame + 1;
+SELECT create_query FROM system.functions WHERE name = 'exampleReplaceFunction';
+```
 
-### [User-defined functions in ClickHouse Cloud](https://clickhouse.com/blog/user-defined-functions-clickhouse-udfs) 
+Result:
+
+```text
+┌─create_query─────────────────────────────────────────────┐
+│ CREATE FUNCTION exampleReplaceFunction AS frame -> frame │
+└──────────────────────────────────────────────────────────┘
+
+┌─create_query───────────────────────────────────────────────────┐
+│ CREATE FUNCTION exampleReplaceFunction AS frame -> (frame + 1) │
+└────────────────────────────────────────────────────────────────┘
+```
+
+## Related Content {#related-content}
+
+### [Executable UDFs](/sql-reference/functions/udf.md). {#executable-udfs}
+
+### [User-defined functions in ClickHouse Cloud](https://clickhouse.com/blog/user-defined-functions-clickhouse-udfs) {#user-defined-functions-in-clickhouse-cloud}

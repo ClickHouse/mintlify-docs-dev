@@ -1,11 +1,12 @@
 ---
 description: 'Aggregates arrays into a larger array of those arrays.'
 keywords: ['groupArrayArray', 'array_concat_agg']
-sidebar_position: 111
-old-slug: /sql-reference/aggregate-functions/reference/grouparrayarray
+slug: /sql-reference/aggregate-functions/reference/grouparrayarray
 title: 'groupArrayArray'
 doc_type: 'reference'
 ---
+
+# groupArrayArray
 
 Aggregates arrays into a larger array of those arrays.
 Combines the [`groupArray`](/sql-reference/aggregate-functions/reference/grouparray) function with the [Array](/sql-reference/aggregate-functions/combinators#-array) combinator.

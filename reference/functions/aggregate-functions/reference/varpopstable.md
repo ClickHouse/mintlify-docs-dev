@@ -2,15 +2,15 @@
 description: 'Returns the population variance. Unlike varPop , this function uses
   a numerically stable algorithm. It works slower but provides a lower computational
   error.'
-sidebar_position: 211
-old-slug: /sql-reference/aggregate-functions/reference/varpopstable
+slug: /sql-reference/aggregate-functions/reference/varpopstable
 title: 'varPopStable'
 doc_type: 'reference'
 ---
 
-## varPopStable 
-
-Returns the population variance. Unlike [`varPop`](../reference/varpop.md), this function uses a [numerically stable](https://en.wikipedia.org/wiki/Numerical_stability) algorithm. It works slower but provides a lower computational error.
+Returns the population variance.
+Unlike [`varPop`](/sql-reference/aggregate-functions/reference/varPop), this function uses a [numerically stable](https://en.wikipedia.org/wiki/Numerical_stability) algorithm.
+It works slower but provides a lower computational error.
+    
 
 **Syntax**
 
@@ -18,21 +18,20 @@ Returns the population variance. Unlike [`varPop`](../reference/varpop.md), this
 varPopStable(x)
 ```
 
-Alias: `VAR_POP_STABLE`.
+**Arguments**
 
-**Parameters**
+- `x` — Population of values to find the population variance of. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
 
-- `x`: Population of values to find the population variance of. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal*](../../data-types/decimal.md).
 
 **Returned value**
 
-- Returns the population variance of `x`. [Float64](../../data-types/float.md).
+Returns the population variance of `x`. [`Float64`](/sql-reference/data-types/float)
 
-**Example**
+**Examples**
 
-Query:
+**Computing stable population variance**
 
-```sql
+```sql title=Query
 DROP TABLE IF EXISTS test_data;
 CREATE TABLE test_data
 (
@@ -47,10 +46,11 @@ SELECT
 FROM test_data;
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─var_pop_stable─┐
 │           14.4 │
 └────────────────┘
 ```
+
+
+

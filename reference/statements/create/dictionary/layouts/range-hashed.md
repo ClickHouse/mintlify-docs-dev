@@ -1,12 +1,16 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/layouts/range-hashed
+slug: /sql-reference/statements/create/dictionary/layouts/range-hashed
 title: 'range_hashed dictionary layout types'
+sidebar_label: 'range_hashed'
+sidebar_position: 5
 description: 'Store a dictionary in memory using a hash table with ordered date/time ranges.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-## range_hashed
+## range_hashed {#range_hashed}
 
 The dictionary is stored in memory in the form of a hash table with an ordered array of ranges and their corresponding values.
 
@@ -24,14 +28,14 @@ Example: The table contains discounts for each advertiser in the format:
 
 To use a sample for date ranges, define the `range_min` and `range_max` elements in the [structure](../attributes.md#composite-key). These elements must contain elements `name` and `type` (if `type` is not specified, the default type will be used - Date). `type` can be any numeric type (Date / DateTime / UInt64 / Int32 / others).
 
-<Note>
-**Values of `range_min` and `range_max` should fit in `Int64` type.**
-</Note>
+:::note
+Values of `range_min` and `range_max` should fit in `Int64` type.
+:::
 
 Example:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY discounts_dict (
@@ -47,8 +51,8 @@ LAYOUT(RANGE_HASHED(range_lookup_strategy 'max'))
 RANGE(MIN discount_start_date MAX discount_end_date)
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <layout>
@@ -72,7 +76,7 @@ RANGE(MIN discount_start_date MAX discount_end_date)
     ...
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
@@ -99,7 +103,7 @@ Details of the algorithm:
 Configuration example:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY somedict(
@@ -112,8 +116,8 @@ PRIMARY KEY Abcdef
 RANGE(MIN StartTimeStamp MAX EndTimeStamp)
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <clickhouse>
@@ -147,7 +151,7 @@ RANGE(MIN StartTimeStamp MAX EndTimeStamp)
 </clickhouse>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
@@ -253,7 +257,7 @@ select dictGet('discounts_dict', 'amount', 3, toDate('2015-01-01')) res;
 └─────┘
 ```
 
-## complex_key_range_hashed
+## complex_key_range_hashed {#complex_key_range_hashed}
 
 The dictionary is stored in memory in the form of a hash table with an ordered array of ranges and their corresponding values (see [range_hashed](#range_hashed)). This type of storage is for use with composite [keys](../attributes.md#composite-key).
 

@@ -1,19 +1,21 @@
 ---
-old-slug: /guides/sre/ssl-user-auth
-title: 'Configuring SSL User Certificate for Authentication'
+sidebar_label: 'SSL user certificate authentication'
+sidebar_position: 3
+slug: /guides/sre/ssl-user-auth
+title: 'Configuring SSL user certificate for authentication'
 description: 'This guide provides simple and minimal settings to configure authentication with SSL user certificates.'
 doc_type: 'guide'
 keywords: ['ssl', 'authentication', 'security', 'certificates', 'user management']
 ---
 
-import SelfManaged from '/snippets/_self_managed_only_no_roadmap.mdx';
-
+# Configuring SSL user certificate for authentication
+import SelfManaged from '@site/docs/_snippets/_self_managed_only_no_roadmap.md';
 
 <SelfManaged />
 
-This guide provides simple and minimal settings to configure authentication with SSL user certificates. The tutorial builds on the [Configuring TLS user guide](/guides/sre/tls/configuring-tls).
+This guide provides simple and minimal settings to configure authentication with SSL user certificates. The tutorial builds on the [Configuring TLS user guide](../tls/configuring-tls.md).
 
-<Note>
+:::note
 SSL user authentication is supported when using the `https`, `native`, `mysql`, and `postgresql` interfaces.
 
 ClickHouse nodes need `<verificationMode>strict</verificationMode>` set for secure authentication (although `relaxed` will work for testing purposes).
@@ -21,13 +23,13 @@ ClickHouse nodes need `<verificationMode>strict</verificationMode>` set for secu
 If you use AWS NLB with the MySQL interface, you have to ask AWS support to enable the undocumented option:
 
 > I would like to be able to configure our NLB proxy protocol v2 as below `proxy_protocol_v2.client_to_server.header_placement,Value=on_first_ack`.
-</Note>
+:::
 
-## 1. Create SSL user certificates
+## 1. Create SSL user certificates {#1-create-ssl-user-certificates}
 
-<Note>
+:::note
 This example uses self-signed certificates with a self-signed CA. For production environments, create a CSR and submit to your PKI team or certificate provider to obtain a proper certificate.
-</Note>
+:::
 
 1. Generate a Certificate Signing Request (CSR) and key. The basic format is the following:
     ```bash
@@ -37,9 +39,9 @@ This example uses self-signed certificates with a self-signed CA. For production
     ```bash
     openssl req -newkey rsa:2048 -nodes -subj "/CN=chnode1.marsnet.local:cert_user"  -keyout chnode1_cert_user.key -out chnode1_cert_user.csr
     ```
-    <Note>
+    :::note
     The CN is arbitrary and any string can be used as an identifier for the certificate. It is used when creating the user in the following steps.
-    </Note>
+    :::
 
 2.  Generate and sign the new user certificate that will be used for authentication. The basic format is the following:
     ```bash
@@ -50,11 +52,11 @@ This example uses self-signed certificates with a self-signed CA. For production
     openssl x509 -req -in chnode1_cert_user.csr -out chnode1_cert_user.crt -CA marsnet_ca.crt -CAkey marsnet_ca.key -days 365
     ```
 
-## 2. Create a SQL user and grant permissions
+## 2. Create a SQL user and grant permissions {#2-create-a-sql-user-and-grant-permissions}
 
-<Note>
-For details on how to enable SQL users and set roles, refer to [Defining SQL Users and Roles](/guides/sre/user-management) user guide.
-</Note>
+:::note
+For details on how to enable SQL users and set roles, refer to [Defining SQL Users and Roles](index.md) user guide.
+:::
 
 1. Create a SQL user defined to use the certificate authentication:
     ```sql
@@ -65,11 +67,11 @@ For details on how to enable SQL users and set roles, refer to [Defining SQL Use
     ```sql
     GRANT ALL ON *.* TO cert_user WITH GRANT OPTION;
     ```
-    <Note>
-    The user is granted full admin privileges in this exercise for demonstration purposes. Refer to the ClickHouse [RBAC documentation](/guides/sre/user-management) for permissions settings.
-    </Note>
+    :::note
+    The user is granted full admin privileges in this exercise for demonstration purposes. Refer to the ClickHouse [RBAC documentation](/guides/sre/user-management/index.md) for permissions settings.
+    :::
 
-    <Note>
+    :::note
     We recommend using SQL to define users and roles. However, if you're currently defining users and roles in configuration files, the user will look like:
     ```xml
     <users>
@@ -86,13 +88,13 @@ For details on how to enable SQL users and set roles, refer to [Defining SQL Use
         </cert_user>
     </users>
     ```
-    </Note>
+    :::
 
-## 3. Testing
+## 3. Testing {#3-testing}
 
 1. Copy the user certificate, user key and CA certificate to a remote node.
 
-2. Configure OpenSSL in the ClickHouse [client config](/interfaces/cli#configuration_files) with certificate and paths.
+2. Configure OpenSSL in the ClickHouse [client config](/interfaces/client#configuration_files) with certificate and paths.
 
     ```xml
     <openSSL>
@@ -108,11 +110,11 @@ For details on how to enable SQL users and set roles, refer to [Defining SQL Use
     ```bash
     clickhouse-client --user <my_user> --query 'SHOW TABLES'
     ```
-    <Note>
+    :::note
     Note that the password passed to clickhouse-client is ignored when a certificate is specified in the config.
-    </Note>
+    :::
 
-## 4. Testing HTTP
+## 4. Testing HTTP {#4-testing-http}
 
 1. Copy the user certificate, user key and CA certificate to a remote node.
 
@@ -131,10 +133,10 @@ For details on how to enable SQL users and set roles, refer to [Defining SQL Use
     information_schema
     system
     ```
-    <Note>
+    :::note
     Notice that no password was specified, the certificate is used in lieu of a password and is how ClickHouse will authenticate the user.
-    </Note>
+    :::
 
-## Summary
+## Summary {#summary}
 
 This article showed the basics of creating and configuring a user for SSL certificate authentication. This method can be used with `clickhouse-client` or any clients which support the `https` interface and where HTTP headers can be set. The generated certificate and key should be kept private and with limited access since the certificate is used to authenticate and authorize the user for operations on the ClickHouse database. Treat the certificate and key as if they were passwords.

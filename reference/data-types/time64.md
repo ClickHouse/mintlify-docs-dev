@@ -1,12 +1,14 @@
 ---
 description: 'Documentation for the Time64 data type in ClickHouse, which stores
   the time range with sub-second precision'
-old-slug: /sql-reference/data-types/time64
+slug: /sql-reference/data-types/time64
 sidebar_position: 17
-sidebarTitle: 'Time64'
+sidebar_label: 'Time64'
 title: 'Time64'
 doc_type: 'reference'
 ---
+
+# Time64
 
 Data type `Time64` represents a time-of-day with fractional seconds.
 It has no calendar date components (day, month, year).
@@ -29,7 +31,7 @@ See also [`Time`](../../sql-reference/data-types/time.md).
 
 Text representation range: [-999:59:59.000, 999:59:59.999] for `precision = 3`. In general, the minimum is `-999:59:59` and the maximum is `999:59:59` with up to `precision` fractional digits (for `precision = 9`, the minimum is `-999:59:59.999999999`).
 
-## Implementation details 
+## Implementation details {#implementation-details}
 
 **Representation**.
 Signed `Decimal64` value counting fractional second with `precision` fractional digits.
@@ -52,7 +54,7 @@ The stored numeric value may exceed this range; however, any component extractio
 Specifying a time zone when creating a `Time64` type or value throws an error.
 Likewise, attempts to apply or change the time zone on `Time64` columns is not supported and results in an error.
 
-## Examples 
+## Examples {#examples}
 
 1. Creating a table with a `Time64`-type column and inserting data into it:
 
@@ -118,6 +120,23 @@ SELECT CAST('14:30:25.250' AS Time64(3)) AS column, toTypeName(column) AS type;
 1. │ 14:30:25.250 │ Time64(3) │
    └───────────────┴───────────┘
 ```
+
+## Addition with Date {#addition-with-date}
+
+A [Time64](time64.md) value can be added to a [Date](date.md) or [Date32](date32.md) value to produce a [DateTime64](datetime64.md) with the same scale as the `Time64`:
+
+```sql
+SET use_legacy_to_time = 0;
+SELECT toDate('2024-07-15') + toTime64('14:30:25.123456', 6) AS dt, toTypeName(dt);
+```
+
+```text
+   ┌─────────────────────────dt─┬─toTypeName(dt)─┐
+1. │ 2024-07-15 14:30:25.123456 │ DateTime64(6)  │
+   └────────────────────────────┴────────────────┘
+```
+
+See [Date and Time Addition](../operators/index.md#date-time-addition) for details on all supported combinations and result types.
 
 **See Also**
 

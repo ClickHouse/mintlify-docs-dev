@@ -2,14 +2,16 @@
 description: 'Documentation for the AggregateFunction data type in ClickHouse, which
 stores intermediate states of aggregate functions'
 keywords: ['AggregateFunction', 'Type']
-sidebarTitle: 'AggregateFunction'
+sidebar_label: 'AggregateFunction'
 sidebar_position: 46
-old-slug: /sql-reference/data-types/aggregatefunction
+slug: /sql-reference/data-types/aggregatefunction
 title: 'AggregateFunction Type'
 doc_type: 'reference'
 ---
 
-## Description 
+# AggregateFunction Type
+
+## Description {#description}
 
 All [Aggregate functions](/sql-reference/aggregate-functions) in ClickHouse have
 an implementation-specific intermediate state that can be serialized to an
@@ -25,7 +27,7 @@ commonly used with the `AggregateFunction` type:
   function combinator, which is used to get the final result of an aggregation 
   from the intermediate states.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 AggregateFunction(aggregate_function_name, types_of_arguments...)
@@ -48,9 +50,9 @@ CREATE TABLE t
 ) ENGINE = ...
 ```
 
-## Usage 
+## Usage {#usage}
 
-### Data Insertion 
+### Data Insertion {#data-insertion}
 
 To insert data into a table with columns of type `AggregateFunction`, you can 
 use `INSERT SELECT` with aggregate functions and the
@@ -72,12 +74,18 @@ In other words, they return a value of `AggregateFunction` type.
 
 In the results of the `SELECT` query, values of type `AggregateFunction` have 
 implementation-specific binary representations for all of the ClickHouse output
-formats. 
+formats.
 
-If you dump data into, for example, the `TabSeparated` format with a `SELECT` 
-query, then this dump can be loaded back using the `INSERT` query.
+There is a special Session level setting `aggregate_function_input_format` that allows to build state from the input values.
+It supports the following formats:
 
-### Data Selection 
+- `state` - binary string with the serialized state (the default).
+  If you dump data into, for example, the `TabSeparated` format with a `SELECT`
+  query, then this dump can be loaded back using the `INSERT` query.
+- `value` - the format will expect a single value of the argument of the aggregate function, or in the case of multiple arguments, a tuple of them; that will be deserialized to form the relevant state
+- `array` - the format will expect an Array of values, as described in the values option above; all the elements of the array will be aggregated to form the state
+
+### Data Selection {#data-selection}
 
 When selecting data from `AggregatingMergeTree` table, use the `GROUP BY` clause
 and the same aggregate functions as for when you inserted the data, but use the 
@@ -94,11 +102,11 @@ SELECT uniq(UserID) FROM table
 SELECT uniqMerge(state) FROM (SELECT uniqState(UserID) AS state FROM table GROUP BY RegionID)
 ```
 
-## Usage Example 
+## Usage Example {#usage-example}
 
 See [AggregatingMergeTree](../../engines/table-engines/mergetree-family/aggregatingmergetree.md) engine description.
 
-## Related Content 
+## Related Content {#related-content}
 
 - Blog: [Using Aggregate Combinators in ClickHouse](https://clickhouse.com/blog/aggregate-functions-combinators-in-clickhouse-for-arrays-maps-and-states)
 - [MergeState](/sql-reference/aggregate-functions/combinators#-mergestate)

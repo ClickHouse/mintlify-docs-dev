@@ -1,21 +1,25 @@
 ---
-old-slug: /guides/replacing-merge-tree
-title: 'ReplacingMergeTree'
-description: 'Using the ReplacingMergeTree engine in ClickHouse'
+slug: /guides/replacing-merge-tree
+title: 'Working with the ReplacingMergeTree engine'
+description: 'Guide on how to use the ReplacingMergeTree engine in ClickHouse'
 keywords: ['replacingmergetree', 'inserts', 'deduplication']
 doc_type: 'guide'
+sidebar_label: 'Working with the ReplacingMergeTree engine'
 ---
+
+import postgres_replacingmergetree from '@site/static/images/migrations/postgres-replacingmergetree.png';
+import Image from '@theme/IdealImage';
 
 While transactional databases are optimized for transactional update and delete workloads, OLAP databases offer reduced guarantees for such operations. Instead, they optimize for immutable data inserted in batches for the benefit of significantly faster analytical queries. While ClickHouse offers update operations through mutations, as well as a lightweight means of deleting rows, its column-orientated structure means these operations should be scheduled with care, as described above. These operations are handled asynchronously, processed with a single thread, and require (in the case of updates) data to be rewritten on disk. They should thus not be used for high numbers of small changes.
 In order to process a stream of update and delete rows while avoiding the above usage patterns, we can use the ClickHouse table engine ReplacingMergeTree.
 
-## Automatic upserts of inserted rows 
+## Automatic upserts of inserted rows {#automatic-upserts-of-inserted-rows}
 
-The [ReplacingMergeTree table engine](/engines/table-engines/mergetree-family/replacingmergetree) allows update operations to be applied to rows, without needing to use inefficient `ALTER` or `DELETE` statements, by offering the ability for users to insert multiple copies of the same row and denote one as the latest version. A background process, in turn, asynchronously removes older versions of the same row, efficiently imitating an update operation through the use of immutable inserts.
-This relies on the ability of the table engine to identify duplicate rows. This is achieved using the `ORDER BY` clause to determine uniqueness, i.e., if two rows have the same values for the columns specified in the `ORDER BY`, they are considered duplicates. A `version` column, specified when defining the table, allows the latest version of a row to be retained when two rows are identified as duplicates i.e. the row with the highest version value is kept.
+The [ReplacingMergeTree table engine](/engines/table-engines/mergetree-family/replacingmergetree) allows update operations to be applied to rows, without needing to use inefficient `ALTER` or `DELETE` statements, by offering the ability for you to insert multiple copies of the same row and denote one as the latest version. A background process, in turn, asynchronously removes older versions of the same row, efficiently imitating an update operation through the use of immutable inserts.
+This relies on the ability of the table engine to identify duplicate rows. This is achieved using the `ORDER BY` clause to determine uniqueness, i.e., if two rows have the same values for the columns specified in the `ORDER BY`, they're considered duplicates. A `version` column, specified when defining the table, allows the latest version of a row to be retained when two rows are identified as duplicates i.e. the row with the highest version value is kept.
 We illustrate this process in the example below. Here, the rows are uniquely identified by the A column (the `ORDER BY` for the table). We assume these rows have been inserted as two batches, resulting in the formation of two data parts on disk. Later, during an asynchronous background process, these parts are merged together.
 
-ReplacingMergeTree additionally allows a deleted column to be specified. This can contain either 0 or 1, where a value of 1 indicates that the row (and its duplicates) has been deleted and zero is used otherwise. **Note: Deleted rows will not be removed at merge time.**
+ReplacingMergeTree additionally allows a deleted column to be specified. This can contain either 0 or 1, where a value of 1 indicates that the row (and its duplicates) has been deleted and zero is used otherwise. **Note: Deleted rows won't be removed at merge time.**
 
 During this process, the following occurs during part merging:
 
@@ -27,7 +31,7 @@ As a result of this merge process, we have four rows representing the final stat
 
 <br />
 
-<img src="/images/migrations/postgres-replacingmergetree.png" alt="ReplacingMergeTree process"/>
+<Image img={postgres_replacingmergetree} size="md" alt="ReplacingMergeTree process"/>
 
 <br />
 
@@ -46,14 +50,14 @@ We recommend pausing inserts once (1) is guaranteed and until this command and t
 
 > Handling deletes with the ReplacingMergeTree is only recommended for tables with a low to moderate number of deletes (less than 10%) unless periods can be scheduled for cleanup with the above conditions.
 
-> Tip: Users may also be able to issue `OPTIMIZE FINAL CLEANUP` against selective partitions no longer subject to changes.
+> Tip: You may also be able to issue `OPTIMIZE FINAL CLEANUP` against selective partitions no longer subject to changes.
 
-## Choosing a primary/deduplication key 
+## Choosing a primary/deduplication key {#choosing-a-primarydeduplication-key}
 
 Above, we highlighted an important additional constraint that must also be satisfied in the case of the ReplacingMergeTree: the values of columns of the `ORDER BY` uniquely identify a row across changes. If migrating from a transactional database like Postgres, the original Postgres primary key should thus be included in the Clickhouse `ORDER BY` clause.
 
-Users of ClickHouse will be familiar with choosing the columns in their tables `ORDER BY` clause to [optimize for query performance](/data-modeling/schema-design#choosing-an-ordering-key). Generally, these columns should be selected based on your [frequent queries and listed in order of increasing cardinality](/guides/best-practices/sparse-primary-indexes#an-index-design-for-massive-data-scales). Importantly, the ReplacingMergeTree imposes an additional constraint - these columns must be immutable, i.e., if replicating from Postgres, only add columns to this clause if they do not change in the underlying Postgres data. While other columns can change, these are required to be consistent for unique row identification.
-For analytical workloads, the Postgres primary key is generally of little use as users will rarely perform point row lookups. Given we recommend that columns be ordered in order of increasing cardinality, as well as the fact that matches on [columns listed earlier in the ORDER BY will usually be faster](/guides/best-practices/sparse-primary-indexes#ordering-key-columns-efficiently), the Postgres primary key should be appended to the end of the `ORDER BY` (unless it has analytical value). In the case that multiple columns form a primary key in Postgres, they should be appended to the `ORDER BY`, respecting cardinality and the likelihood of query value. Users may also wish to generate a unique primary key using a concatenation of values via a `MATERIALIZED` column.
+Users of ClickHouse will be familiar with choosing the columns in their tables `ORDER BY` clause to [optimize for query performance](/data-modeling/schema-design#choosing-an-ordering-key). Generally, these columns should be selected based on your [frequent queries and listed in order of increasing cardinality](/guides/best-practices/sparse-primary-indexes#an-index-design-for-massive-data-scales). Importantly, the ReplacingMergeTree imposes an additional constraint - these columns must be immutable, i.e., if replicating from Postgres, only add columns to this clause if they don't change in the underlying Postgres data. While other columns can change, these are required to be consistent for unique row identification.
+For analytical workloads, the Postgres primary key is generally of little use as you will rarely perform point row lookups. Given we recommend that columns be ordered in order of increasing cardinality, as well as the fact that matches on [columns listed earlier in the ORDER BY will usually be faster](/guides/best-practices/sparse-primary-indexes#ordering-key-columns-efficiently), the Postgres primary key should be appended to the end of the `ORDER BY` (unless it has analytical value). In the case that multiple columns form a primary key in Postgres, they should be appended to the `ORDER BY`, respecting cardinality and the likelihood of query value. You may also wish to generate a unique primary key using a concatenation of values via a `MATERIALIZED` column.
 
 Consider the posts table from the Stack Overflow dataset.
 
@@ -92,11 +96,11 @@ ORDER BY (PostTypeId, toDate(CreationDate), CreationDate, Id)
 
 We use an `ORDER BY` key of `(PostTypeId, toDate(CreationDate), CreationDate, Id)`. The `Id` column, unique for each post, ensures rows can be deduplicated. A `Version` and `Deleted` column are added to the schema as required.
 
-## Querying ReplacingMergeTree 
+## Querying ReplacingMergeTree {#querying-replacingmergetree}
 
-At merge time, the ReplacingMergeTree identifies duplicate rows, using the values of the `ORDER BY` columns as a unique identifier, and either retains only the highest version or removes all duplicates if the latest version indicates a delete. This, however, offers eventual correctness only - it does not guarantee rows will be deduplicated, and you should not rely on it. Queries can, therefore, produce incorrect answers due to update and delete rows being considered in queries.
+At merge time, the ReplacingMergeTree identifies duplicate rows, using the values of the `ORDER BY` columns as a unique identifier, and either retains only the highest version or removes all duplicates if the latest version indicates a delete. This, however, offers eventual correctness only - it doesn't guarantee rows will be deduplicated, and you shouldn't rely on it. Queries can, therefore, produce incorrect answers due to update and delete rows being considered in queries.
 
-To obtain correct answers, users will need to complement background merges with query time deduplication and deletion removal. This can be achieved using the `FINAL` operator.
+To obtain correct answers, you will need to complement background merges with query time deduplication and deletion removal. This can be achieved using the `FINAL` operator.
 
 Consider the posts table above. We can use the normal method of loading this dataset but specify a deleted and version column in addition to values 0. For example purposes, we load 10000 rows only.
 
@@ -216,21 +220,21 @@ FINAL
 Peak memory usage: 8.14 MiB.
 ```
 
-## FINAL performance 
+## FINAL performance {#final-performance}
 
 The `FINAL` operator does have a small performance overhead on queries.
-This will be most noticeable when queries are not filtering on primary key columns,
-causing more data to be read and increasing the deduplication overhead. If users
+This will be most noticeable when queries aren't filtering on primary key columns,
+causing more data to be read and increasing the deduplication overhead. If you
 filter on key columns using a `WHERE` condition, the data loaded and passed for
 deduplication will be reduced.
 
-If the `WHERE` condition does not use a key column, ClickHouse does not currently utilize the `PREWHERE` optimization when using `FINAL`. This optimization aims to reduce the rows read for non-filtered columns. Examples of emulating this `PREWHERE` and thus potentially improving performance can be found [here](https://clickhouse.com/blog/clickhouse-postgresql-change-data-capture-cdc-part-1#final-performance).
+If the `WHERE` condition doesn't use a key column, ClickHouse doesn't currently utilize the `PREWHERE` optimization when using `FINAL`. This optimization aims to reduce the rows read for non-filtered columns. Examples of emulating this `PREWHERE` and thus potentially improving performance can be found [here](https://clickhouse.com/blog/clickhouse-postgresql-change-data-capture-cdc-part-1#final-performance).
 
-## Exploiting partitions with ReplacingMergeTree 
+## Exploiting partitions with ReplacingMergeTree {#exploiting-partitions-with-replacingmergetree}
 
-Merging of data in ClickHouse occurs at a partition level. When using ReplacingMergeTree, we recommend users partition their table according to best practices, provided users can ensure this **partitioning key does not change for a row**. This will ensure updates pertaining to the same row will be sent to the same ClickHouse partition. You may reuse the same partition key as Postgres provided you adhere to the best practices outlined here.
+Merging of data in ClickHouse occurs at a partition level. When using ReplacingMergeTree, we recommend users partition their table according to best practices, provided you can ensure this **partitioning key doesn't change for a row**. This will ensure updates pertaining to the same row will be sent to the same ClickHouse partition. You may reuse the same partition key as Postgres provided you adhere to the best practices outlined here.
 
-Assuming this is the case, users can use the setting `do_not_merge_across_partitions_select_final=1` to improve `FINAL` query performance. This setting causes partitions to be merged and processed independently when using FINAL.
+Assuming this is the case, you can use the setting `do_not_merge_across_partitions_select_final=1` to improve `FINAL` query performance. This setting causes partitions to be merged and processed independently when using FINAL.
 
 Consider the following posts table, where we use no partitioning:
 
@@ -314,27 +318,27 @@ ORDER BY year ASC
 
 As shown, partitioning has significantly improved query performance in this case by allowing the deduplication process to occur at a partition level in parallel.
 
-## Merge behavior considerations 
+## Merge behavior considerations {#merge-behavior-considerations}
 
 ClickHouse's merge selection mechanism goes beyond simple merging of parts. Below, we examine this behavior in the context of ReplacingMergeTree, including configuration options for enabling more aggressive merging of older data and considerations for larger parts.
 
-### Merge selection logic 
+### Merge selection logic {#merge-selection-logic}
 
 While merging aims to minimize the number of parts, it also balances this goal against the cost of write amplification. Consequently, some ranges of parts are excluded from merging if they would lead to excessive write amplification, based on internal calculations. This behavior helps prevent unnecessary resource usage and extends the lifespan of storage components.
 
-### Merging behavior on large parts 
+### Merging behavior on large parts {#merging-behavior-on-large-parts}
 
 The ReplacingMergeTree engine in ClickHouse is optimized for managing duplicate rows by merging data parts, keeping only the latest version of each row based on a specified unique key. However, when a merged part reaches the max_bytes_to_merge_at_max_space_in_pool threshold, it will no longer be selected for further merging, even if min_age_to_force_merge_seconds is set. As a result, automatic merges can no longer be relied upon to remove duplicates that may accumulate with ongoing data insertion.
 
-To address this, users can invoke OPTIMIZE FINAL to manually merge parts and remove duplicates. Unlike automatic merges, OPTIMIZE FINAL bypasses the max_bytes_to_merge_at_max_space_in_pool threshold, merging parts based solely on available resources, particularly disk space, until a single part remains in each partition. However, this approach can be memory-intensive on large tables and may require repeated execution as new data is added.
+To address this, you can invoke `OPTIMIZE FINAL` to manually merge parts and remove duplicates. Unlike automatic merges, `OPTIMIZE FINAL` bypasses the `max_bytes_to_merge_at_max_space_in_pool` threshold, merging parts based solely on available resources, particularly disk space, until a single part remains in each partition. However, this approach can be memory-intensive on large tables and may require repeated execution as new data is added.
 
 For a more sustainable solution that maintains performance, partitioning the table is recommended. This can help prevent data parts from reaching the maximum merge size and reduces the need for ongoing manual optimizations.
 
-### Partitioning and merging across partitions 
+### Partitioning and merging across partitions {#partitioning-and-merging-across-partitions}
 
-As discussed in Exploiting Partitions with ReplacingMergeTree, we recommend partitioning tables as a best practice. Partitioning isolates data for more efficient merges and avoids merging across partitions, particularly during query execution. This behavior is enhanced in versions from 23.12 onward: if the partition key is a prefix of the sorting key, merging across partitions is not performed at query time, leading to faster query performance.
+As discussed in Exploiting Partitions with ReplacingMergeTree, we recommend partitioning tables as a best practice. Partitioning isolates data for more efficient merges and avoids merging across partitions, particularly during query execution. This behavior is enhanced in versions from 23.12 onward: if the partition key is a prefix of the sorting key, merging across partitions isn't performed at query time, leading to faster query performance.
 
-### Tuning merges for better query performance 
+### Tuning merges for better query performance {#tuning-merges-for-better-query-performance}
 
 By default, min_age_to_force_merge_seconds and min_age_to_force_merge_on_partition_only are set to 0 and false, respectively, disabling these features. In this configuration, ClickHouse will apply standard merging behavior without forcing merges based on partition age.
 
@@ -342,11 +346,11 @@ If a value for min_age_to_force_merge_seconds is specified, ClickHouse will igno
 
 This behavior can be further tuned by setting min_age_to_force_merge_on_partition_only=true, requiring all parts in the partition to be older than min_age_to_force_merge_seconds for aggressive merging. This configuration allows older partitions to merge down to a single part over time, which consolidates data and maintains query performance.
 
-### Recommended settings 
+### Recommended settings {#recommended-settings}
 
-<Warning>
+:::warning
 Tuning merge behavior is an advanced operation. We recommend consulting with ClickHouse support before enabling these settings in production workloads.
-</Warning>
+:::
 
 In most cases, setting min_age_to_force_merge_seconds to a low value—significantly less than the partition period—is preferred. This minimizes the number of parts and prevents unnecessary merging at query time with the FINAL operator.
 

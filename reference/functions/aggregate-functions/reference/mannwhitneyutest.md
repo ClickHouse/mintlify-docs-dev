@@ -1,13 +1,20 @@
 ---
 description: 'Applies the Mann-Whitney rank test to samples from two populations.'
-sidebarTitle: 'mannWhitneyUTest'
-sidebar_position: 161
-old-slug: /sql-reference/aggregate-functions/reference/mannwhitneyutest
+sidebar_label: 'mannWhitneyUTest'
+slug: /sql-reference/aggregate-functions/reference/mannwhitneyutest
 title: 'mannWhitneyUTest'
 doc_type: 'reference'
 ---
 
 Applies the Mann-Whitney rank test to samples from two populations.
+
+Values of both samples are in the `sample_data` column.
+If `sample_index` equals to 0 then the value in that row belongs to the sample from the first population.
+Otherwise it belongs to the sample from the second population.
+The null hypothesis is that two populations are stochastically equal.
+Also one-sided hypotheses can be tested.
+This test does not assume that data have normal distribution.
+    
 
 **Syntax**
 
@@ -15,57 +22,40 @@ Applies the Mann-Whitney rank test to samples from two populations.
 mannWhitneyUTest[(alternative[, continuity_correction])](sample_data, sample_index)
 ```
 
-Values of both samples are in the `sample_data` column. If `sample_index` equals to 0 then the value in that row belongs to the sample from the first population. Otherwise it belongs to the sample from the second population.
-The null hypothesis is that two populations are stochastically equal. Also one-sided hypothesises can be tested. This test does not assume that data have normal distribution.
+**Parameters**
+
+- `alternative` — Optional. Alternative hypothesis. 'two-sided' (default): two populations are not stochastically equal. 'greater': values in the first sample are stochastically greater than those in the second sample. 'less': values in the first sample are stochastically less than those in the second sample. [`String`](/sql-reference/data-types/string)
+- `continuity_correction` — Optional. If not 0 then continuity correction in the normal approximation for the p-value is applied. The default value is 1. [`UInt64`](/sql-reference/data-types/int-uint)
+
 
 **Arguments**
 
-- `sample_data` — sample data. [Integer](../../../sql-reference/data-types/int-uint.md), [Float](../../../sql-reference/data-types/float.md) or [Decimal](../../../sql-reference/data-types/decimal.md).
-- `sample_index` — sample index. [Integer](../../../sql-reference/data-types/int-uint.md).
+- `sample_data` — Sample data. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
+- `sample_index` — Sample index. [`(U)Int*`](/sql-reference/data-types/int-uint)
 
-**Parameters**
 
-- `alternative` — alternative hypothesis. (Optional, default: `'two-sided'`.) [String](../../../sql-reference/data-types/string.md).
-  - `'two-sided'`;
-  - `'greater'`;
-  - `'less'`.
-- `continuity_correction` — if not 0 then continuity correction in the normal approximation for the p-value is applied. (Optional, default: 1.) [UInt64](../../../sql-reference/data-types/int-uint.md).
+**Returned value**
 
-**Returned values**
+Returns a tuple with two elements: calculated U-statistic and calculated p-value. [`Tuple(Float64, Float64)`](/sql-reference/data-types/tuple)
 
-[Tuple](../../../sql-reference/data-types/tuple.md) with two elements:
+**Examples**
 
-- calculated U-statistic. [Float64](../../../sql-reference/data-types/float.md).
-- calculated p-value. [Float64](../../../sql-reference/data-types/float.md).
+**Mann-Whitney U test example**
 
-**Example**
+```sql title=Query
+CREATE TABLE mww_ttest (sample_data Float64, sample_index UInt8) ENGINE = Memory;
+INSERT INTO mww_ttest VALUES (10, 0), (11, 0), (12, 0), (1, 1), (2, 1), (3, 1);
 
-Input table:
-
-```text
-┌─sample_data─┬─sample_index─┐
-│          10 │            0 │
-│          11 │            0 │
-│          12 │            0 │
-│           1 │            1 │
-│           2 │            1 │
-│           3 │            1 │
-└─────────────┴──────────────┘
-```
-
-Query:
-
-```sql
 SELECT mannWhitneyUTest('greater')(sample_data, sample_index) FROM mww_ttest;
 ```
 
-Result:
-
-```text
+```response title=Response
 ┌─mannWhitneyUTest('greater')(sample_data, sample_index)─┐
 │ (9,0.04042779918503192)                                │
 └────────────────────────────────────────────────────────┘
 ```
+
+
 
 **See Also**
 

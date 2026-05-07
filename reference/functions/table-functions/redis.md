@@ -1,21 +1,23 @@
 ---
 description: 'This table function allows integrating ClickHouse with Redis.'
-sidebarTitle: 'redis'
+sidebar_label: 'redis'
 sidebar_position: 170
-old-slug: /sql-reference/table-functions/redis
+slug: /sql-reference/table-functions/redis
 title: 'redis'
 doc_type: 'reference'
 ---
 
+# redis Table Function
+
 This table function allows integrating ClickHouse with [Redis](https://redis.io/).
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 redis(host:port, key, structure[, db_index[, password[, pool_size]]])
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 | Argument    | Description                                                                                                |
 |-------------|------------------------------------------------------------------------------------------------------------|
@@ -32,11 +34,11 @@ redis(host:port, key, structure[, db_index[, password[, pool_size]]])
 
 [Named collections](/operations/named-collections.md) are not supported for `redis` table function at the moment.
 
-## Returned value 
+## Returned value {#returned_value}
 
 A table object with key as Redis key, other columns packaged together as Redis value.
 
-## Usage Example 
+## Usage Example {#usage-example}
 
 Read from Redis:
 
@@ -57,7 +59,7 @@ INSERT INTO TABLE FUNCTION redis(
     'key String, v1 String, v2 UInt32') values ('1', '1', 1);
 ```
 
-## Related 
+## Related {#related}
 
 - [The `Redis` table engine](/engines/table-engines/integrations/redis.md)
-- [Using redis as a dictionary source](/sql-reference/dictionaries/index.md#redis)
+- [Using redis as a dictionary source](/sql-reference/statements/create/dictionary/sources/redis)

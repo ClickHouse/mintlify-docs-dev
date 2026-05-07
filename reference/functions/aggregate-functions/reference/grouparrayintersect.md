@@ -1,13 +1,13 @@
 ---
 description: 'Return an intersection of given arrays (Return all items of arrays,
   that are in all given arrays).'
-sidebar_position: 141
-old-slug: /sql-reference/aggregate-functions/reference/grouparrayintersect
+slug: /sql-reference/aggregate-functions/reference/grouparrayintersect
 title: 'groupArrayIntersect'
 doc_type: 'reference'
 ---
 
 Return an intersection of given arrays (Return all items of arrays, that are in all given arrays).
+    
 
 **Syntax**
 
@@ -17,36 +17,37 @@ groupArrayIntersect(x)
 
 **Arguments**
 
-- `x` — Argument (column name or expression).
+- `x` — Argument (column name or expression). [`Any`](/sql-reference/data-types)
 
-**Returned values**
 
-- Array that contains elements that are in all arrays.
+**Returned value**
 
-Type: [Array](../../data-types/array.md).
+Returns an array that contains elements that are in all arrays. [`Array`](/sql-reference/data-types/array)
 
 **Examples**
 
-Consider table `numbers`:
+**Usage example**
 
-```text
-┌─a──────────────┐
-│ [1,2,4]        │
-│ [1,5,2,8,-1,0] │
-│ [1,5,7,5,8,2]  │
-└────────────────┘
-```
+```sql title=Query
+-- Create table with Memory engine
+CREATE TABLE numbers (
+    a Array(Int32)
+) ENGINE = Memory;
 
-Query with column name as argument:
+-- Insert sample data
+INSERT INTO numbers VALUES
+    ([1,2,4]),
+    ([1,5,2,8,-1,0]),
+    ([1,5,7,5,8,2]);
 
-```sql
 SELECT groupArrayIntersect(a) AS intersection FROM numbers;
 ```
 
-Result:
-
-```text
+```response title=Response
 ┌─intersection──────┐
 │ [1, 2]            │
 └───────────────────┘
 ```
+
+
+

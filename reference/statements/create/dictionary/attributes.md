@@ -1,11 +1,13 @@
 ---
 description: 'Dictionary key and attribute configuration'
-old-slug: /sql-reference/statements/create/dictionary/attributes
+sidebar_label: 'Attributes'
+sidebar_position: 2
+slug: /sql-reference/statements/create/dictionary/attributes
 title: 'Dictionary attributes'
 doc_type: 'reference'
 ---
 
-import CloudDetails from '/snippets/sql-reference/_snippet_dictionary_in_cloud.mdx';
+import CloudDetails from '@site/docs/sql-reference/statements/create/dictionary/_snippet_dictionary_in_cloud.md';
 
 <CloudDetails />
 
@@ -51,7 +53,7 @@ Attributes are described in the query body:
 - `PRIMARY KEY` — Key column
 - `AttrName AttrType` — Data column. There can be a multiple number of attributes.
 
-## Key
+## Key {#key}
 
 ClickHouse supports the following types of keys:
 
@@ -60,11 +62,11 @@ ClickHouse supports the following types of keys:
 
 An xml structure can contain either `<id>` or `<key>`. DDL-query must contain single `PRIMARY KEY`.
 
-<Note>
-**You must not describe key as an attribute.**
-</Note>
+:::note
+You must not describe key as an attribute.
+:::
 
-### Numeric Key
+### Numeric Key {#numeric-key}
 
 Type: `UInt64`.
 
@@ -93,13 +95,13 @@ PRIMARY KEY Id
 
 - `PRIMARY KEY` – The name of the column with keys.
 
-### Composite Key
+### Composite Key {#composite-key}
 
 The key can be a `tuple` from any types of fields. The [layout](./layouts/) in this case must be `complex_key_hashed` or `complex_key_cache`.
 
-<Tip>
-**A composite key can consist of a single element. This makes it possible to use a string as the key, for instance.**
-</Tip>
+:::tip
+A composite key can consist of a single element. This makes it possible to use a string as the key, for instance.
+:::
 
 The key structure is set in the element `<key>`. Key fields are specified in the same format as the dictionary [attributes](#attributes). Example:
 
@@ -133,7 +135,7 @@ PRIMARY KEY field1, field2
 
 For a query to the `dictGet*` function, a tuple is passed as the key. Example: `dictGetString('dict_name', 'attr_name', tuple('string for field1', num_for_field2))`.
 
-## Attributes
+## Attributes {#attributes}
 
 Configuration example:
 

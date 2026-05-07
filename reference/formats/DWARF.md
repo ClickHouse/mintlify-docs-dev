@@ -4,21 +4,23 @@ description: 'Documentation for the DWARF format'
 input_format: true
 keywords: ['DWARF']
 output_format: false
-old-slug: /interfaces/formats/DWARF
+slug: /interfaces/formats/DWARF
 title: 'DWARF'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge>
+| Input | Output  | Alias |
+|-------|---------|-------|
+| ✔     | ✗       |       |
 
-## Description 
+## Description {#description}
 
 The `DWARF` format parses DWARF debug symbols from an ELF file (executable, library, or object file). 
 It is similar to `dwarfdump`, but much faster (hundreds of MB/s) and supporting SQL. 
 It produces one row for each Debug Information Entry (DIE) in the `.debug_info` section 
 and includes "null"-entries that the DWARF encoding uses to terminate lists of children in the tree.
 
-<Note>
+:::info
 `.debug_info` consists of *units*, which correspond to compilation units: 
 - Each unit is a tree of *DIE*s, with a `compile_unit` DIE as its root. 
 - Each DIE has a *tag* and a list of *attributes*. 
@@ -32,7 +34,7 @@ The DIEs represent things from the source code, and their *tag* tells you what k
 - function arguments (`formal_parameter`).
 
 The tree structure mirrors the corresponding source code. For example, a `class_type` DIE can contain `subprogram` DIEs representing methods of the class.
-</Note>
+:::
 
 The `DWARF` format outputs the following columns:
 
@@ -54,7 +56,7 @@ The `DWARF` format outputs the following columns:
   - `attr_int` - integer value of the attribute; 0 if the attribute doesn't have a numeric value
   - `attr_str` - string value of the attribute; empty if the attribute doesn't have a string value
 
-## Example usage 
+## Example usage {#example-usage}
 
 The `DWARF` format can be used to find compilation units that have the most function definitions (including template instantiations and functions from included header files):
 
@@ -79,4 +81,4 @@ LIMIT 3
 Peak memory usage: 271.92 MiB.
 ```
 
-## Format settings 
+## Format settings {#format-settings}

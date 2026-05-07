@@ -1,21 +1,27 @@
 ---
 description: 'Provides a read-only table-like interface to Apache Paimon tables in
   Amazon S3, Azure, HDFS or locally stored.'
-sidebarTitle: 'paimon'
+sidebar_label: 'paimon'
 sidebar_position: 90
-old-slug: /sql-reference/table-functions/paimon
+slug: /sql-reference/table-functions/paimon
 title: 'paimon'
 doc_type: 'reference'
 ---
 
+import ExperimentalBadge from '@theme/badges/ExperimentalBadge';
+
+# paimon Table Function {#paimon-table-function}
+
+<ExperimentalBadge />
+
 Provides a read-only table-like interface to Apache [Paimon](https://paimon.apache.org/) tables in Amazon S3, Azure, HDFS or locally stored.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
-paimon(url [,access_key_id, secret_access_key] [,format] [,structure] [,compression])
+paimon(url [,access_key_id, secret_access_key] [,format] [,structure] [,compression] [,extra_credentials])
 
-paimonS3(url [,access_key_id, secret_access_key] [,format] [,structure] [,compression])
+paimonS3(url [,access_key_id, secret_access_key] [,format] [,structure] [,compression] [,extra_credentials])
 
 paimonAzure(connection_string|storage_account_url, container_name, blobpath, [,account_name], [,account_key] [,format] [,compression_method])
 
@@ -24,16 +30,18 @@ paimonHDFS(path_to_table, [,format] [,compression_method])
 paimonLocal(path_to_table, [,format] [,compression_method])
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 Description of the arguments coincides with description of arguments in table functions `s3`, `azureBlobStorage`, `HDFS` and `file` correspondingly.
 `format` stands for the format of data files in the Paimon table.
 
-### Returned value 
+For `paimonS3`, an optional `extra_credentials` parameter can be used to pass a `role_arn` for role-based access in ClickHouse Cloud. See [Secure S3](/cloud/data-sources/secure-s3) for configuration steps.
+
+### Returned value {#returned-value}
 
 A table with the specified structure for reading data in the specified Paimon table.
 
-## Defining a named collection 
+## Defining a named collection {#defining-a-named-collection}
 
 Here is an example of configuring a named collection for storing the URL and credentials:
 
@@ -56,11 +64,11 @@ SELECT * FROM paimonS3(paimon_conf, filename = 'test_table')
 DESCRIBE paimonS3(paimon_conf, filename = 'test_table')
 ```
 
-## Aliases 
+## Aliases {#aliases}
 
 Table function `paimon` is an alias to `paimonS3` now.
 
-## Virtual Columns 
+## Virtual Columns {#virtual-columns}
 
 - `_path` — Path to the file. Type: `LowCardinality(String)`.
 - `_file` — Name of the file. Type: `LowCardinality(String)`.
@@ -68,7 +76,7 @@ Table function `paimon` is an alias to `paimonS3` now.
 - `_time` — Last modified time of the file. Type: `Nullable(DateTime)`. If the time is unknown, the value is `NULL`.
 - `_etag` — The etag of the file. Type: `LowCardinality(String)`. If the etag is unknown, the value is `NULL`.
 
-## Data Types supported 
+## Data Types supported {#data-types-supported}
 
 | Paimon Data Type | Clickhouse Data Type 
 |-------|--------|
@@ -90,7 +98,7 @@ Table function `paimon` is an alias to `paimonS3` now.
 |ARRAY     |Array      |
 |MAP     |Map    |
 
-## Partition supported 
+## Partition supported {#partition-supported}
 Data types supported in Paimon partition keys:
 * `CHAR`
 * `VARCHAR`
@@ -107,6 +115,6 @@ Data types supported in Paimon partition keys:
 * `FLOAT`
 * `DOUBLE`
 
-## See Also 
+## See Also {#see-also}
 
 * [Paimon cluster table function](/sql-reference/table-functions/paimonCluster.md)

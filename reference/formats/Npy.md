@@ -4,14 +4,16 @@ description: 'Documentation for the Npy format'
 input_format: true
 keywords: ['Npy']
 output_format: true
-old-slug: /interfaces/formats/Npy
+slug: /interfaces/formats/Npy
 title: 'Npy'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 The `Npy` format is designed to load a NumPy array from a `.npy` file into ClickHouse. 
 The NumPy file format is a binary format used for efficiently storing arrays of numerical data. 
@@ -19,7 +21,7 @@ During import, ClickHouse treats the top level dimension as an array of rows wit
 
 The table below gives the supported Npy data types and their corresponding type in ClickHouse:
 
-## Data types matching 
+## Data types matching {#data_types-matching}
 
 | Npy data type (`INSERT`) | ClickHouse data type                                            | Npy data type (`SELECT`) |
 |--------------------------|-----------------------------------------------------------------|-------------------------|
@@ -36,9 +38,9 @@ The table below gives the supported Npy data types and their corresponding type 
 | `S`, `U`                 | [String](/sql-reference/data-types/string.md)           | `S`                     |
 |                          | [FixedString](/sql-reference/data-types/fixedstring.md) | `S`                     |
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Saving an array in .npy format using Python 
+### Saving an array in .npy format using Python {#saving-an-array-in-npy-format-using-python}
 
 ```Python
 import numpy as np
@@ -46,7 +48,7 @@ arr = np.array([[[1],[2],[3]],[[4],[5],[6]]])
 np.save('example_array.npy', arr)
 ```
 
-### Reading a NumPy file in ClickHouse 
+### Reading a NumPy file in ClickHouse {#reading-a-numpy-file-in-clickhouse}
 
 ```sql title="Query"
 SELECT *
@@ -60,7 +62,7 @@ FROM file('example_array.npy', Npy)
 └───────────────┘
 ```
 
-### Selecting data 
+### Selecting data {#selecting-data}
 
 You can select data from a ClickHouse table and save it into a file in the Npy format using the following command with clickhouse-client:
 
@@ -68,4 +70,4 @@ You can select data from a ClickHouse table and save it into a file in the Npy f
 $ clickhouse-client --query="SELECT {column} FROM {some_table} FORMAT Npy" > {filename.npy}
 ```
 
-## Format settings 
+## Format settings {#format-settings}

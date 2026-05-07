@@ -1,11 +1,13 @@
 ---
 description: 'Documentation for MOVE access entity statement'
-sidebarTitle: 'MOVE'
+sidebar_label: 'MOVE'
 sidebar_position: 54
-old-slug: /sql-reference/statements/move
+slug: /sql-reference/statements/move
 title: 'MOVE access entity statement'
 doc_type: 'reference'
 ---
+
+# MOVE access entity statement
 
 This statement allows to move an access entity from one access storage to another.
 

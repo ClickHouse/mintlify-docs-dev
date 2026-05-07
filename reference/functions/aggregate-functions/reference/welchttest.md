@@ -1,13 +1,20 @@
 ---
 description: 'Applies Welch''s t-test to samples from two populations.'
-sidebarTitle: 'welchTTest'
-sidebar_position: 214
-old-slug: /sql-reference/aggregate-functions/reference/welchttest
+sidebar_label: 'welchTTest'
+slug: /sql-reference/aggregate-functions/reference/welchttest
 title: 'welchTTest'
 doc_type: 'reference'
 ---
 
-Applies Welch's t-test to samples from two populations.
+Applies [Welch's t-test](https://en.wikipedia.org/wiki/Welch%27s_t-test) to samples from two populations.
+
+Values of both samples are in the `sample_data` column.
+If `sample_index` equals to 0 then the value in that row belongs to the sample from the first population.
+Otherwise it belongs to the sample from the second population.
+The null hypothesis is that means of populations are equal.
+Normal distribution is assumed.
+Populations may have unequal variance.
+    
 
 **Syntax**
 
@@ -15,55 +22,51 @@ Applies Welch's t-test to samples from two populations.
 welchTTest([confidence_level])(sample_data, sample_index)
 ```
 
-Values of both samples are in the `sample_data` column. If `sample_index` equals to 0 then the value in that row belongs to the sample from the first population. Otherwise it belongs to the sample from the second population.
-The null hypothesis is that means of populations are equal. Normal distribution is assumed. Populations may have unequal variance.
+**Parameters**
+
+- `confidence_level` — Optional. Confidence level in order to calculate confidence intervals. [`Float`](/sql-reference/data-types/float)
+
 
 **Arguments**
 
-- `sample_data` — Sample data. [Integer](../../../sql-reference/data-types/int-uint.md), [Float](../../../sql-reference/data-types/float.md) or [Decimal](../../../sql-reference/data-types/decimal.md).
-- `sample_index` — Sample index. [Integer](../../../sql-reference/data-types/int-uint.md).
+- `sample_data` — Sample data. [`Int*`](/sql-reference/data-types/int-uint) or [`UInt*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
+- `sample_index` — Sample index. [`Int*`](/sql-reference/data-types/int-uint) or [`UInt*`](/sql-reference/data-types/int-uint)
 
-**Parameters**
 
-- `confidence_level` — Confidence level in order to calculate confidence intervals. [Float](../../../sql-reference/data-types/float.md).
+**Returned value**
 
-**Returned values**
+Returns a Tuple with two or four elements (if the optional `confidence_level` is specified): calculated t-statistic, calculated p-value, and optionally calculated confidence-interval-low and confidence-interval-high. [`Tuple(Float64, Float64)`](/sql-reference/data-types/tuple) or [`Tuple(Float64, Float64, Float64, Float64)`](/sql-reference/data-types/tuple)
 
-[Tuple](../../../sql-reference/data-types/tuple.md) with two or four elements (if the optional `confidence_level` is specified)
+**Examples**
 
-- calculated t-statistic. [Float64](../../../sql-reference/data-types/float.md).
-- calculated p-value. [Float64](../../../sql-reference/data-types/float.md).
-- calculated confidence-interval-low. [Float64](../../../sql-reference/data-types/float.md).
-- calculated confidence-interval-high. [Float64](../../../sql-reference/data-types/float.md).
+**Basic Welch's t-test**
 
-**Example**
+```sql title=Query
+CREATE TABLE welch_ttest (sample_data Float64, sample_index UInt8) ENGINE = Memory;
+INSERT INTO welch_ttest VALUES (20.3, 0), (22.1, 0), (21.9, 0), (18.9, 1), (20.3, 1), (19, 1);
 
-Input table:
-
-```text
-┌─sample_data─┬─sample_index─┐
-│        20.3 │            0 │
-│        22.1 │            0 │
-│        21.9 │            0 │
-│        18.9 │            1 │
-│        20.3 │            1 │
-│          19 │            1 │
-└─────────────┴──────────────┘
-```
-
-Query:
-
-```sql
 SELECT welchTTest(sample_data, sample_index) FROM welch_ttest;
 ```
 
-Result:
-
-```text
-┌─welchTTest(sample_data, sample_index)─────┐
-│ (2.7988719532211235,0.051807360348581945) │
-└───────────────────────────────────────────┘
+```response title=Response
+┌─welchTTest(sample_data, sample_index)──────┐
+│ (2.7988719532211235, 0.051807360348581945) │
+└────────────────────────────────────────────┘
 ```
+
+**With confidence level**
+
+```sql title=Query
+SELECT welchTTest(0.95)(sample_data, sample_index) FROM welch_ttest;
+```
+
+```response title=Response
+┌─welchTTest(0.95)(sample_data, sample_index)─────────────────────────────────────────┐
+│ (2.7988719532211235, 0.05180736034858519, -0.026294346671631885, 4.092961013338302) │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+
 
 **See Also**
 

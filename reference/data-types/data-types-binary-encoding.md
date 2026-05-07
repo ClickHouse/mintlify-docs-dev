@@ -1,11 +1,13 @@
 ---
 description: 'Documentation for the Data types binary encoding specification'
-sidebarTitle: 'Data types binary encoding specification.'
+sidebar_label: 'Data types binary encoding specification.'
 sidebar_position: 56
-old-slug: /sql-reference/data-types/data-types-binary-encoding
+slug: /sql-reference/data-types/data-types-binary-encoding
 title: 'Data types binary encoding specification'
 doc_type: 'reference'
 ---
+
+# Data types binary encoding specification
 
 This specification describes the binary format that can be used for binary encoding and decoding of ClickHouse data types. This format is used in `Dynamic` column [binary serialization](dynamic.md#binary-output-format) and can be used in input/output formats [RowBinaryWithNamesAndTypes](/interfaces/formats/RowBinaryWithNamesAndTypes) and [Native](/interfaces/formats/Native) under corresponding settings.
 
@@ -70,7 +72,7 @@ The table below describes how each data type is represented in binary format. Ea
 
 For type `JSON` byte `uint8_serialization_version` indicates the version of the serialization. Right now the version is always 0 but can change in future if new arguments will be introduced for `JSON` type.
 
-### Interval kind binary encoding 
+### Interval kind binary encoding {#interval-kind-binary-encoding}
 
 The table below describes how different interval kinds of `Interval` data type are encoded.
 
@@ -88,7 +90,7 @@ The table below describes how different interval kinds of `Interval` data type a
 | `Quarter`     | `0x09`          |
 | `Year`        | `0x1A`          |
 
-### Aggregate function parameter binary encoding 
+### Aggregate function parameter binary encoding {#aggregate-function-parameter-binary-encoding}
 
 The table below describes how parameters of `AggregateFunction` and `SimpleAggregateFunction` are encoded.
 The encoding of a parameter consists of 1 byte indicating the type of the parameter and the value itself.
@@ -100,8 +102,8 @@ The encoding of a parameter consists of 1 byte indicating the type of the parame
 | `Int64`                  | `0x02<var_int_value>`                                                                                                          |
 | `UInt128`                | `0x03<uint128_little_endian_value>`                                                                                            |
 | `Int128`                 | `0x04<int128_little_endian_value>`                                                                                             |
-| `UInt128`                | `0x05<uint128_little_endian_value>`                                                                                            |
-| `Int128`                 | `0x06<int128_little_endian_value>`                                                                                             |
+| `UInt256`                | `0x05<uint256_little_endian_value>`                                                                                            |
+| `Int256`                 | `0x06<int256_little_endian_value>`                                                                                             |
 | `Float64`                | `0x07<float64_little_endian_value>`                                                                                            |
 | `Decimal32`              | `0x08<var_uint_scale><int32_little_endian_value>`                                                                              |
 | `Decimal64`              | `0x09<var_uint_scale><int64_little_endian_value>`                                                                              |

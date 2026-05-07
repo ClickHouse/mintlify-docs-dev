@@ -1,12 +1,16 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/layouts/hierarchical
+slug: /sql-reference/statements/create/dictionary/layouts/hierarchical
 title: 'Hierarchical dictionaries'
+sidebar_label: 'Hierarchical'
+sidebar_position: 10
 description: 'Configure hierarchical dictionaries with parent-child key relationships.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-## Hierarchical dictionaries
+## Hierarchical dictionaries {#hierarchical-dictionaries}
 
 ClickHouse supports hierarchical dictionaries with a [numeric key](../attributes.md#numeric-key).
 
@@ -45,7 +49,7 @@ The [dictGetHierarchy](/sql-reference/functions/ext-dict-functions.md#dictGetHie
 For our example, the structure of the dictionary can be the following:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY regions_dict
@@ -60,8 +64,8 @@ LAYOUT(HASHED())
 LIFETIME(3600);
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <dictionary>
@@ -87,6 +91,6 @@ LIFETIME(3600);
 </dictionary>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>

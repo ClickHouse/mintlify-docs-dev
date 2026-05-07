@@ -1,48 +1,57 @@
 ---
 description: 'Applies bit-wise `OR` to a series of numbers.'
-sidebar_position: 152
-old-slug: /sql-reference/aggregate-functions/reference/groupbitor
+slug: /sql-reference/aggregate-functions/reference/groupbitor
 title: 'groupBitOr'
 doc_type: 'reference'
 ---
 
-Applies bit-wise `OR` to a series of numbers.
+Applies bitwise OR for series of numbers.
+    
+
+**Syntax**
 
 ```sql
 groupBitOr(expr)
 ```
 
+**Aliases**: `BIT_OR`
+
 **Arguments**
 
-`expr` – An expression that results in `UInt*` or `Int*` type.
+- `expr` — Expression of `(U)Int*` type. [`(U)Int*`](/sql-reference/data-types/int-uint)
+
 
 **Returned value**
 
-Value of the `UInt*` or `Int*` type.
+Returns a value of `(U)Int*` type. [`(U)Int*`](/sql-reference/data-types/int-uint)
 
-**Example**
+**Examples**
 
-Test data:
+**Bitwise OR example**
 
-```text
-binary     decimal
-00101100 = 44
-00011100 = 28
-00001101 = 13
-01010101 = 85
+```sql title=Query
+CREATE TABLE t (num UInt32) ENGINE = Memory;
+INSERT INTO t VALUES (44), (28), (13), (85);
+
+-- Test data:
+-- binary     decimal
+-- 00101100 = 44
+-- 00011100 = 28
+-- 00001101 = 13
+-- 01010101 = 85
+
+SELECT groupBitOr(num) FROM t;
 ```
 
-Query:
+```response title=Response
+-- Result:
+-- binary     decimal
+-- 01111101 = 125
 
-```sql
-SELECT groupBitOr(num) FROM t
+┌─groupBitOr(num)─┐
+│             125 │
+└─────────────────┘
 ```
 
-Where `num` is the column with the test data.
 
-Result:
 
-```text
-binary     decimal
-01111101 = 125
-```

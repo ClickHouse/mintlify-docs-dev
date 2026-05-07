@@ -1,8 +1,8 @@
 ---
 description: 'Documentation for Column'
-sidebarTitle: 'COLUMN'
+sidebar_label: 'COLUMN'
 sidebar_position: 37
-old-slug: /sql-reference/statements/alter/column
+slug: /sql-reference/statements/alter/column
 title: 'Column Manipulations'
 doc_type: 'reference'
 ---
@@ -32,7 +32,7 @@ The following actions are supported:
 - [MATERIALIZE COLUMN](#materialize-column) — Materializes the column in the parts where the column is missing.
 These actions are described in detail below.
 
-## ADD COLUMN 
+## ADD COLUMN {#add-column}
 
 ```sql
 ADD COLUMN [IF NOT EXISTS] name [type] [default_expr] [codec] [AFTER name_after | FIRST]
@@ -68,7 +68,7 @@ ToDrop  UInt32
 Added3  UInt32
 ```
 
-## DROP COLUMN 
+## DROP COLUMN {#drop-column}
 
 ```sql
 DROP COLUMN [IF EXISTS] name
@@ -78,9 +78,9 @@ Deletes the column with the name `name`. If the `IF EXISTS` clause is specified,
 
 Deletes data from the file system. Since this deletes entire files, the query is completed almost instantly.
 
-<Tip>
+:::tip
 You can't delete a column if it is referenced by [materialized view](/sql-reference/statements/create/view). Otherwise, it returns an error.
-</Tip>
+:::
 
 Example:
 
@@ -88,7 +88,7 @@ Example:
 ALTER TABLE visits DROP COLUMN browser
 ```
 
-## RENAME COLUMN 
+## RENAME COLUMN {#rename-column}
 
 ```sql
 RENAME COLUMN [IF EXISTS] name to new_name
@@ -104,7 +104,7 @@ Example:
 ALTER TABLE visits RENAME COLUMN webBrowser TO browser
 ```
 
-## CLEAR COLUMN 
+## CLEAR COLUMN {#clear-column}
 
 ```sql
 CLEAR COLUMN [IF EXISTS] name IN PARTITION partition_name
@@ -120,7 +120,7 @@ Example:
 ALTER TABLE visits CLEAR COLUMN browser IN PARTITION tuple()
 ```
 
-## COMMENT COLUMN 
+## COMMENT COLUMN {#comment-column}
 
 ```sql
 COMMENT COLUMN [IF EXISTS] name 'Text comment'
@@ -138,7 +138,7 @@ Example:
 ALTER TABLE visits COMMENT COLUMN browser 'This column shows the browser used for accessing the site.'
 ```
 
-## MODIFY COLUMN 
+## MODIFY COLUMN {#modify-column}
 
 ```sql
 MODIFY COLUMN [IF EXISTS] name [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
@@ -213,11 +213,11 @@ The `ALTER` query is atomic. For MergeTree tables it is also lock-free.
 
 The `ALTER` query for changing columns is replicated. The instructions are saved in ZooKeeper, then each replica applies them. All `ALTER` queries are run in the same order. The query waits for the appropriate actions to be completed on the other replicas. However, a query to change columns in a replicated table can be interrupted, and all actions will be performed asynchronously.
 
-<Note>
+:::note
 Please be careful when changing a Nullable column to Non-Nullable. Make sure it doesn't have any NULL values, otherwise it will cause problems when reading from it. In that case, the workaround would be to Kill the mutation and revert the column back to Nullable type.
-</Note>
+:::
 
-## MODIFY COLUMN REMOVE 
+## MODIFY COLUMN REMOVE {#modify-column-remove}
 
 Removes one of the column properties: `DEFAULT`, `ALIAS`, `MATERIALIZED`, `CODEC`, `COMMENT`, `TTL`, `SETTINGS`.
 
@@ -239,7 +239,7 @@ ALTER TABLE table_with_ttl MODIFY COLUMN column_ttl REMOVE TTL;
 
 - [REMOVE TTL](ttl.md).
 
-## MODIFY COLUMN MODIFY SETTING 
+## MODIFY COLUMN MODIFY SETTING {#modify-column-modify-setting}
 
 Modify a column setting.
 
@@ -257,7 +257,7 @@ Modify column's `max_compress_block_size` to `1MB`:
 ALTER TABLE table_name MODIFY COLUMN column_name MODIFY SETTING max_compress_block_size = 1048576;
 ```
 
-## MODIFY COLUMN RESET SETTING 
+## MODIFY COLUMN RESET SETTING {#modify-column-reset-setting}
 
 Reset a column setting, also removes the setting declaration in the column expression of the table's CREATE query.
 
@@ -275,7 +275,7 @@ Reset column setting `max_compress_block_size` to it's default value:
 ALTER TABLE table_name MODIFY COLUMN column_name RESET SETTING max_compress_block_size;
 ```
 
-## MATERIALIZE COLUMN 
+## MATERIALIZE COLUMN {#materialize-column}
 
 Materializes a column with a `DEFAULT` or `MATERIALIZED` value expression. When adding a materialized column using `ALTER TABLE table_name ADD COLUMN column_name MATERIALIZED`, existing rows without materialized values are not automatically filled. `MATERIALIZE COLUMN` statement can be used to rewrite existing column data after a `DEFAULT` or `MATERIALIZED` expression has been added or updated (which only updates the metadata but does not change existing data). Note that materializing a column in the sort key is an invalid operation because it could break the sort order.
 Implemented as a [mutation](/sql-reference/statements/alter/index.md#mutations).
@@ -333,9 +333,11 @@ SELECT groupArray(x), groupArray(s) FROM tmp;
 
 - [MATERIALIZED](/sql-reference/statements/create/view#materialized-view).
 
-## Limitations 
+## Limitations {#limitations}
 
 The `ALTER` query lets you create and delete separate elements (columns) in nested data structures, but not whole nested data structures. To add a nested data structure, you can add columns with a name like `name.nested_name` and the type `Array(T)`. A nested data structure is equivalent to multiple array columns with a name that has the same prefix before the dot.
+
+Renaming columns with dots in their names is partially supported. Dots are reserved for [Nested](/sql-reference/data-types/nested-data-structures/nested) sub-column access, so the prefix (parent name) must remain the same. Only the suffix (sub-column name) can be changed. For example, `a.b` can be renamed to `a.c`, but renaming `a.b` to `b.d` is not allowed because it changes the Nested parent prefix.
 
 There is no support for deleting columns in the primary key or the sampling key (columns that are used in the `ENGINE` expression). Changing the type for columns that are included in the primary key is only possible if this change does not cause the data to be modified (for example, you are allowed to add values to an Enum or to change a type from `DateTime` to `UInt32`).
 

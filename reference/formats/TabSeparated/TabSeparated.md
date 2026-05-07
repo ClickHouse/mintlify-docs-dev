@@ -4,14 +4,16 @@ description: 'Documentation for the TSV format'
 input_format: true
 keywords: ['TabSeparated', 'TSV']
 output_format: true
-old-slug: /interfaces/formats/TabSeparated
+slug: /interfaces/formats/TabSeparated
 title: 'TabSeparated'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge> <Badge intent="info">Alias: `TSV`</Badge>
+| Input | Output | Alias  |
+|-------|--------|--------|
+| ✔     | ✔      | `TSV`  |
 
-## Description 
+## Description {#description}
 
 In TabSeparated format, data is written by row. Each row contains values separated by tabs. Each value is followed by a tab, except the last value in the row, which is followed by a line feed. Strictly Unix line feeds are assumed everywhere. The last row also must contain a line feed at the end. Values are written in text format, without enclosing quotation marks, and with special characters escaped.
 
@@ -38,7 +40,7 @@ SELECT EventDate, count() AS c FROM test.hits GROUP BY EventDate WITH TOTALS ORD
 2014-03-23      1406958
 ```
 
-## Data formatting 
+## Data formatting {#tabseparated-data-formatting}
 
 Integer numbers are written in decimal form. Numbers can contain an extra "+" character at the beginning (ignored when parsing, and not recorded when formatting). Non-negative numbers can't contain the negative sign. When reading, it is allowed to parse an empty string as a zero, or (for signed types) a string consisting of just a minus sign as a zero. Numbers that do not fit into the corresponding data type may be parsed as a different number, without an error message.
 
@@ -68,7 +70,7 @@ The minimum set of characters that you need to escape when passing data in TabSe
 
 Only a small set of symbols are escaped. You can easily stumble onto a string value that your terminal will ruin in output.
 
-Arrays are written as a list of comma-separated values in square brackets. Number items in the array are formatted as normally. `Date` and `DateTime` types are written in single quotes. Strings are written in single quotes with the same escaping rules as above.
+Arrays are written as a list of comma-separated values in `[]`. Number items in the array are formatted as normally. `Date` and `DateTime` types are written in single quotes. Strings are written in single quotes with the same escaping rules as above.
 
 [NULL](/sql-reference/syntax.md) is formatted according to setting [format_tsv_null_representation](/operations/settings/settings-formats.md/#format_tsv_null_representation) (default value is `\N`).
 
@@ -101,9 +103,9 @@ SELECT * FROM nestedt FORMAT TSV
 1  [1]    ['a']
 ```
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using the following tsv file, named as `football.tsv`:
 
@@ -133,7 +135,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.tsv' FORMAT TabSeparated;
 ```
 
-### Reading data 
+### Reading data {#reading-data}
 
 Read data using the `TabSeparated` format:
 
@@ -165,7 +167,7 @@ The output will be in tab separated format:
 2022-05-07      2021    Walsall Swindon Town    0       3
 ```
 
-## Format settings 
+## Format settings {#format-settings}
 
 | Setting                                                                                                                                                          | Description                                                                                                                                                                                                                                    | Default |
 |------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|

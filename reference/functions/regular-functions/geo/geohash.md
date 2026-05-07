@@ -1,18 +1,18 @@
 ---
 description: 'Documentation for Geohash'
-sidebarTitle: 'Geohash'
-old-slug: /sql-reference/functions/geo/geohash
+sidebar_label: 'Geohash'
+slug: /sql-reference/functions/geo/geohash
 title: 'Functions for Working with Geohash'
 doc_type: 'reference'
 ---
 
-## Geohash 
+## Geohash {#geohash}
 
 [Geohash](https://en.wikipedia.org/wiki/Geohash) is the geocode system, which subdivides Earth's surface into buckets of grid shape and encodes each cell into a short string of letters and digits. It is a hierarchical data structure, so the longer the geohash string is, the more precise the geographic location will be.
 
 If you need to manually convert geographic coordinates to geohash strings, you can use [geohash.org](http://geohash.co/)
 
-## geohashEncode 
+## geohashEncode {#geohashencode}
 
 Encodes latitude and longitude as a [geohash](#geohash)-string.
 
@@ -28,10 +28,10 @@ geohashEncode(longitude, latitude, [precision])
 - `latitude` — Latitude part of the coordinate you want to encode. Floating in range `[-90°, 90°]`. [Float](../../data-types/float.md).
 - `precision` (optional) — Length of the resulting encoded string. Defaults to `12`. Integer in the range `[1, 12]`. [Int8](../../data-types/int-uint.md).
 
-<Note>
+:::note
 - All coordinate parameters must be of the same type: either `Float32` or `Float64`.
 - For the `precision` parameter, any value less than `1` or greater than `12` is silently converted to `12`.
-</Note>
+:::
 
 **Returned values**
 
@@ -53,7 +53,7 @@ Result:
 └──────────────┘
 ```
 
-## geohashDecode 
+## geohashDecode {#geohashdecode}
 
 Decodes any [geohash](#geohash)-encoded string into longitude and latitude.
 
@@ -83,7 +83,7 @@ SELECT geohashDecode('ezs42') AS res;
 └─────────────────────────────────┘
 ```
 
-## geohashesInBox 
+## geohashesInBox {#geohashesinbox}
 
 Returns an array of [geohash](#geohash)-encoded strings of given precision that fall inside and intersect boundaries of given box, basically a 2D grid flattened into array.
 
@@ -101,18 +101,18 @@ geohashesInBox(longitude_min, latitude_min, longitude_max, latitude_max, precisi
 - `latitude_max` — Maximum latitude. Range: `[-90°, 90°]`. [Float](../../data-types/float.md).
 - `precision` — Geohash precision. Range: `[1, 12]`. [UInt8](../../data-types/int-uint.md).
 
-<Note>
+:::note    
 All coordinate parameters must be of the same type: either `Float32` or `Float64`.
-</Note>
+:::
 
 **Returned values**
 
 - Array of precision-long strings of geohash-boxes covering provided area, you should not rely on order of items. [Array](../../data-types/array.md)([String](../../data-types/string.md)).
 - `[]` - Empty array if minimum latitude and longitude values aren't less than corresponding maximum values.
 
-<Note>
+:::note    
 Function throws an exception if resulting array is over 10'000'000 items long.
-</Note>
+:::
 
 **Example**
 

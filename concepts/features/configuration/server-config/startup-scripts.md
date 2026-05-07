@@ -1,11 +1,13 @@
 ---
 description: 'Guide to configuring and using SQL startup scripts in ClickHouse for
   automatic schema creation and migrations'
-sidebarTitle: 'Startup scripts'
-old-slug: /operations/startup-scripts
+sidebar_label: 'Startup scripts'
+slug: /operations/startup-scripts
 title: 'Startup scripts'
 doc_type: 'guide'
 ---
+
+# Startup scripts
 
 ClickHouse can run arbitrary SQL queries from the server configuration during startup. This can be useful for migrations or automatic schema creation.
 
@@ -33,6 +35,6 @@ the server will not start if an error occurs during script execution.
 
 You can specify a conditional query in the config. In that case, the corresponding query executes only when the condition query returns the value `1` or `true`.
 
-<Note>
+:::note
 If the condition query returns any other value than `1` or `true`, the result will be interpreted as `false`, and the corresponding won't be executed.
-</Note>
+:::

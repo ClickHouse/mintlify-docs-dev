@@ -1,13 +1,13 @@
 ---
 description: 'Documentation for Clickhouse Compressor'
-old-slug: /operations/utilities/clickhouse-compressor
+slug: /operations/utilities/clickhouse-compressor
 title: 'clickhouse-compressor'
 doc_type: 'reference'
 ---
 
 Simple program for data compression and decompression.
 
-### Examples
+### Examples {#examples}
 
 Compress data with LZ4:
 ```bash

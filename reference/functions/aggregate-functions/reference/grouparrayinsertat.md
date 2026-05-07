@@ -1,93 +1,88 @@
 ---
 description: 'Inserts a value into the array at the specified position.'
-sidebar_position: 140
-old-slug: /sql-reference/aggregate-functions/reference/grouparrayinsertat
+slug: /sql-reference/aggregate-functions/reference/grouparrayinsertat
 title: 'groupArrayInsertAt'
 doc_type: 'reference'
 ---
 
 Inserts a value into the array at the specified position.
 
+If in one query several values are inserted into the same position, the function behaves in the following ways:
+- If a query is executed in a single thread, the first one of the inserted values is used.
+- If a query is executed in multiple threads, the resulting value is an undetermined one of the inserted values.
+    
+
 **Syntax**
 
 ```sql
-groupArrayInsertAt(default_x, size)(x, pos)
+groupArrayInsertAt(default_x, size)([x, pos])
 ```
 
-If in one query several values are inserted into the same position, the function behaves in the following ways:
+**Parameters**
 
-- If a query is executed in a single thread, the first one of the inserted values is used.
-- If a query is executed in multiple threads, the resulting value is an undetermined one of the inserted values.
+- `default_x` — Optional. Default value for substituting in empty positions. [`Any`](/sql-reference/data-types)
+- `size` — Optional. Length of the resulting array. When using this parameter, the default value `default_x` must be specified. [`UInt32`](/sql-reference/data-types/int-uint)
+
 
 **Arguments**
 
-- `x` — Value to be inserted. [Expression](/sql-reference/syntax#expressions) resulting in one of the [supported data types](../../../sql-reference/data-types/index.md).
-- `pos` — Position at which the specified element `x` is to be inserted. Index numbering in the array starts from zero. [UInt32](/sql-reference/data-types/int-uint#integer-ranges).
-- `default_x` — Default value for substituting in empty positions. Optional parameter. [Expression](/sql-reference/syntax#expressions) resulting in the data type configured for the `x` parameter. If `default_x` is not defined, the [default values](/sql-reference/statements/create/table) are used.
-- `size` — Length of the resulting array. Optional parameter. When using this parameter, the default value `default_x` must be specified. [UInt32](/sql-reference/data-types/int-uint#integer-ranges).
+- `x` — Value to be inserted. [`Any`](/sql-reference/data-types)
+- `pos` — Position at which the specified element `x` is to be inserted. Index numbering in the array starts from zero. [`UInt32`](/sql-reference/data-types/int-uint)
+
 
 **Returned value**
 
-- Array with inserted values.
+Returns an array with inserted values. [`Array`](/sql-reference/data-types/array)
 
-Type: [Array](/sql-reference/data-types/array).
+**Examples**
 
-**Example**
+**Basic usage without parameters**
 
-Query:
-
-```sql
+```sql title=Query
 SELECT groupArrayInsertAt(toString(number), number * 2) FROM numbers(5);
 ```
 
-Result:
-
-```text
+```response title=Response
 ┌─groupArrayInsertAt(toString(number), multiply(number, 2))─┐
 │ ['0','','1','','2','','3','','4']                         │
 └───────────────────────────────────────────────────────────┘
 ```
 
-Query:
+**Usage with default value parameter**
 
-```sql
+```sql title=Query
 SELECT groupArrayInsertAt('-')(toString(number), number * 2) FROM numbers(5);
 ```
 
-Result:
-
-```text
+```response title=Response
 ┌─groupArrayInsertAt('-')(toString(number), multiply(number, 2))─┐
 │ ['0','-','1','-','2','-','3','-','4']                          │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-Query:
+**Usage with default value and size parameters**
 
-```sql
+```sql title=Query
 SELECT groupArrayInsertAt('-', 5)(toString(number), number * 2) FROM numbers(5);
 ```
 
-Result:
-
-```text
+```response title=Response
 ┌─groupArrayInsertAt('-', 5)(toString(number), multiply(number, 2))─┐
 │ ['0','-','1','-','2']                                             │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-Multi-threaded insertion of elements into one position.
+**Multi-threaded insertion into same position**
 
-Query:
-
-```sql
+```sql title=Query
 SELECT groupArrayInsertAt(number, 0) FROM numbers_mt(10) SETTINGS max_block_size = 1;
 ```
 
-As a result of this query you get random integer in the `[0,9]` range. For example:
-
-```text
+```response title=Response
 ┌─groupArrayInsertAt(number, 0)─┐
 │ [7]                           │
 └───────────────────────────────┘
 ```
+
+
+

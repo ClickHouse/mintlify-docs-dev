@@ -1,17 +1,21 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/odbc
+slug: /sql-reference/statements/create/dictionary/sources/odbc
 title: 'ODBC dictionary source'
+sidebar_position: 6
+sidebar_label: 'ODBC'
 description: 'Configure an ODBC connection as a dictionary source in ClickHouse.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 You can use this method to connect any database that has an ODBC driver.
 
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(ODBC(
@@ -23,8 +27,8 @@ SOURCE(ODBC(
 ))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -38,7 +42,7 @@ SOURCE(ODBC(
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
@@ -53,19 +57,19 @@ Setting fields:
 | `background_reconnect` | Reconnect to replica in background if connection fails. Optional. |
 | `query` | The custom query. Optional. |
 
-<Note>
-**The `table` and `query` fields cannot be used together. And either one of the `table` or `query` fields must be declared.**
-</Note>
+:::note
+The `table` and `query` fields cannot be used together. And either one of the `table` or `query` fields must be declared.
+:::
 
 ClickHouse receives quoting symbols from ODBC-driver and quote all settings in queries to driver, so it's necessary to set table name accordingly to table name case in database.
 
 If you have a problems with encodings when using Oracle, see the corresponding [FAQ](/knowledgebase/oracle-odbc) item.
 
-### Known Vulnerability of the ODBC Dictionary Functionality
+### Known Vulnerability of the ODBC Dictionary Functionality {#known-vulnerability-of-the-odbc-dictionary-functionality}
 
-<Note>
-**When connecting to the database through the ODBC driver connection parameter `Servername` can be substituted. In this case values of `USERNAME` and `PASSWORD` from `odbc.ini` are sent to the remote server and can be compromised.**
-</Note>
+:::note
+When connecting to the database through the ODBC driver connection parameter `Servername` can be substituted. In this case values of `USERNAME` and `PASSWORD` from `odbc.ini` are sent to the remote server and can be compromised.
+:::
 
 **Example of insecure use**
 
@@ -90,7 +94,7 @@ SELECT * FROM odbc('DSN=gregtest;Servername=some-server.com', 'test_db');
 
 ODBC driver will send values of `USERNAME` and `PASSWORD` from `odbc.ini` to `some-server.com`.
 
-### Example of Connecting Postgresql
+### Example of Connecting Postgresql {#example-of-connecting-postgresql}
 
 Ubuntu OS.
 
@@ -124,7 +128,7 @@ Configuring `/etc/odbc.ini` (or `~/.odbc.ini` if you signed in under a user that
 The dictionary configuration in ClickHouse:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY table_name (
@@ -137,8 +141,8 @@ LAYOUT(HASHED())
 LIFETIME(MIN 300 MAX 360)
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <clickhouse>
@@ -173,13 +177,13 @@ LIFETIME(MIN 300 MAX 360)
 </clickhouse>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
 You may need to edit `odbc.ini` to specify the full path to the library with the driver `DRIVER=/usr/local/lib/psqlodbcw.so`.
 
-### Example of Connecting MS SQL Server
+### Example of Connecting MS SQL Server {#example-of-connecting-ms-sql-server}
 
 Ubuntu OS.
 
@@ -237,7 +241,7 @@ Remarks:
 Configuring the dictionary in ClickHouse:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY test (
@@ -250,8 +254,8 @@ LAYOUT(FLAT())
 LIFETIME(MIN 300 MAX 360)
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <clickhouse>
@@ -287,5 +291,5 @@ LIFETIME(MIN 300 MAX 360)
 </clickhouse>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>

@@ -1,34 +1,36 @@
 ---
 description: 'Creates a ClickHouse database with tables from PostgreSQL database.'
-sidebarTitle: 'MaterializedPostgreSQL'
+sidebar_label: 'MaterializedPostgreSQL'
 sidebar_position: 60
-old-slug: /engines/database-engines/materialized-postgresql
+slug: /engines/database-engines/materialized-postgresql
 title: 'MaterializedPostgreSQL'
 doc_type: 'reference'
 ---
 
-import {ExperimentalBadge} from '/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx'
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
+import ExperimentalBadge from '@theme/badges/ExperimentalBadge';
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
+
+# MaterializedPostgreSQL
 
 <ExperimentalBadge/>
 <CloudNotSupportedBadge/>
 
-<Note>
+:::note
 ClickHouse Cloud users are recommended to use [ClickPipes](/integrations/clickpipes) for PostgreSQL replication to ClickHouse. This natively supports high-performance Change Data Capture (CDC) for PostgreSQL.
-</Note>
+:::
 
 Creates a ClickHouse database with tables from PostgreSQL database. Firstly, database with engine `MaterializedPostgreSQL` creates a snapshot of PostgreSQL database and loads required tables. Required tables can include any subset of tables from any subset of schemas from specified database. Along with the snapshot database engine acquires LSN and once initial dump of tables is performed - it starts pulling updates from WAL. After database is created, newly added tables to PostgreSQL database are not automatically added to replication. They have to be added manually with `ATTACH TABLE db.table` query.
 
 Replication is implemented with PostgreSQL Logical Replication Protocol, which does not allow to replicate DDL, but allows to know whether replication breaking changes happened (column type changes, adding/removing columns). Such changes are detected and according tables stop receiving updates. In this case you should use `ATTACH`/ `DETACH PERMANENTLY` queries to reload table completely. If DDL does not break replication (for example, renaming a column) table will still receive updates (insertion is done by position).
 
-<Note>
+:::note
 This database engine is experimental. To use it, set `allow_experimental_database_materialized_postgresql` to 1 in your configuration files or by using the `SET` command:
 ```sql
 SET allow_experimental_database_materialized_postgresql=1
 ```
-</Note>
+:::
 
-## Creating a database 
+## Creating a database {#creating-a-database}
 
 ```sql
 CREATE DATABASE [IF NOT EXISTS] db_name [ON CLUSTER cluster]
@@ -42,7 +44,7 @@ ENGINE = MaterializedPostgreSQL('host:port', 'database', 'user', 'password') [SE
 - `user` — PostgreSQL user.
 - `password` — User password.
 
-## Example of use 
+## Example of use {#example-of-use}
 
 ```sql
 CREATE DATABASE postgres_db
@@ -57,7 +59,7 @@ SHOW TABLES FROM postgres_db;
 SELECT * FROM postgresql_db.postgres_table;
 ```
 
-## Dynamically adding new tables to replication 
+## Dynamically adding new tables to replication {#dynamically-adding-table-to-replication}
 
 After `MaterializedPostgreSQL` database is created, it does not automatically detect new tables in according PostgreSQL database. Such tables can be added manually:
 
@@ -65,11 +67,11 @@ After `MaterializedPostgreSQL` database is created, it does not automatically de
 ATTACH TABLE postgres_database.new_table;
 ```
 
-<Warning>
+:::warning
 Before version 22.1, adding a table to replication left a non-removed temporary replication slot (named `{db_name}_ch_replication_slot_tmp`). If attaching tables in ClickHouse version before 22.1, make sure to delete it manually (`SELECT pg_drop_replication_slot('{db_name}_ch_replication_slot_tmp')`). Otherwise disk usage will grow. This issue is fixed in 22.1.
-</Warning>
+:::
 
-## Dynamically removing tables from replication 
+## Dynamically removing tables from replication {#dynamically-removing-table-from-replication}
 
 It is possible to remove specific tables from replication:
 
@@ -77,7 +79,7 @@ It is possible to remove specific tables from replication:
 DETACH TABLE postgres_database.table_to_remove PERMANENTLY;
 ```
 
-## PostgreSQL schema 
+## PostgreSQL schema {#schema}
 
 PostgreSQL [schema](https://www.postgresql.org/docs/9.1/ddl-schemas.html) can be configured in 3 ways (starting from version 21.12).
 
@@ -124,7 +126,7 @@ SELECT * FROM database1.`schema2.table2`;
 
 Warning: for this case dots in table name are not allowed.
 
-## Requirements 
+## Requirements {#requirements}
 
 1. The [wal_level](https://www.postgresql.org/docs/current/runtime-config-wal.html) setting must have a value `logical` and `max_replication_slots` parameter must have a value at least `2` in the PostgreSQL config file.
 
@@ -155,13 +157,13 @@ FROM pg_class
 WHERE oid = 'postgres_table'::regclass;
 ```
 
-<Note>
+:::note
 Replication of [**TOAST**](https://www.postgresql.org/docs/9.5/storage-toast.html) values is not supported. The default value for the data type will be used.
-</Note>
+:::
 
-## Settings 
+## Settings {#settings}
 
-### `materialized_postgresql_tables_list` 
+### `materialized_postgresql_tables_list` {#materialized-postgresql-tables-list}
 
     Sets a comma-separated list of PostgreSQL database tables, which will be replicated via [MaterializedPostgreSQL](../../engines/database-engines/materialized-postgresql.md) database engine.
 
@@ -173,15 +175,15 @@ Replication of [**TOAST**](https://www.postgresql.org/docs/9.5/storage-toast.htm
 
     Default value: empty list — means whole PostgreSQL database will be replicated.
 
-### `materialized_postgresql_schema` 
+### `materialized_postgresql_schema` {#materialized-postgresql-schema}
 
     Default value: empty string. (Default schema is used)
 
-### `materialized_postgresql_schema_list` 
+### `materialized_postgresql_schema_list` {#materialized-postgresql-schema-list}
 
     Default value: empty list. (Default schema is used)
 
-### `materialized_postgresql_max_block_size` 
+### `materialized_postgresql_max_block_size` {#materialized-postgresql-max-block-size}
 
     Sets the number of rows collected in memory before flushing data into PostgreSQL database table.
 
@@ -191,11 +193,11 @@ Replication of [**TOAST**](https://www.postgresql.org/docs/9.5/storage-toast.htm
 
     Default value: `65536`.
 
-### `materialized_postgresql_replication_slot` 
+### `materialized_postgresql_replication_slot` {#materialized-postgresql-replication-slot}
 
     A user-created replication slot. Must be used together with `materialized_postgresql_snapshot`.
 
-### `materialized_postgresql_snapshot` 
+### `materialized_postgresql_snapshot` {#materialized-postgresql-snapshot}
 
     A text string identifying a snapshot, from which [initial dump of PostgreSQL tables](../../engines/database-engines/materialized-postgresql.md) will be performed. Must be used together with `materialized_postgresql_replication_slot`.
 
@@ -213,14 +215,14 @@ Replication of [**TOAST**](https://www.postgresql.org/docs/9.5/storage-toast.htm
     ALTER DATABASE postgres_database MODIFY SETTING materialized_postgresql_max_block_size = <new_size>;
     ```
 
-### `materialized_postgresql_use_unique_replication_consumer_identifier` 
+### `materialized_postgresql_use_unique_replication_consumer_identifier` {#materialized_postgresql_use_unique_replication_consumer_identifier}
 
 Use a unique replication consumer identifier for replication. Default: `0`.
 If set to `1`, allows to setup several `MaterializedPostgreSQL` tables pointing to the same `PostgreSQL` table.
 
-## Notes 
+## Notes {#notes}
 
-### Failover of the logical replication slot 
+### Failover of the logical replication slot {#logical-replication-slot-failover}
 
 Logical Replication Slots which exist on the primary are not available on standby replicas.
 So if there is a failover, new primary (the old physical standby) won't be aware of any slots which were existing with old primary. This will lead to a broken replication from PostgreSQL.
@@ -274,7 +276,7 @@ Please note that this should be used only if it is actually needed. If there is 
     kubectl exec acid-demo-cluster-0 -c postgres -- su postgres -c 'patronictl failover --candidate acid-demo-cluster-1 --force'
     ```
 
-### Required permissions 
+### Required permissions {#required-permissions}
 
 1. [CREATE PUBLICATION](https://postgrespro.ru/docs/postgresql/14/sql-createpublication) -- create query privilege.
 

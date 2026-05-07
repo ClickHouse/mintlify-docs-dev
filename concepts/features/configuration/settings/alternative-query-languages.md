@@ -1,23 +1,24 @@
 ---
-old-slug: /guides/developer/alternative-query-languages
-title: 'Alternative Query Languages'
+slug: /guides/developer/alternative-query-languages
+sidebar_label: 'Alternative query languages'
+title: 'Alternative query languages'
 description: 'Use alternative query languages in ClickHouse'
 keywords: ['alternative query languages', 'query dialects', 'MySQL dialect', 'PostgreSQL dialect', 'developer guide']
 doc_type: 'reference'
 ---
 
-import {ExperimentalBadge} from '/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx'
+import ExperimentalBadge from '@theme/badges/ExperimentalBadge';
 
 Besides standard SQL, ClickHouse supports various alternative query languages for querying data.
 
 The currently supported dialects are:
-- `clickhouse`: The default [SQL dialect](/sql-reference) of ClickHouse
+- `clickhouse`: The default [SQL dialect](../../chdb/reference/sql-reference.md) of ClickHouse
 - `prql`: [Pipelined Relational Query Language (PRQL)](https://prql-lang.org/)
 - `kusto`: [Kusto Query Language (KQL)](https://learn.microsoft.com/en-us/azure/data-explorer/kusto/query)
 
 Which query language is used is controlled by setting `dialect`.
 
-## Standard SQL
+## Standard SQL {#standard-sql}
 
 Standard SQL is the default query language of ClickHouse.
 
@@ -25,7 +26,7 @@ Standard SQL is the default query language of ClickHouse.
 SET dialect = 'clickhouse'
 ```
 
-## Pipelined relational query language (PRQL)
+## Pipelined relational query language (PRQL) {#pipelined-relational-query-language-prql}
 
 <ExperimentalBadge/>
 
@@ -48,7 +49,7 @@ aggregate {
 
 Under the hood, ClickHouse uses transpilation from PRQL to SQL to run PRQL queries.
 
-## Kusto query language (KQL)
+## Kusto query language (KQL) {#kusto-query-language-kql}
 
 <ExperimentalBadge/>
 

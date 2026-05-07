@@ -1,15 +1,17 @@
 ---
 description: 'This engine allows integrating ClickHouse with Redis.'
-sidebarTitle: 'Redis table engine'
+sidebar_label: 'Redis'
 sidebar_position: 175
-old-slug: /engines/table-engines/integrations/redis
+slug: /engines/table-engines/integrations/redis
 title: 'Redis table engine'
 doc_type: 'guide'
 ---
 
+# Redis table engine
+
 This engine allows integrating ClickHouse with [Redis](https://redis.io/). For Redis takes kv model, we strongly recommend you only query it in a point way, such as `where k=xx` or `where k in (xx, xx)`.
 
-## Creating a table 
+## Creating a table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name
@@ -29,18 +31,18 @@ PRIMARY KEY(primary_key_name);
 - `pool_size` — Redis max connection pool size, default is 16.
 - `primary_key_name` - any column name in the column list.
 
-<Note title="Serialization">
+:::note Serialization
 `PRIMARY KEY` supports only one column. The primary key will be serialized in binary as a Redis key.
 Columns other than the primary key will be serialized in binary as Redis value in corresponding order.
-</Note>
+:::
 
 Arguments also can be passed using [named collections](/operations/named-collections.md). In this case `host` and `port` should be specified separately. This approach is recommended for production environment. At this moment, all parameters passed using named collections to redis are required.
 
-<Note title="Filtering">
+:::note Filtering
 Queries with `key equals` or `in filtering` will be optimized to multi keys lookup from Redis. If queries without filtering key full table scan will happen which is a heavy operation.
-</Note>
+:::
 
-## Usage example 
+## Usage example {#usage-example}
 
 Create a table in ClickHouse using `Redis` engine with plain arguments:
 
@@ -148,7 +150,7 @@ Join with other tables.
 SELECT * FROM redis_table JOIN merge_tree_table ON merge_tree_table.key=redis_table.key;
 ```
 
-## Limitations 
+## Limitations {#limitations}
 
 Redis engine also supports scanning queries, such as `where k > xx`, but it has some limitations:
 1. Scanning query may produce some duplicated keys in a very rare case when it is rehashing. See details in [Redis Scan](https://github.com/redis/redis/blob/e4d183afd33e0b2e6e8d1c79a832f678a04a7886/src/dict.c#L1186-L1269).

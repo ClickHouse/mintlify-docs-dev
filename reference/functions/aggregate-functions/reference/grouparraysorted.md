@@ -1,45 +1,58 @@
 ---
 description: 'Returns an array with the first N items in ascending order.'
-sidebar_position: 146
-old-slug: /sql-reference/aggregate-functions/reference/grouparraysorted
+slug: /sql-reference/aggregate-functions/reference/grouparraysorted
 title: 'groupArraySorted'
 doc_type: 'reference'
 ---
 
 Returns an array with the first N items in ascending order.
+    
+
+**Syntax**
 
 ```sql
 groupArraySorted(N)(column)
 ```
 
+**Parameters**
+
+- `N` — The number of elements to return. [`UInt64`](/sql-reference/data-types/int-uint)
+
+
 **Arguments**
 
-- `N` – The number of elements to return.
+- `column` — Column for which to group into an array. [`Any`](/sql-reference/data-types)
 
-- `column` – The value (Integer, String, Float and other Generic types).
 
-**Example**
+**Returned value**
 
-Gets the first 10 numbers:
+Returns an array with the first N items in ascending order. [`Array`](/sql-reference/data-types/array)
 
-```sql
-SELECT groupArraySorted(10)(number) FROM numbers(100)
+**Examples**
+
+**Getting first 10 numbers**
+
+```sql title=Query
+SELECT groupArraySorted(10)(number) FROM numbers(100);
 ```
 
-```text
+```response title=Response
 ┌─groupArraySorted(10)(number)─┐
 │ [0,1,2,3,4,5,6,7,8,9]        │
 └──────────────────────────────┘
 ```
 
-Gets all the String implementations of all numbers in column:
+**String sorting example**
 
-```sql
+```sql title=Query
 SELECT groupArraySorted(5)(str) FROM (SELECT toString(number) AS str FROM numbers(5));
 ```
 
-```text
+```response title=Response
 ┌─groupArraySorted(5)(str)─┐
 │ ['0','1','2','3','4']    │
 └──────────────────────────┘
 ```
+
+
+

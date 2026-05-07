@@ -1,17 +1,16 @@
 ---
 description: 'Documentation for Manipulating Column Statistics'
-sidebarTitle: 'STATISTICS'
+sidebar_label: 'STATISTICS'
 sidebar_position: 45
-old-slug: /sql-reference/statements/alter/statistics
+slug: /sql-reference/statements/alter/statistics
 title: 'Manipulating Column Statistics'
 doc_type: 'reference'
 ---
 
-import {ExperimentalBadge} from '/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx'
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
 
+# Manipulating Column Statistics
 
-<ExperimentalBadge/>
 <CloudNotSupportedBadge/>
 
 The following operations are available:
@@ -30,7 +29,7 @@ The first two commands are lightweight in a sense that they only change metadata
 
 Also, they are replicated, syncing statistics metadata via ZooKeeper.
 
-## Example: 
+## Example: {#example}
 
 Adding two statistics types to two columns:
 
@@ -38,6 +37,12 @@ Adding two statistics types to two columns:
 ALTER TABLE t1 MODIFY STATISTICS c, d TYPE TDigest, Uniq;
 ```
 
-<Note>
+Adding NullCount statistics to a Nullable column:
+
+```sql
+ALTER TABLE t1 ADD STATISTICS nullable_col TYPE NullCount;
+```
+
+:::note
 Statistic are supported only for [`*MergeTree`](../../../engines/table-engines/mergetree-family/mergetree.md) engine tables (including [replicated](../../../engines/table-engines/mergetree-family/replication.md) variants).
-</Note>
+:::

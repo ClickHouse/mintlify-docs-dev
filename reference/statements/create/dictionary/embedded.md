@@ -1,10 +1,13 @@
 ---
 description: 'Built-in geobase dictionaries in ClickHouse'
-old-slug: /sql-reference/statements/create/dictionary/embedded
+sidebar_label: 'Embedded dictionaries'
+sidebar_position: 6
+slug: /sql-reference/statements/create/dictionary/embedded
 title: 'Embedded (geobase) dictionaries'
 doc_type: 'reference'
 ---
 
+import SelfManaged from '@site/docs/_snippets/_self_managed_only_no_roadmap.md';
 
 <SelfManaged />
 

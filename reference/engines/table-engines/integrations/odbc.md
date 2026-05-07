@@ -1,13 +1,15 @@
 ---
 description: 'Allows ClickHouse to connect to external databases via ODBC.'
-sidebarTitle: 'ODBC table engine'
+sidebar_label: 'ODBC'
 sidebar_position: 150
-old-slug: /engines/table-engines/integrations/odbc
+slug: /engines/table-engines/integrations/odbc
 title: 'ODBC table engine'
 doc_type: 'reference'
 ---
 
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
+
+# ODBC table engine
 
 <CloudNotSupportedBadge/>
 
@@ -17,7 +19,7 @@ To safely implement ODBC connections, ClickHouse uses a separate program `clickh
 
 This engine supports the [Nullable](../../../sql-reference/data-types/nullable.md) data type.
 
-## Creating a table 
+## Creating a table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -34,7 +36,7 @@ See a detailed description of the [CREATE TABLE](/sql-reference/statements/creat
 The table structure can differ from the source table structure:
 
 - Column names should be the same as in the source table, but you can use just some of these columns and in any order.
-- Column types may differ from those in the source table. ClickHouse tries to [cast](/sql-reference/functions/type-conversion-functions#cast) values to the ClickHouse data types.
+- Column types may differ from those in the source table. ClickHouse tries to [cast](/sql-reference/functions/type-conversion-functions#CAST) values to the ClickHouse data types.
 - The [external_table_functions_use_nulls](/operations/settings/settings#external_table_functions_use_nulls) setting defines how to handle Nullable columns. Default value: 1. If 0, the table function does not make Nullable columns and inserts default values instead of nulls. This is also applicable for NULL values inside arrays.
 
 **Engine Parameters**
@@ -45,7 +47,7 @@ The table structure can differ from the source table structure:
 
 These parameters can also be passed using [named collections](operations/named-collections.md).
 
-## Usage example 
+## Usage example {#usage-example}
 
 **Retrieving data from the local MySQL installation via ODBC**
 
@@ -134,7 +136,7 @@ SELECT * FROM odbc_t
 └────────┴────────────────┘
 ```
 
-## See also 
+## See also {#see-also}
 
-- [ODBC dictionaries](/sql-reference/dictionaries#mysql)
+- [ODBC dictionaries](/sql-reference/statements/create/dictionary/sources/odbc)
 - [ODBC table function](../../../sql-reference/table-functions/odbc.md)

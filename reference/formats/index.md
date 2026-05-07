@@ -1,5 +1,5 @@
 ---
-old-slug: /sql-reference/formats
+slug: /sql-reference/formats
 title: 'Formats for Input and Output Data'
 description: 'Supported input and output formats'
 doc_type: 'reference'

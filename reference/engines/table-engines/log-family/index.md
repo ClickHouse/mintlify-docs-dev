@@ -1,14 +1,15 @@
 ---
 description: 'Documentation for the Log engine family'
-sidebarTitle: 'Log family'
+sidebar_label: 'Log family'
 sidebar_position: 20
-old-slug: /engines/table-engines/log-family/
+slug: /engines/table-engines/log-family/
 title: 'Log engine family'
 doc_type: 'guide'
 ---
 
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
 
+# Log table engine family
 
 <CloudNotSupportedBadge/>
 
@@ -24,11 +25,11 @@ Engines of the family:
 
 `Log` family table engines can store data to [HDFS](/engines/table-engines/integrations/hdfs) or [S3](/engines/table-engines/mergetree-family/mergetree.md/#table_engine-mergetree-s3) distributed file systems.
 
-<Warning title="This engine is not for log data.">
+:::warning This engine is not for log data.
 Despite the name, *Log table engines are not meant for the storage of log data.  They should only be used for small volumes which need to be written quickly.
-</Warning>
+:::
 
-## Common properties 
+## Common properties {#common-properties}
 
 Engines:
 
@@ -50,7 +51,7 @@ Engines:
 
     You can get a table with corrupted data if something breaks the write operation, for example, abnormal server shutdown.
 
-## Differences 
+## Differences {#differences}
 
 The `TinyLog` engine is the simplest in the family and provides the poorest functionality and lowest efficiency. The `TinyLog` engine does not support parallel data reading by several threads in a single query. It reads data slower than other engines in the family that support parallel reading from a single query and it uses almost as many file descriptors as the `Log` engine because it stores each column in a separate file. Use it only in simple scenarios.
 

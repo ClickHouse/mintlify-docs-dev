@@ -3,17 +3,19 @@ description: 'The result of the `cramersV` function ranges from 0 (corresponding
   no association between the variables) to 1 and can reach 1 only when each value
   is completely determined by the other. It may be viewed as the association between
   two variables as a percentage of their maximum possible variation.'
-sidebar_position: 127
-old-slug: /sql-reference/aggregate-functions/reference/cramersv
+slug: /sql-reference/aggregate-functions/reference/cramersv
 title: 'cramersV'
 doc_type: 'reference'
 ---
 
-[Cramer's V](https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V) (sometimes referred to as Cramer's phi) is a measure of association between two columns in a table. The result of the `cramersV` function ranges from 0 (corresponding to no association between the variables) to 1 and can reach 1 only when each value is completely determined by the other. It may be viewed as the association between two variables as a percentage of their maximum possible variation.
+[Cramer's V](https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V) (sometimes referred to as Cramer's phi) is a measure of association between two columns in a table.
+The result of the `cramersV` function ranges from 0 (corresponding to no association between the variables) to 1 and can reach 1 only when each value is completely determined by the other.
+It may be viewed as the association between two variables as a percentage of their maximum possible variation.
 
-<Note>
-For a bias corrected version of Cramer's V see: [cramersVBiasCorrected](./cramersvbiascorrected.md)
-</Note>
+:::note
+For a bias corrected version of Cramer's V see: [cramersVBiasCorrected](/sql-reference/aggregate-functions/reference/cramersvbiascorrected)
+:::
+    
 
 **Syntax**
 
@@ -21,24 +23,21 @@ For a bias corrected version of Cramer's V see: [cramersVBiasCorrected](./cramer
 cramersV(column1, column2)
 ```
 
-**Parameters**
+**Arguments**
 
-- `column1`: first column to be compared.
-- `column2`: second column to be compared.
+- `column1` — First column to be compared. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
+- `column2` — Second column to be compared. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
+
 
 **Returned value**
 
-- a value between 0 (corresponding to no association between the columns' values) to 1 (complete association).
+Returns a value between 0 (corresponding to no association between the columns' values) to 1 (complete association). [`Float64`](/sql-reference/data-types/float)
 
-Type: always [Float64](../../../sql-reference/data-types/float.md).
+**Examples**
 
-**Example**
+**No association between columns**
 
-The following two columns being compared below have no association with each other, so the result of `cramersV` is 0:
-
-Query:
-
-```sql
+```sql title=Query
 SELECT
     cramersV(a, b)
 FROM
@@ -51,33 +50,32 @@ FROM
     );
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─cramersV(a, b)─┐
 │              0 │
 └────────────────┘
 ```
 
-The following two columns below have a fairly close association, so the result of `cramersV` is a high value:
+**High association between columns**
 
-```sql
+```sql title=Query
 SELECT
     cramersV(a, b)
 FROM
     (
         SELECT
             number % 10 AS a,
-            if(number % 12 = 0, (number + 1) % 5, number % 5) AS b
+            if (number % 12 = 0, (number + 1) % 5, number % 5) AS b
         FROM
             numbers(150)
     );
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─────cramersV(a, b)─┐
 │ 0.9066801892162646 │
 └────────────────────┘
 ```
+
+
+

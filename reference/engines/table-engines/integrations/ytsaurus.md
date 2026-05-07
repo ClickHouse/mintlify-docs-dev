@@ -1,22 +1,24 @@
 ---
 description: 'Table engine that allows importing data from a YTsaurus cluster.'
-sidebarTitle: 'YTsaurus table engine'
+sidebar_label: 'YTsaurus'
 sidebar_position: 185
-old-slug: /engines/table-engines/integrations/ytsaurus
+slug: /engines/table-engines/integrations/ytsaurus
 title: 'YTsaurus table engine'
 keywords: ['YTsaurus', 'table engine']
 doc_type: 'reference'
 ---
 
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
-import {ExperimentalBadge} from '/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx'
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
+import ExperimentalBadge from '@theme/badges/ExperimentalBadge';
+
+# YTsaurus table engine
 
 <ExperimentalBadge/>
 <CloudNotSupportedBadge/>
 
 The YTsaurus table engine allows you to import data from a YTsaurus cluster.
 
-## Creating a table 
+## Creating a table {#creating-a-table}
 
 ```sql
     CREATE TABLE [IF NOT EXISTS] [db.]table_name
@@ -26,7 +28,7 @@ The YTsaurus table engine allows you to import data from a YTsaurus cluster.
     ) ENGINE = YTsaurus('http_proxy_url', 'cypress_path', 'oauth_token')
 ```
 
-<Note>
+:::info
 This is an experimental feature that may change in backwards-incompatible ways in future releases.
 Enable usage of the YTsaurus table engine
 using setting [`allow_experimental_ytsaurus_table_engine`](/operations/settings/settings#allow_experimental_ytsaurus_table_engine).
@@ -34,7 +36,7 @@ using setting [`allow_experimental_ytsaurus_table_engine`](/operations/settings/
 You can do so using:
 
 `SET allow_experimental_ytsaurus_table_engine = 1`.
-</Note>
+:::
 
 **Engine parameters**
 
@@ -42,7 +44,7 @@ You can do so using:
 - `cypress_path` — Cypress path to the data source.
 - `oauth_token` — OAuth token.
 
-## Usage example 
+## Usage example {#usage-example}
 
 Shows a query creating the YTsaurus table:
 
@@ -71,9 +73,9 @@ SELECT * FROM yt_saurus;
  └────┴────┘
 ```
 
-## Data types 
+## Data types {#data-types}
 
-### Primitive data types 
+### Primitive data types {#primitive-data-types}
 
 | YTsaurus data type | Clickhouse data type    |
 | ------------------ | ----------------------- |
@@ -106,7 +108,7 @@ SELECT * FROM yt_saurus;
 | `void`             | `Nothing`               |
 | `T` with `required = False`| `Nullable(T)`   |
 
-### Composite types 
+### Composite types {#composite-data-types}
 
 | YTsaurus data type | Clickhouse data type |
 | ------------------ | -------------------- |

@@ -1,6 +1,6 @@
 ---
 description: 'Page describing transactional (ACID) support in ClickHouse'
-old-slug: /guides/developer/transactional
+slug: /guides/developer/transactional
 title: 'Transactional (ACID) support'
 doc_type: 'guide'
 ---

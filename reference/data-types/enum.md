@@ -1,12 +1,14 @@
 ---
 description: 'Documentation for the Enum data type in ClickHouse, which represents
   a set of named constant values'
-sidebarTitle: 'Enum'
+sidebar_label: 'Enum'
 sidebar_position: 20
-old-slug: /sql-reference/data-types/enum
+slug: /sql-reference/data-types/enum
 title: 'Enum'
 doc_type: 'reference'
 ---
+
+# Enum
 
 Enumerated type consisting of named values.
 
@@ -19,7 +21,7 @@ ClickHouse supports:
 
 ClickHouse automatically chooses the type of `Enum` when data is inserted. You can also use `Enum8` or `Enum16` types to be sure in the size of storage.
 
-## Usage Examples 
+## Usage Examples {#usage-examples}
 
 Here we create a table with an `Enum8('hello' = 1, 'world' = 2)` type column:
 
@@ -123,7 +125,7 @@ SELECT toTypeName(CAST('a', 'Enum(\'a\' = 1, \'b\' = 2)'))
 └─────────────────────────────────────────────────────┘
 ```
 
-## General Rules and Usage 
+## General Rules and Usage {#general-rules-and-usage}
 
 Each of the values is assigned a number in the range `-128 ... 127` for `Enum8` or in the range `-32768 ... 32767` for `Enum16`. All the strings and numbers must be different. An empty string is allowed. If this type is specified (in a table definition), numbers can be in an arbitrary order. However, the order does not matter.
 

@@ -1,19 +1,21 @@
 ---
 description: 'Documentation for the leadInFrame window function'
-sidebarTitle: 'leadInFrame'
+sidebar_label: 'leadInFrame'
 sidebar_position: 10
-old-slug: /sql-reference/window-functions/leadInFrame
+slug: /sql-reference/window-functions/leadInFrame
 title: 'leadInFrame'
 doc_type: 'reference'
 ---
 
+# leadInFrame
+
 Returns a value evaluated at the row that is offset rows after the current row within the ordered frame.
 
-<Warning>
+:::warning
 `leadInFrame` behavior differs from the standard SQL `lead` window function.
 Clickhouse window function `leadInFrame` respects the window frame.
 To get behavior identical to the `lead`, use `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`.
-</Warning>
+:::
 
 **Syntax**
 

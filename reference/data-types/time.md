@@ -1,12 +1,14 @@
 ---
 description: 'Documentation for the Time data type in ClickHouse, which stores
   the time range with second precision'
-old-slug: /sql-reference/data-types/time
+slug: /sql-reference/data-types/time
 sidebar_position: 15
-sidebarTitle: 'Time'
+sidebar_label: 'Time'
 title: 'Time'
 doc_type: 'reference'
 ---
+
+# Time
 
 Data type `Time` represents a time with hour, minute, and second components.
 It is independent of any calendar date and is suitable for values which do not need day, months and year components.
@@ -21,7 +23,7 @@ Text representation range: [-999:59:59, 999:59:59].
 
 Resolution: 1 second.
 
-## Implementation details 
+## Implementation details {#implementation-details}
 
 **Representation and Performance**.
 Data type `Time` internally stores a signed 32-bit integer that encodes the seconds.
@@ -46,7 +48,7 @@ Specifying a time zone for `Time` as a type parameter or during value creation t
 Likewise, attempts to apply or change the time zone on `Time` columns are not supported and result in an error.
 `Time` values are not silently reinterpreted under different time zones.
 
-## Examples 
+## Examples {#examples}
 
 **1.** Creating a table with a `Time`-type column and inserting data into it:
 
@@ -78,6 +80,7 @@ SELECT * FROM tab ORDER BY event_id;
 **2.** Filtering on `Time` values
 
 ``` sql
+SET use_legacy_to_time = 0;
 SELECT * FROM tab WHERE time = toTime('14:30:25')
 ```
 
@@ -113,7 +116,24 @@ SELECT CAST('14:30:25' AS Time) AS column, toTypeName(column) AS type
    └───────────┴──────┘
 ```
 
-## See Also 
+## Addition with Date {#addition-with-date}
+
+A [Time](time.md) value can be added to a [Date](date.md) or [Date32](date32.md) value to produce a [DateTime](datetime.md) or [DateTime64](datetime64.md):
+
+```sql
+SET use_legacy_to_time = 0;
+SELECT toDate('2024-07-15') + toTime('14:30:25') as datetime;
+```
+
+```text
+   ┌────────────datetime─┐
+1. │ 2024-07-15 14:30:25 │
+   └─────────────────────┘
+```
+
+See [Date and Time Addition](../operators/index.md#date-time-addition) for details on all supported combinations and result types.
+
+## See Also {#see-also}
 
 - [Type conversion functions](../functions/type-conversion-functions.md)
 - [Functions for working with dates and times](../functions/date-time-functions.md)

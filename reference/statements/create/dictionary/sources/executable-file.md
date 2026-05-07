@@ -1,17 +1,21 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/executable-file
+slug: /sql-reference/statements/create/dictionary/sources/executable-file
 title: 'Executable File dictionary source'
+sidebar_position: 3
+sidebar_label: 'Executable File'
 description: 'Configure an executable file as a dictionary source in ClickHouse.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Working with executable files depends on [how the dictionary is stored in memory](../layouts/). If the dictionary is stored using `cache` and `complex_key_cache`, ClickHouse requests the necessary keys by sending a request to the executable file's STDIN. Otherwise, ClickHouse starts the executable file and treats its output as dictionary data.
 
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(EXECUTABLE(
@@ -21,8 +25,8 @@ SOURCE(EXECUTABLE(
 ))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -34,7 +38,7 @@ SOURCE(EXECUTABLE(
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 
 Setting fields:

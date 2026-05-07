@@ -1,11 +1,15 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/layouts/polygon
+slug: /sql-reference/statements/create/dictionary/layouts/polygon
 title: 'Polygon dictionaries'
+sidebar_label: 'Polygon'
+sidebar_position: 12
 description: 'Configure polygon dictionaries for point-in-polygon lookups.'
 doc_type: 'reference'
 ---
 
-import CloudDetails from '/snippets/sql-reference/_snippet_dictionary_in_cloud.mdx';
+import CloudDetails from '@site/docs/sql-reference/statements/create/dictionary/_snippet_dictionary_in_cloud.md';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 The `polygon` (`POLYGON`) dictionary is optimized for point-in-polygon queries, essentially "reverse geocoding" lookups.
 Given a coordinate (latitude/longitude), it efficiently finds which polygon/region (from a set of many polygons, such as country or region boundaries) contains that point.
@@ -18,7 +22,7 @@ Example of configuring a polygon dictionary:
 <CloudDetails />
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY polygon_dict_name (
@@ -31,8 +35,8 @@ LAYOUT(POLYGON(STORE_POLYGON_KEY_COLUMN 1))
 ...
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <dictionary>
@@ -67,7 +71,7 @@ LAYOUT(POLYGON(STORE_POLYGON_KEY_COLUMN 1))
 </dictionary>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 

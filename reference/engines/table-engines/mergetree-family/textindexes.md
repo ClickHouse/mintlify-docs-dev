@@ -2,11 +2,12 @@
 description: 'Quickly find search terms in text.'
 keywords: ['full-text search', 'text index', 'index', 'indices']
 sidebar_label: 'Full-text Search with Text Indexes'
-old-slug: /engines/table-engines/mergetree-family/textindexes
+slug: /engines/table-engines/mergetree-family/textindexes
 title: 'Full-text Search with Text Indexes'
 doc_type: 'reference'
 ---
 
+# Full-text search with text indexes
 
 Text indexes (also known as [inverted indexes](https://en.wikipedia.org/wiki/Inverted_index)) enable fast full-text search on text data.
 A text index stores a mapping from tokens to the row numbers which contain each token.
@@ -59,31 +60,15 @@ two    : [3]
 
 Given a search token, this index structure allows to find all matching rows quickly.
 
-## Creating a Text Index
+## Creating a Text Index {#creating-a-text-index}
 
 Text indexes are generally available (GA) in ClickHouse version 26.2 and newer.
 In these versions, no special settings need to be configured to use the text index.
 We strongly recommend using ClickHouse versions >= 26.2 for production use cases.
 
-<Note>
-**If you have upgraded (or were upgraded, e.g. ClickHouse Cloud) from a ClickHouse version older than 26.2, the presence of a [compatibility](../../../operations/settings/settings#compatibility) setting may still cause the index to be disabled, and/or text-index related performance optimizations to be deactivated.**
-
-If query
-
-```sql
-SELECT value FROM system.settings WHERE name = 'compatibility';
-```
-
-returns a value smaller than `26.2` (e.g. `25.4`), you will need to set three additional settings to use the text index:
-
-```sql
-SET enable_full_text_index = true;
-SET query_plan_direct_read_from_text_index = true;
-SET use_skip_indexes_on_data_read = true;
-```
-
-Alternatively, you can increment the [compatibility](../../../operations/settings/settings#compatibility) setting to `26.2` or newer but this affects many settings and typically requires prior testing.
-</Note>
+:::note
+Text indexes can be used with any ClickHouse version >= 26.2, regardless of the [compatibility](../../../operations/settings/settings#compatibility) setting.
+:::
 
 To create a text index use the following syntax:
 
@@ -96,6 +81,7 @@ CREATE TABLE table
                                 -- Mandatory parameters:
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
+                                            | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
@@ -114,8 +100,9 @@ ORDER BY key
 
 Text indexes can be defined on columns of these types:
 - [String](/sql-reference/data-types/string.md) and [FixedString](/sql-reference/data-types/fixedstring.md),
-- [Array(String)](/sql-reference/data-types/array.md) and [Array(FixedString)](/sql-reference/data-types/array.md), and
-- [Map](/sql-reference/data-types/map.md) (via [mapKeys](/sql-reference/functions/tuple-map-functions.md/#mapKeys) and [mapValues](/sql-reference/functions/tuple-map-functions.md/#mapValues) functions).
+- [Array(String)](/sql-reference/data-types/array.md) and [Array(FixedString)](/sql-reference/data-types/array.md),
+- [Map](/sql-reference/data-types/map.md) (via [mapKeys](/sql-reference/functions/tuple-map-functions.md/#mapKeys) and [mapValues](/sql-reference/functions/tuple-map-functions.md/#mapValues) functions), and
+- [JSON](/sql-reference/data-types/newjson.md) (via [JSONAllPaths](/sql-reference/functions/json-functions.md/#JSONAllPaths) and [`JSONAllValues`](/sql-reference/functions/json-functions.md#JSONAllValues) functions).
 
 Columns of type [Nullable(T)](/sql-reference/data-types/nullable.md) and [LowCardinality()](/sql-reference/data-types/lowcardinality.md) are also supported, including `Array(Nullable(String or FixedString))`.
 
@@ -127,6 +114,7 @@ ALTER TABLE table
                                 -- Mandatory parameters:
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
+                                            | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
@@ -160,6 +148,7 @@ ALTER TABLE table DROP INDEX text_idx;
   The separators can be specified using an optional parameter, for example, `tokenizer = splitByString([', ', '; ', '\n', '\\'])`.
   Note that each string can consist of multiple characters (`', '` in the example).
   The default separator list, if not specified explicitly (for example, `tokenizer = splitByString`), is a single whitespace `[' ']`.
+- `asciiCJK` splits strings into tokens using Unicode word boundary rules (similar to [Unicode Text Segmentation (UAX #29)](https://unicode.org/reports/tr29/)). ASCII alphanumeric characters and underscores form tokens with connectors (ASCII `:` for letters, `.` and `'` for same-type characters). Non-ASCII Unicode characters, including [CJK](https://en.wikipedia.org/wiki/CJK_characters) characters, become single-character tokens.
 - `ngrams(N)` splits strings into equally large `N`-grams (see function [ngrams](/sql-reference/functions/splitting-merging-functions.md/#ngrams)).
   The ngram length can be specified using an optional integer parameter between 1 and 8, for example, `tokenizer = ngrams(3)`.
   The default ngram size, if not specified explicitly (for example, `tokenizer = ngrams`), is 3.
@@ -172,14 +161,14 @@ ALTER TABLE table DROP INDEX text_idx;
 
 All available tokenizers are listed in [system.tokenizers](../../../operations/system-tables/tokenizers.md).
 
-<Note>
-**The `splitByString` tokenizer applies the split separators left-to-right.**
+:::note
+The `splitByString` tokenizer applies the split separators left-to-right.
 This can create ambiguities.
 For example, the separator strings `['%21', '%']` will cause `%21abc` to be tokenized as `['abc']`, whereas switching both separators strings `['%', '%21']` will output `['21abc']`.
 In the most cases, you want that matching prefers longer separators first.
 This can generally be done by passing the separator strings in order of descending length.
 If the separator strings happen to form a [prefix code](https://en.wikipedia.org/wiki/Prefix_code), they can be passed in arbitrary order.
-</Note>
+:::
 
 To understand how a tokenizer split the input string, you can use the [tokens](/sql-reference/functions/splitting-merging-functions.md/#tokens) and [tokensForLikePattern](/sql-reference/functions/splitting-merging-functions.md/#tokensForLikePattern) functions:
 
@@ -196,9 +185,9 @@ Result:
 ```
 
 *Working with non-ASCII inputs.*
-While text indexes can in principle be build on top of text data in any language and character set, we recommend doing so at the moment only for input in an extended ASCII character sets, i.e. Western languages.
-In particular, Chinese, Japanese, and Korean currently lack comprehensive indexing support, leading to potentially huge index sizes and large query times.
-We plan to add specialized language-specific tokenizers to handle these cases better in future.
+Text indexes can be built on top of text data in any language and character set.
+For non-ASCII text, the `asciiCJK` tokenizer is recommended as it correctly handles Unicode word boundaries including CJK characters.
+:::
 
 **Preprocessor argument (optional)**. The preprocessor refers to an expression which is applied to the input string before tokenization.
 
@@ -350,18 +339,18 @@ Result:
 The huge index granularity ensures that the text index is created for the entire part.
 An explicitly specified index granularity is ignored.
 
-## Using a Text Index
+## Using a Text Index {#using-a-text-index}
 
 Using a text index in SELECT queries is straightforward as common string search functions will leverage the index automatically.
 If no index exists on a column or table part, the string search functions will fall back to slow brute-force scans.
 
-<Note>
-**We recommend using functions `hasAnyTokens` and `hasAllTokens` to search the text index, please see [below](#functions-example-hasanytokens-hasalltokens).**
+:::note
+We recommend using functions `hasAnyTokens` and `hasAllTokens` to search the text index, please see [below](#functions-example-hasanytokens-hasalltokens).
 These functions work with all available tokenizers and all possible preprocessor expressions.
 As the other supported functions historically preceded the text index, they had to retain their legacy behavior in many cases (e.g. no preprocessor support).
-</Note>
+:::
 
-### Supported functions
+### Supported functions {#functions-support}
 
 The text index can be used if text functions are used in the `WHERE` clause or `PREWHERE` clauses:
 
@@ -371,9 +360,9 @@ FROM [...]
 WHERE string_search_function(column_with_text_index)
 ```
 
-#### `=` and `!=`
+#### `=` {#functions-example-equals}
 
-`=` ([equals](/sql-reference/functions/comparison-functions.md/#equals)) and `!=` ([notEquals](/sql-reference/functions/comparison-functions.md/#notEquals)) match the entire given search term.
+`=` ([equals](/sql-reference/functions/comparison-functions.md/#equals)) matches the entire given search term.
 
 Example:
 
@@ -381,11 +370,9 @@ Example:
 SELECT * from table WHERE str = 'Hello';
 ```
 
-The text index supports `=` and `!=`, yet equality and inequality search only make sense with the `array` tokenizer (it causes the index to store entire row values).
+#### `IN` {#functions-example-in}
 
-#### `IN` and `NOT IN`
-
-`IN` ([in](/sql-reference/functions/in-functions)) and `NOT IN` ([notIn](/sql-reference/functions/in-functions)) are similar to functions `equals` and `notEquals` but they match all (`IN`) or no (`NOT IN`) search terms.
+`IN` ([in](/sql-reference/functions/in-functions)) is similar to `equals` but matches all search terms.
 
 Example:
 
@@ -393,15 +380,21 @@ Example:
 SELECT * from table WHERE str IN ('Hello', 'World');
 ```
 
-The same restrictions as for `=` and `!=` apply, i.e. `IN` and `NOT IN` only make sense in conjunction with the `array` tokenizer.
+:::note
+`NOT IN` (`notIn`) is not supported by the text index.
+:::
 
-#### `LIKE`, `NOT LIKE` and `match`
+#### `LIKE` and `match` {#functions-example-like-match}
 
-<Note>
-**These functions currently use the text index for filtering only if the index tokenizer is either `splitByNonAlpha`, `ngrams` or `sparseGrams`.**
-</Note>
+:::note
+These functions currently use the text index for filtering only if the index tokenizer is either `splitByNonAlpha`, `ngrams` or `sparseGrams`.
+:::
 
-In order to use `LIKE` ([like](/sql-reference/functions/string-search-functions.md/#like)), `NOT LIKE` ([notLike](/sql-reference/functions/string-search-functions.md/#notLike)), and the [match](/sql-reference/functions/string-search-functions.md/#match) function with text indexes, ClickHouse must be able to extract complete tokens from the search term.
+:::note
+`NOT LIKE` (`notLike`) is not supported by the text index.
+:::
+
+In order to use `LIKE` ([like](/sql-reference/functions/string-search-functions.md/#like)) and the [match](/sql-reference/functions/string-search-functions.md/#match) function with text indexes, ClickHouse must be able to extract complete tokens from the search term.
 For the index with `ngrams` tokenizer, this is the case if the length of the searched strings between wildcards is equal or longer than the ngram length.
 
 Example for the text index with `splitByNonAlpha` tokenizer:
@@ -421,7 +414,11 @@ SELECT count() FROM table WHERE comment LIKE ' support %'; -- or `% support %`
 
 The spaces left and right of `support` make sure that the term can be extracted as a token.
 
-#### `startsWith` and `endsWith`
+Fortunately, there is a special case where ClickHouse can leverage the inverted index to speed up LIKE queries significantly.
+
+See the [LIKE/ILIKE performance tuning section](#like-ilike-queries-perf) for details.
+
+#### `startsWith` and `endsWith` {#functions-example-startswith-endswith}
 
 Similar to `LIKE`, functions [startsWith](/sql-reference/functions/string-functions.md/#startsWith) and [endsWith](/sql-reference/functions/string-functions.md/#endsWith) can only use a text index, if complete tokens can be extracted from the search term.
 For the index with `ngrams` tokenizer, this is the case if the length of the searched strings between wildcards is equal or longer than the ngram length.
@@ -447,12 +444,12 @@ Similarly, `endsWith` should be used with a leading space:
 SELECT count() FROM table WHERE endsWith(comment, ' olap engine');
 ```
 
-#### `hasToken` and `hasTokenOrNull`
+#### `hasToken` and `hasTokenOrNull` {#functions-example-hastoken-hastokenornull}
 
-<Note>
-**Function `hasToken` looks straightforward to use but it has certain pitfalls with non-default tokenizers and preprocessor expressions.**
+:::note
+Function `hasToken` looks straightforward to use but it has certain pitfalls with non-default tokenizers and preprocessor expressions.
 We recommend using functions `hasAnyTokens` and `hasAllTokens` instead.
-</Note>
+:::
 
 Functions [hasToken](/sql-reference/functions/string-search-functions.md/#hasToken) and [hasTokenOrNull](/sql-reference/functions/string-search-functions.md/#hasTokenOrNull) match against a single given token.
 
@@ -464,7 +461,7 @@ Example:
 SELECT count() FROM table WHERE hasToken(comment, 'clickhouse');
 ```
 
-#### `hasAnyTokens` and `hasAllTokens`
+#### `hasAnyTokens` and `hasAllTokens` {#functions-example-hasanytokens-hasalltokens}
 
 Functions [hasAnyTokens](/sql-reference/functions/string-search-functions.md/#hasAnyTokens) and [hasAllTokens](/sql-reference/functions/string-search-functions.md/#hasAllTokens) match against one or all of the given tokens.
 
@@ -483,7 +480,25 @@ SELECT count() FROM table WHERE hasAnyTokens(comment, ['clickhouse', 'olap']);
 SELECT count() FROM table WHERE hasAllTokens(comment, ['clickhouse', 'olap']);
 ```
 
-#### `has`
+#### `hasPhrase` {#functions-example-hasphrase}
+
+Function [hasPhrase](/sql-reference/functions/string-search-functions.md/#hasPhrase) matches against a phrase: all tokens must appear consecutively and in the same order as in the search string.
+
+Unlike `hasAllTokens`, which only requires all tokens to be present somewhere, `hasPhrase` requires them to appear as a consecutive sequence.
+The search phrase is tokenized using the same tokenizer configured for the index column.
+Note that the function requires one of the `splitByNonAlpha`, `splitByString`, `ngrams`, or `asciiCJK` tokenizers.
+
+Example:
+
+```sql
+-- Matches: 'clickhouse' and 'olap' must appear consecutively in that order
+SELECT count() FROM table WHERE hasPhrase(comment, 'clickhouse olap');
+
+-- Does NOT match a row containing 'olap clickhouse' (wrong order)
+-- Does NOT match a row containing 'clickhouse fast olap' (non-consecutive)
+```
+
+#### `has` {#functions-example-has}
 
 Array function [has](/sql-reference/functions/array-functions#has) matches against a single token in the array of strings.
 
@@ -493,7 +508,18 @@ Example:
 SELECT count() FROM table WHERE has(array, 'clickhouse');
 ```
 
-#### `mapContains`
+#### `hasAny` and `hasAll` {#functions-example-hasany-hasall}
+
+Array functions [hasAny](/sql-reference/functions/array-functions#hasAny) and [hasAll](/sql-reference/functions/array-functions#hasAll) test whether the indexed array column contains any or all of a constant set of needle strings.
+
+Example:
+
+```sql
+SELECT count() FROM table WHERE hasAny(tags, ['clickhouse', 'olap']);
+SELECT count() FROM table WHERE hasAll(tags, ['clickhouse', 'olap']);
+```
+
+#### `mapContains` {#functions-example-mapcontains}
 
 Function [mapContains](/sql-reference/functions/tuple-map-functions#mapContainsKey) (an alias of `mapContainsKey`) matches against tokens extracted from the searched string in the keys of a map.
 The behaviour is similar to the `equals` function with a `String` column.
@@ -507,7 +533,7 @@ SELECT count() FROM table WHERE mapContainsKey(map, 'clickhouse');
 SELECT count() FROM table WHERE mapContains(map, 'clickhouse');
 ```
 
-#### `mapContainsValue`
+#### `mapContainsValue` {#functions-example-mapcontainsvalue}
 
 Function [mapContainsValue](/sql-reference/functions/tuple-map-functions#mapContainsValue) matches against tokens extracted from the searched string in the values of a map.
 The behaviour is similar to the `equals` function with a `String` column.
@@ -519,7 +545,7 @@ Example:
 SELECT count() FROM table WHERE mapContainsValue(map, 'clickhouse');
 ```
 
-#### `mapContainsKeyLike` and `mapContainsValueLike`
+#### `mapContainsKeyLike` and `mapContainsValueLike` {#functions-example-mapcontainslike}
 
 The functions [mapContainsKeyLike](/sql-reference/functions/tuple-map-functions#mapContainsKeyLike) and [mapContainsValueLike](/sql-reference/functions/tuple-map-functions#mapContainsValueLike) match a pattern against all keys or values (respectively) of a map.
 
@@ -530,7 +556,7 @@ SELECT count() FROM table WHERE mapContainsKeyLike(map, '% clickhouse %');
 SELECT count() FROM table WHERE mapContainsValueLike(map, '% clickhouse %');
 ```
 
-#### `operator[]`
+#### `operator[]` {#functions-example-access-operator}
 
 Access [operator[]](/sql-reference/operators#access-operators) can be used with the text index to filter out keys and values. The text index is only used if it is created on `mapKeys(map)` or `mapValues(map)` expressions, or both.
 
@@ -542,9 +568,7 @@ SELECT count() FROM table WHERE map['engine'] = 'clickhouse';
 
 See the following examples for using columns of type `Array(T)` and `Map(K, V)` with the text index.
 
-### Examples for `Array` and `Map` columns with text indexes
-
-#### Indexing Array(String) columns
+### Indexing Array(String) columns {#text-index-example-array}
 
 Imagine a blogging platform, where authors categorize their blog posts using keywords.
 We like users to discover related content by searching for or clicking on topics.
@@ -577,7 +601,7 @@ ALTER TABLE posts ADD INDEX keywords_idx(keywords) TYPE text(tokenizer = splitBy
 ALTER TABLE posts MATERIALIZE INDEX keywords_idx; -- Don't forget to rebuild the index for existing data
 ```
 
-#### Indexing Map columns
+### Indexing Map columns {#text-index-example-map}
 
 In many observability use cases, log messages are split into "components" and stored as appropriate data types, e.g. date time for the timestamp, enum for the log level etc.
 Metrics fields are best stored as key-value pairs.
@@ -637,9 +661,269 @@ SELECT * FROM logs WHERE has(mapValues(attributes), '192.168.1.1'); -- fast
 SELECT * FROM logs WHERE mapContainsValueLike(attributes, '% error %'); -- fast
 ```
 
-## Performance Tuning
+### Indexing JSON columns {#text-index-example-json}
 
-### Direct read
+Text indexes can be used with `JSON` columns in three ways:
+
+1. **Indexes on specific subcolumns** — create a text index on a known JSON path, just like on a regular column. This indexes the *values* at that path.
+2. **Path-based indexes with [JSONAllPaths](/sql-reference/functions/json-functions.md/#JSONAllPaths)** — indexes *all paths* present in each granule to skip granules that cannot contain the queried path. Similar to `Map` columns.
+3. **Value-based indexes with [JSONAllValues](/sql-reference/functions/json-functions.md#JSONAllValues)** — indexes *all values* across all JSON paths to accelerate full-text search on any JSON subcolumn with a single index.
+
+#### Indexes on specific subcolumns {#json-indexes-on-subcolumns}
+
+You can create a skip index on any JSON subcolumn using the same syntax as for regular columns.
+
+There are two ways to reference a JSON subcolumn in an index expression:
+
+- **Typed path** declared in the JSON type hint — access by name directly: `json.a`.
+- **Dynamic path** with explicit cast — use the `::` cast syntax: `json.b::String`.
+
+Example index definition:
+
+```sql
+CREATE TABLE sensor_data
+(
+    data JSON(sensor_id String),
+    INDEX idx_sensor data.sensor_id TYPE text(tokenizer = splitByNonAlpha),
+    INDEX idx_location data.location::String TYPE text(tokenizer = splitByNonAlpha)
+)
+ENGINE = MergeTree
+ORDER BY tuple()
+SETTINGS index_granularity = 1;
+
+INSERT INTO sensor_data SELECT toJSONString(map('sensor_id', 'id_' || number , 'location', 'room_' || toString(number))) FROM numbers(4);
+INSERT INTO sensor_data SELECT toJSONString(map('sensor_id', 'id_' || number, 'location', 'room_' || toString(number))) FROM numbers(4, 4);
+```
+
+Example query:
+
+```sql
+EXPLAIN indexes = 1 SELECT * FROM sensor_data WHERE data.sensor_id = 'id_5';
+```
+
+Result:
+
+```text
+...
+    Indexes:
+      Skip
+        Name: idx_sensor
+        Description: text
+        Condition: (mode: All; tokens: ["5", "id"])
+        Parts: 1/2
+        Granules: 1/8
+```
+
+Example query:
+
+```sql
+EXPLAIN indexes = 1 SELECT * FROM sensor_data WHERE data.location::String = 'room_5';
+```
+
+Result:
+
+```text
+...
+    Indexes:
+      Skip
+        Name: idx_location
+        Description: text
+        Condition: (mode: All; tokens: ["5", "room"])
+        Parts: 1/2
+        Granules: 1/8
+```
+
+#### Path-based indexes with JSONAllPaths {#json-indexes-jsonallpaths}
+
+Similar to `Map` columns, text indexes can be created on [JSON](/sql-reference/data-types/newjson.md) columns using [`JSONAllPaths`](/sql-reference/functions/json-functions.md/#JSONAllPaths).
+The index stores the set of JSON paths present in each granule and uses them to skip granules where a queried path is absent.
+
+Example index definition:
+
+```sql
+CREATE TABLE events
+(
+    data JSON,
+    INDEX idx JSONAllPaths(data) TYPE text(tokenizer = array)
+)
+ENGINE = MergeTree
+ORDER BY tuple();
+
+INSERT INTO events VALUES ('{"user": {"name": "Alice"}, "action": "login"}');
+INSERT INTO events VALUES ('{"metric": {"cpu": 0.95}, "host": "srv1"}');
+```
+
+You can use `EXPLAIN indexes = 1` to verify that the skip index is being used.
+When a path exists only in one part, the index skips the other part.
+
+Example:
+
+```sql
+EXPLAIN indexes = 1 SELECT * FROM events WHERE data.user.name = 'Alice';
+```
+
+Result:
+
+```text
+...
+    Indexes:
+      Skip
+        Name: idx
+        Description: text
+        Condition: (mode: All; tokens: ["user.name"])
+        Parts: 1/2
+        Granules: 1/2
+```
+
+When a path does not exist in any part, all parts and granules are skipped.
+
+Example:
+
+```sql
+EXPLAIN indexes = 1 SELECT * FROM events WHERE data.nonexistent = 1;
+```
+
+Result:
+
+```text title="Response"
+...
+    Indexes:
+      Skip
+        Name: idx
+        Description: text
+        Condition: (mode: All; tokens: ["nonexistent"])
+        Parts: 0/2
+        Granules: 0/2
+```
+
+`IS NOT NULL` also uses the index — it skips granules where the path is absent (since the value would be `NULL`):
+
+Example:
+
+```sql
+EXPLAIN indexes = 1 SELECT * FROM events WHERE data.user.name IS NOT NULL;
+```
+
+Result:
+
+```text
+...
+    Indexes:
+      Skip
+        Name: idx
+        Description: text
+        Condition: (mode: All; tokens: ["user.name"])
+        Parts: 1/2
+        Granules: 1/2
+```
+
+#### Value-based indexes with JSONAllValues {#json-indexes-jsonallvalues}
+
+Text indexes can be used to accelerate searches on [JSON](/sql-reference/data-types/newjson.md) columns via function [`JSONAllValues`](/sql-reference/functions/json-functions.md#JSONAllValues).
+
+`JSONAllValues` returns all values from a JSON column as `Array(String)`.
+Values of non-string datatypes (e.g. integers and arrays) are converted to their text representation.
+A text index build using `JSONAllValues` indexes these text representations across all JSON paths in each row.
+This index can then accelerate queries that filter on individual JSON subcolumns.
+When a query filters on a specific subcolumn (e.g. `data.user_name = 'alice'`), the text index can quickly skip rows (and granules) that do not contain the search tokens in any of their JSON values.
+
+:::note
+The index may produce false positives when different JSON paths contain the same tokens.
+For example, if row 1 has `{"a": "hello", "b": "world"}` and a query searches for `data.a = 'world'`, the text index cannot distinguish that `world` belongs to path `b`, not `a`.
+In such cases, the index will not skip the row, and the filter on the actual column data will handle the final evaluation.
+This is the same behavior as with other text index use cases where the index acts as a fast pre-filter.
+:::
+
+##### Creating the index {#json-all-values-creating-the-index}
+
+Example index definition:
+
+```sql
+CREATE TABLE events
+(
+    id UInt64,
+    data JSON,
+    INDEX json_idx JSONAllValues(data) TYPE text(tokenizer = splitByNonAlpha)
+)
+ENGINE = MergeTree
+ORDER BY id;
+```
+
+##### Supported query patterns {#json-all-values-supported-query-patterns}
+
+Once the index is created, it can speed up queries on JSON subcolumns using the same functions as for `String` columns and function `equals` for all columns.
+
+Subcolumn access:
+
+```sql
+SELECT * FROM events WHERE data.user_name = 'alice';
+SELECT * FROM events WHERE data.message LIKE '% error %';
+SELECT * FROM events WHERE startsWith(data.status, 'fail');
+SELECT * FROM events WHERE hasToken(data.title, 'clickhouse');
+```
+
+Subcolumn access with explicit `CAST`:
+
+```sql
+SELECT * FROM events WHERE hasAllTokens(data.message::String, 'connection timeout');
+SELECT * FROM events WHERE data.status_code::UInt64 = 404;
+SELECT * FROM events WHERE has(data.tags::Array(String), 'bug')
+```
+
+`IN` operator:
+
+```sql
+SELECT * FROM events WHERE data.level IN ('error', 'critical');
+```
+
+### Phrase search {#text-index-phrase-search}
+
+Text index supports phrase search via the `hasPhrase` function.
+All tokens in the phrase must appear consecutively and in the same order in the document.
+
+The text index accelerates phrase search by intersecting the posting lists for all tokens in the phrase to identify candidate granules.
+Within those granules, ClickHouse then verifies exact token adjacency.
+
+`hasPhrase` is supported with tokenizers `splitByNonAlpha`, `splitByString`, `ngrams`, and `asciiCJK`.
+
+The phrase string is tokenized using the index's configured tokenizer.
+Tokenizer separator characters in the phrase are ignored: `hasPhrase(text, 'quick+brown')` is equivalent to `hasPhrase(text, 'quick brown')` for the `splitByNonAlpha` tokenizer.
+
+#### Example {#text-index-phrase-search-example}
+
+```sql
+CREATE TABLE tab (
+    id UInt32,
+    text String,
+    INDEX idx(text) TYPE text(tokenizer = splitByNonAlpha)
+)
+ENGINE = MergeTree
+ORDER BY id;
+
+INSERT INTO tab VALUES
+    (1, 'weather in New York'),
+    (2, 'New weather in York'),
+    (3, 'weather in New Orleans');
+```
+
+```sql
+SELECT id, text FROM tab WHERE hasPhrase(text, 'weather in New York');
+```
+
+Result:
+
+```result
+   ┌─id─┬─text────────────────┐
+1. │  1 │ weather in New York │
+   └────┴─────────────────────┘
+```
+
+Row 2 (`'New weather in York'`) does not match because the tokens are in the wrong order.
+Row 3 (`'weather in New Orleans'`) does not match because it does not contain the token `'York'`.
+
+## Performance Tuning {#performance-tuning}
+
+### Direct read {#direct-read}
 
 Certain types of text queries can be speed up significantly by an optimization called "direct read".
 
@@ -656,12 +940,12 @@ Text index lookups read relatively little data and are therefore much faster tha
 
 Direct read is controlled by two settings:
 - Setting [query_plan_direct_read_from_text_index](../../../operations/settings/settings#query_plan_direct_read_from_text_index) (true by default) which specifies if direct read is generally enabled.
-- Setting [use_skip_indexes_on_data_read](../../../operations/settings/settings#use_skip_indexes_on_data_read), another prerequisite for direct read. In ClickHouse versions >= 26.1, the setting is enabled by default. In earlier versions, you need to run `SET use_skip_indexes_on_data_read = 1` explicitly.
+- Setting [use_skip_indexes_on_data_read](../../../operations/settings/settings#use_skip_indexes_on_data_read) was a prerequisite for direct read in ClickHouse versions < 26.4.
 
 **Supported functions**
 
 The direct read optimization supports functions `hasToken`, `hasAllTokens`, and `hasAnyTokens`.
-If the text index is defined with an `array` tokenizer, direct read is also supported for functions `equals`, `has`, `mapContainsKey`, and `mapContainsValue`.
+If the text index is defined with an `array` tokenizer, direct read is also supported for functions `equals`, `has`, `hasAny`, `hasAll`, `mapContainsKey`, and `mapContainsValue`.
 These functions can also be combined by `AND`, `OR`, and `NOT` operators.
 The `WHERE` or `PREWHERE` clauses can also contain additional non-text-search-functions filters (for text columns or other columns) - in that case, the direct read optimization will still be used but less effective (it only applies to the supported text search functions).
 
@@ -674,7 +958,6 @@ SELECT count()
 FROM table
 WHERE hasToken(col, 'some_token')
 SETTINGS query_plan_direct_read_from_text_index = 0, -- disable direct read
-         use_skip_indexes_on_data_read = 1;
 ```
 
 returns
@@ -697,7 +980,6 @@ SELECT count()
 FROM table
 WHERE hasToken(col, 'some_token')
 SETTINGS query_plan_direct_read_from_text_index = 1, -- enable direct read
-         use_skip_indexes_on_data_read = 1;
 ```
 
 returns
@@ -723,7 +1005,7 @@ However, even if the text column is accessed elsewhere in the query, direct read
 Direct read as a hint is based on the same principles as normal direct read, but instead adds an additional filter build from the text index data without removing the underlying text column.
 It is used for functions when reading only from the text index would produce false positives.
 
-Supported functions are: `like`, `startsWith`, `endsWith`, `equals`, `has`, `mapContainsKey`, and `mapContainsValue`.
+Supported functions are: `like`, `startsWith`, `endsWith`, `equals`, `has`, `hasPhrase`, `mapContainsKey`, and `mapContainsValue`.
 
 The additional filter can provide additional selectivity to restrict the result set in combination with other filters further, helping to reduce the amount of data read from other columns.
 
@@ -736,7 +1018,7 @@ EXPLAIN actions = 1
 SELECT count()
 FROM table
 WHERE (col LIKE '%some-token%') AND (d >= today())
-SETTINGS use_skip_indexes_on_data_read = 1, query_plan_text_index_add_hint = 0
+SETTINGS query_plan_text_index_add_hint = 0
 FORMAT TSV
 ```
 
@@ -755,7 +1037,7 @@ EXPLAIN actions = 1
 SELECT count()
 FROM table
 WHERE col LIKE '%some-token%'
-SETTINGS use_skip_indexes_on_data_read = 1, query_plan_text_index_add_hint = 1
+SETTINGS query_plan_text_index_add_hint = 1
 ```
 
 returns
@@ -771,7 +1053,22 @@ Thanks to the [PREWHERE](/sql-reference/statements/select/prewhere) optimization
 For this query, the application order is `__text_index_...`, then `greaterOrEquals(...)`, and finally `like(...)`.
 This ordering enables skipping even more data granules than the granules skipped by the text index and the original filter, before reading the heavy columns used in the query after `WHERE` clause further reducing the amount of data to read.
 
-### Caching
+### LIKE/ILIKE queries {#like-ilike-queries-perf}
+
+When a LIKE/ILIKE query pattern is `%<alpha-numeric-characters-without-spaces>%` and the text index tokenizer is `splitByNonAlpha` or `array`, ClickHouse leverages the inverted index to speed up LIKE/ILIKE queries significantly. To achieve that, ClickHouse scans the inverted index dictionary instead of a full-table scan to find the matching pattern.
+
+When the optimization is enabled, LIKE/ILIKE queries should be significantly faster than a full-table scan. However, when the pattern matches most dictionary tokens, the performance can be worse compared to a full-table scan. Luckily, there is a fallback mechanism to prevent that.
+
+The optimization is controlled by a setting:
+- [use_text_index_like_evaluation_by_dictionary_scan](../../../operations/settings/settings#use_text_index_like_evaluation_by_dictionary_scan)
+
+The fallback mechanism is controlled by two settings:
+- [text_index_like_min_pattern_length](../../../operations/settings/settings#text_index_like_min_pattern_length)
+- [text_index_like_max_postings_to_read](../../../operations/settings/settings#text_index_like_max_postings_to_read)
+
+This optimization supports only functions `like` and `ilike`.
+
+### Caching {#caching}
 
 Different caches are available to buffer parts of the text index in memory (see section [Implementation Details](#implementation)):
 Currently, there are caches for the deserialized headers, tokens, and posting lists of the text index to reduce I/O.
@@ -782,7 +1079,7 @@ To clear the caches, use statement [SYSTEM CLEAR TEXT INDEX CACHES](../../../sql
 
 Please refer the following server settings to configure the caches.
 
-#### Tokens cache settings
+#### Tokens cache settings {#caching-tokens}
 
 | Setting                                                                                                                                                  | Description                                                                                                    |
 |----------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
@@ -791,7 +1088,7 @@ Please refer the following server settings to configure the caches.
 | [text_index_tokens_cache_max_entries](/operations/server-configuration-parameters/settings#text_index_tokens_cache_max_entries)      | Maximum number of deserialized tokens in cache.                                                     |
 | [text_index_tokens_cache_size_ratio](/operations/server-configuration-parameters/settings#text_index_tokens_cache_size_ratio)        | The size of the protected queue in the text index tokens cache relative to the cache\'s total size.  |
 
-#### Header cache settings
+#### Header cache settings {#caching-header}
 
 | Setting                                                                                                                              | Description                                                                                          |
 |--------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
@@ -800,7 +1097,7 @@ Please refer the following server settings to configure the caches.
 | [text_index_header_cache_max_entries](/operations/server-configuration-parameters/settings#text_index_header_cache_max_entries)      | Maximum number of deserialized headers in cache.                                                     |
 | [text_index_header_cache_size_ratio](/operations/server-configuration-parameters/settings#text_index_header_cache_size_ratio)        | The size of the protected queue in the text index header cache relative to the cache\'s total size.  |
 
-#### Posting lists cache settings
+#### Posting lists cache settings {#caching-posting-lists}
 
 | Setting                                                                                                                               | Description                                                                                             |
 |---------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
@@ -809,14 +1106,14 @@ Please refer the following server settings to configure the caches.
 | [text_index_postings_cache_max_entries](/operations/server-configuration-parameters/settings#text_index_postings_cache_max_entries)   | Maximum number of deserialized postings in cache.                                                       |
 | [text_index_postings_cache_size_ratio](/operations/server-configuration-parameters/settings#text_index_postings_cache_size_ratio)     | The size of the protected queue in the text index postings cache relative to the cache\'s total size.   |
 
-## Limitations
+## Limitations {#limitations}
 
 The text index currently has the following limitations:
 - The materialization of text indexes with a high number of tokens (e.g. 10 billion tokens) can consume significant amounts of memory. Text
   index materialization can happen directly (`ALTER TABLE <table> MATERIALIZE INDEX <index>`) or indirectly in part merges.
 - It is not possible to materialize text indexes on parts with more than 4.294.967.296 (= 2^32 = ca. 4.2 billion) rows. Without a materialized text index, queries fall back to slow brute-force search within the part. As a worst case estimation, assume a part contains a single column of type String and MergeTree setting `max_bytes_to_merge_at_max_space_in_pool` (default: 150 GB) was not changed. In this case, the situation happens if the column contains less than 29.5 characters per row on average. In practice, tables also contain other columns and the threshold is multiples times smaller than that (depending on the number, type and size of the other columns).
 
-## Text Indexes vs Bloom-Filter-Based Indexes
+## Text Indexes vs Bloom-Filter-Based Indexes {#text-index-vs-bloom-filter-indexes}
 
 String predicates can be sped up using text indexes and bloom-filter-based based indexes (index type `bloom_filter`, `ngrambf_v1`, `tokenbf_v1`, `sparse_grams`), yet both are fundamentally different in their design and intended use cases:
 
@@ -847,7 +1144,7 @@ Text indexes, in contrast, are purpose-built for full-text search:
 - They provide efficient support for `hasAllTokens`, `LIKE`, `match`, and similar text-search functions.
 - They have significantly better scalability for large text corpora.
 
-## Implementation Details
+## Implementation Details {#implementation}
 
 Each text index consists of two (abstract) data structures:
 - a dictionary which maps each token to a postings list, and
@@ -880,14 +1177,14 @@ If the posting list is larger than `posting_list_block_size`, it is split into m
 When data parts are merged, the text index does not need to be rebuilt from scratch; instead, it can be merged efficiently in a separate step of the merge process.
 During this step, the sorted dictionaries of the text indexes of each input part are read and combined into a new unified dictionary.
 The row numbers in the postings lists are also recalculated to reflect their new positions in the merged data part, using a mapping of old to new row numbers that is created during the initial merge phase.
-This method of merging text indexes is similar to how [projections](/sql-reference/statements/alter/projection#normal-projection-with-part-offset-field) with `_part_offset` column are merged.
+This method of merging text indexes is similar to how [projections](/docs/sql-reference/statements/alter/projection#projection-indexes) with `_part_offset` column are merged.
 If index is not materialized in the source part, it is built, written into a temporary file and then merged together with indexes from the other parts and from other temporary index files.
 
 **Debugging**
 
 Table function [mergeTreeTextIndex](../../../sql-reference/table-functions/mergeTreeTextIndex.md) can be used to introspect text indexes.
 
-## Example: Hackernews dataset
+## Example: Hackernews dataset {#hacker-news-dataset}
 
 Let's look at the performance improvements of text indexes on a large dataset with lots of text.
 We will use 28.7M rows of comments on the popular Hacker News website.
@@ -954,7 +1251,7 @@ ALTER TABLE hackernews MATERIALIZE INDEX comment_idx SETTINGS mutations_sync = 2
 Now, let's run queries using `hasToken`, `hasAnyTokens`, and `hasAllTokens` functions.
 The following examples will show the dramatic performance difference between a standard index scan and the direct read optimization.
 
-### 1. Using `hasToken`
+### 1. Using `hasToken` {#using-hasToken}
 
 `hasToken` checks if the text contains a specific single token.
 We'll search for the case-sensitive token 'ClickHouse'.
@@ -993,7 +1290,7 @@ SETTINGS query_plan_direct_read_from_text_index = 1;
 ```
 The direct read query is over 45 times faster (0.362s vs 0.008s) and processes significantly less data (9.51 GB vs 3.15 MB) by reading from the index alone.
 
-### 2. Using `hasAnyTokens`
+### 2. Using `hasAnyTokens` {#using-hasAnyTokens}
 
 `hasAnyTokens` checks if the text contains at least one of the given tokens.
 We'll search for comments containing either 'love' or 'ClickHouse'.
@@ -1004,7 +1301,7 @@ We'll search for comments containing either 'love' or 'ClickHouse'.
 SELECT count()
 FROM hackernews
 WHERE hasAnyTokens(comment, 'love ClickHouse')
-SETTINGS query_plan_direct_read_from_text_index = 0, use_skip_indexes_on_data_read = 0;
+SETTINGS query_plan_direct_read_from_text_index = 0;
 
 ┌─count()─┐
 │  408426 │
@@ -1019,7 +1316,7 @@ SETTINGS query_plan_direct_read_from_text_index = 0, use_skip_indexes_on_data_re
 SELECT count()
 FROM hackernews
 WHERE hasAnyTokens(comment, 'love ClickHouse')
-SETTINGS query_plan_direct_read_from_text_index = 1, use_skip_indexes_on_data_read = 1;
+SETTINGS query_plan_direct_read_from_text_index = 1;
 
 ┌─count()─┐
 │  408426 │
@@ -1030,7 +1327,7 @@ SETTINGS query_plan_direct_read_from_text_index = 1, use_skip_indexes_on_data_re
 The speedup is even more dramatic for this common "OR" search.
 The query is nearly 89 times faster (1.329s vs 0.015s) by avoiding the full column scan.
 
-### 3. Using `hasAllTokens`
+### 3. Using `hasAllTokens` {#using-hasAllTokens}
 
 `hasAllTokens` checks if the text contains all of the given tokens.
 We'll search for comments containing both 'love' and 'ClickHouse'.
@@ -1043,7 +1340,7 @@ It filters down the 28.7M rows to just 147.46K rows, but it still must read 57.0
 SELECT count()
 FROM hackernews
 WHERE hasAllTokens(comment, 'love ClickHouse')
-SETTINGS query_plan_direct_read_from_text_index = 0, use_skip_indexes_on_data_read = 0;
+SETTINGS query_plan_direct_read_from_text_index = 0;
 
 ┌─count()─┐
 │      11 │
@@ -1059,7 +1356,7 @@ Direct read answers the query by operating on the index data, reading only 147.4
 SELECT count()
 FROM hackernews
 WHERE hasAllTokens(comment, 'love ClickHouse')
-SETTINGS query_plan_direct_read_from_text_index = 1, use_skip_indexes_on_data_read = 1;
+SETTINGS query_plan_direct_read_from_text_index = 1;
 
 ┌─count()─┐
 │      11 │
@@ -1070,7 +1367,7 @@ SETTINGS query_plan_direct_read_from_text_index = 1, use_skip_indexes_on_data_re
 
 For this "AND" search, the direct read optimization is over 26 times faster (0.184s vs 0.007s) than the standard skip index scan.
 
-### 4. Compound search: OR, AND, NOT, ...
+### 4. Compound search: OR, AND, NOT, ... {#compound-search}
 
 The direct read optimization also applies to compound boolean expressions.
 Here, we'll perform a case-insensitive search for 'ClickHouse' OR 'clickhouse'.
@@ -1081,7 +1378,7 @@ Here, we'll perform a case-insensitive search for 'ClickHouse' OR 'clickhouse'.
 SELECT count()
 FROM hackernews
 WHERE hasToken(comment, 'ClickHouse') OR hasToken(comment, 'clickhouse')
-SETTINGS query_plan_direct_read_from_text_index = 0, use_skip_indexes_on_data_read = 0;
+SETTINGS query_plan_direct_read_from_text_index = 0;
 
 ┌─count()─┐
 │     769 │
@@ -1096,7 +1393,7 @@ SETTINGS query_plan_direct_read_from_text_index = 0, use_skip_indexes_on_data_re
 SELECT count()
 FROM hackernews
 WHERE hasToken(comment, 'ClickHouse') OR hasToken(comment, 'clickhouse')
-SETTINGS query_plan_direct_read_from_text_index = 1, use_skip_indexes_on_data_read = 1;
+SETTINGS query_plan_direct_read_from_text_index = 1;
 
 ┌─count()─┐
 │     769 │
@@ -1108,7 +1405,7 @@ SETTINGS query_plan_direct_read_from_text_index = 1, use_skip_indexes_on_data_re
 By combining the results from the index, the direct read query is 34 times faster (0.450s vs 0.013s) and avoids reading the 9.58 GB of column data.
 For this specific case, `hasAnyTokens(comment, ['ClickHouse', 'clickhouse'])` would be the preferred, more efficient syntax.
 
-## Related content
+## Related content {#related-content}
 
 - Presentation: https://github.com/ClickHouse/clickhouse-presentations/blob/master/2025-tumuchdata-munich/ClickHouse_%20full-text%20search%20-%2011.11.2025%20Munich%20Database%20Meetup.pdf
 - Presentation: https://presentations.clickhouse.com/2026-fosdem-inverted-index/Inverted_indexes_the_what_the_why_the_how.pdf

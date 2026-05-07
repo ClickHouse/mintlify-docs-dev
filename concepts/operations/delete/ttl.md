@@ -1,5 +1,5 @@
 ---
-old-slug: /guides/developer/ttl
+slug: /guides/developer/ttl
 sidebarTitle: 'TTL (Time To Live)'
 sidebar_position: 2
 keywords: ['ttl', 'time to live', 'clickhouse', 'old', 'data']

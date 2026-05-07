@@ -1,15 +1,19 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/mongodb
+slug: /sql-reference/statements/create/dictionary/sources/mongodb
 title: 'MongoDB dictionary source'
+sidebar_position: 9
+sidebar_label: 'MongoDB'
 description: 'Configure MongoDB as a dictionary source in ClickHouse.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(MONGODB(
@@ -32,8 +36,8 @@ SOURCE(MONGODB(
 ))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -60,7 +64,7 @@ Or using a URI:
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 

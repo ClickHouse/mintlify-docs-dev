@@ -4,20 +4,22 @@ description: 'Documentation for the JSONObjectEachRow format'
 input_format: true
 keywords: ['JSONObjectEachRow']
 output_format: true
-old-slug: /interfaces/formats/JSONObjectEachRow
+slug: /interfaces/formats/JSONObjectEachRow
 title: 'JSONObjectEachRow'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 In this format, all data is represented as a single JSON Object, with each row represented as a separate field of this object similar to the [`JSONEachRow`](./JSONEachRow.md) format.
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Basic example 
+### Basic example {#basic-example}
 
 Given some JSON:
 
@@ -32,7 +34,7 @@ Given some JSON:
 To use an object name as a column value you can use the special setting [`format_json_object_each_row_column_for_object_name`](/operations/settings/settings-formats.md/#format_json_object_each_row_column_for_object_name). 
 The value of this setting is set to the name of a column, that is used as JSON key for a row in the resulting object.
 
-#### Output 
+#### Output {#output}
 
 Let's say we have the table `test` with two columns:
 
@@ -58,7 +60,7 @@ SELECT * FROM test SETTINGS format_json_object_each_row_column_for_object_name='
 }
 ```
 
-#### Input 
+#### Input {#input}
 
 Let's say we stored the output from the previous example in a file named `data.json`:
 
@@ -87,7 +89,7 @@ DESCRIBE file('data.json', JSONObjectEachRow) SETTING format_json_object_each_ro
 └─────────────┴─────────────────┘
 ```
 
-### Inserting data 
+### Inserting data {#json-inserting-data}
 
 ```sql title="Query"
 INSERT INTO UserActivity FORMAT JSONEachRow {"PageViews":5, "UserID":"4324182021466249494", "Duration":146,"Sign":-1} {"UserID":"4324182021466249494","PageViews":6,"Duration":185,"Sign":1}
@@ -100,7 +102,7 @@ ClickHouse allows:
 
 ClickHouse ignores spaces between elements and commas after the objects. You can pass all the objects in one line. You do not have to separate them with line breaks.
 
-#### Omitted values processing 
+#### Omitted values processing {#omitted-values-processing}
 
 ClickHouse substitutes omitted values with the default values for the corresponding [data types](/sql-reference/data-types/index.md).
 
@@ -119,11 +121,11 @@ CREATE TABLE IF NOT EXISTS example_table
 - If `input_format_defaults_for_omitted_fields = 0`, then the default value for `x` and `a` equals `0` (as the default value for the `UInt32` data type).
 - If `input_format_defaults_for_omitted_fields = 1`, then the default value for `x` equals `0`, but the default value of `a` equals `x * 2`.
 
-<Note>
+:::note
 When inserting data with `input_format_defaults_for_omitted_fields = 1`, ClickHouse consumes more computational resources, compared to insertion with `input_format_defaults_for_omitted_fields = 0`.
-</Note>
+:::
 
-### Selecting data 
+### Selecting data {#json-selecting-data}
 
 Consider the `UserActivity` table as an example:
 
@@ -143,11 +145,11 @@ The query `SELECT * FROM UserActivity FORMAT JSONEachRow` returns:
 
 Unlike the [JSON](/interfaces/formats/JSON) format, there is no substitution of invalid UTF-8 sequences. Values are escaped in the same way as for `JSON`.
 
-<Note>
+:::info
 Any set of bytes can be output in the strings. Use the [`JSONEachRow`](./JSONEachRow.md) format if you are sure that the data in the table can be formatted as JSON without losing any information.
-</Note>
+:::
 
-### Usage of Nested Structures 
+### Usage of Nested Structures {#jsoneachrow-nested}
 
 If you have a table with the [`Nested`](/sql-reference/data-types/nested-data-structures/index.md) data type columns, you can insert JSON data with the same structure. Enable this feature with the [input_format_import_nested_json](/operations/settings/settings-formats.md/#input_format_import_nested_json) setting.
 
@@ -206,7 +208,7 @@ SELECT * FROM json_each_row_nested
 └───────────────┴────────┘
 ```
 
-## Format settings 
+## Format settings {#format-settings}
 
 | Setting                                                                                                                                                                            | Description                                                                                                                                                             | Default  | Notes                                                                                                                                                                                         |
 |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

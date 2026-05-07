@@ -1,15 +1,17 @@
 ---
 description: 'Documentation for TRUNCATE Statements'
-sidebarTitle: 'TRUNCATE'
+sidebar_label: 'TRUNCATE'
 sidebar_position: 52
-old-slug: /sql-reference/statements/truncate
+slug: /sql-reference/statements/truncate
 title: 'TRUNCATE Statements'
 doc_type: 'reference'
 ---
 
+# TRUNCATE Statements
+
 The `TRUNCATE` statement in ClickHouse is used to quickly remove all data from a table or database while preserving their structure.
 
-## TRUNCATE TABLE 
+## TRUNCATE TABLE {#truncate-table}
 ```sql
 TRUNCATE TABLE [IF EXISTS] [db.]name [ON CLUSTER cluster] [SYNC]
 ```
@@ -25,9 +27,9 @@ You can use the [alter_sync](/operations/settings/settings#alter_sync) setting t
 
 You can specify how long (in seconds) to wait for inactive replicas to execute `TRUNCATE` queries with the [replication_wait_for_inactive_replica_timeout](/operations/settings/settings#replication_wait_for_inactive_replica_timeout) setting.
 
-<Note>
+:::note    
 If the `alter_sync` is set to `2` and some replicas are not active for more than the time, specified by the `replication_wait_for_inactive_replica_timeout` setting, then an exception `UNFINISHED` is thrown.
-</Note>
+:::
 
 The `TRUNCATE TABLE` query is **not supported** for the following table engines:
 
@@ -37,7 +39,7 @@ The `TRUNCATE TABLE` query is **not supported** for the following table engines:
 - [`Buffer`](../../engines/table-engines/special/buffer.md)
 - [`Null`](../../engines/table-engines/special/null.md)
 
-## TRUNCATE ALL TABLES 
+## TRUNCATE ALL TABLES {#truncate-all-tables}
 ```sql
 TRUNCATE [ALL] TABLES FROM [IF EXISTS] db [LIKE | ILIKE | NOT LIKE '<pattern>'] [ON CLUSTER cluster]
 ```
@@ -52,7 +54,7 @@ TRUNCATE [ALL] TABLES FROM [IF EXISTS] db [LIKE | ILIKE | NOT LIKE '<pattern>'] 
 
 Removes all data from all tables in a database.
 
-## TRUNCATE DATABASE 
+## TRUNCATE DATABASE {#truncate-database}
 ```sql
 TRUNCATE DATABASE [IF EXISTS] db [ON CLUSTER cluster]
 ```
@@ -65,6 +67,6 @@ TRUNCATE DATABASE [IF EXISTS] db [ON CLUSTER cluster]
 
 Removes all tables from a database but keeps the database itself. When the clause `IF EXISTS` is omitted, the query returns an error if the database does not exist.
 
-<Note>
+:::note
 `TRUNCATE DATABASE` is not supported for `Replicated` databases. Instead, just `DROP` and `CREATE` the database.
-</Note>
+:::

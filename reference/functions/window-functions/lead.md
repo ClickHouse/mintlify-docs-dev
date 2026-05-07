@@ -1,11 +1,13 @@
 ---
 description: 'Documentation for the lead window function'
-sidebarTitle: 'lead'
+sidebar_label: 'lead'
 sidebar_position: 10
-old-slug: /sql-reference/window-functions/lead
+slug: /sql-reference/window-functions/lead
 title: 'lead'
 doc_type: 'reference'
 ---
+
+# lead
 
 Returns a value evaluated at the row that is offset rows after the current row within the ordered frame.
 This function is similar to [`leadInFrame`](./leadInFrame.md), but always uses the `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING` frame.

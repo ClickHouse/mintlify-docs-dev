@@ -1,20 +1,20 @@
 ---
 description: 'Selects the last encountered value of a column.'
-sidebar_position: 105
-old-slug: /sql-reference/aggregate-functions/reference/anylast
+slug: /sql-reference/aggregate-functions/reference/anylast
 title: 'anyLast'
 doc_type: 'reference'
 ---
 
 Selects the last encountered value of a column.
 
-<Warning>
+:::warning
 As a query can be executed in arbitrary order, the result of this function is non-deterministic.
-If you need an arbitrary but deterministic result, use functions [`min`](../reference/min.md) or [`max`](../reference/max.md).
-</Warning>
+If you need an arbitrary but deterministic result, use functions [min](/sql-reference/aggregate-functions/reference/min) or [max](/sql-reference/aggregate-functions/reference/max).
+:::
 
 By default, the function never returns NULL, i.e. ignores NULL values in the input column.
-However, if the function is used with the `RESPECT NULLS` modifier, it returns the first value reads no matter if NULL or not.
+However, if the function is used with the `RESPECT NULLS` modifier, it returns the last value reads no matter if NULL or not.
+    
 
 **Syntax**
 
@@ -22,34 +22,32 @@ However, if the function is used with the `RESPECT NULLS` modifier, it returns t
 anyLast(column) [RESPECT NULLS]
 ```
 
-Alias `anyLast(column)` (without `RESPECT NULLS`)
-- [`last_value`](../reference/last_value.md).
+**Aliases**: `last_value`
 
-Aliases for `anyLast(column) RESPECT NULLS`
-- `anyLastRespectNulls`, `anyLast_respect_nulls`
-- `lastValueRespectNulls`, `last_value_respect_nulls`
+**Arguments**
 
-**Parameters**
-- `column`: The column name.
+- `column` — The column name. [`Any`](/sql-reference/data-types)
+
 
 **Returned value**
 
-- The last value encountered.
+Returns the last value encountered. [`Any`](/sql-reference/data-types)
 
-**Example**
+**Examples**
 
-Query:
+**Usage example**
 
-```sql
-CREATE TABLE tab (city Nullable(String)) ENGINE=Memory;
-
-INSERT INTO tab (city) VALUES ('Amsterdam'),(NULL),('New York'),('Tokyo'),('Valencia'),(NULL);
-
+```sql title=Query
+CREATE TABLE tab(city Nullable(String)) ENGINE=Memory;
+INSERT INTO tab (city) VALUES ('Amsterdam'), (NULL), ('New York'), ('Tokyo'), ('Valencia'), (NULL);
 SELECT anyLast(city), anyLastRespectNulls(city) FROM tab;
 ```
 
-```response
+```response title=Response
 ┌─anyLast(city)─┬─anyLastRespectNulls(city)─┐
 │ Valencia      │ ᴺᵁᴸᴸ                      │
 └───────────────┴───────────────────────────┘
 ```
+
+
+

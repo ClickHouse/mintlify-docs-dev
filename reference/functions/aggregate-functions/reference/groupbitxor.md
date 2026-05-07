@@ -1,48 +1,57 @@
 ---
 description: 'Applies bit-wise `XOR` for series of numbers.'
-sidebar_position: 153
-old-slug: /sql-reference/aggregate-functions/reference/groupbitxor
+slug: /sql-reference/aggregate-functions/reference/groupbitxor
 title: 'groupBitXor'
 doc_type: 'reference'
 ---
 
-Applies bit-wise `XOR` for series of numbers.
+Applies bitwise XOR for series of numbers.
+    
+
+**Syntax**
 
 ```sql
 groupBitXor(expr)
 ```
 
+**Aliases**: `BIT_XOR`
+
 **Arguments**
 
-`expr` – An expression that results in `UInt*` or `Int*` type.
+- `expr` — Expression of `(U)Int*` type. [`(U)Int*`](/sql-reference/data-types/int-uint)
 
-**Return value**
 
-Value of the `UInt*` or `Int*` type.
+**Returned value**
 
-**Example**
+Returns a value of `(U)Int*` type. [`(U)Int*`](/sql-reference/data-types/int-uint)
 
-Test data:
+**Examples**
 
-```text
-binary     decimal
-00101100 = 44
-00011100 = 28
-00001101 = 13
-01010101 = 85
+**Bitwise XOR example**
+
+```sql title=Query
+CREATE TABLE t (num UInt32) ENGINE = Memory;
+INSERT INTO t VALUES (44), (28), (13), (85);
+
+-- Test data:
+-- binary     decimal
+-- 00101100 = 44
+-- 00011100 = 28
+-- 00001101 = 13
+-- 01010101 = 85
+
+SELECT groupBitXor(num) FROM t;
 ```
 
-Query:
+```response title=Response
+-- Result:
+-- binary     decimal
+-- 01101000 = 104
 
-```sql
-SELECT groupBitXor(num) FROM t
+┌─groupBitXor(num)─┐
+│              104 │
+└──────────────────┘
 ```
 
-Where `num` is the column with the test data.
 
-Result:
 
-```text
-binary     decimal
-01101000 = 104
-```

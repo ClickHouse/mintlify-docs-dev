@@ -1,14 +1,14 @@
 ---
 description: 'List of format settings for the JSON format'
 keywords: ['Format Settings', 'JSON']
-old-slug: /interfaces/formats/JSON/format-settings
+slug: /interfaces/formats/JSON/format-settings
 title: 'Format Settings For JSON'
 doc_type: 'reference'
 ---
 
 On this page you can find format settings common to all JSON formats.
 
-{/* <!-- TO DO - AUTOGENERATE THE TABLE BELOW --> */}
+<!-- TO DO - AUTOGENERATE THE TABLE BELOW -->
 
 | Setting                                                                                                                                                                              | Description                                                                                                                                | Default | Note                                                                                                                                                                                        |
 |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

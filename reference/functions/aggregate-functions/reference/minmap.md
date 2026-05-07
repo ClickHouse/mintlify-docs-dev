@@ -1,53 +1,50 @@
 ---
 description: 'Calculates the minimum from `value` array according to the keys specified
   in the `key` array.'
-sidebar_position: 169
-old-slug: /sql-reference/aggregate-functions/reference/minmap
+slug: /sql-reference/aggregate-functions/reference/minmap
 title: 'minMap'
 doc_type: 'reference'
 ---
 
 Calculates the minimum from `value` array according to the keys specified in the `key` array.
 
+:::note
+- Passing a tuple of keys and value arrays is identical to passing an array of keys and an array of values.
+- The number of elements in `key` and `value` must be the same for each row that is totaled.
+:::
+    
+
 **Syntax**
 
 ```sql
-`minMap(key, value)`
-```
-or
-```sql
-minMap(Tuple(key, value))
+minMappedArrays(key, value)
+minMappedArrays(Tuple(key, value))
 ```
 
-Alias: `minMappedArrays`
+**Arguments**
 
-<Note>
-- Passing a tuple of keys and value arrays is identical to passing an array of keys and an array of values.
-- The number of elements in `key` and `value` must be the same for each row that is totaled.
-</Note>
+- `key` — Array of keys. [`Array(T)`](/sql-reference/data-types/array)
+- `value` — Array of values. [`Array(T)`](/sql-reference/data-types/array)
 
-**Parameters**
-
-- `key` — Array of keys. [Array](../../data-types/array.md).
-- `value` — Array of values. [Array](../../data-types/array.md).
 
 **Returned value**
 
-- Returns a tuple of two arrays: keys in sorted order, and values calculated for the corresponding keys. [Tuple](../../data-types/tuple.md)([Array](../../data-types/array.md), [Array](../../data-types/array.md)).
+Returns a tuple of two arrays: keys in sorted order, and values calculated for the corresponding keys. [`Tuple(Array(T), Array(T))`](/sql-reference/data-types/tuple)
 
-**Example**
+**Examples**
 
-Query:
+**Usage example**
 
-```sql
-SELECT minMap(a, b)
-FROM VALUES('a Array(Int32), b Array(Int64)', ([1, 2], [2, 2]), ([2, 3], [1, 1]))
+```sql title=Query
+SELECT minMappedArrays(a, b)
+FROM VALUES('a Array(Int32), b Array(Int64)', ([1, 2], [2, 2]), ([2, 3], [1, 1]));
 ```
 
-Result:
-
-```text
-┌─minMap(a, b)──────┐
-│ ([1,2,3],[2,1,1]) │
-└───────────────────┘
+```response title=Response
+┌─minMappedArrays(a, b)───────────┐
+│ ([1, 2, 3], [2, 1, 1])          │
+└─────────────────────────────────┘
 ```
+
+
+

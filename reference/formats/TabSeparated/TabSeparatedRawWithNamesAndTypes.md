@@ -4,25 +4,27 @@ description: 'Documentation for the TabSeparatedRawWithNamesAndTypes format'
 input_format: true
 keywords: ['TabSeparatedRawWithNamesAndTypes', 'TSVRawWithNamesAndTypes', 'RawWithNamesAndTypes']
 output_format: true
-old-slug: /interfaces/formats/TabSeparatedRawWithNamesAndTypes
+slug: /interfaces/formats/TabSeparatedRawWithNamesAndTypes
 title: 'TabSeparatedRawWithNamesAndTypes'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge> <Badge intent="info">Alias: `TSVRawWithNamesAndNames`, `RawWithNamesAndNames`</Badge>
+| Input | Output | Alias                                             |
+|-------|--------|---------------------------------------------------|
+| ✔     | ✔      | `TSVRawWithNamesAndNames`, `RawWithNamesAndNames` |
 
-## Description 
+## Description {#description}
 
 Differs from the [`TabSeparatedWithNamesAndTypes`](./TabSeparatedWithNamesAndTypes.md) format,
 in that the rows are written without escaping.
 
-<Note>
+:::note
 When parsing with this format, tabs or line-feeds are not allowed in each field.
-</Note>
+:::
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using the following tsv file, named as `football.tsv`:
 
@@ -54,7 +56,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.tsv' FORMAT TabSeparatedRawWithNamesAndTypes;
 ```
 
-### Reading data 
+### Reading data {#reading-data}
 
 Read data using the `TabSeparatedRawWithNamesAndTypes` format:
 
@@ -88,4 +90,4 @@ Date    Int16   LowCardinality(String)  LowCardinality(String)  Int8    Int8
 2022-05-07      2021    Walsall Swindon Town    0       3
 ```
 
-## Format settings 
+## Format settings {#format-settings}

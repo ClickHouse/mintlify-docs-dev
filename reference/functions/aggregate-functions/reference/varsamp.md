@@ -1,14 +1,31 @@
 ---
 description: 'Calculate the sample variance of a data set.'
-sidebar_position: 212
-old-slug: /sql-reference/aggregate-functions/reference/varSamp
+slug: /sql-reference/aggregate-functions/reference/varSamp
 title: 'varSamp'
 doc_type: 'reference'
 ---
 
-## varSamp 
-
 Calculate the sample variance of a data set.
+
+The sample variance is calculated using the formula:
+
+$$
+\frac{\Sigma{(x - \bar{x})^2}}{n-1}
+$$
+
+<br/>
+
+Where:
+- $x$ is each individual data point in the data set
+- $\bar{x}$ is the arithmetic mean of the data set
+- $n$ is the number of data points in the data set
+
+The function assumes that the input data set represents a sample from a larger population. If you want to calculate the variance of the entire population (when you have the complete data set), you should use [`varPop`](/sql-reference/aggregate-functions/reference/varPop) instead.
+
+:::note
+This function uses a numerically unstable algorithm. If you need [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability) in calculations, use the [`varSampStable`](/sql-reference/aggregate-functions/reference/varsampstable) function. It works slower but provides a lower computational error.
+:::
+    
 
 **Syntax**
 
@@ -16,37 +33,22 @@ Calculate the sample variance of a data set.
 varSamp(x)
 ```
 
-Alias: `VAR_SAMP`.
+**Aliases**: `VAR_SAMP`
 
-**Parameters**
+**Arguments**
 
-- `x`: The population for which you want to calculate the sample variance. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal*](../../data-types/decimal.md).
+- `x` — The population for which you want to calculate the sample variance. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
+
 
 **Returned value**
 
-- Returns the sample variance of the input data set `x`. [Float64](../../data-types/float.md).
+Returns the sample variance of the input data set `x`. [`Float64`](/sql-reference/data-types/float)
 
-**Implementation details**
+**Examples**
 
-The `varSamp` function calculates the sample variance using the following formula:
+**Computing sample variance**
 
-$$
-\sum\frac{(x - \text{mean}(x))^2}{(n - 1)}
-$$
-
-Where:
-
-- `x` is each individual data point in the data set.
-- `mean(x)` is the arithmetic mean of the data set.
-- `n` is the number of data points in the data set.
-
-The function assumes that the input data set represents a sample from a larger population. If you want to calculate the variance of the entire population (when you have the complete data set), you should use [`varPop`](../reference/varpop.md) instead.
-
-**Example**
-
-Query:
-
-```sql
+```sql title=Query
 DROP TABLE IF EXISTS test_data;
 CREATE TABLE test_data
 (
@@ -59,10 +61,11 @@ INSERT INTO test_data VALUES (10.5), (12.3), (9.8), (11.2), (10.7);
 SELECT round(varSamp(x),3) AS var_samp FROM test_data;
 ```
 
-Response:
-
-```response
+```response title=Response
 ┌─var_samp─┐
 │    0.865 │
 └──────────┘
 ```
+
+
+

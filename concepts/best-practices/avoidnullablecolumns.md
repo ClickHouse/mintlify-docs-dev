@@ -1,12 +1,12 @@
 ---
-old-slug: /optimize/avoid-nullable-columns
-sidebarTitle: 'Avoid nullable Columns'
-title: 'Avoid nullable Columns'
+slug: /optimize/avoid-nullable-columns
+sidebar_label: 'Avoid nullable columns'
+title: 'Avoid nullable columns'
 description: 'Why Nullable Columns should be avoided in ClickHouse'
 doc_type: 'guide'
 keywords: ['avoid nullable columns', 'nullable columns', 'data types', 'best practices', 'performance optimization']
 ---
 
-import AvoidNullableColumns from '/snippets/_avoid_nullable_columns.mdx';
+import Content from '@site/docs/best-practices/_snippets/_avoid_nullable_columns.md';
 
-<AvoidNullableColumns />
+<Content />

@@ -1,13 +1,14 @@
 ---
 description: 'The `theilsU` function calculates Theils'' U uncertainty coefficient,
   a value that measures the association between two columns in a table.'
-sidebar_position: 201
-old-slug: /sql-reference/aggregate-functions/reference/theilsu
+slug: /sql-reference/aggregate-functions/reference/theilsu
 title: 'theilsU'
 doc_type: 'reference'
 ---
 
-The `theilsU` function calculates the [Theil's U uncertainty coefficient](https://en.wikipedia.org/wiki/Contingency_table#Uncertainty_coefficient), a value that measures the association between two columns in a table. Its values range from −1.0 (100% negative association, or perfect inversion) to +1.0 (100% positive association, or perfect agreement). A value of 0.0 indicates the absence of association.
+The `theilsU` function calculates the [Theil's U uncertainty coefficient](https://en.wikipedia.org/wiki/Contingency_table#Uncertainty_coefficient), a value that measures the association between two columns in a table.
+Its values range from 0.0 (no association) to 1.0 (perfect agreement).
+    
 
 **Syntax**
 
@@ -17,35 +18,34 @@ theilsU(column1, column2)
 
 **Arguments**
 
-- `column1` and `column2` are the columns to be compared
+- `column1` — First column to be compared. [`Any`](/sql-reference/data-types)
+- `column2` — Second column to be compared. [`Any`](/sql-reference/data-types)
+
 
 **Returned value**
 
-- a value between -1 and 1
+Returns a value between 0 and 1. [`Float64`](/sql-reference/data-types/float)
 
-**Return type** is always [Float64](../../../sql-reference/data-types/float.md).
+**Examples**
 
-**Example**
+**Usage example**
 
-The following two columns being compared below have a small association with each other, so the value of `theilsU` is negative:
-
-```sql
-SELECT
-    theilsU(a, b)
-FROM
-    (
-        SELECT
-            number % 10 AS a,
-            number % 4 AS b
-        FROM
-            numbers(150)
-    );
+```sql title=Query
+SELECT theilsU(a, b)
+FROM (
+    SELECT
+        number % 10 AS a,
+        number % 4 AS b
+    FROM
+        numbers(150)
+);
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌────────theilsU(a, b)─┐
-│ -0.30195720557678846 │
+│  0.30195720557678846 │
 └──────────────────────┘
 ```
+
+
+

@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for Index'
 sidebar: 'sqlreference'
-old-slug: /sql-reference/functions
+slug: /sql-reference/functions
 title: 'Landing page for Functions'
 doc_type: 'landing-page'
 ---

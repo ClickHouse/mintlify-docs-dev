@@ -1,27 +1,31 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/layouts/ssd-cache
+slug: /sql-reference/statements/create/dictionary/layouts/ssd-cache
 title: 'ssd_cache dictionary layout types'
+sidebar_label: 'ssd_cache'
+sidebar_position: 8
 description: 'Store dictionary data on SSD with an in-memory index: ssd_cache or complex_key_ssd_cache types'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-## ssd_cache
+## ssd_cache {#ssd_cache}
 
 Similar to `cache`, but stores data on SSD and index in RAM. All cache dictionary settings related to update queue can also be applied to SSD cache dictionaries.
 
 The dictionary key has the [UInt64](/sql-reference/data-types/int-uint.md) type.
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 LAYOUT(SSD_CACHE(BLOCK_SIZE 4096 FILE_SIZE 16777216 READ_BUFFER_SIZE 1048576
     PATH '/var/lib/clickhouse/user_files/test_dict'))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <layout>
@@ -40,10 +44,10 @@ LAYOUT(SSD_CACHE(BLOCK_SIZE 4096 FILE_SIZE 16777216 READ_BUFFER_SIZE 1048576
 </layout>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
-## complex_key_ssd_cache
+## complex_key_ssd_cache {#complex_key_ssd_cache}
 
 This type of storage is for use with composite [keys](../attributes.md#composite-key). Similar to `ssd_cache`.

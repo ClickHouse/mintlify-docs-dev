@@ -1,13 +1,15 @@
 ---
 description: 'Allows to perform queries on data exposed via an Apache Arrow Flight server.'
-sidebarTitle: 'arrowFlight'
+sidebar_label: 'arrowFlight'
 sidebar_position: 186
-old-slug: /sql-reference/table-functions/arrowflight
+slug: /sql-reference/table-functions/arrowflight
 title: 'arrowFlight'
 doc_type: 'reference'
 ---
 
-Allows to perform queries on data exposed via an [Apache Arrow Flight](../../interfaces/arrowflight.md) server.
+# arrowFlight Table Function
+
+Allows to perform queries on data exposed via an [Apache Arrow Flight](/interfaces/arrowflight) server.
 
 **Syntax**
 

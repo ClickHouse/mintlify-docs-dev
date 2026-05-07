@@ -1,10 +1,12 @@
 ---
 description: 'Documentation for the Set special data type used in IN expressions'
-sidebarTitle: 'Set'
+sidebar_label: 'Set'
 sidebar_position: 59
-old-slug: /sql-reference/data-types/special-data-types/set
+slug: /sql-reference/data-types/special-data-types/set
 title: 'Set'
 doc_type: 'reference'
 ---
+
+# Set
 
 Used for the right half of an [IN](/sql-reference/operators/in) expression.

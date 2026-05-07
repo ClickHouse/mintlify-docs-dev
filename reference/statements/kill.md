@@ -1,15 +1,15 @@
 ---
 description: 'Documentation for Kill'
-sidebarTitle: 'KILL'
+sidebar_label: 'KILL'
 sidebar_position: 46
-old-slug: /sql-reference/statements/kill
+slug: /sql-reference/statements/kill
 title: 'KILL Statements'
 doc_type: 'reference'
 ---
 
 There are two kinds of kill statements: to kill a query and to kill a mutation
 
-## KILL QUERY 
+## KILL QUERY {#kill-query}
 
 ```sql
 KILL QUERY [ON CLUSTER cluster]
@@ -60,9 +60,9 @@ KILL QUERY WHERE query_id='2-857d-4a57-9ee0-327da5d60a90'
 KILL QUERY WHERE user='username' SYNC
 ```
 
-<Tip>
+:::tip 
 If you are killing a query in ClickHouse Cloud or in a self-managed cluster, then be sure to use the ```ON CLUSTER [cluster-name]```option, in order to ensure the query is killed on all replicas
-</Tip>
+:::
 
 Read-only users can only stop their own queries.
 
@@ -77,7 +77,7 @@ The response contains the `kill_status` column, which can take the following val
 
 A test query (`TEST`) only checks the user's rights and displays a list of queries to stop.
 
-## KILL MUTATION 
+## KILL MUTATION {#kill-mutation}
 
 The presence of long-running or incomplete mutations often indicates that a ClickHouse service is running poorly. The asynchronous nature of mutations can cause them to consume all available resources on a system. You may need to either: 
 
@@ -142,6 +142,6 @@ The query is useful when a mutation is stuck and cannot finish (e.g. if some fu
 
 Changes already made by the mutation are not rolled back.
 
-<Note>
+:::note 
 `is_killed=1` column (ClickHouse Cloud only) in the [system.mutations](/operations/system-tables/mutations) table does not necessarily mean the mutation is completely finalized. It is possible for a mutation to remain in a state where `is_killed=1` and `is_done=0` for an extended period. This can happen if another long-running mutation is blocking the killed mutation. This is a normal situation.
-</Note>
+:::

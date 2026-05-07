@@ -1,14 +1,63 @@
 ---
 description: 'Creates an array from different argument values.'
-sidebar_position: 154
-old-slug: /sql-reference/aggregate-functions/reference/groupuniqarray
+slug: /sql-reference/aggregate-functions/reference/groupuniqarray
 title: 'groupUniqArray'
 doc_type: 'reference'
 ---
 
-Syntax: `groupUniqArray(x)` or `groupUniqArray(max_size)(x)`
+Creates an array from different argument values.
+The memory consumption of this function is the same as for the [`uniqExact`](/sql-reference/aggregate-functions/reference/uniqexact) function.
+    
 
-Creates an array from different argument values. Memory consumption is the same as for the [uniqExact](../../../sql-reference/aggregate-functions/reference/uniqexact.md) function.
+**Syntax**
 
-The second version (with the `max_size` parameter) limits the size of the resulting array to `max_size` elements.
-For example, `groupUniqArray(1)(x)` is equivalent to `[any(x)]`.
+```sql
+groupUniqArray(x)
+groupUniqArray(max_size)(x)
+```
+
+**Parameters**
+
+- `max_size` — Limits the size of the resulting array to `max_size` elements. `groupUniqArray(1)(x)` is equivalent to `[any(x)]`. [`UInt64`](/sql-reference/data-types/int-uint)
+
+
+**Arguments**
+
+- `x` — Expression. [`Any`](/sql-reference/data-types)
+
+
+**Returned value**
+
+Returns an array of unique values. [`Array`](/sql-reference/data-types/array)
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+CREATE TABLE t (x UInt8) ENGINE = Memory;
+INSERT INTO t VALUES (1), (2), (1), (3), (2), (4);
+
+SELECT groupUniqArray(x) FROM t;
+```
+
+```response title=Response
+┌─groupUniqArray(x)─┐
+│ [1,2,3,4]         │
+└───────────────────┘
+```
+
+**With max_size parameter**
+
+```sql title=Query
+SELECT groupUniqArray(2)(x) FROM t;
+```
+
+```response title=Response
+┌─groupUniqArray(2)(x)─┐
+│ [1,2]                │
+└──────────────────────┘
+```
+
+
+

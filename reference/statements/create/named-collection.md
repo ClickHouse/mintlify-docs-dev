@@ -1,14 +1,16 @@
 ---
 description: 'Documentation for CREATE NAMED COLLECTION'
-sidebarTitle: 'NAMED COLLECTION'
-old-slug: /sql-reference/statements/create/named-collection
+sidebar_label: 'NAMED COLLECTION'
+slug: /sql-reference/statements/create/named-collection
 title: 'CREATE NAMED COLLECTION'
 doc_type: 'reference'
 ---
 
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
 
 <CloudNotSupportedBadge />
+
+# CREATE NAMED COLLECTION
 
 Creates a new named collection.
 

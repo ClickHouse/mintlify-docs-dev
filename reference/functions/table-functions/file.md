@@ -3,28 +3,29 @@ description: 'A table engine which provides a table-like interface to SELECT fro
   and INSERT into files, similar to the s3 table function. Use `file()` when working
   with local files, and `s3()` when working with buckets in object storage such as
   S3, GCS, or MinIO.'
-sidebarTitle: 'file'
+sidebar_label: 'file'
 sidebar_position: 60
-old-slug: /sql-reference/table-functions/file
+slug: /sql-reference/table-functions/file
 title: 'file'
 doc_type: 'reference'
 ---
 
-import {ExperimentalBadge} from '/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx'
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
+import ExperimentalBadge from '@theme/badges/ExperimentalBadge';
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
 
+# file Table Function
 
 A table engine which provides a table-like interface to SELECT from and INSERT into files, similar to the [s3](/sql-reference/table-functions/url.md) table function. Use `file()` when working with local files, and `s3()` when working with buckets in object storage such as S3, GCS, or MinIO.
 
 The `file` function can be used in `SELECT` and `INSERT` queries to read from or write to files.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 file([path_to_archive ::] path [,format] [,structure] [,compression])
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 | Parameter         | Description                                                                                                                                                                                                                                                                                                   |
 |-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -34,13 +35,31 @@ file([path_to_archive ::] path [,format] [,structure] [,compression])
 | `structure`       | Structure of the table. Format: `'column1_name column1_type, column2_name column2_type, ...'`.                                                                                                                                                                                                                |
 | `compression`     | The existing compression type when used in a `SELECT` query, or the desired compression type when used in an `INSERT` query. Supported compression types are `gz`, `br`, `xz`, `zst`, `lz4`, and `bz2`.                                                                                                       |
 
-## Returned value 
+:::tip
+When the `structure` argument is omitted, ClickHouse infers the schema from the format itself.
+Different formats produce different default column names and types.
+To see the schema for a specific format, use [`DESC`](/sql-reference/statements/describe-table) with the [`format`](/sql-reference/table-functions/format) table function.
+
+For example:
+
+```sql
+DESC format(LineAsString, 'Hello\nWorld')
+```
+
+```response
+┌─name─┬─type───┬─default_type─┬─default_expression─┬─comment─┬─codec_expression─┬─ttl_expression─┐
+│ line │ String │              │                    │         │                  │                │
+└──────┴────────┴──────────────┴────────────────────┴─────────┴──────────────────┴────────────────┘
+```
+:::
+
+## Returned value {#returned_value}
 
 A table for reading or writing data in a file.
 
-## Examples for Writing to a File 
+## Examples for Writing to a File {#examples-for-writing-to-a-file}
 
-### Write to a TSV file 
+### Write to a TSV file {#write-to-a-tsv-file}
 
 ```sql
 INSERT INTO TABLE FUNCTION
@@ -57,7 +76,7 @@ As a result, the data is written into the file `test.tsv`:
 1    3    2
 ```
 
-### Partitioned write to multiple TSV files 
+### Partitioned write to multiple TSV files {#partitioned-write-to-multiple-tsv-files}
 
 If you specify a `PARTITION BY` expression when inserting data into a table function of type `file()`, then a separate file is created for each partition. Splitting the data into separate files helps to improve performance of read operations.
 
@@ -81,9 +100,9 @@ As a result, the data is written into three files: `test_1.tsv`, `test_2.tsv`, a
 1    2    3
 ```
 
-## Examples for Reading from a File 
+## Examples for Reading from a File {#examples-for-reading-from-a-file}
 
-### SELECT from a CSV file 
+### SELECT from a CSV file {#select-from-a-csv-file}
 
 First, set `user_files_path` in the server configuration and prepare a file `test.csv`:
 
@@ -112,7 +131,7 @@ LIMIT 2;
 └─────────┴─────────┴─────────┘
 ```
 
-### Inserting data from a file into a table 
+### Inserting data from a file into a table {#inserting-data-from-a-file-into-a-table}
 
 ```sql
 INSERT INTO FUNCTION
@@ -137,7 +156,7 @@ Reading data from `table.csv`, located in `archive1.zip` or/and `archive2.zip`:
 SELECT * FROM file('user_files/archives/archive{1..2}.zip :: table.csv');
 ```
 
-## Globs in path 
+## Globs in path {#globs-in-path}
 
 Paths may use globbing. Files must match the whole path pattern, not only the suffix or prefix. There is one exception that if the path refers to an existing
 directory and does not use globs, a `*` will be implicitly added to the path so
@@ -151,7 +170,7 @@ all the files in the directory are selected.
 
 Constructions with `{}` are similar to the [remote](remote.md) and [hdfs](hdfs.md) table functions.
 
-## Examples 
+## Examples {#examples}
 
 **Example**
 
@@ -182,9 +201,9 @@ Query the total number of rows in `some_dir` using the implicit `*`:
 SELECT count(*) FROM file('some_dir', 'TSV', 'name String, value UInt32');
 ```
 
-<Note>
+:::note
 If your listing of files contains number ranges with leading zeros, use the construction with braces for each digit separately or use `?`.
-</Note>
+:::
 
 **Example**
 
@@ -210,26 +229,26 @@ Query the total number of rows from all files `file002` inside any folder in dir
 SELECT count(*) FROM file('big_dir/**/file002', 'CSV', 'name String, value UInt32');
 ```
 
-## Virtual Columns 
+## Virtual Columns {#virtual-columns}
 
 - `_path` — Path to the file. Type: `LowCardinality(String)`.
 - `_file` — Name of the file. Type: `LowCardinality(String)`.
 - `_size` — Size of the file in bytes. Type: `Nullable(UInt64)`. If the file size is unknown, the value is `NULL`.
 - `_time` — Last modified time of the file. Type: `Nullable(DateTime)`. If the time is unknown, the value is `NULL`.
 
-## use_hive_partitioning setting 
+## use_hive_partitioning setting {#hive-style-partitioning}
 
-When setting `use_hive_partitioning` is set to 1, ClickHouse will detect Hive-style partitioning in the path (`/name=value/`) and will allow to use partition columns as virtual columns in the query. These virtual columns will have the same names as in the partitioned path, but starting with `_`.
+When setting `use_hive_partitioning` is set to 1, ClickHouse will detect Hive-style partitioning in the path (`/name=value/`) and will allow to use partition columns as virtual columns in the query. These virtual columns will have the same names as in the partitioned path.
 
 **Example**
 
 Use virtual column, created with Hive-style partitioning
 
 ```sql
-SELECT * FROM file('data/path/date=*/country=*/code=*/*.parquet') WHERE _date > '2020-01-01' AND _country = 'Netherlands' AND _code = 42;
+SELECT * FROM file('data/path/date=*/country=*/code=*/*.parquet') WHERE date > '2020-01-01' AND country = 'Netherlands' AND code = 42;
 ```
 
-## Settings 
+## Settings {#settings}
 
 | Setting                                                                                                            | Description                                                                                                                                                                 |
 |--------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -239,7 +258,7 @@ SELECT * FROM file('data/path/date=*/country=*/code=*/*.parquet') WHERE _date > 
 | [engine_file_skip_empty_files](operations/settings/settings.md#engine_file_skip_empty_files)                       | allows to skip empty files while reading. Disabled by default.                                                                                                              |
 | [storage_file_read_method](/operations/settings/settings#engine_file_empty_if_not_exists)                          | method of reading data from storage file, one of: read, pread, mmap (only for clickhouse-local). Default value: `pread` for clickhouse-server, `mmap` for clickhouse-local. |
 
-## Related 
+## Related {#related}
 
 - [Virtual columns](engines/table-engines/index.md#table_engines-virtual_columns)
 - [Rename files after processing](operations/settings/settings.md#rename_files_after_processing)

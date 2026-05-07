@@ -1,5 +1,5 @@
 ---
-old-slug: /best-practices/avoid-optimize-final
+slug: /best-practices/avoid-optimize-final
 sidebar_position: 10
 sidebarTitle: 'Avoid optimize final'
 title: 'Avoid OPTIMIZE FINAL'

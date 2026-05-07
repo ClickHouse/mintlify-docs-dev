@@ -1,17 +1,21 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/http
+slug: /sql-reference/statements/create/dictionary/sources/http
 title: 'HTTP(S) dictionary source'
+sidebar_position: 5
+sidebar_label: 'HTTP(S)'
 description: 'Configure an HTTP or HTTPS endpoint as a dictionary source in ClickHouse.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Working with an HTTP(S) server depends on [how the dictionary is stored in memory](../layouts/). If the dictionary is stored using `cache` and `complex_key_cache`, ClickHouse requests the necessary keys by sending a request via the `POST` method.
 
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(HTTP(
@@ -22,8 +26,8 @@ SOURCE(HTTP(
 ))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -44,7 +48,7 @@ SOURCE(HTTP(
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 

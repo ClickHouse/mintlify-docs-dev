@@ -1,16 +1,18 @@
 ---
 description: 'Guide to using and configuring the query cache feature in ClickHouse'
-sidebarTitle: 'Query cache'
+sidebar_label: 'Query cache'
 sidebar_position: 65
-old-slug: /operations/query-cache
+slug: /operations/query-cache
 title: 'Query cache'
 doc_type: 'guide'
 ---
 
+# Query cache
+
 The query cache allows to compute `SELECT` queries just once and to serve further executions of the same query directly from the cache.
 Depending on the type of the queries, this can dramatically reduce latency and resource consumption of the ClickHouse server.
 
-## Background, design and limitations 
+## Background, design and limitations {#background-design-and-limitations}
 
 Query caches can generally be viewed as transactionally consistent or inconsistent.
 
@@ -31,16 +33,16 @@ Transactionally inconsistent caching is traditionally provided by client tools o
 configuration is often duplicated. With ClickHouse's query cache, the caching logic moves to the server side. This reduces maintenance
 effort and avoids redundancy.
 
-## Configuration settings and usage 
+## Configuration settings and usage {#configuration-settings-and-usage}
 
-<Note>
+:::note
 In ClickHouse Cloud, you must use [query level settings](/operations/settings/query-level) to edit query cache settings. Editing [config level settings](/operations/configuration-files) is currently not supported.
-</Note>
+:::
 
-<Note>
+:::note
 [clickhouse-local](utilities/clickhouse-local.md) runs a single query at a time. Since query result caching does not make sense, the query
 result cache is disabled in clickhouse-local.
-</Note>
+:::
 
 Setting [use_query_cache](/operations/settings/settings#use_query_cache) can be used to control whether a specific query or all queries of the
 current session should utilize the query cache. For example, the first execution of query
@@ -54,11 +56,11 @@ SETTINGS use_query_cache = true;
 will store the query result in the query cache. Subsequent executions of the same query (also with parameter `use_query_cache = true`) will
 read the computed result from the cache and return it immediately.
 
-<Note>
+:::note
 Setting `use_query_cache` and all other query-cache-related settings only take an effect on stand-alone `SELECT` statements. In particular,
 the results of `SELECT`s to views created by `CREATE VIEW AS SELECT [...] SETTINGS use_query_cache = true` are not cached unless the `SELECT`
 statement runs with `SETTINGS use_query_cache = true`.
-</Note>
+:::
 
 The way the cache is utilized can be configured in more detail using settings [enable_writes_to_query_cache](/operations/settings/settings#enable_writes_to_query_cache)
 and [enable_reads_from_query_cache](/operations/settings/settings#enable_reads_from_query_cache) (both `true` by default). The former setting
@@ -76,7 +78,7 @@ For maximum control, it is generally recommended to provide settings `use_query_
 `enable_reads_from_query_cache` only with specific queries. It is also possible to enable caching at user or profile level (e.g. via `SET
 use_query_cache = true`) but one should keep in mind that all `SELECT` queries may return cached results then.
 
-The query cache can be cleared using statement `SYSTEM DROP QUERY CACHE`. The content of the query cache is displayed in system table
+The query cache can be cleared using statement `SYSTEM CLEAR QUERY CACHE`. The content of the query cache is displayed in system table
 [system.query_cache](system-tables/query_cache.md). The number of query cache hits and misses since database start are shown as events
 "QueryCacheHits" and "QueryCacheMisses" in system table [system.events](system-tables/events.md). Both counters are only updated for
 `SELECT` queries which run with setting `use_query_cache = true`, other queries do not affect "QueryCacheMisses". Field `query_cache_usage`
@@ -89,7 +91,8 @@ changed (see below) but doing so is not recommended for security reasons.
 
 Query results are referenced in the query cache by the [Abstract Syntax Tree (AST)](https://en.wikipedia.org/wiki/Abstract_syntax_tree) of
 their query. This means that caching is agnostic to upper/lowercase, for example `SELECT 1` and `select 1` are treated as the same query. To
-make the matching more natural, all query-level settings related to the query cache are removed from the AST.
+make the matching more natural, all query-level settings related to the query cache and [output formatting](settings/settings-formats.md))
+are removed from the AST.
 
 If the query was aborted due to an exception or user cancellation, no entry is written into the query cache.
 
@@ -115,11 +118,11 @@ readonly:
 ```xml
 <profiles>
     <default>
-        {/* The maximum cache size in bytes for user/profile 'default' */}
+        <!-- The maximum cache size in bytes for user/profile 'default' -->
         <query_cache_max_size_in_bytes>10000</query_cache_max_size_in_bytes>
-        {/* The maximum number of SELECT query results stored in the cache for user/profile 'default' */}
+        <!-- The maximum number of SELECT query results stored in the cache for user/profile 'default' -->
         <query_cache_max_entries>100</query_cache_max_entries>
-        {/* Make both settings read-only so the user cannot change them */}
+        <!-- Make both settings read-only so the user cannot change them -->
         <constraints>
             <query_cache_max_size_in_bytes>
                 <readonly/>
@@ -150,6 +153,9 @@ cache evicts entries "lazily", i.e. when an entry becomes stale, it is not immed
 is to be inserted into the query cache, the database checks whether the cache has enough free space for the new entry. If this is not the
 case, the database tries to remove all stale entries. If the cache still has not enough free space, the new entry is not inserted.
 
+If the query is run via HTTP, then ClickHouse sets the `Age` and `Expires` headers with the age (in seconds) and expiration timestamp of the
+cached entry.
+
 Entries in the query cache are compressed by default. This reduces the overall memory consumption at the cost of slower writes into / reads
 from the query cache. To disable compression, use setting [query_cache_compress_entries](/operations/settings/settings#query_cache_compress_entries).
 
@@ -165,7 +171,7 @@ SELECT 1 SETTINGS use_query_cache = true, query_cache_tag = 'tag 1';
 SELECT 1 SETTINGS use_query_cache = true, query_cache_tag = 'tag 2';
 ```
 
-To remove only entries with tag `tag` from the query cache, you can use statement `SYSTEM DROP QUERY CACHE TAG 'tag'`.
+To remove only entries with tag `tag` from the query cache, you can use statement `SYSTEM CLEAR QUERY CACHE TAG 'tag'`.
 
 ClickHouse reads table data in blocks of [max_block_size](/operations/settings/settings#max_block_size) rows. Due to filtering, aggregation,
 etc., result blocks are typically much smaller than 'max_block_size' but there are also cases where they are much bigger. Setting
@@ -179,7 +185,7 @@ result blocks. While this behavior is a good default, it can be suppressed using
 [query_cache_squash_partial_results](/operations/settings/settings#query_cache_squash_partial_results).
 
 Also, results of queries with non-deterministic functions are not cached by default. Such functions include
-- functions for accessing dictionaries: [`dictGet()`](/sql-reference/functions/ext-dict-functions#dictget-dictgetordefault-dictgetornull) etc.
+- functions for accessing dictionaries: [`dictGet()`](/sql-reference/functions/ext-dict-functions) etc.
 - [user-defined functions](../sql-reference/statements/create/function.md) without tag `<deterministic>true</deterministic>` in their XML
   definition,
 - functions which return the current date or time: [`now()`](../sql-reference/functions/date-time-functions.md#now),
@@ -208,6 +214,6 @@ row policy on a table by running the same query as another user B for whom no su
 be marked accessible by other users (i.e. shared) by supplying setting
 [query_cache_share_between_users](/operations/settings/settings#query_cache_share_between_users).
 
-## Related content 
+## Related content {#related-content}
 
 - Blog: [Introducing the ClickHouse Query Cache](https://clickhouse.com/blog/introduction-to-the-clickhouse-query-cache-and-design)

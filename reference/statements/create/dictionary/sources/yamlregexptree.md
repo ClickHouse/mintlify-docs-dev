@@ -1,10 +1,13 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/yamlregexptree
+slug: /sql-reference/statements/create/dictionary/sources/yamlregexptree
 title: 'YAMLRegExpTree dictionary source'
+sidebar_position: 15
+sidebar_label: 'YAMLRegExpTree'
 description: 'Configure a YAML file as a source for regular expression tree dictionaries.'
 doc_type: 'reference'
 ---
 
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
 
 <CloudNotSupportedBadge/>
 
@@ -12,13 +15,13 @@ The `YAMLRegExpTree` source loads a regular expression tree from a YAML file on 
 It is designed exclusively for use with the [`regexp_tree`](../layouts/regexp-tree.md) dictionary layout
 and provides hierarchical regex-to-attribute mappings for pattern-based lookups such as user agent parsing.
 
-<Note>
-**The `YAMLRegExpTree` source is only available in ClickHouse Open Source.**
+:::note
+The `YAMLRegExpTree` source is only available in ClickHouse Open Source.
 For ClickHouse Cloud, export the dictionary to CSV and load it via a [ClickHouse table source](./clickhouse.md) instead.
 See [Using regexp_tree dictionaries in ClickHouse Cloud](../layouts/regexp-tree#use-regular-expression-tree-dictionary-in-clickhouse-cloud) for details.
-</Note>
+:::
 
-## Configuration
+## Configuration {#configuration}
 
 ```sql
 CREATE DICTIONARY regexp_dict
@@ -39,7 +42,7 @@ Setting fields:
 |---------|-------------|
 | `PATH`  | The absolute path to the YAML file containing the regular expression tree. When created via DDL, the file must be in the `user_files` directory. |
 
-## YAML file structure
+## YAML file structure {#yaml-file-structure}
 
 The YAML file contains a list of regular expression tree nodes. Each node can have attributes and child nodes, forming a hierarchy:
 
@@ -67,7 +70,7 @@ Each node has the following structure:
 - **attributes**: User-defined dictionary attributes (e.g. `name`, `version`). Attribute values may contain **back references** to capture groups in the regular expression, written as `\1` or `$1` (numbers 1-9). These are replaced with the matched capture group at query time.
 - **child nodes**: A list of children, each with its own attributes and optionally more children. The name of the child list is arbitrary (e.g. `versions` above). String matching proceeds depth-first: if a string matches a node, its children are also checked. Attributes of the deepest matching node take precedence, overriding equally named parent attributes.
 
-## Related pages
+## Related pages {#related-pages}
 
 - [regexp_tree dictionary layout](../layouts/regexp-tree.md) — layout configuration, query examples, and matching modes
 - [dictGet](/sql-reference/functions/ext-dict-functions#dictGet), [dictGetAll](/sql-reference/functions/ext-dict-functions#dictGetAll) — functions for querying regexp tree dictionaries

@@ -4,14 +4,16 @@ description: 'Documentation for the TSKV format'
 input_format: true
 keywords: ['TSKV']
 output_format: true
-old-slug: /interfaces/formats/TSKV
+slug: /interfaces/formats/TSKV
 title: 'TSKV'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 Similar to the [`TabSeparated`](./TabSeparated.md) format, but outputs a value in `name=value` format. 
 Names are escaped the same way as in the [`TabSeparated`](./TabSeparated.md) format, and the `=` symbol is also escaped.
@@ -37,10 +39,10 @@ SELECT * FROM t_null FORMAT TSKV
 x=1    y=\N
 ```
 
-<Note>
+:::note
 When there are a large number of small columns, this format is ineffective, and there is generally no reason to use it. 
 Nevertheless, it is no worse than the [`JSONEachRow`](../JSON/JSONEachRow.md) format in terms of efficiency.
-</Note>
+:::
 
 For parsing, any order is supported for the values of the different columns. 
 It is acceptable for some values to be omitted as they are treated as equal to their default values.
@@ -54,9 +56,9 @@ if setting [`input_format_skip_unknown_fields`](/operations/settings/settings-fo
 
 [NULL](/sql-reference/syntax.md) is formatted as `\N`.
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using the following tskv file, named as `football.tskv`:
 
@@ -86,7 +88,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.tskv' FORMAT TSKV;
 ```
 
-### Reading data 
+### Reading data {#reading-data}
 
 Read data using the `TSKV` format:
 
@@ -118,4 +120,4 @@ date=2022-05-07 season=2021     home_team=Stevenage Borough     away_team=Salfor
 date=2022-05-07 season=2021     home_team=Walsall       away_team=Swindon Town  home_team_goals=0       away_team_goals=3
 ```
 
-## Format settings 
+## Format settings {#format-settings}

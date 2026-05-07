@@ -4,25 +4,27 @@ description: 'Documentation for the MySQLDump format'
 input_format: true
 keywords: ['MySQLDump']
 output_format: false
-old-slug: /interfaces/formats/MySQLDump
+slug: /interfaces/formats/MySQLDump
 title: 'MySQLDump'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge>
+| Input | Output  | Alias |
+|-------|---------|-------|
+| ✔     | ✗       |       |
 
-## Description 
+## Description {#description}
 
 ClickHouse supports reading MySQL [dumps](https://dev.mysql.com/doc/refman/8.0/en/mysqldump.html).
 
 It reads all the data from `INSERT` queries belonging to a single table in the dump. 
 If there is more than one table, by default it reads data from the first one.
 
-<Note>
+:::note
 This format supports schema inference: if the dump contains a `CREATE` query for the specified table, the structure is inferred from it, otherwise the schema is inferred from the data of `INSERT` queries.
-</Note>
+:::
 
-## Example usage 
+## Example usage {#example-usage}
 
 Given the following SQL dump file:
 
@@ -78,7 +80,7 @@ SETTINGS input_format_mysql_dump_table_name = 'test2'
 └───┘
 ```
 
-## Format settings 
+## Format settings {#format-settings}
 
 You can specify the name of the table from which to read data from using the [`input_format_mysql_dump_table_name`](/operations/settings/settings-formats.md/#input_format_mysql_dump_table_name) setting.
 If setting `input_format_mysql_dump_map_columns` is set to `1` and the dump contains a `CREATE` query for specified table or column names in the `INSERT` query, the columns from the input data will map to the columns from the table by name.

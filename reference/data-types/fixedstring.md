@@ -1,11 +1,13 @@
 ---
 description: 'Documentation for the FixedString data type in ClickHouse'
-sidebarTitle: 'FixedString(N)'
+sidebar_label: 'FixedString(N)'
 sidebar_position: 10
-old-slug: /sql-reference/data-types/fixedstring
+slug: /sql-reference/data-types/fixedstring
 title: 'FixedString(N)'
 doc_type: 'reference'
 ---
+
+# FixedString(N)
 
 A fixed-length string of `N` bytes (neither characters nor code points).
 

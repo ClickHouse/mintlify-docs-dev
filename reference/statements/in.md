@@ -1,10 +1,12 @@
 ---
 description: 'Documentation for the IN operators excluding NOT IN, GLOBAL IN and GLOBAL
   NOT IN operators which are covered separately'
-old-slug: /sql-reference/operators/in
-title: 'IN (operator)'
+slug: /sql-reference/operators/in
+title: 'IN Operators'
 doc_type: 'reference'
 ---
+
+# IN Operators
 
 The `IN`, `NOT IN`, `GLOBAL IN`, and `GLOBAL NOT IN` operators are covered separately, since their functionality is quite rich.
 
@@ -25,7 +27,7 @@ The right side of the operator can be a set of constant expressions, a set of tu
 
 ClickHouse allows types to differ in the left and the right parts of the `IN` subquery. 
 In this case, it converts the right side value to the type of the left side, as 
-if the [accurateCastOrNull](/sql-reference/functions/type-conversion-functions#accuratecastornullx-t) function were applied to the right side. 
+if the [accurateCastOrNull](/sql-reference/functions/type-conversion-functions#accurateCastOrNull) function were applied to the right side. 
 
 This means that the data type becomes [Nullable](../../sql-reference/data-types/nullable.md), and if the conversion 
 cannot be performed, it returns [NULL](/operations/settings/formats#input_format_null_as_default).
@@ -92,7 +94,7 @@ ORDER BY EventDate ASC
 For each day after March 17th, count the percentage of pageviews made by users who visited the site on March 17th.
 A subquery in the `IN` clause is always run just one time on a single server. There are no dependent subqueries.
 
-## NULL Processing 
+## NULL Processing {#null-processing}
 
 During request processing, the `IN` operator assumes that the result of an operation with [NULL](/operations/settings/formats#input_format_null_as_default) always equals `0`, regardless of whether `NULL` is on the right or left side of the operator. `NULL` values are not included in any dataset, do not correspond to each other and cannot be compared if [transform_null_in = 0](../../operations/settings/settings.md#transform_null_in).
 
@@ -127,17 +129,19 @@ FROM t_null
 └───────────────────────┘
 ```
 
-## Distributed Subqueries 
+## Distributed Subqueries {#distributed-subqueries}
 
 There are two options for `IN` operators with subqueries (similar to `JOIN` operators): normal `IN` / `JOIN` and `GLOBAL IN` / `GLOBAL JOIN`. They differ in how they are run for distributed query processing.
 
-<Note>
+:::note    
 Remember that the algorithms described below may work differently depending on the [settings](../../operations/settings/settings.md) `distributed_product_mode` setting.
-</Note>
+:::
 
 When using the regular `IN`, the query is sent to remote servers, and each of them runs the subqueries in the `IN` or `JOIN` clause.
 
 When using `GLOBAL IN` / `GLOBAL JOIN`, first all the subqueries are run for `GLOBAL IN` / `GLOBAL JOIN`, and the results are collected in temporary tables. Then the temporary tables are sent to each remote server, where the queries are run using this temporary data.
+
+For `GLOBAL ... JOIN`, which side of the join is calculated as the subquery depends on the join kind: for `LEFT` and `INNER` joins, the right table is calculated; for `RIGHT` joins, the left table is calculated instead, since the right table is the preserved side and should be read from shards.
 
 For a non-distributed query, use the regular `IN` / `JOIN`.
 
@@ -229,7 +233,7 @@ This is more optimal than using the normal `IN`. However, keep the following poi
 
 It also makes sense to specify a local table in the `GLOBAL IN` clause, in case this local table is only available on the requestor server and you want to use data from it on remote servers.
 
-### Distributed Subqueries and max_rows_in_set 
+### Distributed Subqueries and max_rows_in_set {#distributed-subqueries-and-max_rows_in_set}
 
 You can use [`max_rows_in_set`](/operations/settings/settings#max_rows_in_set) and [`max_bytes_in_set`](/operations/settings/settings#max_bytes_in_set) to control how much data is transferred during distributed queries. 
 
@@ -241,7 +245,7 @@ SELECT * FROM table1 WHERE col1 GLOBAL IN (SELECT col1 FROM table2 WHERE <some_p
  
 If `some_predicate` is not selective enough, it will return a large amount of data and cause performance issues. In such cases, it is wise to limit the data transfer over the network. Also, note that [`set_overflow_mode`](/operations/settings/settings#set_overflow_mode) is set to `throw` (by default) meaning that an exception is raised when these thresholds are met.
 
-### Distributed Subqueries and max_parallel_replicas 
+### Distributed Subqueries and max_parallel_replicas {#distributed-subqueries-and-max_parallel_replicas}
 
 When [max_parallel_replicas](#distributed-subqueries-and-max_parallel_replicas) is greater than 1, distributed queries are further transformed.
 

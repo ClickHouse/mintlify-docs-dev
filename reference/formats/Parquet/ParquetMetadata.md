@@ -1,12 +1,12 @@
 ---
 description: 'Documentation for the ParquetMetadata format'
 keywords: ['ParquetMetadata']
-old-slug: /interfaces/formats/ParquetMetadata
+slug: /interfaces/formats/ParquetMetadata
 title: 'ParquetMetadata'
 doc_type: 'reference'
 ---
 
-## Description 
+## Description {#description}
 
 Special format for reading Parquet file metadata (https://parquet.apache.org/docs/file-format/metadata/). It always outputs one row with the next structure/content:
 - `num_columns` - the number of columns
@@ -45,7 +45,7 @@ Special format for reading Parquet file metadata (https://parquet.apache.org/doc
       - `min` - the minimum value of the column chunk
       - `max` - the maximum column of the column chunk
 
-## Example usage 
+## Example usage {#example-usage}
 
 Example:
 

@@ -1,22 +1,24 @@
 ---
 description: 'Represents the contents of some projection in MergeTree tables.
   It can be used for introspection.'
-sidebarTitle: 'mergeTreeProjection'
+sidebar_label: 'mergeTreeProjection'
 sidebar_position: 77
-old-slug: /sql-reference/table-functions/mergeTreeProjection
+slug: /sql-reference/table-functions/mergeTreeProjection
 title: 'mergeTreeProjection'
 doc_type: 'reference'
 ---
 
+# mergeTreeProjection Table Function
+
 Represents the contents of some projection in MergeTree tables. It can be used for introspection.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 mergeTreeProjection(database, table, projection)
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 | Argument     | Description                                |
 |--------------|--------------------------------------------|
@@ -24,11 +26,11 @@ mergeTreeProjection(database, table, projection)
 | `table`      | The table name to read projection from.    |
 | `projection` | The projection to read from.               |
 
-## Returned value 
+## Returned value {#returned_value}
 
 A table object with columns provided by given projection.
 
-## Usage Example 
+## Usage Example {#usage-example}
 
 ```sql
 CREATE TABLE test

@@ -1,20 +1,22 @@
 ---
 description: 'Documentation for GRANT Statement'
-sidebarTitle: 'GRANT'
+sidebar_label: 'GRANT'
 sidebar_position: 38
-old-slug: /sql-reference/statements/grant
+slug: /sql-reference/statements/grant
 title: 'GRANT Statement'
 doc_type: 'reference'
 ---
 
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
+
+# GRANT Statement
 
 - Grants [privileges](#privileges) to ClickHouse user accounts or roles.
 - Assigns roles to user accounts or to the other roles.
 
 To revoke privileges, use the [REVOKE](../../sql-reference/statements/revoke.md) statement. Also you can list granted privileges with the [SHOW GRANTS](../../sql-reference/statements/show.md#show-grants) statement.
 
-## Granting Privilege Syntax 
+## Granting Privilege Syntax {#granting-privilege-syntax}
 
 ```sql
 GRANT [ON CLUSTER cluster_name] privilege[(column_name [,...])] [,...] ON {db.table[*]|db[*].*|*.*|table[*]|*} TO {user | role | CURRENT_USER} [,...] [WITH GRANT OPTION] [WITH REPLACE OPTION]
@@ -27,7 +29,7 @@ GRANT [ON CLUSTER cluster_name] privilege[(column_name [,...])] [,...] ON {db.ta
 The `WITH GRANT OPTION` clause grants `user` or `role` with permission to execute the `GRANT` query. Users can grant privileges of the same scope they have and less.
 The `WITH REPLACE OPTION` clause replace old privileges by new privileges for the `user` or `role`, if is not specified it appends privileges.
 
-## Assigning Role Syntax 
+## Assigning Role Syntax {#assigning-role-syntax}
 
 ```sql
 GRANT [ON CLUSTER cluster_name] role [,...] TO {user | another_role | CURRENT_USER} [,...] [WITH ADMIN OPTION] [WITH REPLACE OPTION]
@@ -39,7 +41,7 @@ GRANT [ON CLUSTER cluster_name] role [,...] TO {user | another_role | CURRENT_US
 The `WITH ADMIN OPTION` clause grants [ADMIN OPTION](#admin-option) privilege to `user` or `role`.
 The `WITH REPLACE OPTION` clause replace old roles by new role for the `user` or `role`, if is not specified it appends roles.
 
-## Grant Current Grants Syntax 
+## Grant Current Grants Syntax {#grant-current-grants-syntax}
 ```sql
 GRANT CURRENT GRANTS{(privilege[(column_name [,...])] [,...] ON {db.table|db.*|*.*|table|*}) | ON {db.table|db.*|*.*|table|*}} TO {user | role | CURRENT_USER} [,...] [WITH GRANT OPTION] [WITH REPLACE OPTION]
 ```
@@ -51,7 +53,7 @@ GRANT CURRENT GRANTS{(privilege[(column_name [,...])] [,...] ON {db.table|db.*|*
 Using the `CURRENT GRANTS` statement allows you to give all specified privileges to the given user or role.
 If none of the privileges were specified, then the given user or role will receive all available privileges for `CURRENT_USER`.
 
-## Usage 
+## Usage {#usage}
 
 To use `GRANT`, your account must have the `GRANT OPTION` privilege. You can grant privileges only inside the scope of your account privileges.
 
@@ -73,22 +75,22 @@ Also `john` has the `GRANT OPTION` privilege, so it can grant other users with p
 
 Access to the `system` database is always allowed (since this database is used for processing queries).
 
-<Note>
+:::note
 While there are many system tables which new users can access by default, they  may not be able to access every system table by default without grants.
 Additionally, access to certain system tables such as `system.zookeeper` is restricted for Cloud users for security reasons.
-</Note>
+:::
 
 You can grant multiple privileges to multiple accounts in one query. The query `GRANT SELECT, INSERT ON *.* TO john, robin` allows accounts `john` and `robin` to execute the `INSERT` and `SELECT` queries over all the tables in all the databases on the server.
 
-## Wildcard grants 
+## Wildcard grants {#wildcard-grants}
 
 Specifying privileges you can use asterisk (`*`) instead of a table or a database name. For example, the `GRANT SELECT ON db.* TO john` query allows `john` to execute the `SELECT` query over all the tables in `db` database.
 Also, you can omit database name. In this case privileges are granted for current database.
 For example, `GRANT SELECT ON * TO john` grants the privilege on all the tables in the current database, `GRANT SELECT ON mytable TO john` grants the privilege on the `mytable` table in the current database.
 
-<Note>
+:::note
 The feature described below is available starting with the 24.10 ClickHouse version.
-</Note>
+:::
 
 You can also put asterisks at the end of a table or a database name. This feature allows you to grant privileges on an abstract prefix of the table's path.
 Example: `GRANT SELECT ON db.my_tables* TO john`. This query allows `john` to execute the `SELECT` query over all the `db` database tables with the prefix `my_tables*`.
@@ -128,7 +130,7 @@ GRANT SELECT ON *suffix TO john -- wrong
 GRANT SELECT(foo) ON db.table* TO john -- wrong
 ```
 
-## Privileges 
+## Privileges {#privileges}
 
 A Privilege is a permission given to a user to execute specific kinds of queries.
 
@@ -141,7 +143,7 @@ The hierarchy of privileges in ClickHouse is shown below:
     - `ALLOW SQL SECURITY NONE`
     - `ALTER QUOTA`
     - `ALTER ROLE`
-    - `ALTER ROW POLICY` 
+    - `ALTER ROW POLICY`
     - `ALTER SETTINGS PROFILE`
     - `ALTER USER`
     - `CREATE QUOTA`
@@ -172,10 +174,10 @@ The hierarchy of privileges in ClickHouse is shown below:
         - `ALTER DROP COLUMN`
         - `ALTER MATERIALIZE COLUMN`
         - `ALTER MODIFY COLUMN`
-        - `ALTER RENAME COLUMN` 
+        - `ALTER RENAME COLUMN`
       - `ALTER CONSTRAINT`
         - `ALTER ADD CONSTRAINT`
-        - `ALTER DROP CONSTRAINT` 
+        - `ALTER DROP CONSTRAINT`
       - `ALTER DELETE`
       - `ALTER FETCH PARTITION`
       - `ALTER FREEZE PARTITION`
@@ -185,7 +187,7 @@ The hierarchy of privileges in ClickHouse is shown below:
         - `ALTER DROP INDEX`
         - `ALTER MATERIALIZE INDEX`
         - `ALTER ORDER BY`
-        - `ALTER SAMPLE BY` 
+        - `ALTER SAMPLE BY`
       - `ALTER MATERIALIZE TTL`
       - `ALTER MODIFY COMMENT`
       - `ALTER MOVE PARTITION`
@@ -195,9 +197,10 @@ The hierarchy of privileges in ClickHouse is shown below:
         - `ALTER ADD STATISTICS`
         - `ALTER DROP STATISTICS`
         - `ALTER MATERIALIZE STATISTICS`
-        - `ALTER MODIFY STATISTICS` 
+        - `ALTER MODIFY STATISTICS`
       - `ALTER TTL`
-      - `ALTER UPDATE` 
+      - `ALTER UPDATE`
+      - `ALTER TABLE EXECUTE`
     - `ALTER VIEW`
       - `ALTER VIEW MODIFY QUERY`
       - `ALTER VIEW REFRESH`
@@ -222,7 +225,7 @@ The hierarchy of privileges in ClickHouse is shown below:
     - `DROP FUNCTION`
     - `DROP RESOURCE`
     - `DROP TABLE`
-    - `DROP VIEW` 
+    - `DROP VIEW`
     - `DROP WORKLOAD`
   - [`INSERT`](#insert)
   - [`INTROSPECTION`](#introspection)
@@ -244,7 +247,7 @@ The hierarchy of privileges in ClickHouse is shown below:
   - [`SELECT`](#select)
   - [`SET DEFINER`](/sql-reference/statements/create/view#sql_security)
   - [`SHOW`](#show)
-    - `SHOW COLUMNS` 
+    - `SHOW COLUMNS`
     - `SHOW DATABASES`
     - `SHOW DICTIONARIES`
     - `SHOW TABLES`
@@ -331,7 +334,7 @@ The hierarchy of privileges in ClickHouse is shown below:
     - `SYSTEM WAIT LOADING PARTS`
   - [`TABLE ENGINE`](#table-engine)
   - [`TRUNCATE`](#truncate)
-  - `UNDROP TABLE` 
+  - `UNDROP TABLE`
 - [`NONE`](#none)
 
 Examples of how this hierarchy is treated:
@@ -369,7 +372,7 @@ If a user or a role has no privileges, it is displayed as [NONE](#none) privileg
 
 Some queries by their implementation require a set of privileges. For example, to execute the [RENAME](../../sql-reference/statements/optimize.md) query you need the following privileges: `SELECT`, `CREATE TABLE`, `INSERT` and `DROP TABLE`.
 
-### SELECT 
+### SELECT {#select}
 
 Allows executing [SELECT](../../sql-reference/statements/select/index.md) queries.
 
@@ -387,7 +390,7 @@ GRANT SELECT(x,y) ON db.table TO john
 
 This privilege allows `john` to execute any `SELECT` query that involves data from the `x` and/or `y` columns in `db.table`, for example, `SELECT x FROM db.table`. `john` can't execute `SELECT z FROM db.table`. The `SELECT * FROM db.table` also is not available. Processing this query, ClickHouse does not return any data, even `x` and `y`. The only exception is if a table contains only `x` and `y` columns, in this case ClickHouse returns all the data.
 
-### INSERT 
+### INSERT {#insert}
 
 Allows executing [INSERT](../../sql-reference/statements/insert-into.md) queries.
 
@@ -405,7 +408,7 @@ GRANT INSERT(x,y) ON db.table TO john
 
 The granted privilege allows `john` to insert data to the `x` and/or `y` columns in `db.table`.
 
-### ALTER 
+### ALTER {#alter}
 
 Allows executing [ALTER](../../sql-reference/statements/alter/index.md) queries according to the following hierarchy of privileges:
 
@@ -436,6 +439,7 @@ Allows executing [ALTER](../../sql-reference/statements/alter/index.md) queries 
   - `ALTER MOVE PARTITION`. Level: `TABLE`. Aliases: `ALTER MOVE PART`, `MOVE PARTITION`, `MOVE PART`
   - `ALTER FETCH PARTITION`. Level: `TABLE`. Aliases: `ALTER FETCH PART`, `FETCH PARTITION`, `FETCH PART`
   - `ALTER FREEZE PARTITION`. Level: `TABLE`. Aliases: `FREEZE PARTITION`
+  - `ALTER EXECUTE`. Level: `TABLE`. Aliases: `ALTER TABLE EXECUTE`
   - `ALTER VIEW`. Level: `GROUP`
   - `ALTER VIEW REFRESH`. Level: `VIEW`. Aliases: `REFRESH VIEW`
   - `ALTER VIEW MODIFY QUERY`. Level: `VIEW`. Aliases: `ALTER TABLE MODIFY QUERY`
@@ -453,11 +457,11 @@ Examples of how this hierarchy is treated:
 - The `DETACH` operation needs the [DROP](#drop) privilege.
 - To stop mutation by the [KILL MUTATION](../../sql-reference/statements/kill.md#kill-mutation) query, you need to have a privilege to start this mutation. For example, if you want to stop the `ALTER UPDATE` query, you need the `ALTER UPDATE`, `ALTER TABLE`, or `ALTER` privilege.
 
-### BACKUP 
+### BACKUP {#backup}
 
-Allows execution of [`BACKUP`] in queries. For more information on backups see ["Backup and Restore"](../../operations/backup.md).
+Allows execution of [`BACKUP`] in queries. For more information on backups see ["Backup and Restore"](/operations/backup/overview).
 
-### CREATE 
+### CREATE {#create}
 
 Allows executing [CREATE](../../sql-reference/statements/create/index.md) and [ATTACH](../../sql-reference/statements/attach.md) DDL-queries according to the following hierarchy of privileges:
 
@@ -473,7 +477,7 @@ Allows executing [CREATE](../../sql-reference/statements/create/index.md) and [A
 
 - To delete the created table, a user needs [DROP](#drop).
 
-### CLUSTER 
+### CLUSTER {#cluster}
 
 Allows executing `ON CLUSTER` queries.
 
@@ -497,7 +501,7 @@ located in the `access_control_improvements` section of `config.xml` (see below)
 </access_control_improvements>
 ```
 
-### DROP 
+### DROP {#drop}
 
 Allows executing [DROP](../../sql-reference/statements/drop.md) and [DETACH](../../sql-reference/statements/detach.md) queries according to the following hierarchy of privileges:
 
@@ -507,19 +511,19 @@ Allows executing [DROP](../../sql-reference/statements/drop.md) and [DETACH](../
   - `DROP VIEW`. Level: `VIEW`
   - `DROP DICTIONARY`. Level: `DICTIONARY`
 
-### TRUNCATE 
+### TRUNCATE {#truncate}
 
 Allows executing [TRUNCATE](../../sql-reference/statements/truncate.md) queries.
 
 Privilege level: `TABLE`.
 
-### OPTIMIZE 
+### OPTIMIZE {#optimize}
 
 Allows executing [OPTIMIZE TABLE](../../sql-reference/statements/optimize.md) queries.
 
 Privilege level: `TABLE`.
 
-### SHOW 
+### SHOW {#show}
 
 Allows executing `SHOW`, `DESCRIBE`, `USE`, and `EXISTS` queries according to the following hierarchy of privileges:
 
@@ -533,7 +537,7 @@ Allows executing `SHOW`, `DESCRIBE`, `USE`, and `EXISTS` queries according to th
 
 A user has the `SHOW` privilege if it has any other privilege concerning the specified table, dictionary or database.
 
-### KILL QUERY 
+### KILL QUERY {#kill-query}
 
 Allows executing [KILL](../../sql-reference/statements/kill.md#kill-query) queries according to the following hierarchy of privileges:
 
@@ -543,7 +547,7 @@ Privilege level: `GLOBAL`.
 
 `KILL QUERY` privilege allows one user to kill queries of other users.
 
-### ACCESS MANAGEMENT 
+### ACCESS MANAGEMENT {#access-management}
 
 Allows a user to execute queries that manage users, roles and row policies.
 
@@ -574,16 +578,16 @@ Allows a user to execute queries that manage users, roles and row policies.
 
 The `ROLE ADMIN` privilege allows a user to assign and revoke any roles including those which are not assigned to the user with the admin option.
 
-### SYSTEM 
+### SYSTEM {#system}
 
 Allows a user to execute [SYSTEM](../../sql-reference/statements/system.md) queries according to the following hierarchy of privileges.
 
 - `SYSTEM`. Level: `GROUP`
   - `SYSTEM SHUTDOWN`. Level: `GLOBAL`. Aliases: `SYSTEM KILL`, `SHUTDOWN`
   - `SYSTEM DROP CACHE`. Aliases: `DROP CACHE`
-    - `SYSTEM DROP DNS CACHE`. Level: `GLOBAL`. Aliases: `SYSTEM DROP DNS`, `DROP DNS CACHE`, `DROP DNS`
-    - `SYSTEM DROP MARK CACHE`. Level: `GLOBAL`. Aliases: `SYSTEM DROP MARK`, `DROP MARK CACHE`, `DROP MARKS`
-    - `SYSTEM DROP UNCOMPRESSED CACHE`. Level: `GLOBAL`. Aliases: `SYSTEM DROP UNCOMPRESSED`, `DROP UNCOMPRESSED CACHE`, `DROP UNCOMPRESSED`
+    - `SYSTEM DROP DNS CACHE`. Level: `GLOBAL`. Aliases: `SYSTEM CLEAR DNS CACHE`, `SYSTEM DROP DNS`, `DROP DNS CACHE`, `DROP DNS`
+    - `SYSTEM DROP MARK CACHE`. Level: `GLOBAL`. Aliases: `SYSTEM CLEAR MARK CACHE`, `SYSTEM DROP MARK`, `DROP MARK CACHE`, `DROP MARKS`
+    - `SYSTEM DROP UNCOMPRESSED CACHE`. Level: `GLOBAL`. Aliases: `SYSTEM CLEAR UNCOMPRESSED CACHE`, `SYSTEM DROP UNCOMPRESSED`, `DROP UNCOMPRESSED CACHE`, `DROP UNCOMPRESSED`
   - `SYSTEM RELOAD`. Level: `GROUP`
     - `SYSTEM RELOAD CONFIG`. Level: `GLOBAL`. Aliases: `RELOAD CONFIG`
     - `SYSTEM RELOAD DICTIONARY`. Level: `GLOBAL`. Aliases: `SYSTEM RELOAD DICTIONARIES`, `RELOAD DICTIONARY`, `RELOAD DICTIONARIES`
@@ -604,7 +608,7 @@ Allows a user to execute [SYSTEM](../../sql-reference/statements/system.md) quer
 
 The `SYSTEM RELOAD EMBEDDED DICTIONARIES` privilege implicitly granted by the `SYSTEM RELOAD DICTIONARY ON *.*` privilege.
 
-### INTROSPECTION 
+### INTROSPECTION {#introspection}
 
 Allows using [introspection](../../operations/optimizing-performance/sampling-query-profiler.md) functions.
 
@@ -614,7 +618,7 @@ Allows using [introspection](../../operations/optimizing-performance/sampling-qu
   - `addressToSymbol`. Level: `GLOBAL`
   - `demangle`. Level: `GLOBAL`
 
-### SOURCES 
+### SOURCES {#sources}
 
 Allows using external data sources. Applies to [table engines](../../engines/table-engines/index.md) and [table functions](/sql-reference/table-functions).
 
@@ -640,24 +644,24 @@ Possible parameters:
 - `SQLITE`
 - `URL`
 
-<Note>
+:::note
 The separation on READ/WRITE grants for sources is available starting with version 25.7 and only with server setting
 `access_control_improvements.enable_read_write_grants`
 
 Otherwise, you should use the syntax `GRANT AZURE ON *.* TO user` which is equivalent to the new `GRANT READ, WRITE ON AZURE TO user` 
-</Note>
+:::
 
 Examples:
 
 - To create a table with the [MySQL table engine](../../engines/table-engines/integrations/mysql.md), you need `CREATE TABLE (ON db.table_name)` and `MYSQL` privileges.
 - To use the [mysql table function](../../sql-reference/table-functions/mysql.md), you need `CREATE TEMPORARY TABLE` and `MYSQL` privileges.
 
-### Source Filter Grants 
+### Source Filter Grants {#source-filter-grants}
 
-<Note>
+:::note
 This feature is available starting with version 25.8 and only with server setting
 `access_control_improvements.enable_read_write_grants`
-</Note>
+:::
 
 You can grant access to specific source URIs by using regular expression filters. This allows fine-grained control over which external data sources users can access.
 
@@ -684,7 +688,7 @@ GRANT READ ON S3('s3://foo/.*') TO john
 GRANT READ ON S3('s3://bar/.*') TO john
 ```
 
-<Warning>
+:::warning
 Source filter takes **regexp** as a parameter, so a grant
 `GRANT READ ON URL('http://www.google.com') TO john;`
 
@@ -699,7 +703,7 @@ This may lead to potential vulnerability. The correct grant should be
 ```sql
 GRANT READ ON URL('https://www\.google\.com') TO john;
 ```
-</Warning>
+:::
 
 **Re-granting with GRANT OPTION:**
 
@@ -717,11 +721,11 @@ GRANT CURRENT GRANTS(READ ON S3) TO alice
 - **Partial revokes are not allowed:** You cannot revoke a subset of a granted filter pattern. You must revoke the entire grant and re-grant with new patterns if needed.
 - **Wildcard grants are not allowed:** You cannot use `GRANT READ ON *('regexp')` or similar wildcard-only patterns. Specific source must be provided.
 
-### dictGet 
+### dictGet {#dictget}
 
 - `dictGet`. Aliases: `dictHas`, `dictGetHierarchy`, `dictIsIn`
 
-Allows a user to execute [dictGet](/sql-reference/functions/ext-dict-functions#dictget-dictgetordefault-dictgetornull), [dictHas](../../sql-reference/functions/ext-dict-functions.md#dicthas), [dictGetHierarchy](../../sql-reference/functions/ext-dict-functions.md#dictgethierarchy), [dictIsIn](../../sql-reference/functions/ext-dict-functions.md#dictisin) functions.
+Allows a user to execute [dictGet](/sql-reference/functions/ext-dict-functions#dictGet), [dictHas](../../sql-reference/functions/ext-dict-functions.md#dictHas), [dictGetHierarchy](../../sql-reference/functions/ext-dict-functions.md#dictGetHierarchy), [dictIsIn](../../sql-reference/functions/ext-dict-functions.md#dictIsIn) functions.
 
 Privilege level: `DICTIONARY`.
 
@@ -730,7 +734,7 @@ Privilege level: `DICTIONARY`.
 - `GRANT dictGet ON mydb.mydictionary TO john`
 - `GRANT dictGet ON mydictionary TO john`
 
-### displaySecretsInShowAndSelect 
+### displaySecretsInShowAndSelect {#displaysecretsinshowandselect}
 
 Allows a user to view secrets in `SHOW` and `SELECT` queries if both
 [`display_secrets_in_show_and_select` server setting](../../operations/server-configuration-parameters/settings#display_secrets_in_show_and_select)
@@ -738,7 +742,7 @@ and
 [`format_display_secrets_in_show_and_select` format setting](../../operations/settings/formats#format_display_secrets_in_show_and_select)
 are turned on.
 
-### NAMED COLLECTION ADMIN 
+### NAMED COLLECTION ADMIN {#named-collection-admin}
 
 Allows a certain operation on a specified named collection. Before version 23.7 it was called NAMED COLLECTION CONTROL, and after 23.7 NAMED COLLECTION ADMIN was added and NAMED COLLECTION CONTROL is preserved as an alias.
 
@@ -757,7 +761,7 @@ Unlike all other grants (CREATE, DROP, ALTER, SHOW) grant NAMED COLLECTION was a
 Assuming a named collection is called abc, we grant privilege CREATE NAMED COLLECTION to user john.
 - `GRANT CREATE NAMED COLLECTION ON abc TO john`
 
-### TABLE ENGINE 
+### TABLE ENGINE {#table-engine}
 
 Allows using a specified table engine when creating a table. Applies to [table engines](../../engines/table-engines/index.md).
 
@@ -766,21 +770,33 @@ Allows using a specified table engine when creating a table. Applies to [table e
 - `GRANT TABLE ENGINE ON * TO john`
 - `GRANT TABLE ENGINE ON TinyLog TO john`
 
-### ALL 
+:::note
+By default, for backward compatibility reasons, creating a table with a specific table engine ignores grants,
+however you can change this behaviour by setting [`table_engines_require_grant` to true](https://github.com/ClickHouse/ClickHouse/blob/df970ed64eaf472de1e7af44c21ec95956607ebb/programs/server/config.xml#L853-L855)
+in config.xml.
+:::
+
+Some table engines with external sources may require `READ`/`WRITE` permissions on the corresponding source. See [Sources](#sources).
+
+For example, for the AzureBlobStorage table engine, following grant may be required.
+
+- `GRANT READ, WRITE ON AZURE TO john`
+
+### ALL {#all}
 
 <CloudNotSupportedBadge/>
 
 Grants all the privileges on regulated entity to a user account or a role.
 
-<Note>
+:::note
 The privilege `ALL` is not supported in ClickHouse Cloud, where the `default` user has limited permissions. Users can grant the maximum permissions to a user by granting the `default_role`. See [here](/cloud/security/manage-cloud-users) for further details.
 Users can also use the `GRANT CURRENT GRANTS` as the default user to achieve similar effects to `ALL`.
-</Note>
+:::
 
-### NONE 
+### NONE {#none}
 
 Doesn't grant any privileges.
 
-### ADMIN OPTION 
+### ADMIN OPTION {#admin-option}
 
 The `ADMIN OPTION` privilege allows a user to grant their role to another user.

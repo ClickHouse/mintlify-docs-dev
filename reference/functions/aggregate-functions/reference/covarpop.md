@@ -1,7 +1,6 @@
 ---
 description: 'Calculates the population covariance'
-sidebar_position: 121
-old-slug: /sql-reference/aggregate-functions/reference/covarpop
+slug: /sql-reference/aggregate-functions/reference/covarpop
 title: 'covarPop'
 doc_type: 'reference'
 ---
@@ -12,9 +11,12 @@ $$
 \frac{\Sigma{(x - \bar{x})(y - \bar{y})}}{n}
 $$
 
-<Note>
-This function uses a numerically unstable algorithm. If you need [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability) in calculations, use the [`covarPopStable`](../reference/covarpopstable.md) function. It works slower but provides a lower computational error.
-</Note>
+<br/>
+
+:::note
+This function uses a numerically unstable algorithm. If you need [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability) in calculations, use the [`covarPopStable`](../reference/covarPopStable.md) function. It works slower but provides a lower computational error.
+:::
+    
 
 **Syntax**
 
@@ -22,34 +24,36 @@ This function uses a numerically unstable algorithm. If you need [numerical stab
 covarPop(x, y)
 ```
 
+**Aliases**: `COVAR_POP`
+
 **Arguments**
 
-- `x` — first variable. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal](../../data-types/decimal.md).
-- `y` — second variable. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal](../../data-types/decimal.md).
+- `x` — First variable. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
+- `y` — Second variable. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
 
-**Returned Value**
 
-- The population covariance between `x` and `y`. [Float64](../../data-types/float.md).
+**Returned value**
 
-**Example**
+Returns the population covariance between `x` and `y`. [`Float64`](/sql-reference/data-types/float)
 
-Query:
+**Examples**
 
-```sql
+**Basic population covariance calculation**
+
+```sql title=Query
 DROP TABLE IF EXISTS series;
 CREATE TABLE series(i UInt32, x_value Float64, y_value Float64) ENGINE = Memory;
 INSERT INTO series(i, x_value, y_value) VALUES (1, 5.6, -4.4),(2, -9.6, 3),(3, -1.3, -4),(4, 5.3, 9.7),(5, 4.4, 0.037),(6, -8.6, -7.8),(7, 5.1, 9.3),(8, 7.9, -3.6),(9, -8.2, 0.62),(10, -3, 7.3);
-```
 
-```sql
 SELECT covarPop(x_value, y_value)
-FROM series;
+FROM series
 ```
 
-Result:
-
-```reference
+```response title=Response
 ┌─covarPop(x_value, y_value)─┐
 │                   6.485648 │
 └────────────────────────────┘
 ```
+
+
+

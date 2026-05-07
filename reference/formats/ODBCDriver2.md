@@ -1,13 +1,13 @@
 ---
 description: 'Documentation for the ODBCDriver2 format'
 keywords: ['ODBCDriver2']
-old-slug: /interfaces/formats/ODBCDriver2
+slug: /interfaces/formats/ODBCDriver2
 title: 'ODBCDriver2'
 doc_type: 'reference'
 ---
 
-## Description 
+## Description {#description}
 
-## Example usage 
+## Example usage {#example-usage}
 
-## Format settings 
+## Format settings {#format-settings}

@@ -1,17 +1,22 @@
 ---
 description: 'Exactly computes the quantile of a numeric data sequence, taking into
   account the weight of each element.'
-sidebar_position: 174
-old-slug: /sql-reference/aggregate-functions/reference/quantileexactweighted
+slug: /sql-reference/aggregate-functions/reference/quantileexactweighted
 title: 'quantileExactWeighted'
 doc_type: 'reference'
 ---
 
 Exactly computes the [quantile](https://en.wikipedia.org/wiki/Quantile) of a numeric data sequence, taking into account the weight of each element.
 
-To get exact value, all the passed values ​​are combined into an array, which is then partially sorted. Each value is counted with its weight, as if it is present `weight` times. A hash table is used in the algorithm. Because of this, if the passed values ​​are frequently repeated, the function consumes less RAM than [quantileExact](/sql-reference/aggregate-functions/reference/quantileexact#quantileexact). You can use this function instead of `quantileExact` and specify the weight 1.
+To get the exact value, all the passed values are combined into an array, which is then partially sorted.
+Each value is counted with its weight, as if it is present `weight` times.
+A hash table is used in the algorithm.
+Because of this, if the passed values are frequently repeated, the function consumes less RAM than [`quantileExact`](/sql-reference/aggregate-functions/reference/quantileexact#quantileExact).
+You can use this function instead of `quantileExact` and specify the weight 1.
 
-When using multiple `quantile*` functions with different levels in a query, the internal states are not combined (that is, the query works less efficiently than it could). In this case, use the [quantiles](../../../sql-reference/aggregate-functions/reference/quantiles.md#quantiles) function.
+When using multiple `quantile*` functions with different levels in a query, the internal states are not combined (that is, the query works less efficiently than it could).
+In this case, use the [quantiles](/sql-reference/aggregate-functions/reference/quantiles#quantiles) function.
+    
 
 **Syntax**
 
@@ -19,50 +24,50 @@ When using multiple `quantile*` functions with different levels in a query, the 
 quantileExactWeighted(level)(expr, weight)
 ```
 
-Alias: `medianExactWeighted`.
+**Aliases**: `medianExactWeighted`
+
+**Parameters**
+
+- `level` — Optional. Level of quantile. Constant floating-point number from 0 to 1. We recommend using a `level` value in the range of `[0.01, 0.99]`. Default value: 0.5. At `level=0.5` the function calculates median. [`Float*`](/sql-reference/data-types/float)
+
 
 **Arguments**
 
-- `level` — Level of quantile. Optional parameter. Constant floating-point number from 0 to 1. We recommend using a `level` value in the range of `[0.01, 0.99]`. Default value: 0.5. At `level=0.5` the function calculates [median](https://en.wikipedia.org/wiki/Median).
-- `expr` — Expression over the column values resulting in numeric [data types](/sql-reference/data-types), [Date](../../../sql-reference/data-types/date.md) or [DateTime](../../../sql-reference/data-types/datetime.md).
-- `weight` — Column with weights of sequence members. Weight is a number of value occurrences with [Unsigned integer types](../../../sql-reference/data-types/int-uint.md).
+- `expr` — Expression over the column values resulting in numeric data types, Date or DateTime. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal) or [`Date`](/sql-reference/data-types/date) or [`DateTime`](/sql-reference/data-types/datetime)
+- `weight` — Column with weights of sequence members. Weight is a number of value occurrences. [`UInt*`](/sql-reference/data-types/int-uint)
+
 
 **Returned value**
 
-- Quantile of the specified level.
+Quantile of the specified level. [`Float64`](/sql-reference/data-types/float) or [`Date`](/sql-reference/data-types/date) or [`DateTime`](/sql-reference/data-types/datetime)
 
-Type:
+**Examples**
 
-- [Float64](../../../sql-reference/data-types/float.md) for numeric data type input.
-- [Date](../../../sql-reference/data-types/date.md) if input values have the `Date` type.
-- [DateTime](../../../sql-reference/data-types/datetime.md) if input values have the `DateTime` type.
+**Computing exact weighted quantile**
 
-**Example**
+```sql title=Query
+CREATE TABLE t (
+    n Int32,
+    val Int32
+) ENGINE = Memory;
 
-Input table:
+-- Insert the sample data
+INSERT INTO t VALUES
+(0, 3),
+(1, 2),
+(2, 1),
+(5, 4);
 
-```text
-┌─n─┬─val─┐
-│ 0 │   3 │
-│ 1 │   2 │
-│ 2 │   1 │
-│ 5 │   4 │
-└───┴─────┘
+SELECT quantileExactWeighted(n, val) FROM t;
 ```
 
-Query:
-
-```sql
-SELECT quantileExactWeighted(n, val) FROM t
-```
-
-Result:
-
-```text
+```response title=Response
 ┌─quantileExactWeighted(n, val)─┐
 │                             1 │
 └───────────────────────────────┘
 ```
+
+
 
 **See Also**
 

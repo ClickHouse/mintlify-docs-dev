@@ -1,18 +1,20 @@
 ---
 description: 'CoalescingMergeTree inherits from the MergeTree engine. Its key feature
   is the ability to automatically store last non-null value of each column during part merges.'
-sidebarTitle: 'CoalescingMergeTree'
+sidebar_label: 'CoalescingMergeTree'
 sidebar_position: 50
-old-slug: /engines/table-engines/mergetree-family/coalescingmergetree
+slug: /engines/table-engines/mergetree-family/coalescingmergetree
 title: 'CoalescingMergeTree table engine'
 keywords: ['CoalescingMergeTree']
 show_related_blogs: true
 doc_type: 'reference'
 ---
 
-<Note title="Available from version 25.6">
+# CoalescingMergeTree table engine
+
+:::note Available from version 25.6
 This table engine is available from version 25.6 and higher in both OSS and Cloud.
-</Note>
+:::
 
 This engine inherits from [MergeTree](/engines/table-engines/mergetree-family/mergetree). The key difference is in how data parts are merged: for `CoalescingMergeTree` tables, ClickHouse replaces all rows with the same primary key (or more precisely, the same [sorting key](../../../engines/table-engines/mergetree-family/mergetree.md)) with a single row that contains the latest non-NULL values for each column.
 
@@ -20,7 +22,7 @@ This enables column-level upserts, meaning you can update only specific columns 
 
 `CoalescingMergeTree` is intended for use with Nullable types in non-key columns. If the columns are not Nullable, the behavior is the same as with [ReplacingMergeTree](/engines/table-engines/mergetree-family/replacingmergetree).
 
-## Creating a table 
+## Creating a table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -37,26 +39,23 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 
 For a description of request parameters, see [request description](../../../sql-reference/statements/create/table.md).
 
-### Parameters of CoalescingMergeTree 
+### Parameters of CoalescingMergeTree {#parameters-of-coalescingmergetree}
 
-#### Columns 
+#### Columns {#columns}
 
-`columns` - a tuple with the names of columns where values will be united. Optional parameter.
-    The columns must be of a numeric type and must not be in the partition or sorting key.
+`columns` - Optional. A tuple with the names of columns where values will be united. The provided columns must not be in the partition or sorting key. If `columns` is not specified, ClickHouse unites the values in all columns that are not in the sorting key.
 
- If `columns` is not specified, ClickHouse unites the values in all columns that are not in the sorting key.
-
-### Query clauses 
+### Query clauses {#query-clauses}
 
 When creating a `CoalescingMergeTree` table the same [clauses](../../../engines/table-engines/mergetree-family/mergetree.md) are required, as when creating a `MergeTree` table.
 
+<details markdown="1">
 
+<summary>Deprecated Method for Creating a Table</summary>
 
-<AccordionGroup>
-<Accordion title="Deprecated Method for Creating a Table">
-<Note>
+:::note
 Do not use this method in new projects and, if possible, switch the old projects to the method described above.
-</Note>
+:::
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -70,9 +69,10 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 All of the parameters excepting `columns` have the same meaning as in `MergeTree`.
 
 - `columns` — tuple with names of columns values of which will be summed. Optional parameter. For a description, see the text above.
-</Accordion>
-</AccordionGroup>
-## Usage example 
+
+</details>
+
+## Usage example {#usage-example}
 
 Consider the following table:
 
@@ -126,7 +126,7 @@ SELECT * FROM test_table FINAL ORDER BY key;
 
 Using the `FINAL` modifier forces ClickHouse to apply merge logic at query time, ensuring you get the correct, coalesced "latest" value for each column. This is the safest and most accurate method when querying from a CoalescingMergeTree table.
 
-<Note>
+:::note
 
 An approach with `GROUP BY` may return incorrect results if the underlying parts have not been fully merged.
 
@@ -134,4 +134,4 @@ An approach with `GROUP BY` may return incorrect results if the underlying parts
 SELECT key, last_value(value_int), last_value(value_string), last_value(value_date)  FROM test_table GROUP BY key; -- Not recommended.
 ```
 
-</Note>
+:::

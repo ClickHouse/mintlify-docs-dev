@@ -1,44 +1,54 @@
 ---
 description: 'Performs simple (unidimensional) linear regression.'
-sidebar_position: 183
-old-slug: /sql-reference/aggregate-functions/reference/simplelinearregression
+slug: /sql-reference/aggregate-functions/reference/simplelinearregression
 title: 'simpleLinearRegression'
 doc_type: 'reference'
 ---
 
 Performs simple (unidimensional) linear regression.
+    
+
+**Syntax**
 
 ```sql
 simpleLinearRegression(x, y)
 ```
 
-Parameters:
+**Arguments**
 
-- `x` — Column with explanatory variable values.
-- `y` — Column with dependent variable values.
+- `x` — Column with explanatory variable values. [`Float64`](/sql-reference/data-types/float)
+- `y` — Column with dependent variable values. [`Float64`](/sql-reference/data-types/float)
 
-Returned values:
 
-Constants `(k, b)` of the resulting line `y = k*x + b`.
+**Returned value**
+
+Returns constants `(k, b)` of the resulting line `y = k*x + b`. [`Tuple(Float64, Float64)`](/sql-reference/data-types/tuple)
 
 **Examples**
 
-```sql
-SELECT arrayReduce('simpleLinearRegression', [0, 1, 2, 3], [0, 1, 2, 3])
+**Perfect linear fit**
+
+```sql title=Query
+SELECT arrayReduce('simpleLinearRegression', [0, 1, 2, 3], [0, 1, 2, 3]);
 ```
 
-```text
+```response title=Response
 ┌─arrayReduce('simpleLinearRegression', [0, 1, 2, 3], [0, 1, 2, 3])─┐
 │ (1,0)                                                             │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-```sql
-SELECT arrayReduce('simpleLinearRegression', [0, 1, 2, 3], [3, 4, 5, 6])
+**Linear fit with offset**
+
+```sql title=Query
+SELECT arrayReduce('simpleLinearRegression', [0, 1, 2, 3], [3, 4, 5, 6]);
 ```
 
-```text
+```response title=Response
 ┌─arrayReduce('simpleLinearRegression', [0, 1, 2, 3], [3, 4, 5, 6])─┐
 │ (1,3)                                                             │
 └───────────────────────────────────────────────────────────────────┘
 ```
+
+
+

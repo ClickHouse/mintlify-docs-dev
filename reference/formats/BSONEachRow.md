@@ -4,19 +4,21 @@ description: 'Documentation for the BSONEachRow format'
 input_format: true
 keywords: ['BSONEachRow']
 output_format: true
-old-slug: /interfaces/formats/BSONEachRow
+slug: /interfaces/formats/BSONEachRow
 title: 'BSONEachRow'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 The `BSONEachRow` format parses data as a sequence of Binary JSON (BSON) documents without any separator between them.
 Each row is formatted as a single document and each column is formatted as a single BSON document field with the column name as a key.
 
-## Data types matching 
+## Data types matching {#data-types-matching}
 
 For output it uses the following correspondence between ClickHouse types and BSON types:
 
@@ -74,13 +76,13 @@ For example, it is possible to insert a BSON `int32` value into ClickHouse as [`
 Big integers and decimals such as `Int128`/`UInt128`/`Int256`/`UInt256`/`Decimal128`/`Decimal256` can be parsed from a BSON Binary value with the `\x00` binary subtype. 
 In this case, the format will validate that the size of the binary data equals the size of the expected value.
 
-<Note>
+:::note
 This format does not work properly on Big-Endian platforms.
-</Note>
+:::
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using a BSON file with the following data, named as `football.bson`:
 
@@ -112,7 +114,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.bson' FORMAT BSONEachRow;
 ```
 
-### Reading data 
+### Reading data {#reading-data}
 
 Read data using the `BSONEachRow` format:
 
@@ -122,11 +124,11 @@ FROM football INTO OUTFILE 'docs_data/bson/football.bson'
 FORMAT BSONEachRow
 ```
 
-<Tip>
+:::tip
 BSON is a binary format that does not display in a human-readable form on the terminal. Use the `INTO OUTFILE` to output BSON files.
-</Tip>
+:::
 
-## Format settings 
+## Format settings {#format-settings}
 
 | Setting                                                                                                                                                                                               | Description                                                                                  | Default  |
 |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|----------|

@@ -1,11 +1,13 @@
 ---
 description: 'Designed for thinning and aggregating/averaging (rollup) Graphite data.'
-sidebarTitle: 'GraphiteMergeTree'
+sidebar_label: 'GraphiteMergeTree'
 sidebar_position: 90
-old-slug: /engines/table-engines/mergetree-family/graphitemergetree
+slug: /engines/table-engines/mergetree-family/graphitemergetree
 title: 'GraphiteMergeTree table engine'
 doc_type: 'guide'
 ---
+
+# GraphiteMergeTree table engine
 
 This engine is designed for thinning and aggregating/averaging (rollup) [Graphite](http://graphite.readthedocs.io/en/latest/index.html) data. It may be helpful to developers who want to use ClickHouse as a data store for Graphite.
 
@@ -13,7 +15,7 @@ You can use any ClickHouse table engine to store the Graphite data if you do not
 
 The engine inherits properties from [MergeTree](../../../engines/table-engines/mergetree-family/mergetree.md).
 
-## Creating a table 
+## Creating a table {#creating-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -52,13 +54,13 @@ The names of these columns should be set in the rollup configuration.
 
 When creating a `GraphiteMergeTree` table, the same [clauses](../../../engines/table-engines/mergetree-family/mergetree.md#table_engine-mergetree-creating-a-table) are required, as when creating a `MergeTree` table.
 
+<details markdown="1">
 
+<summary>Deprecated Method for Creating a Table</summary>
 
-<AccordionGroup>
-<Accordion title="Deprecated Method for Creating a Table">
-<Note>
+:::note
 Do not use this method in new projects and, if possible, switch old projects to the method described above.
-</Note>
+:::
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -75,9 +77,10 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 All of the parameters excepting `config_section` have the same meaning as in `MergeTree`.
 
 - `config_section` — Name of the section in the configuration file, where are the rules of rollup set.
-</Accordion>
-</AccordionGroup>
-## Rollup configuration 
+
+</details>
+
+## Rollup configuration {#rollup-configuration}
 
 The settings for rollup are defined by the [graphite_rollup](../../../operations/server-configuration-parameters/settings.md#graphite) parameter in the server configuration. The name of the parameter could be any. You can create several configurations and use them for different tables.
 
@@ -86,22 +89,22 @@ Rollup configuration structure:
       required-columns
       patterns
 
-### Required columns 
+### Required columns {#required-columns}
 
-#### `path_column_name` 
+#### `path_column_name` {#path_column_name}
 
 `path_column_name` — The name of the column storing the metric name (Graphite sensor). Default value: `Path`.
 
-#### `time_column_name` 
+#### `time_column_name` {#time_column_name}
 `time_column_name` — The name of the column storing the time of measuring the metric. Default value: `Time`.
 
-#### `value_column_name` 
+#### `value_column_name` {#value_column_name}
 `value_column_name` — The name of the column storing the value of the metric at the time set in `time_column_name`. Default value: `Value`.
 
-#### `version_column_name` 
+#### `version_column_name` {#version_column_name}
 `version_column_name` — The name of the column storing the version of the metric. Default value: `Timestamp`.
 
-### Patterns 
+### Patterns {#patterns}
 
 Structure of the `patterns` section:
 
@@ -129,13 +132,13 @@ default
     ...
 ```
 
-<Warning>
-**Patterns must be strictly ordered:**
+:::important
+Patterns must be strictly ordered:
 
 1. Patterns without `function` or `retention`.
 1. Patterns with both `function` and `retention`.
 1. Pattern `default`.
-</Warning>
+:::
 
 When processing a row, ClickHouse checks the rules in the `pattern` sections. Each of `pattern` (including `default`) sections can contain `function` parameter for aggregation, `retention` parameters or both. If the metric name matches the `regexp`, the rules from the `pattern` section (or sections) are applied; otherwise, the rules from the `default` section are used.
 
@@ -154,7 +157,7 @@ Valid values:
 - `precision`– How precisely to define the age of the data in seconds. Should be a divisor for 86400 (seconds in a day).
 - `function` – The name of the aggregating function to apply to data whose age falls within the range `[age, age + precision]`. Accepted functions: min / max / any / avg. The average is calculated imprecisely, like the average of the averages.
 
-### Configuration Example without rules types 
+### Configuration Example without rules types {#configuration-example}
 
 ```xml
 <graphite_rollup>
@@ -189,7 +192,7 @@ Valid values:
 </graphite_rollup>
 ```
 
-### Configuration Example with rules types 
+### Configuration Example with rules types {#configuration-typed-example}
 
 ```xml
 <graphite_rollup>
@@ -263,6 +266,6 @@ Valid values:
 </graphite_rollup>
 ```
 
-<Note>
+:::note
 Data rollup is performed during merges. Usually, for old partitions, merges are not started, so for rollup it is necessary to trigger an unscheduled merge using [optimize](../../../sql-reference/statements/optimize.md). Or use additional tools, for example [graphite-ch-optimizer](https://github.com/innogames/graphite-ch-optimizer).
-</Note>
+:::

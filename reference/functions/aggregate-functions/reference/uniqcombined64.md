@@ -2,79 +2,89 @@
 description: 'Calculates the approximate number of different argument values. It is
   the same as uniqCombined, but uses a 64-bit hash for all data types rather than
   just for the String data type.'
-sidebar_position: 206
-old-slug: /sql-reference/aggregate-functions/reference/uniqcombined64
+slug: /sql-reference/aggregate-functions/reference/uniqcombined64
 title: 'uniqCombined64'
 doc_type: 'reference'
 ---
 
-Calculates the approximate number of different argument values. It is the same as [uniqCombined](/sql-reference/aggregate-functions/reference/uniqcombined), but uses a 64-bit hash for all data types rather than just for the String data type.
+Calculates the approximate number of different argument values.
+It is the same as [`uniqCombined`](https://clickhouse.com/docs/sql-reference/aggregate-functions/reference/uniqcombined), but uses a 64-bit hash for all data types rather than just for the String data type.
+
+This function provides the result deterministically (it does not depend on the query processing order).
+
+:::note
+Since it uses 64-bit hash for all types, the result does not suffer from very high error for cardinalities significantly larger than `UINT_MAX` like [`uniqCombined`](https://clickhouse.com/docs/sql-reference/aggregate-functions/reference/uniqcombined) does, which uses a 32-bit hash for non-String types.
+:::
+
+Compared to the [uniq](https://clickhouse.com/docs/sql-reference/aggregate-functions/reference/uniq) function, the uniqCombined64 function:
+- Consumes several times less memory
+- Calculates with several times higher accuracy
+
+<details>
+<summary>Implementation details</summary>
+This function calculates a 64-bit hash for all data types for all parameters in the aggregate, then uses it in calculations.
+It uses a combination of three algorithms: array, hash table, and [HyperLogLog](https://en.wikipedia.org/wiki/HyperLogLog) with an error correction table:
+- For a small number of distinct elements, an array is used
+- When the set size is larger, a hash table is used
+- For a larger number of elements, HyperLogLog is used, which will occupy a fixed amount of memory
+</details>
+    
+
+**Syntax**
 
 ```sql
 uniqCombined64(HLL_precision)(x[, ...])
+uniqCombined64(x[, ...])
 ```
 
 **Parameters**
 
-- `HLL_precision`: The base-2 logarithm of the number of cells in [HyperLogLog](https://en.wikipedia.org/wiki/HyperLogLog). Optionally, you can use the function as `uniqCombined64(x[, ...])`. The default value for `HLL_precision` is 17, which is effectively 96 KiB of space (2^17 cells, 6 bits each).
-- `X`: A variable number of parameters. Parameters can be `Tuple`, `Array`, `Date`, `DateTime`, `String`, or numeric types.
+- `HLL_precision` — Optional. The base-2 logarithm of the number of cells in HyperLogLog. The default value is 17, which is effectively 96 KiB of space (2^17 cells, 6 bits each). Range: [12, 20]. [`UInt8`](/sql-reference/data-types/int-uint)
+
+
+**Arguments**
+
+- `x` — A variable number of parameters. [`Tuple(T)`](/sql-reference/data-types/tuple) or [`Array(T)`](/sql-reference/data-types/array) or [`Date`](/sql-reference/data-types/date) or [`DateTime`](/sql-reference/data-types/datetime) or [`String`](/sql-reference/data-types/string) or [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
+
 
 **Returned value**
 
-- A number [UInt64](../../../sql-reference/data-types/int-uint.md)-type number.
+Returns a UInt64-type number representing the approximate number of different argument values. [`UInt64`](/sql-reference/data-types/int-uint)
 
-**Implementation details**
+**Examples**
 
-The `uniqCombined64` function:
-- Calculates a hash (64-bit hash for all data types) for all parameters in the aggregate, then uses it in calculations.
-- Uses a combination of three algorithms: array, hash table, and HyperLogLog with an error correction table.
-  - For a small number of distinct elements, an array is used. 
-  - When the set size is larger, a hash table is used. 
-  - For a larger number of elements, HyperLogLog is used, which will occupy a fixed amount of memory.
-- Provides the result deterministically (it does not depend on the query processing order).
+**Large dataset example**
 
-<Note>
-Since it uses 64-bit hash for all types, the result does not suffer from very high error for cardinalities significantly larger than `UINT_MAX` like [uniqCombined](../../../sql-reference/aggregate-functions/reference/uniqcombined.md) does, which uses a 32-bit hash for non-`String` types.
-</Note>
-
-Compared to the [uniq](/sql-reference/aggregate-functions/reference/uniq) function, the `uniqCombined64` function:
-
-- Consumes several times less memory.
-- Calculates with several times higher accuracy.
-
-**Example**
-
-In the example below `uniqCombined64` is run on `1e10` different numbers returning a very close approximation of the number of different argument values. 
-
-Query:
-
-```sql
+```sql title=Query
 SELECT uniqCombined64(number) FROM numbers(1e10);
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─uniqCombined64(number)─┐
-│             9998568925 │ -- 10.00 billion
+│             9998568925 │
 └────────────────────────┘
 ```
 
-By comparison the `uniqCombined` function returns a rather poor approximation for an input this size.
+**Comparison with uniqCombined**
 
-Query:
+```sql title=Query
+-- uniqCombined64 with large dataset
+SELECT uniqCombined64(number) FROM numbers(1e10);
 
-```sql
+-- uniqCombined with same dataset shows poor approximation
 SELECT uniqCombined(number) FROM numbers(1e10);
 ```
 
-Result:
-
-```response
+```response title=Response
+┌─uniqCombined64(number)─┐
+│             9998568925 │ -- 10.00 billion
+└────────────────────────┘
 ┌─uniqCombined(number)─┐
 │           5545308725 │ -- 5.55 billion
 └──────────────────────┘
 ```
+
+
 
 **See Also**
 

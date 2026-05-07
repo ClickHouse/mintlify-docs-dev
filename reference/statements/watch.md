@@ -1,13 +1,15 @@
 ---
-description: Documentation for WATCH Statement
-sidebarTitle: WATCH
+description: 'Documentation for WATCH Statement'
+sidebar_label: 'WATCH'
 sidebar_position: 53
-old-slug: /sql-reference/statements/watch
-title: WATCH statement
-doc_type: reference
+slug: /sql-reference/statements/watch
+title: 'WATCH Statement'
+doc_type: 'reference'
 ---
 
-import {DeprecatedBadge} from '/snippets/components/DeprecatedBadge/DeprecatedBadge.jsx'
+import DeprecatedBadge from '@theme/badges/DeprecatedBadge';
+
+# WATCH Statement
 
 <DeprecatedBadge/>
 

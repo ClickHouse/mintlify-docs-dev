@@ -1,15 +1,17 @@
 ---
 description: 'A table engine storing time series, i.e. a set of values associated
   with timestamps and tags (or labels).'
-sidebarTitle: 'TimeSeries table engine'
+sidebar_label: 'TimeSeries'
 sidebar_position: 60
-old-slug: /engines/table-engines/special/time_series
+slug: /engines/table-engines/special/time_series
 title: 'TimeSeries table engine'
 doc_type: 'reference'
 ---
 
-import {ExperimentalBadge} from '/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx'
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
+import ExperimentalBadge from '@theme/badges/ExperimentalBadge';
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
+
+# TimeSeries table engine
 
 <ExperimentalBadge/>
 <CloudNotSupportedBadge/>
@@ -21,14 +23,14 @@ metric_name1[tag1=value1, tag2=value2, ...] = {timestamp1: value1, timestamp2: v
 metric_name2[...] = ...
 ```
 
-<Note>
+:::info
 This is an experimental feature that may change in backwards-incompatible ways in the future releases.
 Enable usage of the TimeSeries table engine
 with [allow_experimental_time_series_table](/operations/settings/settings#allow_experimental_time_series_table) setting.
 Input the command `set allow_experimental_time_series_table = 1`.
-</Note>
+:::
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 CREATE TABLE name [(columns)] ENGINE=TimeSeries
@@ -38,7 +40,7 @@ CREATE TABLE name [(columns)] ENGINE=TimeSeries
 [METRICS db.metrics_table_name | METRICS ENGINE metrics_table_engine(arguments)]
 ```
 
-## Usage 
+## Usage {#usage}
 
 It's easier to start with everything set by default (it's allowed to create a `TimeSeries` table without specifying a list of columns):
 
@@ -47,10 +49,10 @@ CREATE TABLE my_table ENGINE=TimeSeries
 ```
 
 Then this table can be used with the following protocols (a port must be assigned in the server configuration):
-- [prometheus remote-write](../../../interfaces/prometheus.md#remote-write)
-- [prometheus remote-read](../../../interfaces/prometheus.md#remote-read)
+- [prometheus remote-write](/interfaces/prometheus#remote-write)
+- [prometheus remote-read](/interfaces/prometheus#remote-read)
 
-## Target tables 
+## Target tables {#target-tables}
 
 A `TimeSeries` table doesn't have its own data, everything is stored in its target tables.
 This is similar to how a [materialized view](../../../sql-reference/statements/create/view#materialized-view) works,
@@ -62,7 +64,7 @@ or the `TimeSeries` table engine can generate inner target tables automatically.
 
 The target tables are the following:
 
-### Data table 
+### Data table {#data-table}
 
 The _data_ table contains time series associated with some identifier.
 
@@ -74,7 +76,7 @@ The _data_ table must have columns:
 | `timestamp` | [x] | `DateTime64(3)` | `DateTime64(X)` | A time point |
 | `value` | [x] | `Float64` | `Float32` or `Float64` | A value associated with the `timestamp` |
 
-### Tags table 
+### Tags table {#tags-table}
 
 The _tags_ table contains identifiers calculated for each combination of a metric name and tags.
 
@@ -90,7 +92,7 @@ The _tags_ table must have columns:
 | `min_time` | [ ] | `Nullable(DateTime64(3))` | `DateTime64(X)` or `Nullable(DateTime64(X))` | Minimum timestamp of time series with that `id`. The column is created if [store_min_time_and_max_time](#settings) is `true` |
 | `max_time` | [ ] | `Nullable(DateTime64(3))` | `DateTime64(X)` or `Nullable(DateTime64(X))` | Maximum timestamp of time series with that `id`. The column is created if [store_min_time_and_max_time](#settings) is `true` |
 
-### Metrics table 
+### Metrics table {#metrics-table}
 
 The _metrics_ table contains some information about metrics been collected, the types of those metrics and their descriptions.
 
@@ -106,7 +108,7 @@ The _metrics_ table must have columns:
 Any row inserted into a `TimeSeries` table will be in fact stored in those three target tables.
 A `TimeSeries` table contains all those columns from the [data](#data-table), [tags](#tags-table), [metrics](#metrics-table) tables.
 
-## Creation 
+## Creation {#creation}
 
 There are multiple ways to create a table with the `TimeSeries` table engine.
 The simplest statement
@@ -190,7 +192,7 @@ ENGINE = ReplacingMergeTree
 ORDER BY metric_family_name
 ```
 
-## Adjusting types of columns 
+## Adjusting types of columns {#adjusting-column-types}
 
 You can adjust the types of almost any column of the inner target tables by specifying them explicitly
 while defining the main table. For example,
@@ -215,7 +217,7 @@ ENGINE = MergeTree
 ORDER BY (id, timestamp)
 ```
 
-## The `id` column 
+## The `id` column {#id-column}
 
 The `id` column contains identifiers, every identifier is calculated for a combination of a metric name and tags.
 The DEFAULT expression for the `id` column is an expression which will be used to calculate such identifiers.
@@ -229,7 +231,7 @@ CREATE TABLE my_table
 ENGINE=TimeSeries
 ```
 
-## The `tags` and `all_tags` columns 
+## The `tags` and `all_tags` columns {#tags-and-all-tags}
 
 There are two columns containing maps of tags - `tags` and `all_tags`. In this example they mean the same, however they can be different
 if setting `tags_to_columns` is used. This setting allows to specify that a specific tag should be stored in a separate column instead of storing
@@ -263,7 +265,7 @@ ENGINE=TimeSeries
 SETTINGS tags_to_columns = {'instance': 'instance', 'job': 'job'}
 ```
 
-## Table engines of inner target tables 
+## Table engines of inner target tables {#inner-table-engines}
 
 By default inner target tables use the following table engines:
 - the [data](#data-table) table uses [MergeTree](../mergetree-family/mergetree);
@@ -281,7 +283,7 @@ TAGS ENGINE=ReplicatedAggregatingMergeTree
 METRICS ENGINE=ReplicatedReplacingMergeTree
 ```
 
-## External target tables 
+## External target tables {#external-target-tables}
 
 It's possible to make a `TimeSeries` table use a manually created table:
 
@@ -302,7 +304,7 @@ CREATE TABLE metrics_for_my_table ...
 CREATE TABLE my_table ENGINE=TimeSeries DATA data_for_my_table TAGS tags_for_my_table METRICS metrics_for_my_table;
 ```
 
-## Settings 
+## Settings {#settings}
 
 Here is a list of settings which can be specified while defining a `TimeSeries` table:
 
@@ -314,7 +316,7 @@ Here is a list of settings which can be specified while defining a `TimeSeries` 
 | `aggregate_min_time_and_max_time` | Bool | true | When creating an inner target `tags` table, this flag enables using `SimpleAggregateFunction(min, Nullable(DateTime64(3)))` instead of just `Nullable(DateTime64(3))` as the type of the `min_time` column, and the same for the `max_time` column |
 | `filter_by_min_time_and_max_time` | Bool | true | If set to true then the table will use the `min_time` and `max_time` columns for filtering time series |
 
-# Functions 
+# Functions {#functions}
 
 Here is a list of functions supporting a `TimeSeries` table as an argument:
 - [timeSeriesData](../../../sql-reference/table-functions/timeSeriesData.md)

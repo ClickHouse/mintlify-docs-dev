@@ -1,28 +1,30 @@
 ---
 description: 'Documentation for the TabSeparatedWithNamesAndTypes format'
 keywords: ['TabSeparatedWithNamesAndTypes']
-old-slug: /interfaces/formats/TabSeparatedWithNamesAndTypes
+slug: /interfaces/formats/TabSeparatedWithNamesAndTypes
 title: 'TabSeparatedWithNamesAndTypes'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge> <Badge intent="info">Alias: `TSVWithNamesAndTypes`, `RawWithNamesAndTypes`</Badge>
+| Input | Output | Alias                                          |
+|-------|--------|------------------------------------------------|
+|     ✔    |     ✔     | `TSVWithNamesAndTypes`, `RawWithNamesAndTypes` |
 
-## Description 
+## Description {#description}
 
 Differs from the [`TabSeparated`](./TabSeparated.md) format in that the column names are written to the first row, while the column types are in the second row.
 
-<Note>
+:::note
 - If setting [`input_format_with_names_use_header`](../../../operations/settings/settings-formats.md/#input_format_with_names_use_header) is set to `1`,
 the columns from the input data will be mapped to the columns in the table by their names, columns with unknown names will be skipped if setting [`input_format_skip_unknown_fields`](../../../operations/settings/settings-formats.md/#input_format_skip_unknown_fields) is set to 1.
 Otherwise, the first row will be skipped.
 - If setting [`input_format_with_types_use_header`](../../../operations/settings/settings-formats.md/#input_format_with_types_use_header) is set to `1`,
 the types from input data will be compared with the types of the corresponding columns from the table. Otherwise, the second row will be skipped.
-</Note>
+:::
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using the following tsv file, named as `football.tsv`:
 
@@ -54,7 +56,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.tsv' FORMAT TabSeparatedWithNamesAndTypes;
 ```
 
-### Reading data 
+### Reading data {#reading-data}
 
 Read data using the `TabSeparatedWithNamesAndTypes` format:
 
@@ -88,4 +90,4 @@ Date    Int16   LowCardinality(String)  LowCardinality(String)  Int8    Int8
 2022-05-07      2021    Walsall Swindon Town    0       3
 ```
 
-## Format settings 
+## Format settings {#format-settings}

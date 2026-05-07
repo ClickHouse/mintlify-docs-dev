@@ -1,22 +1,24 @@
 ---
 description: 'Allows `SELECT` and `INSERT` queries to be performed on data that is
   stored on a remote PostgreSQL server.'
-sidebarTitle: 'postgresql'
+sidebar_label: 'postgresql'
 sidebar_position: 160
-old-slug: /sql-reference/table-functions/postgresql
+slug: /sql-reference/table-functions/postgresql
 title: 'postgresql'
 doc_type: 'reference'
 ---
 
+# postgresql Table Function
+
 Allows `SELECT` and `INSERT` queries to be performed on data that is stored on a remote PostgreSQL server.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 postgresql({host:port, database, table, user, password[, schema, [, on_conflict]] | named_collection[, option=value [,..]]})
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 | Argument      | Description                                                                |
 |---------------|----------------------------------------------------------------------------|
@@ -30,15 +32,15 @@ postgresql({host:port, database, table, user, password[, schema, [, on_conflict]
 
 Arguments also can be passed using [named collections](operations/named-collections.md). In this case `host` and `port` should be specified separately. This approach is recommended for production environment.
 
-## Returned value 
+## Returned value {#returned_value}
 
 A table object with the same columns as the original PostgreSQL table.
 
-<Note>
+:::note
 In the `INSERT` query to distinguish table function `postgresql(...)` from table name with column names list you must use keywords `FUNCTION` or `TABLE FUNCTION`. See examples below.
-</Note>
+:::
 
-## Implementation Details 
+## Implementation Details {#implementation-details}
 
 `SELECT` queries on PostgreSQL side run as `COPY (SELECT ...) TO STDOUT` inside read-only PostgreSQL transaction with commit after each `SELECT` query.
 
@@ -50,9 +52,9 @@ All joins, aggregations, sorting, `IN [ array ]` conditions and the `LIMIT` samp
 
 PostgreSQL Array types converts into ClickHouse arrays.
 
-<Note>
+:::note
 Be careful, in PostgreSQL an array data type column like Integer[] may contain arrays of different dimensions in different rows, but in ClickHouse it is only allowed to have multidimensional arrays of the same dimension in all rows.
-</Note>
+:::
 
 Supports multiple replicas that must be listed by `|`. For example:
 
@@ -68,7 +70,7 @@ SELECT name FROM postgresql(`postgres1:5431|postgres2:5432`, 'postgres_database'
 
 Supports replicas priority for PostgreSQL dictionary source. The bigger the number in map, the less the priority. The highest priority is `0`.
 
-## Examples 
+## Examples {#examples}
 
 Table in PostgreSQL:
 
@@ -146,11 +148,11 @@ CREATE TABLE pg_table_schema_with_dots (a UInt32)
         ENGINE PostgreSQL('localhost:5432', 'clickhouse', 'nice.table', 'postgrsql_user', 'password', 'nice.schema');
 ```
 
-## Related 
+## Related {#related}
 
 - [The PostgreSQL table engine](../../engines/table-engines/integrations/postgresql.md)
-- [Using PostgreSQL as a dictionary source](/sql-reference/dictionaries#postgresql)
+- [Using PostgreSQL as a dictionary source](/sql-reference/statements/create/dictionary/sources/postgresql)
 
-### Replicating or migrating Postgres data with with PeerDB 
+### Replicating or migrating Postgres data with with PeerDB {#replicating-or-migrating-postgres-data-with-with-peerdb}
 
 > In addition to table functions, you can always use [PeerDB](https://docs.peerdb.io/introduction) by ClickHouse to set up a continuous data pipeline from Postgres to ClickHouse. PeerDB is a tool designed specifically to replicate data from Postgres to ClickHouse using change data capture (CDC).

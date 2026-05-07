@@ -1,12 +1,14 @@
 ---
 description: 'The File table engine keeps the data in a file in one of the supported
   file formats (`TabSeparated`, `Native`, etc.).'
-sidebarTitle: 'File'
+sidebar_label: 'File'
 sidebar_position: 40
-old-slug: /engines/table-engines/special/file
+slug: /engines/table-engines/special/file
 title: 'File table engine'
 doc_type: 'reference'
 ---
+
+# File table engine
 
 The File table engine keeps the data in a file in one of the supported [file formats](/interfaces/formats#formats-overview) (`TabSeparated`, `Native`, etc.).
 
@@ -16,11 +18,11 @@ Usage scenarios:
 - Convert data from one format to another.
 - Updating data in ClickHouse via editing a file on a disk.
 
-<Note>
+:::note
 This engine is not currently available in ClickHouse Cloud, please [use the S3 table function instead](/sql-reference/table-functions/s3.md).
-</Note>
+:::
 
-## Usage in ClickHouse Server 
+## Usage in ClickHouse Server {#usage-in-clickhouse-server}
 
 ```sql
 File(Format)
@@ -37,11 +39,11 @@ When creating table using `File(Format)` it creates empty subdirectory in that f
 
 You may manually create this subfolder and file in server filesystem and then [ATTACH](../../../sql-reference/statements/attach.md) it to table information with matching name, so you can query data from that file.
 
-<Note>
+:::note
 Be careful with this functionality, because ClickHouse does not keep track of external changes to such files. The result of simultaneous writes via ClickHouse and outside of ClickHouse is undefined.
-</Note>
+:::
 
-## Example 
+## Example {#example}
 
 **1.** Set up the `file_engine_table` table:
 
@@ -72,7 +74,7 @@ SELECT * FROM file_engine_table
 └──────┴───────┘
 ```
 
-## Usage in ClickHouse-local 
+## Usage in ClickHouse-local {#usage-in-clickhouse-local}
 
 In [clickhouse-local](../../../operations/utilities/clickhouse-local.md) File engine accepts file path in addition to `Format`. Default input/output streams can be specified using numeric or human-readable names like `0` or `stdin`, `1` or `stdout`. It is possible to read and write compressed files based on an additional engine parameter or file extension (`gz`, `br` or `xz`).
 
@@ -82,7 +84,7 @@ In [clickhouse-local](../../../operations/utilities/clickhouse-local.md) File en
 $ echo -e "1,2\n3,4" | clickhouse-local -q "CREATE TABLE table (a Int64, b Int64) ENGINE = File(CSV, stdin); SELECT a, b FROM table; DROP TABLE table"
 ```
 
-## Details of Implementation 
+## Details of Implementation {#details-of-implementation}
 
 - Multiple `SELECT` queries can be performed concurrently, but `INSERT` queries will wait each other.
 - Supported creating new file by `INSERT` query.
@@ -93,20 +95,20 @@ $ echo -e "1,2\n3,4" | clickhouse-local -q "CREATE TABLE table (a Int64, b Int64
   - Indices
   - Replication
 
-## PARTITION BY 
+## PARTITION BY {#partition-by}
 
 `PARTITION BY` — Optional.  It is possible to create separate files by partitioning the data on a partition key. In most cases, you don't need a partition key, and if it is needed you generally don't need a partition key more granular than by month. Partitioning does not speed up queries (in contrast to the ORDER BY expression). You should never use too granular partitioning. Don't partition your data by client identifiers or names (instead, make client identifier or name the first column in the ORDER BY expression).
 
 For partitioning by month, use the `toYYYYMM(date_column)` expression, where `date_column` is a column with a date of the type [Date](/sql-reference/data-types/date.md). The partition names here have the `"YYYYMM"` format.
 
-## Virtual columns 
+## Virtual columns {#virtual-columns}
 
 - `_path` — Path to the file. Type: `LowCardinality(String)`.
 - `_file` — Name of the file. Type: `LowCardinality(String)`.
 - `_size` — Size of the file in bytes. Type: `Nullable(UInt64)`. If the size is unknown, the value is `NULL`.
 - `_time` — Last modified time of the file. Type: `Nullable(DateTime)`. If the time is unknown, the value is `NULL`.
 
-## Settings 
+## Settings {#settings}
 
 - [engine_file_empty_if_not_exists](/operations/settings/settings#engine_file_empty_if_not_exists) - allows to select empty data from a file that doesn't exist. Disabled by default.
 - [engine_file_truncate_on_insert](/operations/settings/settings#engine_file_truncate_on_insert) - allows to truncate file before insert into it. Disabled by default.

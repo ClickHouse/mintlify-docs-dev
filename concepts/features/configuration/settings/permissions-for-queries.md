@@ -1,11 +1,13 @@
 ---
 description: 'Settings for query permissions.'
-sidebarTitle: 'Permissions for queries'
+sidebar_label: 'Permissions for queries'
 sidebar_position: 58
-old-slug: /operations/settings/permissions-for-queries
+slug: /operations/settings/permissions-for-queries
 title: 'Permissions for queries'
 doc_type: 'reference'
 ---
+
+# Permissions for queries
 
 Queries in ClickHouse can be divided into several types:
 
@@ -17,7 +19,7 @@ Queries in ClickHouse can be divided into several types:
 
 The following settings regulate user permissions by the type of query:
 
-## readonly 
+## readonly {#readonly}
 Restricts permissions for read data, write data, and change settings queries.
 
 When set to 1, allows:
@@ -28,9 +30,9 @@ When set to 1, allows:
 When set to 2, allows the above plus:
 - SET and CREATE TEMPORARY TABLE
 
-  <Tip>
+  :::tip
   Queries like EXISTS, DESCRIBE, EXPLAIN, SHOW PROCESSLIST, etc are equivalent to SELECT, because they just do select from system tables.
-  </Tip>
+  :::
 
 Possible values:
 
@@ -40,15 +42,15 @@ Possible values:
 
 Default value: 0
 
-<Note>
+:::note
 After setting `readonly = 1`, the user can't change `readonly` and `allow_ddl` settings in the current session.
 
-When using the `GET` method in the [HTTP interface](../../interfaces/http.md), `readonly = 1` is set automatically. To modify data, use the `POST` method.
+When using the `GET` method in the [HTTP interface](/interfaces/http), `readonly = 1` is set automatically. To modify data, use the `POST` method.
 
 Setting `readonly = 1` prohibits the user from changing settings. There is a way to prohibit the user from changing only specific settings. Also there is a way to allow changing only specific settings under `readonly = 1` restrictions. For details see [constraints on settings](../../operations/settings/constraints-on-settings.md).
-</Note>
+:::
 
-## allow_ddl 
+## allow_ddl {#allow_ddl}
 
 Allows or denies [DDL](https://en.wikipedia.org/wiki/Data_definition_language) queries.
 
@@ -59,10 +61,10 @@ Possible values:
 
 Default value: 1
 
-<Note>
+:::note
 You cannot run `SET allow_ddl = 1` if `allow_ddl = 0` for the current session.
-</Note>
+:::
 
-<Note title="KILL QUERY">
+:::note KILL QUERY
 `KILL QUERY` can be performed with any combination of readonly and allow_ddl settings.
-</Note>
+:::

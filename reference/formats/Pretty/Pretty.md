@@ -4,16 +4,18 @@ description: 'Documentation for the Pretty format'
 input_format: false
 keywords: ['Pretty']
 output_format: true
-old-slug: /interfaces/formats/Pretty
+slug: /interfaces/formats/Pretty
 title: 'Pretty'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Output</Badge>
+import PrettyFormatSettings from './_snippets/common-pretty-format-settings.md';
 
-import CommonPrettyFormatSettings from '/snippets/products/reference/formats/Pretty/_snippets/common-pretty-format-settings.mdx';
+| Input | Output  | Alias |
+|-------|---------|-------|
+| ✗     | ✔       |       |
 
-## Description 
+## Description {#description}
 
 The `Pretty` format outputs data as Unicode-art tables, 
 using ANSI-escape sequences for displaying colors in the terminal.
@@ -23,7 +25,7 @@ This is necessary so that blocks can be output without buffering results (buffer
 
 [NULL](/sql-reference/syntax.md) is output as `ᴺᵁᴸᴸ`.
 
-## Example usage 
+## Example usage {#example-usage}
 
 Example (shown for the [`PrettyCompact`](./PrettyCompact.md) format):
 
@@ -52,9 +54,9 @@ SELECT 'String with \'quotes\' and \t character' AS Escaping_test
 To avoid dumping too much data to the terminal, only the first `10,000` rows are printed. 
 If the number of rows is greater than or equal to `10,000`, the message "Showed first 10 000" is printed.
 
-<Note>
+:::note
 This format is only appropriate for outputting a query result, but not for parsing data.
-</Note>
+:::
 
 The Pretty format supports outputting total values (when using `WITH TOTALS`) and extremes (when 'extremes' is set to 1). 
 In these cases, total values and extreme values are output after the main data, in separate tables. 
@@ -92,6 +94,6 @@ Extremes:
 └────────────┴─────────┘
 ```
 
-## Format settings 
+## Format settings {#format-settings}
 
 <PrettyFormatSettings/>

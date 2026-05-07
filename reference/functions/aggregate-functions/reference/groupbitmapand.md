@@ -1,30 +1,36 @@
 ---
 description: 'Calculations the AND of a bitmap column, return cardinality of type
   UInt64, if add suffix -State, then return a bitmap object.'
-sidebar_position: 149
-old-slug: /sql-reference/aggregate-functions/reference/groupbitmapand
+slug: /sql-reference/aggregate-functions/reference/groupbitmapand
 title: 'groupBitmapAnd'
 doc_type: 'reference'
 ---
 
-Calculations the AND of a bitmap column, return cardinality of type UInt64, if add suffix -State, then return [bitmap object](../../../sql-reference/functions/bitmap-functions.md).
+Calculates the AND of a bitmap column and returns it's cardinality.
+If suffix combinator [`-State`](/sql-reference/aggregate-functions/combinators#-state) is added, then it returns a bitmap object.
+    
+
+**Syntax**
 
 ```sql
 groupBitmapAnd(expr)
+groupBitmapAndState(expr)
 ```
 
 **Arguments**
 
-`expr` – An expression that results in `AggregateFunction(groupBitmap, UInt*)` type.
+- `expr` — Expression that results in an `AggregateFunction(groupBitmap, UInt*)` type. [`AggregateFunction(groupBitmap, UInt*)`](/sql-reference/data-types/aggregatefunction)
 
-**Return value**
 
-Value of the `UInt64` type.
+**Returned value**
 
-**Example**
+Returns a count of type `UInt64`, or a bitmap object when using `-State`. [`UInt64`](/sql-reference/data-types/int-uint)
 
-```sql
-DROP TABLE IF EXISTS bitmap_column_expr_test2;
+**Examples**
+
+**Usage example**
+
+```sql title=Query
 CREATE TABLE bitmap_column_expr_test2
 (
     tag_id String,
@@ -38,12 +44,25 @@ INSERT INTO bitmap_column_expr_test2 VALUES ('tag2', bitmapBuild(cast([6,7,8,9,1
 INSERT INTO bitmap_column_expr_test2 VALUES ('tag3', bitmapBuild(cast([2,4,6,8,10,12] AS Array(UInt32))));
 
 SELECT groupBitmapAnd(z) FROM bitmap_column_expr_test2 WHERE like(tag_id, 'tag%');
+```
+
+```response title=Response
 ┌─groupBitmapAnd(z)─┐
 │               3   │
 └───────────────────┘
+```
 
+**Using -State combinator**
+
+```sql title=Query
 SELECT arraySort(bitmapToArray(groupBitmapAndState(z))) FROM bitmap_column_expr_test2 WHERE like(tag_id, 'tag%');
+```
+
+```response title=Response
 ┌─arraySort(bitmapToArray(groupBitmapAndState(z)))─┐
 │ [6,8,10]                                         │
 └──────────────────────────────────────────────────┘
 ```
+
+
+

@@ -2,7 +2,7 @@
 description: 'Documentation for Dictionary'
 sidebarTitle: 'DICTIONARY'
 sidebar_position: 38
-old-slug: /sql-reference/statements/create/dictionary
+slug: /sql-reference/statements/create/dictionary
 title: 'CREATE DICTIONARY'
 doc_type: 'reference'
 ---

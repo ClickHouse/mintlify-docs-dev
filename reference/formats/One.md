@@ -4,19 +4,21 @@ description: 'Documentation for the One format'
 input_format: true
 keywords: ['One']
 output_format: false
-old-slug: /interfaces/formats/One
+slug: /interfaces/formats/One
 title: 'One'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✗      |       |
 
-## Description 
+## Description {#description}
 
 The `One` format is a special input format that doesn't read any data from file, and returns only one row with column of type [`UInt8`](../../sql-reference/data-types/int-uint.md), name `dummy` and value `0` (like the `system.one` table).
 Can be used with virtual columns `_file/_path`  to list all files without reading actual data.
 
-## Example usage 
+## Example usage {#example-usage}
 
 Example:
 
@@ -39,4 +41,4 @@ SELECT _file FROM file('path/to/files/data*', One);
 └──────────────┘
 ```
 
-## Format settings 
+## Format settings {#format-settings}

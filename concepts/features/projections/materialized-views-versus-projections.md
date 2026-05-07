@@ -1,5 +1,5 @@
 ---
-old-slug: /managing-data/materialized-views-versus-projections
+slug: /managing-data/materialized-views-versus-projections
 sidebarTitle: 'Materialized views vs projections'
 title: 'Materialized views versus projections'
 hide_title: false

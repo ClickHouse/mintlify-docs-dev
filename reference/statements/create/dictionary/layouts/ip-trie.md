@@ -1,10 +1,14 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/layouts/ip-trie
+slug: /sql-reference/statements/create/dictionary/layouts/ip-trie
 title: 'ip_trie dictionary layout'
+sidebar_label: 'ip_trie'
+sidebar_position: 10
 description: 'Store a dictionary as a trie for fast IP address prefix lookups.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 The `ip_trie` dictionary is designed for IP address lookups by network prefix.
 It stores IP ranges in CIDR notation and allows fast determination of which prefix (e.g. subnet or ASN range) a given IP falls into, making it ideal for IP-based searches like geolocation or network classification.
@@ -37,7 +41,7 @@ INSERT INTO my_ip_addresses VALUES
 Let's define an `ip_trie` dictionary for this table. The `ip_trie` layout requires a composite key:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 CREATE DICTIONARY my_ip_trie_dictionary (
@@ -51,8 +55,8 @@ LAYOUT(IP_TRIE)
 LIFETIME(3600);
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <structure>
@@ -83,7 +87,7 @@ LIFETIME(3600);
 </layout>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 

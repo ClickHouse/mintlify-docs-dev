@@ -4,20 +4,22 @@ description: 'Documentation for the JSONStrings format'
 input_format: true
 keywords: ['JSONStrings']
 output_format: true
-old-slug: /interfaces/formats/JSONStrings
+slug: /interfaces/formats/JSONStrings
 title: 'JSONStrings'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 Differs from the [JSON](./JSON.md) format only in that data fields are output as strings, not as typed JSON values.
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using a JSON file with the following data, named as `football.json`:
 
@@ -198,7 +200,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.json' FORMAT JSONStrings;
 ```
 
-### Reading data 
+### Reading data {#reading-data}
 
 Read data using the `JSONStrings` format:
 
@@ -391,4 +393,4 @@ The output will be in JSON format:
 }
 ```
 
-## Format settings 
+## Format settings {#format-settings}

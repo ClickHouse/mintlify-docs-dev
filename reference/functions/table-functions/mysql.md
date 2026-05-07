@@ -1,22 +1,24 @@
 ---
 description: 'Allows `SELECT` and `INSERT` queries to be performed on data that are
   stored on a remote MySQL server.'
-sidebarTitle: 'mysql'
+sidebar_label: 'mysql'
 sidebar_position: 137
-old-slug: /sql-reference/table-functions/mysql
+slug: /sql-reference/table-functions/mysql
 title: 'mysql'
 doc_type: 'reference'
 ---
 
+# mysql Table Function
+
 Allows `SELECT` and `INSERT` queries to be performed on data that are stored on a remote MySQL server.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 mysql({host:port, database, table, user, password[, replace_query, on_duplicate_clause] | named_collection[, option=value [,..]]})
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 | Argument            | Description                                                                                                                                                                                                                                                           |
 |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -46,19 +48,19 @@ or
 SELECT name FROM mysql(`mysql1:3306|mysql2:3306|mysql3:3306`, 'mysql_database', 'mysql_table', 'user', 'password');
 ```
 
-## Returned value 
+## Returned value {#returned_value}
 
 A table object with the same columns as the original MySQL table.
 
-<Note>
+:::note
 Some data types of MySQL can be mapped to different ClickHouse types - this is addressed by query-level setting [mysql_datatypes_support_level](operations/settings/settings.md#mysql_datatypes_support_level)
-</Note>
+:::
 
-<Note>
+:::note
 In the `INSERT` query to distinguish table function `mysql(...)` from table name with column names list, you must use keywords `FUNCTION` or `TABLE FUNCTION`. See examples below.
-</Note>
+:::
 
-## Examples 
+## Examples {#examples}
 
 Table in MySQL:
 
@@ -141,10 +143,10 @@ SELECT * FROM mysql('host:port', 'database', 'table', 'user', 'password')
 WHERE id > (SELECT max(id) FROM mysql_copy);
 ```
 
-## Related 
+## Related {#related}
 
 - [The 'MySQL' table engine](../../engines/table-engines/integrations/mysql.md)
-- [Using MySQL as a dictionary source](/sql-reference/dictionaries#mysql)
+- [Using MySQL as a dictionary source](/sql-reference/statements/create/dictionary/sources/mysql)
 - [mysql_datatypes_support_level](operations/settings/settings.md#mysql_datatypes_support_level)
 - [mysql_map_fixed_string_to_text_in_show_columns](operations/settings/settings.md#mysql_map_fixed_string_to_text_in_show_columns)
 - [mysql_map_string_to_text_in_show_columns](operations/settings/settings.md#mysql_map_string_to_text_in_show_columns)

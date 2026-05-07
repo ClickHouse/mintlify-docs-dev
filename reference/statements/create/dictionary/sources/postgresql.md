@@ -1,15 +1,19 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/postgresql
+slug: /sql-reference/statements/create/dictionary/sources/postgresql
 title: 'PostgreSQL dictionary source'
+sidebar_position: 12
+sidebar_label: 'PostgreSQL'
 description: 'Configure PostgreSQL as a dictionary source in ClickHouse.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(POSTGRESQL(
@@ -27,8 +31,8 @@ SOURCE(POSTGRESQL(
 ))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -46,7 +50,7 @@ SOURCE(POSTGRESQL(
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
@@ -69,6 +73,6 @@ Setting fields:
 | `background_reconnect` | Reconnect to replica in background if connection fails. Optional. |
 | `query` | The custom query. Optional. |
 
-<Note>
-**The `table` or `where` fields cannot be used together with the `query` field. And either one of the `table` or `query` fields must be declared.**
-</Note>
+:::note
+The `table` or `where` fields cannot be used together with the `query` field. And either one of the `table` or `query` fields must be declared.
+:::

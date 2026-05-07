@@ -1,6 +1,6 @@
 ---
 title: 'ClickHouse Concepts'
-old-slug: /guides/manage-and-deploy
+slug: /guides/manage-and-deploy
 description: 'Explore ClickHouse concepts including materialized views, dictionaries, performance tuning, operations, configuration, security, and more.'
 mode: wide
 ---

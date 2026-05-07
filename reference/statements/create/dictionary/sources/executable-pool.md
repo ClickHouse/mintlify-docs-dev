@@ -1,10 +1,14 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/executable-pool
+slug: /sql-reference/statements/create/dictionary/sources/executable-pool
 title: 'Executable Pool dictionary source'
+sidebar_position: 4
+sidebar_label: 'Executable Pool'
 description: 'Configure an executable pool as a dictionary source in ClickHouse.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Executable pool allows loading data from a pool of processes.
 This source does not work with dictionary layouts that need to load all data from source.
@@ -22,7 +26,7 @@ Executable pool will spawn a pool of processes with the specified command and ke
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(EXECUTABLE_POOL(
@@ -34,8 +38,8 @@ SOURCE(EXECUTABLE_POOL(
 ))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -49,7 +53,7 @@ SOURCE(EXECUTABLE_POOL(
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 
 Setting fields:

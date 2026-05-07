@@ -1,19 +1,21 @@
 ---
 description: 'Documentation for the Tuple data type in ClickHouse'
-sidebarTitle: 'Tuple(T1, T2, ...)'
+sidebar_label: 'Tuple(T1, T2, ...)'
 sidebar_position: 34
-old-slug: /sql-reference/data-types/tuple
+slug: /sql-reference/data-types/tuple
 title: 'Tuple(T1, T2, ...)'
 doc_type: 'reference'
 ---
+
+# Tuple(T1, T2, ...)
 
 A tuple of elements, each having an individual [type](/sql-reference/data-types). Tuple must contain at least one element.
 
 Tuples are used for temporary column grouping. Columns can be grouped when an IN expression is used in a query, and for specifying certain formal parameters of lambda functions. For more information, see the sections [IN operators](../../sql-reference/operators/in.md) and [Higher order functions](/sql-reference/functions/overview#higher-order-functions).
 
-Tuples can be the result of a query. In this case, for text formats other than JSON, values are comma-separated in brackets. In JSON formats, tuples are output as arrays (in square brackets).
+Tuples can be the result of a query. In this case, for text formats other than JSON, values are comma-separated in `()`. In JSON formats, tuples are output as arrays (in `[]`).
 
-## Creating Tuples 
+## Creating Tuples {#creating-tuples}
 
 You can use a function to create a tuple:
 
@@ -61,7 +63,7 @@ SELECT (1, 'a') AS x, (today(), rand(), 'someString') AS y, ('a') AS not_a_tuple
 └─────────┴────────────────────────────────────────┴─────────────┘
 ```
 
-## Data Type Detection 
+## Data Type Detection {#data-type-detection}
 
 When creating tuples on the fly, ClickHouse interferes the type of the tuples arguments as the smallest types which can hold the provided argument value. If the value is [NULL](/operations/settings/formats#input_format_null_as_default), the interfered type is [Nullable](../../sql-reference/data-types/nullable.md).
 
@@ -77,7 +79,7 @@ SELECT tuple(1, NULL) AS x, toTypeName(x)
 └───────────┴─────────────────────────────────┘
 ```
 
-## Referring to Tuple Elements 
+## Referring to Tuple Elements {#referring-to-tuple-elements}
 
 Tuple elements can be referred to by name or by index:
 
@@ -103,7 +105,7 @@ Result:
 └────────────────────┘
 ```
 
-## Comparison operations with Tuple 
+## Comparison operations with Tuple {#comparison-operations-with-tuple}
 
 Two tuples are compared by sequentially comparing their elements from the left to the right. If first tuples element is greater (smaller) than the second tuples corresponding element, then the first tuple is greater (smaller) than the second, otherwise (both elements are equal), the next element is compared.
 
@@ -179,4 +181,39 @@ ORDER BY key ASC;
 │   1 │            42 │                                    70 │
 │   2 │             2 │                                     0 │
 └─────┴───────────────┴───────────────────────────────────────┘
+```
+
+## Nullable(Tuple(T1, T2, ...)) {#nullable-tuple}
+
+:::warning Experimental Feature
+Requires `SET allow_experimental_nullable_tuple_type = 1`
+This is an experimental feature and may change in future versions.
+:::
+
+Allows the entire tuple to be `NULL`, as opposed to `Tuple(Nullable(T1), Nullable(T2), ...)` where only individual elements can be `NULL`.
+
+| Type                                       | Tuple can be NULL | Elements can be NULL |
+| ------------------------------------------ | ----------------- | -------------------- |
+| `Nullable(Tuple(String, Int64))`           | ✅                | ❌                   |
+| `Tuple(Nullable(String), Nullable(Int64))` | ❌                | ✅                   |
+
+Example:
+
+```sql
+SET allow_experimental_nullable_tuple_type = 1;
+
+CREATE TABLE test (
+    id UInt32,
+    data Nullable(Tuple(String, Int64))
+) ENGINE = Memory;
+
+INSERT INTO test VALUES (1, ('hello', 42)), (2, NULL);
+
+SELECT * FROM test WHERE data IS NULL;
+```
+
+```txt
+ ┌─id─┬─data─┐
+ │  2 │ ᴺᵁᴸᴸ │
+ └────┴──────┘
 ```

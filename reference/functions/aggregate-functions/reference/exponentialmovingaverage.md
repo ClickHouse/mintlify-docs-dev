@@ -1,15 +1,17 @@
 ---
 description: 'Calculates the exponential moving average of values for the determined
   time.'
-sidebar_position: 132
-old-slug: /sql-reference/aggregate-functions/reference/exponentialMovingAverage
+slug: /sql-reference/aggregate-functions/reference/exponentialMovingAverage
 title: 'exponentialMovingAverage'
 doc_type: 'reference'
 ---
 
-## exponentialMovingAverage 
-
 Calculates the exponential moving average of values for the determined time.
+
+Each `value` corresponds to the determinate `timeunit`.
+The half-life `x` is the time lag at which the exponential weights decay by one-half.
+The function returns a weighted average: the older the time point, the less weight the corresponding value is considered to be.
+    
 
 **Syntax**
 
@@ -17,69 +19,43 @@ Calculates the exponential moving average of values for the determined time.
 exponentialMovingAverage(x)(value, timeunit)
 ```
 
-Each `value` corresponds to the determinate `timeunit`. The half-life `x` is the time lag at which the exponential weights decay by one-half. The function returns a weighted average: the older the time point, the less weight the corresponding value is considered to be.
+**Parameters**
+
+- `x` — Half-life period. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
+
 
 **Arguments**
 
-- `value` — Value. [Integer](../../../sql-reference/data-types/int-uint.md), [Float](../../../sql-reference/data-types/float.md) or [Decimal](../../../sql-reference/data-types/decimal.md).
-- `timeunit` — Timeunit. [Integer](../../../sql-reference/data-types/int-uint.md), [Float](../../../sql-reference/data-types/float.md) or [Decimal](../../../sql-reference/data-types/decimal.md). Timeunit is not timestamp (seconds), it's -- an index of the time interval. Can be calculated using [intDiv](/sql-reference/functions/arithmetic-functions#intDiv).
+- `value` — Value. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
+- `timeunit` — Timeunit. Timeunit is not timestamp (seconds), it's an index of the time interval. Can be calculated using `intDiv`. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
 
-**Parameters**
 
-- `x` — Half-life period. [Integer](../../../sql-reference/data-types/int-uint.md), [Float](../../../sql-reference/data-types/float.md) or [Decimal](../../../sql-reference/data-types/decimal.md).
+**Returned value**
 
-**Returned values**
-
-- Returns an [exponentially smoothed moving average](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average) of the values for the past `x` time at the latest point of time.
-
-Type: [Float64](/sql-reference/data-types/float).
+Returns an exponentially smoothed moving average of the values for the past `x` time at the latest point of time. [`Float64`](/sql-reference/data-types/float)
 
 **Examples**
 
-Input table:
+**Basic exponential moving average**
 
-```text
-┌──temperature─┬─timestamp──┐
-│          95  │         1  │
-│          95  │         2  │
-│          95  │         3  │
-│          96  │         4  │
-│          96  │         5  │
-│          96  │         6  │
-│          96  │         7  │
-│          97  │         8  │
-│          97  │         9  │
-│          97  │        10  │
-│          97  │        11  │
-│          98  │        12  │
-│          98  │        13  │
-│          98  │        14  │
-│          98  │        15  │
-│          99  │        16  │
-│          99  │        17  │
-│          99  │        18  │
-│         100  │        19  │
-│         100  │        20  │
-└──────────────┴────────────┘
+```sql title=Query
+-- Input table with temperature data
+SELECT exponentialMovingAverage(5)(temperature, timestamp)
+FROM VALUES('temperature Int32, timestamp Int32',
+    (95, 1), (95, 2), (95, 3), (96, 4), (96, 5), (96, 6), (96, 7),
+    (97, 8), (97, 9), (97, 10), (97, 11), (98, 12), (98, 13), (98, 14),
+    (98, 15), (99, 16), (99, 17), (99, 18), (100, 19), (100, 20))
 ```
 
-Query:
-
-```sql
-SELECT exponentialMovingAverage(5)(temperature, timestamp);
+```response title=Response
+┌─exponentialM⋯ timestamp)─┐
+│        92.25779635374204 │
+└──────────────────────────┘
 ```
 
-Result:
+**Example with the `bar` function**
 
-```text
-┌──exponentialMovingAverage(5)(temperature, timestamp)──┐
-│                                    92.25779635374204  │
-└───────────────────────────────────────────────────────┘
-```
-
-Query:
-
-```sql
+```sql title=Query
 SELECT
     value,
     time,
@@ -95,9 +71,7 @@ FROM
 )
 ```
 
-Result:
-
-```text
+```response title=Response
 ┌─value─┬─time─┬─round(exp_smooth, 3)─┬─bar────────────────────────────────────────┐
 │     1 │    0 │                0.067 │ ███▎                                       │
 │     0 │    1 │                0.062 │ ███                                        │
@@ -146,19 +120,22 @@ Result:
 │     1 │   44 │                0.753 │ █████████████████████████████████████▋     │
 │     1 │   45 │                 0.77 │ ██████████████████████████████████████▍    │
 │     1 │   46 │                0.785 │ ███████████████████████████████████████▎   │
-│     1 │   47 │                  0.8 │ ███████████████████████████████████████▊   │  
+│     1 │   47 │                  0.8 │ ███████████████████████████████████████▊   │
 │     1 │   48 │                0.813 │ ████████████████████████████████████████▋  │
 │     1 │   49 │                0.825 │ █████████████████████████████████████████▎ │
 └───────┴──────┴──────────────────────┴────────────────────────────────────────────┘
 ```
 
-```sql
+**Window function usage with time-based calculation**
+
+```sql title=Query
 CREATE TABLE data
 ENGINE = Memory AS
 SELECT
     10 AS value,
     toDateTime('2020-01-01') + (3600 * number) AS time
 FROM numbers_mt(10);
+
 -- Calculate timeunit using intDiv
 SELECT
     value,
@@ -166,29 +143,10 @@ SELECT
     exponentialMovingAverage(1)(value, intDiv(toUInt32(time), 3600)) OVER (ORDER BY time ASC) AS res,
     intDiv(toUInt32(time), 3600) AS timeunit
 FROM data
-ORDER BY time ASC;
+ORDER BY time ASC
+```
 
-┌─value─┬────────────────time─┬─────────res─┬─timeunit─┐
-│    10 │ 2020-01-01 00:00:00 │           5 │   438288 │
-│    10 │ 2020-01-01 01:00:00 │         7.5 │   438289 │
-│    10 │ 2020-01-01 02:00:00 │        8.75 │   438290 │
-│    10 │ 2020-01-01 03:00:00 │       9.375 │   438291 │
-│    10 │ 2020-01-01 04:00:00 │      9.6875 │   438292 │
-│    10 │ 2020-01-01 05:00:00 │     9.84375 │   438293 │
-│    10 │ 2020-01-01 06:00:00 │    9.921875 │   438294 │
-│    10 │ 2020-01-01 07:00:00 │   9.9609375 │   438295 │
-│    10 │ 2020-01-01 08:00:00 │  9.98046875 │   438296 │
-│    10 │ 2020-01-01 09:00:00 │ 9.990234375 │   438297 │
-└───────┴─────────────────────┴─────────────┴──────────┘
--- Calculate timeunit using toRelativeHourNum
-SELECT
-    value,
-    time,
-    exponentialMovingAverage(1)(value, toRelativeHourNum(time)) OVER (ORDER BY time ASC) AS res,
-    toRelativeHourNum(time) AS timeunit
-FROM data
-ORDER BY time ASC;
-
+```response title=Response
 ┌─value─┬────────────────time─┬─────────res─┬─timeunit─┐
 │    10 │ 2020-01-01 00:00:00 │           5 │   438288 │
 │    10 │ 2020-01-01 01:00:00 │         7.5 │   438289 │
@@ -202,3 +160,6 @@ ORDER BY time ASC;
 │    10 │ 2020-01-01 09:00:00 │ 9.990234375 │   438297 │
 └───────┴─────────────────────┴─────────────┴──────────┘
 ```
+
+
+

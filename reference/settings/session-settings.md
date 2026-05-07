@@ -2,7 +2,7 @@
 title: 'Session Settings'
 description: 'Settings which are set from system.settings'
 sidebarTitle: 'Session Settings'
-old-slug: /operations/settings/settings
+slug: /operations/settings/settings
 toc_max_heading_level: 2
 doc_type: 'reference'
 ---

@@ -1,30 +1,19 @@
 ---
-old-slug: /managing-data/core-concepts
-title: 'ClickHouse fundamentals'
+slug: /managing-data/core-concepts
+title: 'Core concepts'
 description: 'Learn Core Concepts of how ClickHouse works'
 keywords: ['concepts', 'part', 'partition', 'primary index']
 doc_type: 'guide'
 ---
 
-Learn fundamental concepts of how ClickHouse works.
+In this section of the documentation,
+you will learn some of the core concepts of how ClickHouse works.
 
-<CardGroup cols={2}>
-  <Card title="Table Parts" icon="puzzle-piece" href="/concepts/core-concepts/parts">
-    Learn what table parts are in ClickHouse.
-  </Card>
-  <Card title="Table Part Merges" icon="code-merge" href="/concepts/core-concepts/merges">
-    Learn what table part merges are and what they're used for.
-  </Card>
-  <Card title="Table Partitions" icon="table-cells-large" href="/concepts/core-concepts/partitions">
-    Learn what table partitions are and what they're used for.
-  </Card>
-  <Card title="Primary Indexes" icon="key" href="/concepts/core-concepts/primary-indexes">
-    How ClickHouse's sparse primary index efficiently skips unnecessary data during query execution.
-  </Card>
-  <Card title="Query Parallelism" icon="arrows-split-up-and-left" href="/concepts/core-concepts/query-parallelism">
-    How ClickHouse parallelizes query execution for maximum performance.
-  </Card>
-  <Card title="Architectural Overview" icon="sitemap" href="/concepts/core-concepts/academic_overview">
-    A concise academic overview of the ClickHouse architecture, based on the VLDB 2024 paper.
-  </Card>
-</CardGroup>
+| Page                                         | Description                                                                                                                                                                                                           |
+|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Table parts](./parts.md)                        | Learn what table parts are in ClickHouse.                                                                                                                                                                             |
+| [Table partitions](./partitions.mdx)             | Learn what table partitions are and what they're used for.                                                                                                                                                           |
+| [Table part merges](./merges.mdx)                | Learn what table part merges are and what they're used for.                                                                                                                                                          |
+| [Table shards and replicas](./shards.mdx)        | Learn what table shards and replicas are and what they're used for.                                                                                                                                                  |
+| [Primary indexes](./primary-indexes.mdx)         | Introduces ClickHouse's sparse primary index and how it helps efficiently skip unnecessary data during query execution. Explains how the index is built and used, with examples and tools for observing its effect. Links to a deep dive for advanced use cases and best practices. |
+| [Architectural Overview](./academic-overview.mdx) | A concise academic overview of all components of the ClickHouse architecture, based on our VLDB 2024 scientific paper.                                                                                                |

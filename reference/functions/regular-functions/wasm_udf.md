@@ -1,12 +1,15 @@
 ---
 description: 'Documentation for WebAssembly User Defined Functions'
-old-slug: /sql-reference/functions/wasm_udf
+sidebar_label: 'WebAssembly UDFs'
+slug: /sql-reference/functions/wasm_udf
 title: 'WebAssembly User Defined Functions'
 doc_type: 'guide'
 ---
 
-import {CloudNotSupportedBadge} from '/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx'
-import {ExperimentalBadge} from '/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx'
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
+import ExperimentalBadge from '@theme/badges/ExperimentalBadge';
+
+# WebAssembly User-Defined Functions
 
 ClickHouse supports creating user-defined functions (UDFs) written in WebAssembly. This allows you to execute custom logic written in languages like Rust, C, C++, or others by compiling them to WebAssembly modules.
 
@@ -212,9 +215,9 @@ WebAssembly does not distinguish between signed and unsigned arguments, but rath
 
 ### ABI BUFFERED_V1
 
-<Note>
+:::note
 This ABI is experimental and subject to change in future releases.
-</Note>
+:::
 
 Processes entire blocks at once using a (de)serialization through WASM memory. Supports any argument and return types.
 

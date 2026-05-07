@@ -1,5 +1,5 @@
 ---
-old-slug: /guides/developer/overview
+slug: /guides/developer/overview
 title: 'Advanced Guides'
 description: 'Overview of the advanced guides'
 keywords: ['ClickHouse advanced guides', 'developer guides', 'query optimization', 'materialized views', 'deduplication', 'time series', 'query execution']

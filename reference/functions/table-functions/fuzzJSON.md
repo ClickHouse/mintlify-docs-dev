@@ -1,21 +1,23 @@
 ---
 description: 'Perturbs a JSON string with random variations.'
-sidebarTitle: 'fuzzJSON'
+sidebar_label: 'fuzzJSON'
 sidebar_position: 75
-old-slug: /sql-reference/table-functions/fuzzJSON
+slug: /sql-reference/table-functions/fuzzJSON
 title: 'fuzzJSON'
 doc_type: 'reference'
 ---
 
+# fuzzJSON Table Function
+
 Perturbs a JSON string with random variations.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 fuzzJSON({ named_collection [, option=value [,..]] | json_str[, random_seed] })
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 | Argument                           | Description                                                                                 |
 |------------------------------------|---------------------------------------------------------------------------------------------|
@@ -34,11 +36,11 @@ fuzzJSON({ named_collection [, option=value [,..]] | json_str[, random_seed] })
 | `min_key_length` (UInt64)          | The minimum key length. Should be at least 1.                                               |
 | `max_key_length` (UInt64)          | The maximum key length. Should be greater or equal than the `min_key_length`, if specified. |
 
-## Returned value 
+## Returned value {#returned_value}
 
 A table object with a a single column containing perturbed JSON strings.
 
-## Usage Example 
+## Usage Example {#usage-example}
 
 ```sql
 CREATE NAMED COLLECTION json_fuzzer AS json_str='{}';

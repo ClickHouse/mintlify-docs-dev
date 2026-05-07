@@ -1,19 +1,19 @@
 ---
 description: 'Guide to testing and benchmarking hardware performance with ClickHouse'
-sidebarTitle: 'Testing Hardware'
+sidebar_label: 'Testing Hardware'
 sidebar_position: 54
-old-slug: /operations/performance-test
+slug: /operations/performance-test
 title: 'How to Test Your Hardware with ClickHouse'
 doc_type: 'guide'
 ---
 
-import SelfManagedOnlyNoRoadmap from '/snippets/_self_managed_only_no_roadmap.mdx';
+import SelfManaged from '@site/docs/_snippets/_self_managed_only_no_roadmap.md';
 
-<SelfManagedOnlyNoRoadmap />
+<SelfManaged />
 
 You can run a basic ClickHouse performance test on any server without installation of ClickHouse packages.
 
-## Automated run 
+## Automated run {#automated-run}
 
 You can run the benchmark with a single script.
 

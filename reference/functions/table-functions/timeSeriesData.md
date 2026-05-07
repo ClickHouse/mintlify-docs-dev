@@ -1,12 +1,14 @@
 ---
 description: 'timeSeriesData returns the data table used by table `db_name.time_series_table`
   whose table engine is TimeSeries.'
-sidebarTitle: 'timeSeriesData'
+sidebar_label: 'timeSeriesData'
 sidebar_position: 145
-old-slug: /sql-reference/table-functions/timeSeriesData
+slug: /sql-reference/table-functions/timeSeriesData
 title: 'timeSeriesData'
 doc_type: 'reference'
 ---
+
+# timeSeriesData Table Function
 
 `timeSeriesData(db_name.time_series_table)` - Returns the [data](../../engines/table-engines/integrations/time-series.md#data-table) table
 used by table `db_name.time_series_table` whose table engine is [TimeSeries](../../engines/table-engines/integrations/time-series.md):

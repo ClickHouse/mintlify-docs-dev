@@ -1,5 +1,5 @@
 ---
-old-slug: /data-modeling/projections
+slug: /data-modeling/projections
 title: 'Projections'
 description: 'Page describing what projections are, how they can be used to improve
 query performance, and how they differ from materialized views.'
@@ -8,7 +8,13 @@ sidebar_order: 1
 doc_type: 'guide'
 ---
 
-## Introduction 
+import projections_1 from '@site/static/images/data-modeling/projections_1.png';
+import projections_2 from '@site/static/images/data-modeling/projections_2.png';
+import Image from '@theme/IdealImage';
+
+# Projections
+
+## Introduction {#introduction}
 
 ClickHouse offers various mechanisms of speeding up analytical queries on large
 amounts of data for real-time scenarios. One such mechanism to speed up your
@@ -20,11 +26,10 @@ queries by creating a reordering of data by attributes of interest. This can be:
 3. A precomputed aggregation (similar to a materialized view) but with an ordering
    aligned to the aggregation.
 
-<Frame>
+<br/>
 <iframe width="560" height="315" src="https://www.youtube.com/embed/6CdnUdZSEG0?si=1zUyrP-tCvn9tXse" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-</Frame>
 
-## How do Projections work? 
+## How do Projections work? {#how-do-projections-work}
 
 Practically, a Projection can be thought of as an additional, hidden table to the
 original table. The projection can have a different row order, and therefore a 
@@ -45,9 +50,9 @@ ClickHouse automatically samples the primary keys and chooses a table that can
 generate the same correct result, but requires the least amount of data to be 
 read as shown in the figure below:
 
-<img src="/images/data-modeling/projections_1.png" alt="Projections in ClickHouse"/>
+<Image img={projections_1} size="md" alt="Projections in ClickHouse"/>
 
-### Smarter storage with `_part_offset` 
+### Smarter storage with `_part_offset` {#smarter_storage_with_part_offset}
 
 Since version 25.5, ClickHouse supports the virtual column `_part_offset` in 
 projections which offers a new way to define a projection.
@@ -66,9 +71,9 @@ There are now two ways to define a projection:
 The approaches above can also be mixed, storing some columns in the projection and
 others indirectly via `_part_offset`.
 
-## When to use Projections? 
+## When to use Projections? {#when-to-use-projections}
 
-Projections are an appealing feature for new users as they are automatically 
+Projections are an appealing feature for new users as they're automatically 
 maintained as data is inserted. Furthermore, queries can just be sent to a 
 single table where the projections are exploited where possible to speed up 
 the response time.
@@ -79,16 +84,16 @@ filters. This places greater emphasis on user applications and increases
 client-side complexity.
 
 Despite these advantages, projections come with some inherent limitations which
-users should be aware of and thus should be deployed sparingly.
+you should be aware of and thus should be deployed sparingly.
 
 - Projections don't allow using different TTL for the source table and the 
   (hidden) target table, materialized views allow different TTLs.
-- Lightweight updates and deletes are not supported for tables with projections.
+- Lightweight updates and deletes aren't supported for tables with projections.
 - Materialized Views can be chained: the target table of one materialized view 
-  can be the source table of another materialized view, and so on. This is not 
+  can be the source table of another materialized view, and so on. This isn't 
   possible with projections.
-- Projections don't support joins, but Materialized Views do.
-- Projections don't support filters (`WHERE` clause), but Materialized Views do.
+- Projection definitions don't support joins, but Materialized Views do. However, queries on tables with projections can use joins freely.
+- Projection definitions don't support filters (`WHERE` clause), but Materialized Views do. However, queries on tables with projections can filter freely.
 
 We recommend using projections when:
 
@@ -96,19 +101,19 @@ We recommend using projections when:
   projection can, in theory, use a `GROUP BY,` materialized views are more 
   effective for maintaining aggregates. The query optimizer is also more likely
   to exploit projections that use a simple reordering, i.e., `SELECT * ORDER BY x`.
-  Users can select a subset of columns in this expression to reduce storage 
+  You can select a subset of columns in this expression to reduce storage 
   footprint.
 - Users are comfortable with the potential associated increase in storage footprint and 
   overhead of writing data twice. Test the impact on insertion speed and 
   [evaluate the storage overhead](/data-compression/compression-in-clickhouse).
 
-## Examples 
+## Examples {#examples}
 
-### Filtering on columns which aren't in the primary key 
+### Filtering on columns which aren't in the primary key {#filtering-without-using-primary-keys}
 
 In this example, we'll show you how to add a projection to a table.
 We'll also look at how the projection can be used to speed up queries which filter
-on columns which are not in the primary key of a table.
+on columns which aren't in the primary key of a table.
 
 For this example, we'll be using the New York Taxi Data
 dataset available at [sql.clickhouse.com](https://sql.clickhouse.com/) which is ordered 
@@ -126,7 +131,7 @@ FROM nyc_taxi.trips WHERE tip_amount > 200 AND trip_duration_min > 0
 ORDER BY tip_amount, trip_id ASC
 ```
 
-Notice that because we are filtering on `tip_amount` which is not in the `ORDER BY`, ClickHouse 
+Notice that because we're filtering on `tip_amount` which isn't in the `ORDER BY`, ClickHouse 
 had to do a full table scan. Let's speed this query up.
 
 So as to preserve the original table and results, we'll create a new table and copy the data using an `INSERT INTO SELECT`:
@@ -189,7 +194,7 @@ WHERE query_id='<query_id>'
    └───────────────────────────────────────────────────────────────────────────────┴──────────────────────────────────┘
 ```
 
-### Using projections to speed up UK price paid queries 
+### Using projections to speed up UK price paid queries {#using-projections-to-speed-up-UK-price-paid}
 
 To demonstrate how projections can be used to speed up query performance, let's
 take a look at an example using a real life dataset. For this example we'll be 
@@ -293,17 +298,17 @@ ALTER TABLE uk.uk_price_paid_with_projections
 SETTINGS mutations_sync = 1
 ```
 
-<Note>
+:::note
 If there is a `GROUP BY` clause used in a projection like in the `prj_gby_county`
 projection above, then the underlying storage engine for the (hidden) table 
 becomes `AggregatingMergeTree`, and all aggregate functions are converted to 
 `AggregateFunction`. This ensures proper incremental data aggregation.
-</Note>
+:::
 
 The figure below is a visualization of the main table `uk_price_paid_with_projections`
 and its two projections:
 
-<img src="/images/data-modeling/projections_2.png" alt="Visualization of the main table uk_price_paid_with_projections and its two projections"/>
+<Image img={projections_2} size="md" alt="Visualization of the main table uk_price_paid_with_projections and its two projections"/>
 
 If we now run the query that lists the counties in London for the three highest 
 paid prices again, we see an improvement in query performance:
@@ -393,7 +398,7 @@ projections:    ['uk.uk_price_paid_with_projections.prj_obj_town_price']
 2 rows in set. Elapsed: 0.006 sec.
 ```
 
-### Further examples 
+### Further examples {#further-examples}
 
 The following examples use the same UK price dataset, contrasting queries with and without projections.
 
@@ -404,7 +409,7 @@ CREATE TABLE uk.uk_price_paid_with_projections_v2 AS uk.uk_price_paid;
 INSERT INTO uk.uk_price_paid_with_projections_v2 SELECT * FROM uk.uk_price_paid;
 ```
 
-#### Build a Projection 
+#### Build a Projection {#build-projection}
 
 Let's create an aggregate projection by the dimensions `toYear(date)`, `district`, and `town`:
 
@@ -436,7 +441,7 @@ SETTINGS mutations_sync = 1
 
 The following queries contrast performance with and without projections. To disable projection use we use the setting [`optimize_use_projections`](/operations/settings/settings#optimize_use_projections), which is enabled by default.
 
-#### Query 1. Average price per year 
+#### Query 1. Average price per year {#average-price-projections}
 
 ```sql runnable
 SELECT
@@ -461,7 +466,7 @@ ORDER BY year ASC
 ```
 The results should be the same, but the performance better on the latter example!
 
-#### Query 2. Average price per year in London 
+#### Query 2. Average price per year in London {#average-price-london-projections}
 
 ```sql runnable
 SELECT
@@ -486,7 +491,7 @@ GROUP BY year
 ORDER BY year ASC
 ```
 
-#### Query 3. The most expensive neighborhoods 
+#### Query 3. The most expensive neighborhoods {#most-expensive-neighborhoods-projections}
 
 The condition (date >= '2020-01-01') needs to be modified so that it matches the projection dimension (`toYear(date) >= 2020)`:
 
@@ -527,7 +532,7 @@ LIMIT 100
 
 Again, the result is the same but notice the improvement in query performance for the 2nd query.
 
-### Combining projections in one query 
+### Combining projections in one query {#combining-projections}
 
 Starting in version 25.6, building on the `_part_offset` support introduced in 
 the previous version, ClickHouse can now use multiple projections to accelerate 
@@ -583,10 +588,10 @@ INSERT INTO page_views VALUES (
 5, '2025-07-03', 104, 'https://example.com/page5', 'asia');
 ```
 
-<Note>
+:::note
 Note: The table uses custom settings for illustration, such as one-row granules 
-and disabled part merges, which are not recommended for production use.
-</Note>
+and disabled part merges, which aren't recommended for production use.
+:::
 
 This setup produces:
 - Five separate parts (one per inserted row)
@@ -647,7 +652,7 @@ In the end, just **1 out of 5 parts** is read from the base table.
 By combining the index analysis of multiple projections, ClickHouse significantly reduces the amount of data scanned, 
 improving performance while keeping storage overhead low.
 
-## Related content 
+## Related content {#related-content}
 - [A Practical Introduction to Primary Indexes in ClickHouse](/guides/best-practices/sparse-primary-indexes#option-3-projections)
-- [Materialized Views](/materialized-views)
+- [Materialized Views](/docs/materialized-views)
 - [ALTER PROJECTION](/sql-reference/statements/alter/projection)

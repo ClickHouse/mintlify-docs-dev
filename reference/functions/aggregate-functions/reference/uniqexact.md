@@ -1,36 +1,73 @@
 ---
 description: 'Calculates the exact number of different argument values.'
-sidebar_position: 207
-old-slug: /sql-reference/aggregate-functions/reference/uniqexact
+slug: /sql-reference/aggregate-functions/reference/uniqexact
 title: 'uniqExact'
 doc_type: 'reference'
 ---
 
 Calculates the exact number of different argument values.
 
+:::warning
+The `uniqExact` function uses more memory than `uniq`, because the size of the state has unbounded growth as the number of different values increases.
+Use the `uniqExact` function if you absolutely need an exact result.
+Otherwise use the [`uniq`](https://clickhouse.com/docs/sql-reference/aggregate-functions/reference/uniq) function.
+:::
+    
+
+**Syntax**
+
 ```sql
 uniqExact(x[, ...])
 ```
 
-Use the `uniqExact` function if you absolutely need an exact result. Otherwise use the [uniq](/sql-reference/aggregate-functions/reference/uniq) function.
-
-The `uniqExact` function uses more memory than `uniq`, because the size of the state has unbounded growth as the number of different values increases.
-
 **Arguments**
 
-The function takes a variable number of parameters. Parameters can be `Tuple`, `Array`, `Date`, `DateTime`, `String`, or numeric types.
+- `x` — The function takes a variable number of parameters. [`Tuple(T)`](/sql-reference/data-types/tuple) or [`Array(T)`](/sql-reference/data-types/array) or [`Date`](/sql-reference/data-types/date) or [`DateTime`](/sql-reference/data-types/datetime) or [`String`](/sql-reference/data-types/string) or [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
 
-**Example**
 
-In this example we'll use the `uniqExact` function to count the number of unique type codes (a short identifier for the type of aircraft) in the [opensky data set](https://sql.clickhouse.com?query=U0VMRUNUIHVuaXFFeGFjdCh0eXBlY29kZSkgRlJPTSBvcGVuc2t5Lm9wZW5za3k&).
+**Returned value**
 
-```sql title="Query"
-SELECT uniqExact(typecode) FROM opensky.opensky
+Returns the exact number of different argument values as a UInt64. [`UInt64`](/sql-reference/data-types/int-uint)
+
+**Examples**
+
+**Basic usage**
+
+```sql title=Query
+CREATE TABLE example_data
+(
+    id UInt32,
+    category String
+)
+ENGINE = Memory;
+
+INSERT INTO example_data VALUES
+(1, 'A'), (2, 'B'), (3, 'A'), (4, 'C'), (5, 'B'), (6, 'A');
+
+SELECT uniqExact(category) as exact_unique_categories
+FROM example_data;
 ```
 
-```response title="Response"
-1106
+```response title=Response
+┌─exact_unique_categories─┐
+│                       3 │
+└─────────────────────────┘
 ```
+
+**Multiple arguments**
+
+```sql title=Query
+SELECT uniqExact(id, category) as exact_unique_combinations
+FROM example_data;
+```
+
+```response title=Response
+┌─exact_unique_combinations─┐
+│                         6 │
+└───────────────────────────┘
+```
+
+
 
 **See Also**
 

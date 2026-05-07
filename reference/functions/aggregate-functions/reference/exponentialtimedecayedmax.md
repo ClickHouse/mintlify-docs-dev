@@ -1,15 +1,13 @@
 ---
 description: 'Returns the maximum of the computed exponentially smoothed moving average
   at index `t` in time with that at `t-1`. '
-sidebar_position: 135
-old-slug: /sql-reference/aggregate-functions/reference/exponentialTimeDecayedMax
+slug: /sql-reference/aggregate-functions/reference/exponentialTimeDecayedMax
 title: 'exponentialTimeDecayedMax'
 doc_type: 'reference'
 ---
 
-## exponentialTimeDecayedMax 
-
-Returns the maximum of the computed exponentially smoothed moving average at index `t` in time with that at `t-1`. 
+Returns the maximum of the computed exponentially smoothed moving average at index `t` in time with that at `t-1`.
+    
 
 **Syntax**
 
@@ -17,24 +15,26 @@ Returns the maximum of the computed exponentially smoothed moving average at ind
 exponentialTimeDecayedMax(x)(value, timeunit)
 ```
 
-**Arguments**
-
-- `value` — Value. [Integer](../../../sql-reference/data-types/int-uint.md), [Float](../../../sql-reference/data-types/float.md) or [Decimal](../../../sql-reference/data-types/decimal.md).
-- `timeunit` — Timeunit. [Integer](../../../sql-reference/data-types/int-uint.md), [Float](../../../sql-reference/data-types/float.md) or [Decimal](../../../sql-reference/data-types/decimal.md), [DateTime](../../data-types/datetime.md), [DateTime64](../../data-types/datetime64.md).
-
 **Parameters**
 
-- `x` — Half-life period. [Integer](../../../sql-reference/data-types/int-uint.md), [Float](../../../sql-reference/data-types/float.md) or [Decimal](../../../sql-reference/data-types/decimal.md).
+- `x` — Half-life period. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
 
-**Returned values**
 
-- Returns the maximum of the exponentially smoothed weighted moving average at `t` and `t-1`. [Float64](../../data-types/float.md).
+**Arguments**
 
-**Example**
+- `value` — Value. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
+- `timeunit` — Timeunit. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal) or [`DateTime`](/sql-reference/data-types/datetime) or [`DateTime64`](/sql-reference/data-types/datetime64)
 
-Query:
 
-```sql
+**Returned value**
+
+Returns the maximum of the exponentially smoothed weighted moving average at `t` and `t-1`. [`Float64`](/sql-reference/data-types/float)
+
+**Examples**
+
+**Window function usage with visual representation**
+
+```sql title=Query
 SELECT
     value,
     time,
@@ -50,59 +50,60 @@ FROM
     );
 ```
 
-Result:
-
-```response
-    ┌─value─┬─time─┬─round(exp_smooth, 3)─┬─bar────────┐
- 1. │     1 │    0 │                    1 │ ██████████ │
- 2. │     0 │    1 │                0.905 │ █████████  │
- 3. │     0 │    2 │                0.819 │ ████████▏  │
- 4. │     0 │    3 │                0.741 │ ███████▍   │
- 5. │     0 │    4 │                 0.67 │ ██████▋    │
- 6. │     0 │    5 │                0.607 │ ██████     │
- 7. │     0 │    6 │                0.549 │ █████▍     │
- 8. │     0 │    7 │                0.497 │ ████▉      │
- 9. │     0 │    8 │                0.449 │ ████▍      │
-10. │     0 │    9 │                0.407 │ ████       │
-11. │     0 │   10 │                0.368 │ ███▋       │
-12. │     0 │   11 │                0.333 │ ███▎       │
-13. │     0 │   12 │                0.301 │ ███        │
-14. │     0 │   13 │                0.273 │ ██▋        │
-15. │     0 │   14 │                0.247 │ ██▍        │
-16. │     0 │   15 │                0.223 │ ██▏        │
-17. │     0 │   16 │                0.202 │ ██         │
-18. │     0 │   17 │                0.183 │ █▊         │
-19. │     0 │   18 │                0.165 │ █▋         │
-20. │     0 │   19 │                 0.15 │ █▍         │
-21. │     0 │   20 │                0.135 │ █▎         │
-22. │     0 │   21 │                0.122 │ █▏         │
-23. │     0 │   22 │                0.111 │ █          │
-24. │     0 │   23 │                  0.1 │ █          │
-25. │     0 │   24 │                0.091 │ ▉          │
-26. │     1 │   25 │                    1 │ ██████████ │
-27. │     1 │   26 │                    1 │ ██████████ │
-28. │     1 │   27 │                    1 │ ██████████ │
-29. │     1 │   28 │                    1 │ ██████████ │
-30. │     1 │   29 │                    1 │ ██████████ │
-31. │     1 │   30 │                    1 │ ██████████ │
-32. │     1 │   31 │                    1 │ ██████████ │
-33. │     1 │   32 │                    1 │ ██████████ │
-34. │     1 │   33 │                    1 │ ██████████ │
-35. │     1 │   34 │                    1 │ ██████████ │
-36. │     1 │   35 │                    1 │ ██████████ │
-37. │     1 │   36 │                    1 │ ██████████ │
-38. │     1 │   37 │                    1 │ ██████████ │
-39. │     1 │   38 │                    1 │ ██████████ │
-40. │     1 │   39 │                    1 │ ██████████ │
-41. │     1 │   40 │                    1 │ ██████████ │
-42. │     1 │   41 │                    1 │ ██████████ │
-43. │     1 │   42 │                    1 │ ██████████ │
-44. │     1 │   43 │                    1 │ ██████████ │
-45. │     1 │   44 │                    1 │ ██████████ │
-46. │     1 │   45 │                    1 │ ██████████ │
-47. │     1 │   46 │                    1 │ ██████████ │
-48. │     1 │   47 │                    1 │ ██████████ │
-49. │     1 │   48 │                    1 │ ██████████ │
-50. │     1 │   49 │                    1 │ ██████████ │
-    └───────┴──────┴──────────────────────┴────────────┘
+```response title=Response
+┌─value─┬─time─┬─round(exp_smooth, 3)─┬─bar────────┐
+│     1 │    0 │                    1 │ ██████████ │
+│     0 │    1 │                0.905 │ █████████  │
+│     0 │    2 │                0.819 │ ████████▏  │
+│     0 │    3 │                0.741 │ ███████▍   │
+│     0 │    4 │                 0.67 │ ██████▋    │
+│     0 │    5 │                0.607 │ ██████     │
+│     0 │    6 │                0.549 │ █████▍     │
+│     0 │    7 │                0.497 │ ████▉      │
+│     0 │    8 │                0.449 │ ████▍      │
+│     0 │    9 │                0.407 │ ████       │
+│     0 │   10 │                0.368 │ ███▋       │
+│     0 │   11 │                0.333 │ ███▎       │
+│     0 │   12 │                0.301 │ ███        │
+│     0 │   13 │                0.273 │ ██▋        │
+│     0 │   14 │                0.247 │ ██▍        │
+│     0 │   15 │                0.223 │ ██▏        │
+│     0 │   16 │                0.202 │ ██         │
+│     0 │   17 │                0.183 │ █▊         │
+│     0 │   18 │                0.165 │ █▋         │
+│     0 │   19 │                 0.15 │ █▍         │
+│     0 │   20 │                0.135 │ █▎         │
+│     0 │   21 │                0.122 │ █▏         │
+│     0 │   22 │                0.111 │ █          │
+│     0 │   23 │                  0.1 │ █          │
+│     0 │   24 │                0.091 │ ▉          │
+│     1 │   25 │                    1 │ ██████████ │
+│     1 │   26 │                    1 │ ██████████ │
+│     1 │   27 │                    1 │ ██████████ │
+│     1 │   28 │                    1 │ ██████████ │
+│     1 │   29 │                    1 │ ██████████ │
+│     1 │   30 │                    1 │ ██████████ │
+│     1 │   31 │                    1 │ ██████████ │
+│     1 │   32 │                    1 │ ██████████ │
+│     1 │   33 │                    1 │ ██████████ │
+│     1 │   34 │                    1 │ ██████████ │
+│     1 │   35 │                    1 │ ██████████ │
+│     1 │   36 │                    1 │ ██████████ │
+│     1 │   37 │                    1 │ ██████████ │
+│     1 │   38 │                    1 │ ██████████ │
+│     1 │   39 │                    1 │ ██████████ │
+│     1 │   40 │                    1 │ ██████████ │
+│     1 │   41 │                    1 │ ██████████ │
+│     1 │   42 │                    1 │ ██████████ │
+│     1 │   43 │                    1 │ ██████████ │
+│     1 │   44 │                    1 │ ██████████ │
+│     1 │   45 │                    1 │ ██████████ │
+│     1 │   46 │                    1 │ ██████████ │
+│     1 │   47 │                    1 │ ██████████ │
+│     1 │   48 │                    1 │ ██████████ │
+│     1 │   49 │                    1 │ ██████████ │
+└───────┴──────┴──────────────────────┴────────────┘
 ```
+
+
+

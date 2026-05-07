@@ -1,15 +1,18 @@
 ---
 description: 'Documentation for the ClickHouse Keeper HTTP API and embedded dashboard'
-old-slug: /operations/utilities/clickhouse-keeper-http-api
+sidebar_label: 'Keeper HTTP API'
+sidebar_position: 70
+slug: /operations/utilities/clickhouse-keeper-http-api
 title: 'Keeper HTTP API and Dashboard'
 doc_type: 'reference'
 ---
 
+# Keeper HTTP API and Dashboard
 
 ClickHouse Keeper provides an HTTP API and embedded web dashboard for monitoring, health checks, and storage management. 
 This interface allows operators to inspect cluster status, execute commands, and manage Keeper storage through a web browser or HTTP clients.
 
-## Configuration
+## Configuration {#configuration}
 
 To enable the HTTP API, add the `http_control` section to your `keeper_server` configuration:
 
@@ -24,7 +27,7 @@ To enable the HTTP API, add the `http_control` section to your `keeper_server` c
 </keeper_server>
 ```
 
-### Configuration Options
+### Configuration Options {#configuration-options}
 
 | Setting                                   | Default  | Description                                |
 |-------------------------------------------|----------|--------------------------------------------|
@@ -33,9 +36,9 @@ To enable the HTTP API, add the `http_control` section to your `keeper_server` c
 | `http_control.readiness.endpoint`         | `/ready` | Custom path for the readiness probe        |
 | `http_control.storage.session_timeout_ms` | `30000`  | Session timeout for storage API operations |
 
-## Endpoints
+## Endpoints {#endpoints}
 
-### Dashboard
+### Dashboard {#dashboard}
 
 - **Path**: `/dashboard`
 - **Method**: GET
@@ -47,7 +50,7 @@ The dashboard provides:
 - Storage browser
 - Command execution interface
 
-### Readiness Probe
+### Readiness Probe {#readiness-probe}
 
 - **Path**: `/ready` (configurable)
 - **Method**: GET
@@ -64,7 +67,7 @@ Success response (HTTP 200):
 }
 ```
 
-### Commands API
+### Commands API {#commands-api}
 
 - **Path**: `/api/v1/commands/{command}`
 - **Methods**: GET, POST
@@ -83,7 +86,7 @@ curl http://localhost:9182/api/v1/commands/stat
 curl "http://localhost:9182/api/v1/commands/ls?command=ls%20'/'&cwd=/"
 ```
 
-### Storage API
+### Storage API {#storage-api}
 
 - **Base Path**: `/api/v1/storage`
 - **Description**: REST API for Keeper storage operations

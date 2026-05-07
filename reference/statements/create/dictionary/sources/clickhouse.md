@@ -1,15 +1,19 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/clickhouse
+slug: /sql-reference/statements/create/dictionary/sources/clickhouse
 title: 'ClickHouse dictionary source'
+sidebar_position: 8
+sidebar_label: 'ClickHouse'
 description: 'Configure a ClickHouse table as a dictionary source.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(CLICKHOUSE(
@@ -25,8 +29,8 @@ SOURCE(CLICKHOUSE(
 ));
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -44,7 +48,7 @@ SOURCE(CLICKHOUSE(
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
@@ -63,6 +67,6 @@ Setting fields:
 | `secure` | Use SSL for connection. |
 | `query` | The custom query. Optional. |
 
-<Note>
-**The `table` or `where` fields cannot be used together with the `query` field. And either one of the `table` or `query` fields must be declared.**
-</Note>
+:::note
+The `table` or `where` fields cannot be used together with the `query` field. And either one of the `table` or `query` fields must be declared.
+:::

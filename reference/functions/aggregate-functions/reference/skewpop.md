@@ -1,12 +1,14 @@
 ---
 description: 'Computes the skewness of a sequence.'
-sidebar_position: 185
-old-slug: /sql-reference/aggregate-functions/reference/skewpop
+slug: /sql-reference/aggregate-functions/reference/skewpop
 title: 'skewPop'
 doc_type: 'reference'
 ---
 
 Computes the [skewness](https://en.wikipedia.org/wiki/Skewness) of a sequence.
+    
+
+**Syntax**
 
 ```sql
 skewPop(expr)
@@ -14,14 +16,38 @@ skewPop(expr)
 
 **Arguments**
 
-`expr` — [Expression](/sql-reference/syntax#expressions) returning a number.
+- `expr` — An expression returning a number. [`Expression`](/sql-reference/data-types/special-data-types/expression)
+
 
 **Returned value**
 
-The skewness of the given distribution. Type — [Float64](../../../sql-reference/data-types/float.md)
+Returns the skewness of the given distribution. [`Float64`](/sql-reference/data-types/float)
 
-**Example**
+**Examples**
 
-```sql
-SELECT skewPop(value) FROM series_with_value_column;
+**Symmetric distribution**
+
+```sql title=Query
+SELECT skewPop(number) FROM numbers(100);
 ```
+
+```response title=Response
+┌─skewPop(number)─┐
+│               0 │
+└─────────────────┘
+```
+
+**Right-skewed distribution**
+
+```sql title=Query
+SELECT skewPop(x) FROM (SELECT pow(number, 2) AS x FROM numbers(10));
+```
+
+```response title=Response
+┌─────────skewPop(x)─┐
+│ 0.6735701055423582 │
+└────────────────────┘
+```
+
+
+

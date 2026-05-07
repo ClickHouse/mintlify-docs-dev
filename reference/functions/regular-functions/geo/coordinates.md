@@ -1,12 +1,12 @@
 ---
 description: 'Documentation for Coordinates'
-sidebarTitle: 'Geographical Coordinates'
-old-slug: /sql-reference/functions/geo/coordinates
+sidebar_label: 'Geographical Coordinates'
+slug: /sql-reference/functions/geo/coordinates
 title: 'Functions for Working with Geographical Coordinates'
 doc_type: 'reference'
 ---
 
-## greatCircleDistance 
+## greatCircleDistance {#greatcircledistance}
 
 Calculates the distance between two points on the Earth's surface using [the great-circle formula](https://en.wikipedia.org/wiki/Great-circle_distance).
 
@@ -41,7 +41,7 @@ SELECT greatCircleDistance(55.755831, 37.617673, -55.755831, -37.617673) AS grea
 └─────────────────────┘
 ```
 
-## geoDistance 
+## geoDistance {#geodistance}
 
 Similar to `greatCircleDistance` but calculates the distance on WGS-84 ellipsoid instead of sphere. This is more precise approximation of the Earth Geoid.
 The performance is the same as for `greatCircleDistance` (no performance drawback). It is recommended to use `geoDistance` to calculate the distances on Earth.
@@ -79,7 +79,7 @@ SELECT geoDistance(38.8976, -77.0366, 39.9496, -75.1503) AS geoDistance
 └─────────────┘
 ```
 
-## greatCircleAngle 
+## greatCircleAngle {#greatcircleangle}
 
 Calculates the central angle between two points on the Earth's surface using [the great-circle formula](https://en.wikipedia.org/wiki/Great-circle_distance).
 
@@ -110,7 +110,7 @@ SELECT greatCircleAngle(0, 0, 45, 0) AS arc
 └─────┘
 ```
 
-## pointInEllipses 
+## pointInEllipses {#pointinellipses}
 
 Checks whether the point belongs to at least one of the ellipses.
 Coordinates are geometric in the Cartesian coordinate system.
@@ -143,7 +143,7 @@ SELECT pointInEllipses(10., 10., 10., 9.1, 1., 0.9999)
 └─────────────────────────────────────────────────┘
 ```
 
-## pointInPolygon 
+## pointInPolygon {#pointinpolygon}
 
 Checks whether the point belongs to the polygon on the plane.
 
@@ -178,3 +178,4 @@ SELECT pointInPolygon((3., 3.), [(6, 0), (8, 4), (5, 8), (0, 2)]) AS res
 > **Note**  
 > • You can set `validate_polygons = 0` to bypass geometry validation.  
 > • `pointInPolygon` assumes every polygon is well-formed. If the input is self-intersecting, has mis-ordered rings, or overlapping edges, results become unreliable—especially for points that sit exactly on an edge, a vertex, or inside a self-intersection where the notion of "inside" vs. "outside" is undefined.
+> • When the polygon argument is constant and the point is expressed using indexed key columns (for example, `pointInPolygon((x, y), constant_polygon)` on a table where `x, y` are part of the `PRIMARY KEY` or covered by a `minmax` index), ClickHouse can use both the primary key and `minmax` data-skipping indexes to prune irrelevant granules.

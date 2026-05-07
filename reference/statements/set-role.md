@@ -1,10 +1,10 @@
 ---
-description: Documentation for Set Role
-sidebarTitle: SET ROLE
+description: 'Documentation for Set Role'
+sidebar_label: 'SET ROLE'
 sidebar_position: 51
-old-slug: /sql-reference/statements/set-role
-title: SET ROLE statement
-doc_type: reference
+slug: /sql-reference/statements/set-role
+title: 'SET ROLE Statement'
+doc_type: 'reference'
 ---
 
 Activates roles for the current user.
@@ -13,7 +13,7 @@ Activates roles for the current user.
 SET ROLE {DEFAULT | NONE | role [,...] | ALL | ALL EXCEPT role [,...]}
 ```
 
-## SET DEFAULT ROLE \
+## SET DEFAULT ROLE {#set-default-role}
 
 Sets default roles to a user.
 
@@ -23,7 +23,7 @@ Default roles are automatically activated at user login. You can set as default 
 SET DEFAULT ROLE {NONE | role [,...] | ALL | ALL EXCEPT role [,...]} TO {user|CURRENT_USER} [,...]
 ```
 
-## Examples \
+## Examples {#examples}
 
 Set multiple default roles to a user:
 

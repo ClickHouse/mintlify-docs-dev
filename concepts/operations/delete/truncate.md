@@ -1,5 +1,5 @@
 ---
-old-slug: /managing-data/truncate
+slug: /managing-data/truncate
 sidebarTitle: 'Truncate table'
 title: 'Truncate Table'
 hide_title: false

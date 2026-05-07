@@ -1,16 +1,18 @@
 ---
 description: 'The `Dictionary` engine displays the dictionary data as a ClickHouse
   table.'
-sidebarTitle: 'Dictionary'
+sidebar_label: 'Dictionary'
 sidebar_position: 20
-old-slug: /engines/table-engines/special/dictionary
+slug: /engines/table-engines/special/dictionary
 title: 'Dictionary table engine'
 doc_type: 'reference'
 ---
 
-The `Dictionary` engine displays the [dictionary](../../../sql-reference/dictionaries/index.md) data as a ClickHouse table.
+# Dictionary table engine
 
-## Example 
+The `Dictionary` engine displays the [dictionary](../../../sql-reference/statements/create/dictionary/overview.md) data as a ClickHouse table.
+
+## Example {#example}
 
 As an example, consider a dictionary of `products` with the following configuration:
 
@@ -67,7 +69,7 @@ WHERE name = 'products'
 └──────────┴──────┴────────┴─────────────────┴─────────────────┴─────────────────┴───────────────┴─────────────────┘
 ```
 
-You can use the [dictGet\*](/sql-reference/functions/ext-dict-functions#dictget-dictgetordefault-dictgetornull) function to get the dictionary data in this format.
+You can use the [dictGet\*](/sql-reference/functions/ext-dict-functions) functions to get the dictionary data in this format.
 
 This view isn't helpful when you need to get raw data, or when performing a `JOIN` operation. For these cases, you can use the `Dictionary` engine, which displays the dictionary data in a table.
 

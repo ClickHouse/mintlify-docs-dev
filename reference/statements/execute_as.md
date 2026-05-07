@@ -1,15 +1,17 @@
 ---
 description: 'Documentation for EXECUTE AS Statement'
-sidebarTitle: 'EXECUTE AS'
+sidebar_label: 'EXECUTE AS'
 sidebar_position: 53
-old-slug: /sql-reference/statements/execute_as
+slug: /sql-reference/statements/execute_as
 title: 'EXECUTE AS Statement'
 doc_type: 'reference'
 ---
 
+# EXECUTE AS Statement
+
 Allows to execute queries on behalf of a different user.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 EXECUTE AS target_user;
@@ -20,7 +22,7 @@ The first form (without `subquery`) sets that all the following queries in the c
 
 The second form (with `subquery`) executes only the specified `subquery` on behalf of the specified `target_user`.
 
-In order to work both forms require server setting [allow_impersonate_user](/operations/server-configuration-parameters/settings#allow_impersonate_user)
+In order to work both forms require config setting `access_control_improvements.allow_impersonate_user`
 to be set to `1` and the `IMPERSONATE` privilege to be granted. For example, the following commands
 ```sql
 GRANT IMPERSONATE ON user1 TO user2;
@@ -31,7 +33,7 @@ allow user `user2` to execute commands `EXECUTE AS user1 ...` and also allow use
 While impersonating another user function [currentUser()](/sql-reference/functions/other-functions#currentUser) returns the name of that other user,
 and function [authenticatedUser()](/sql-reference/functions/other-functions#authenticatedUser) returns the name of the user who has been actually authenticated.
 
-## Examples 
+## Examples {#examples}
 
 ```sql
 SELECT currentUser(), authenticatedUser(); -- outputs "default    default"

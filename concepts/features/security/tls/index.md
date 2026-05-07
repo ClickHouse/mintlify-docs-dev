@@ -1,5 +1,5 @@
 ---
-old-slug: /guides/sre/tls
+slug: /guides/sre/tls
 title: 'TLS configuration'
 description: 'Landing page for TLS configuration'
 doc_type: 'landing-page'

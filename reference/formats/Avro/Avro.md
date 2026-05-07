@@ -4,24 +4,26 @@ description: 'Documentation for the Avro format'
 input_format: true
 keywords: ['Avro']
 output_format: true
-old-slug: /interfaces/formats/Avro
+slug: /interfaces/formats/Avro
 title: 'Avro'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+import DataTypeMapping from './_snippets/data-types-matching.md'
 
-import DataTypeMapping from '/snippets/products/reference/formats/Avro/_snippets/data-types-matching.mdx'
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 [Apache Avro](https://avro.apache.org/) is a row-oriented serialization format that uses binary encoding for efficient data processing. The `Avro` format supports reading and writing [Avro data files](https://avro.apache.org/docs/++version++/specification/#object-container-files). This format expects self-describing messages with an embedded schema. If you're using Avro with a schema registry, refer to the [`AvroConfluent`](./AvroConfluent.md) format.
 
-## Data type mapping 
+## Data type mapping {#data-type-mapping}
 
 <DataTypeMapping/>
 
-## Format settings 
+## Format settings {#format-settings}
 
 | Setting                                     | Description                                                                                         | Default |
 |---------------------------------------------|-----------------------------------------------------------------------------------------------------|---------|
@@ -32,9 +34,9 @@ import DataTypeMapping from '/snippets/products/reference/formats/Avro/_snippets
 | `output_format_avro_string_column_pattern`  | Regular expression to identify `String` columns for Avro string type mapping. By default, ClickHouse `String` columns are written as Avro `bytes` type.                                 |         |
 | `output_format_avro_rows_in_file`           | Maximum number of rows per Avro output file. When this limit is reached, a new file is created (if the storage system supports file splitting).                                                         | `1`     |
 
-## Examples 
+## Examples {#examples}
 
-### Reading Avro data 
+### Reading Avro data {#reading-avro-data}
 
 To read data from an Avro file into a ClickHouse table:
 
@@ -47,11 +49,11 @@ The root schema of the ingested Avro file must be of type `record`.
 To find the correspondence between table columns and fields of Avro schema, ClickHouse compares their names. 
 This comparison is case-sensitive and unused fields are skipped.
 
-Data types of ClickHouse table columns can differ from the corresponding fields of the Avro data inserted. When inserting data, ClickHouse interprets data types according to the table above and then [casts](/sql-reference/functions/type-conversion-functions#cast) the data to the corresponding column type.
+Data types of ClickHouse table columns can differ from the corresponding fields of the Avro data inserted. When inserting data, ClickHouse interprets data types according to the table above and then [casts](/sql-reference/functions/type-conversion-functions#CAST) the data to the corresponding column type.
 
 While importing data, when a field is not found in the schema and setting [`input_format_avro_allow_missing_fields`](/operations/settings/settings-formats.md/#input_format_avro_allow_missing_fields) is enabled, the default value will be used instead of throwing an error.
 
-### Writing Avro data 
+### Writing Avro data {#writing-avro-data}
 
 To write data from a ClickHouse table into an Avro file:
 
@@ -66,7 +68,7 @@ Column names must:
 
 The output compression and sync interval for Avro files can be configured using the [`output_format_avro_codec`](/operations/settings/settings-formats.md/#output_format_avro_codec) and [`output_format_avro_sync_interval`](/operations/settings/settings-formats.md/#output_format_avro_sync_interval) settings, respectively.
 
-### Inferring the Avro schema 
+### Inferring the Avro schema {#inferring-the-avro-schema}
 
 Using the ClickHouse [`DESCRIBE`](/sql-reference/statements/describe-table) function, you can quickly view the inferred format of an Avro file like the following example. 
 This example includes the URL of a publicly accessible Avro file in the ClickHouse S3 public bucket:

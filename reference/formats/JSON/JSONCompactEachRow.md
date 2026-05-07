@@ -4,20 +4,22 @@ description: 'Documentation for the JSONCompactEachRow format'
 input_format: true
 keywords: ['JSONCompactEachRow']
 output_format: true
-old-slug: /interfaces/formats/JSONCompactEachRow
+slug: /interfaces/formats/JSONCompactEachRow
 title: 'JSONCompactEachRow'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 Differs from [`JSONEachRow`](./JSONEachRow.md) only in that data rows are output as arrays, not as objects.
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using a JSON file with the following data, named as `football.json`:
 
@@ -47,7 +49,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.json' FORMAT JSONCompactEachRow;
 ```
 
-### Reading data 
+### Reading data {#reading-data}
 
 Read data using the `JSONCompactEachRow` format:
 
@@ -79,4 +81,4 @@ The output will be in JSON format:
 ["2022-05-07", 2021, "Walsall", "Swindon Town", 0, 3]
 ```
 
-## Format settings 
+## Format settings {#format-settings}

@@ -3,11 +3,13 @@ description: 'Used for implementing views (for more information, see the `CREATE
   query`). It does not store data, but only stores the specified `SELECT` query. When
   reading from a table, it runs this query (and deletes all unnecessary columns from
   the query).'
-sidebarTitle: 'View'
+sidebar_label: 'View'
 sidebar_position: 90
-old-slug: /engines/table-engines/special/view
+slug: /engines/table-engines/special/view
 title: 'View table engine'
 doc_type: 'reference'
 ---
+
+# View table engine
 
 Used for implementing views (for more information, see the `CREATE VIEW query`). It does not store data, but only stores the specified `SELECT` query. When reading from a table, it runs this query (and deletes all unnecessary columns from the query).

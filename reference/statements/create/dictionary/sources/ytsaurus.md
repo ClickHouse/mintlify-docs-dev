@@ -1,24 +1,30 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/ytsaurus
+slug: /sql-reference/statements/create/dictionary/sources/ytsaurus
 title: 'YTsaurus dictionary source'
+sidebar_position: 13
+sidebar_label: 'YTsaurus'
 description: 'Configure YTsaurus as a dictionary source in ClickHouse.'
 doc_type: 'reference'
 ---
 
+import ExperimentalBadge from '@theme/badges/ExperimentalBadge';
+import CloudNotSupportedBadge from '@theme/badges/CloudNotSupportedBadge';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <ExperimentalBadge/>
 <CloudNotSupportedBadge/>
 
-<Info>
-**This is an experimental feature that may change in backwards-incompatible ways in future releases.**
+:::info
+This is an experimental feature that may change in backwards-incompatible ways in future releases.
 Enable usage of the YTsaurus dictionary source
 using setting [`allow_experimental_ytsaurus_dictionary_source`](/operations/settings/settings#allow_experimental_ytsaurus_dictionary_source).
-</Info>
+:::
 
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(YTSAURUS(
@@ -28,8 +34,8 @@ SOURCE(YTSAURUS(
 ))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -42,7 +48,7 @@ SOURCE(YTSAURUS(
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 

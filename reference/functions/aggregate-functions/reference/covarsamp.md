@@ -1,16 +1,21 @@
 ---
 description: 'Calculates the value of `Σ((x - x̅)(y - y̅)) / (n - 1)`'
-sidebar_position: 124
-old-slug: /sql-reference/aggregate-functions/reference/covarsamp
+slug: /sql-reference/aggregate-functions/reference/covarsamp
 title: 'covarSamp'
 doc_type: 'reference'
 ---
 
-Calculates the value of `Σ((x - x̅)(y - y̅)) / (n - 1)`.
+Calculates the sample covariance:
 
-<Note>
-This function uses a numerically unstable algorithm. If you need [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability) in calculations, use the [`covarSampStable`](../reference/covarsamp.md) function. It works slower but provides a lower computational error.
-</Note>
+$$
+\frac{\Sigma{(x - \bar{x})(y - \bar{y})}}{n - 1}
+$$
+
+:::note
+This function uses a numerically unstable algorithm. If you need [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability) in calculations, use the [`covarSampStable`](/sql-reference/aggregate-functions/reference/covarsampstable) function.
+It works slower but provides a lower computational error.
+:::
+    
 
 **Syntax**
 
@@ -18,62 +23,49 @@ This function uses a numerically unstable algorithm. If you need [numerical stab
 covarSamp(x, y)
 ```
 
+**Aliases**: `COVAR_SAMP`
+
 **Arguments**
 
-- `x` — first variable. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal](../../data-types/decimal.md).
-- `y` — second variable. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal](../../data-types/decimal.md).
+- `x` — First variable. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
+- `y` — Second variable. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
 
-**Returned Value**
 
-- The sample covariance between `x` and `y`. For `n <= 1`, `nan` is returned. [Float64](../../data-types/float.md).
+**Returned value**
 
-**Example**
+Returns the sample covariance between `x` and `y`. For `n <= 1`, `nan` is returned. [`Float64`](/sql-reference/data-types/float)
 
-Query:
+**Examples**
 
-```sql
+**Basic sample covariance calculation**
+
+```sql title=Query
 DROP TABLE IF EXISTS series;
 CREATE TABLE series(i UInt32, x_value Float64, y_value Float64) ENGINE = Memory;
 INSERT INTO series(i, x_value, y_value) VALUES (1, 5.6,-4.4),(2, -9.6,3),(3, -1.3,-4),(4, 5.3,9.7),(5, 4.4,0.037),(6, -8.6,-7.8),(7, 5.1,9.3),(8, 7.9,-3.6),(9, -8.2,0.62),(10, -3,7.3);
-```
 
-```sql
 SELECT covarSamp(x_value, y_value)
-FROM
-(
-    SELECT
-        x_value,
-        y_value
-    FROM series
-);
+FROM series
 ```
 
-Result:
-
-```reference
+```response title=Response
 ┌─covarSamp(x_value, y_value)─┐
 │           7.206275555555556 │
 └─────────────────────────────┘
 ```
 
-Query:
+**Single value returns NaN**
 
-```sql
+```sql title=Query
 SELECT covarSamp(x_value, y_value)
-FROM
-(
-    SELECT
-        x_value,
-        y_value
-    FROM series LIMIT 1
-);
-
+FROM series LIMIT 1
 ```
 
-Result:
-
-```reference
+```response title=Response
 ┌─covarSamp(x_value, y_value)─┐
 │                         nan │
 └─────────────────────────────┘
 ```
+
+
+

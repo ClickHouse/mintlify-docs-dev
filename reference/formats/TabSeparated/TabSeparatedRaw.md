@@ -4,26 +4,28 @@ description: 'Documentation for the TabSeparatedRaw format'
 input_format: true
 keywords: ['TabSeparatedRaw']
 output_format: true
-old-slug: /interfaces/formats/TabSeparatedRaw
+slug: /interfaces/formats/TabSeparatedRaw
 title: 'TabSeparatedRaw'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge> <Badge intent="info">Alias: `TSVRaw`, `Raw`</Badge>
+| Input | Output | Alias           |
+|-------|--------|-----------------|
+| ✔     | ✔      | `TSVRaw`, `Raw` |
 
-## Description 
+## Description {#description}
 
 Differs from the [`TabSeparated`](/interfaces/formats/TabSeparated) format in that rows are written without escaping.
 
-<Note>
+:::note
 When parsing with this format, tabs or line-feeds are not allowed in each field.
-</Note>
+:::
 
 For a comparison of the `TabSeparatedRaw` format and the `RawBlob` format see: [Raw Formats Comparison](../RawBLOB.md/#raw-formats-comparison)
 
-## Example usage 
+## Example usage {#example-usage}
 
-### Inserting data 
+### Inserting data {#inserting-data}
 
 Using the following tsv file, named as `football.tsv`:
 
@@ -53,7 +55,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.tsv' FORMAT TabSeparatedRaw;
 ```
 
-### Reading data 
+### Reading data {#reading-data}
 
 Read data using the `TabSeparatedRaw` format:
 
@@ -85,4 +87,4 @@ The output will be in tab separated format:
 2022-05-07      2021    Walsall Swindon Town    0       3
 ```
 
-## Format settings 
+## Format settings {#format-settings}

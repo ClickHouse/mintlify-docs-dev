@@ -1,13 +1,13 @@
 ---
 description: 'The result is equal to the square root of varPop. Unlike stddevPop,
   this function uses a numerically stable algorithm.'
-sidebar_position: 189
-old-slug: /sql-reference/aggregate-functions/reference/stddevpopstable
+slug: /sql-reference/aggregate-functions/reference/stddevpopstable
 title: 'stddevPopStable'
 doc_type: 'reference'
 ---
 
-The result is equal to the square root of [varPop](../../../sql-reference/aggregate-functions/reference/varpop.md). Unlike [`stddevPop`](../reference/stddevpop.md), this function uses a numerically stable algorithm. It works slower but provides a lower computational error.
+The result is equal to the square root of [varPop](../../../sql-reference/aggregate-functions/reference/varPop.md). Unlike [stddevPop](../reference/stddevPop.md), this function uses a numerically stable algorithm. It works slower but provides a lower computational error.
+    
 
 **Syntax**
 
@@ -15,19 +15,20 @@ The result is equal to the square root of [varPop](../../../sql-reference/aggreg
 stddevPopStable(x)
 ```
 
-**Parameters**
+**Arguments**
 
-- `x`: Population of values to find the standard deviation of. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal*](../../data-types/decimal.md).
+- `x` — Population of values to find the standard deviation of. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
+
 
 **Returned value**
 
-Square root of the variance of `x`. [Float64](../../data-types/float.md).
+Returns the square root of the variance of `x`. [`Float64`](/sql-reference/data-types/float)
 
-**Example**
+**Examples**
 
-Query:
+**Basic usage**
 
-```sql
+```sql title=Query
 DROP TABLE IF EXISTS test_data;
 CREATE TABLE test_data
 (
@@ -35,17 +36,18 @@ CREATE TABLE test_data
 )
 ENGINE = Log;
 
-INSERT INTO test_data SELECT randUniform(5.5, 10) FROM numbers(1000000)
+INSERT INTO test_data SELECT randUniform(5.5, 10) FROM numbers(1000000);
 
 SELECT
     stddevPopStable(population) AS stddev
 FROM test_data;
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─────────────stddev─┐
 │ 1.2999977786592576 │
 └────────────────────┘
 ```
+
+
+

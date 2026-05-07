@@ -4,12 +4,12 @@ description: 'Documentation for the CSV format'
 input_format: true
 keywords: ['CSV']
 output_format: true
-old-slug: /interfaces/formats/CSV
+slug: /interfaces/formats/CSV
 title: 'CSV'
 doc_type: 'reference'
 ---
 
-## Description 
+## Description {#description}
 
 Comma Separated Values format ([RFC](https://tools.ietf.org/html/rfc4180)).
 When formatting, rows are enclosed in double quotes. A double quote inside a string is output as two double quotes in a row. 
@@ -28,10 +28,10 @@ There are no other rules for escaping characters.
 $ clickhouse-client --format_csv_delimiter="|" --query="INSERT INTO test.csv FORMAT CSV" < data.csv
 ```
 
-<Note>
+:::note
 By default, the delimiter is `,` 
 See the [format_csv_delimiter](/operations/settings/settings-formats.md/#format_csv_delimiter) setting for more information.
-</Note>
+:::
 
 When parsing, all values can be parsed either with or without quotes. Both double and single quotes are supported.
 
@@ -46,9 +46,9 @@ First, we try to match the input value to the ENUM name.
 If we fail and the input value is a number, we try to match this number to the ENUM id.
 If input data contains only ENUM ids, it's recommended to enable the setting [input_format_csv_enum_as_number](/operations/settings/settings-formats.md/#input_format_csv_enum_as_number) to optimize `ENUM` parsing.
 
-## Example usage 
+## Example usage {#example-usage}
 
-## Format settings 
+## Format settings {#format-settings}
 
 | Setting                                                                                                                                                            | Description                                                                                                        | Default | Notes                                                                                                                                                                                        |
 |--------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

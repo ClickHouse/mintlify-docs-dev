@@ -1,7 +1,7 @@
 ---
 description: 'Documentation for arrayJoin function'
 sidebarTitle: 'arrayJoin'
-old-slug: /sql-reference/functions/array-join
+slug: /sql-reference/functions/array-join
 title: 'arrayJoin function'
 doc_type: 'reference'
 ---

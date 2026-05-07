@@ -1,14 +1,13 @@
 ---
 description: 'Documentation for Exact and Approximate Vector Search'
 keywords: ['vector similarity search', 'ann', 'knn', 'hnsw', 'indices', 'index', 'nearest neighbor', 'vector search']
-sidebarTitle: 'Exact and Approximate Vector Search'
-old-slug: /engines/table-engines/mergetree-family/annindexes
+sidebar_label: 'Exact and Approximate Vector Search'
+slug: /engines/table-engines/mergetree-family/annindexes
 title: 'Exact and Approximate Vector Search'
 doc_type: 'guide'
 ---
 
-import {ExperimentalBadge} from '/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx'
-
+# Exact and approximate vector search
 
 The problem of finding the N closest points in a multi-dimensional (vector) space for a given point is known as [nearest neighbor search](https://en.wikipedia.org/wiki/Nearest_neighbor_search) or, in short: vector search.
 Two general approaches exist for solving vector search:
@@ -32,13 +31,13 @@ The reference vector is a constant array and given as a common table expression.
 Any of the available [distance function](/sql-reference/functions/distance-functions) can be used for that.
 `<N>` specifies how many neighbors should be returned.
 
-## Exact vector search 
+## Exact vector search {#exact-nearest-neighbor-search}
 
 An exact vector search can be performed using above SELECT query as is.
 The runtime of such queries is generally proportional to the number of stored vectors and their dimension, i.e. the number of array elements.
 Also, since ClickHouse performs a brute-force scan of all vectors, the runtime depends also on the number of threads by the query (see setting [max_threads](../../../operations/settings/settings.md#max_threads)).
 
-### Example 
+### Example {#exact-nearest-neighbor-search-example}
 
 ```sql
 CREATE TABLE tab(id Int32, vec Array(Float32)) ENGINE = MergeTree ORDER BY id;
@@ -62,18 +61,18 @@ returns
    └────┴─────────┘
 ```
 
-## Approximate vector search 
+## Approximate vector search {#approximate-nearest-neighbor-search}
 
-### Vector Similarity Indexes 
+### Vector Similarity Indexes {#vector-similarity-index}
 
 ClickHouse provides a special "vector similarity" index to perform approximate vector search.
 
-<Note>
+:::note
 Vector similarity indexes are available in ClickHouse version 25.8 and higher.
 If you run into problems, kindly open an issue in the [ClickHouse repository](https://github.com/clickhouse/clickhouse/issues).
-</Note>
+:::
 
-#### Creating a Vector Similarity Index 
+#### Creating a Vector Similarity Index {#creating-a-vector-similarity-index}
 
 A vector similarity index can be created on a new table like this:
 
@@ -95,7 +94,7 @@ ALTER TABLE table ADD INDEX <index_name> vectors TYPE vector_similarity(<type>, 
 ```
 
 Vector similarity indexes are special kinds of skipping indexes (see [here](mergetree.md#table_engine-mergetree-data_skipping-indexes) and [here](../../../optimize/skipping-indexes)).
-Accordingly, above `ALTER TABLE` statement only causes the index to be build for future new data inserted into the table.
+Accordingly, above `ALTER TABLE` statement only causes the index to be built for future new data inserted into the table.
 To build the index for existing data as well, you need to materialize it:
 
 ```sql
@@ -103,17 +102,24 @@ ALTER TABLE table MATERIALIZE INDEX <index_name> SETTINGS mutations_sync = 2;
 ```
 
 Function `<distance_function>` must be
-- `L2Distance`, the [Euclidean distance](https://en.wikipedia.org/wiki/Euclidean_distance), representing the length of a line between two points in Euclidean space, or
-- `cosineDistance`, the [cosine distance](https://en.wikipedia.org/wiki/Cosine_similarity#Cosine_distance), representing the angle between two non-zero vectors.
+- `L2Distance`, the [Euclidean distance](https://en.wikipedia.org/wiki/Euclidean_distance), representing the length of a line between two points in Euclidean space,
+- `cosineDistance`, the [cosine distance](https://en.wikipedia.org/wiki/Cosine_similarity#Cosine_distance), representing the angle between two non-zero vectors, or
+- `dotProduct`, the [dot product](https://en.wikipedia.org/wiki/Dot_product) (inner product), representing the sum of element-wise products of two vectors. Equivalent to `cosineDistance` on normalized data.
 
 For normalized data, `L2Distance` is usually the best choice, otherwise `cosineDistance` is recommended to compensate for scale.
+
+:::note
+For distance functions `L2Distance` and `cosineDistance`, a smaller value means a higher similarity, whereas for `dotProduct`, a higher value means a higher similarity.
+As a result, vector indexes with `L2Distance` and `cosineDistance` can only be used by `SELECT [...] ORDER BY [...] ASC` queries (`ASC` is the default for `ORDER BY`), whereas vector indexes built for `dotProduct` can only be used by `SELECT [...] ORDER BY [...] DESC` queries.
+:::
 
 `<dimensions>` specifies the array cardinality (number of elements) in the underlying column.
 If ClickHouse finds an array with a different cardinality during index creation, the index is discarded and an error is returned.
 
 The optional GRANULARITY parameter `<N>` refers to the size of the index granules (see [here](../../../optimize/skipping-indexes)).
-The default value of 100 million should work reasonably well for most use cases but it can also be tuned.
-We recommend tuning only for advanced users who understand the implications of what they are doing (see [below](#differences-to-regular-skipping-indexes)).
+Unlike regular skip indexes, which use a default index granularity of 1, vector similarity indexes use 100 million as default index granularity.
+This value makes sure that only few indexes are build internally even for large parts.
+We recommend changing the index granularity only for advanced users who understand the implications of what they are doing (see [below](#differences-to-regular-skipping-indexes)).
 
 Vector similarity indexes are generic in the sense that they can accommodate different approximate search method.
 The actually used method is specified by parameter `<type>`.
@@ -187,11 +193,11 @@ Memory consumption = 3072 + 512 = 3584 MB
 
 Above formula does not account for additional memory required by vector similarity indexes to allocate runtime data structures like pre-allocated buffers and caches.
 
-#### Using a Vector Similarity Index 
+#### Using a Vector Similarity Index {#using-a-vector-similarity-index}
 
-<Note>
+:::note
 To use vector similarity indexes, setting [compatibility](../../../operations/settings/settings.md) has be `''` (the default value), or `'25.1'` or newer.
-</Note>
+:::
 
 Vector similarity indexes support SELECT queries of this form:
 
@@ -258,9 +264,9 @@ Vector similarity indexes are used if the output contains `Skip` and the name an
 In this case, the vector similarity index dropped two of four granules, i.e. 50% of the data.
 The more granules can be dropped, the more effective index usage becomes.
 
-<Tip>
+:::tip
 To enforce index usage, you can run the SELECT query with setting [force_data_skipping_indexes](../../../operations/settings/settings#force_data_skipping_indices) (provide the index name as setting value).
-</Tip>
+:::
 
 **Post-filtering and Pre-filtering**
 
@@ -387,11 +393,11 @@ Query id: a2a9d0c8-a525-45c1-96ca-c5a11fa66f47
     └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-<Note>
+:::note
 A query run without rescoring (`vector_search_with_rescoring = 0`) and with parallel replicas enabled may fall back to rescoring.
-</Note>
+:::
 
-#### Performance tuning 
+#### Performance tuning {#performance-tuning}
 
 **Tuning compression**
 
@@ -434,11 +440,24 @@ The bigger this cache is, the fewer unnecessary loads will happen.
 The maximum cache size can be configured using server setting [vector_similarity_index_cache_size](../../../operations/server-configuration-parameters/settings.md#vector_similarity_index_cache_size).
 By default, the cache can grow up to 5 GB in size.
 
-<Note>
+The following log messages (`system.text_log`) indicate that the vector similarity index is being loaded.
+If such messages appear repeatedly for different vector search queries, this indicates that the cache size is too low.
+
+```text
+2026-02-03 07:39:10.351635 [1386] f0ac5c85-1b1c-4f35-8848-87a1d1aa00ba : VectorSimilarityIndex Start loading vector similarity index
+
+<...>
+
+2026-02-03 07:40:25.217603 [1386] f0ac5c85-1b1c-4f35-8848-87a1d1aa00ba : VectorSimilarityIndex Loaded vector similarity index: max_level = 2, connectivity = 64, size = 1808111, capacity = 1808111, memory_usage = 8.00 GiB, bytes_per_vector = 4096, scalar_words = 1024, nodes = 1808111, edges = 51356964, max_edges = 233395072
+```
+
+:::note
 The vector similarity index cache stores vector index granules.
 If individual vector index granules are bigger than the cache size, they will not be cached.
 Therefore, please make sure to calculate the vector index size (based on the formula in "Estimating storage and memory consumption" or [system.data_skipping_indices](../../../operations/system-tables/data_skipping_indices)) and size the cache correspondingly.
-</Note>
+:::
+
+_We reiterate that verifying and, if necessary, increasing the vector index cache should be the first step when investigating slow vector search queries._
 
 The current size of the vector similarity index cache is shown in [system.metrics](../../../operations/system-tables/metrics.md):
 
@@ -515,7 +534,7 @@ search_v = openai_client.embeddings.create(input = "[Good Books]", model='text-e
 params = {'$search_v_binary$': np.array(search_v, dtype=np.float32).tobytes()}
 result = chclient.query(
    "SELECT id FROM items
-    ORDER BY cosineDistance(vector, (SELECT reinterpret($search_v_binary$, 'Array(Float32)')))
+    ORDER BY cosineDistance(vector, reinterpret($search_v_binary$, 'Array(Float32)'))
     LIMIT 10"
     parameters = params)
 ```
@@ -523,7 +542,7 @@ result = chclient.query(
 In the example, the reference vector is sent as-is in binary form and reinterpreted as array of floats on the server.
 This saves CPU time on the server side, and avoids bloat in the server logs and `system.query_log`.
 
-#### Administration and monitoring 
+#### Administration and monitoring {#administration}
 
 The on-disk size of vector similarity indexes can be obtained from [system.data_skipping_indices](../../../operations/system-tables/data_skipping_indices):
 
@@ -541,7 +560,7 @@ Example output:
 └──────────┴───────┴──────┴──────────────────────────┘
 ```
 
-#### Differences to regular skipping indexes 
+#### Differences to regular skipping indexes {#differences-to-regular-skipping-indexes}
 
 As all regular [skipping indexes](/optimize/skipping-indexes), vector similarity indexes are constructed over granules and each indexed block consists of `GRANULARITY = [N]`-many granules (`[N]` = 1 by default for normal skipping indexes).
 For example, if the primary index granularity of the table is 8192 (setting `index_granularity = 8192`) and `GRANULARITY = 2`, then each indexed block will contain 16384 rows.
@@ -566,7 +585,9 @@ Note that the search accuracy is with both cases equally good, only the processi
 It is generally recommended to use a large `GRANULARITY` for vector similarity indexes and fall back to a smaller `GRANULARITY` values only in case of problems like excessive memory consumption of the vector similarity structures.
 If no `GRANULARITY` was specified for vector similarity indexes, the default value is 100 million.
 
-#### Example 
+#### Example {#approximate-nearest-neighbor-search-example}
+
+Queries:
 
 ```sql
 CREATE TABLE tab(id Int32, vec Array(Float32), INDEX idx vec TYPE vector_similarity('hnsw', 'L2Distance', 2)) ENGINE = MergeTree ORDER BY id;
@@ -580,7 +601,7 @@ ORDER BY L2Distance(vec, reference_vec) ASC
 LIMIT 3;
 ```
 
-returns
+Result:
 
 ```result
    ┌─id─┬─vec─────┐
@@ -596,9 +617,7 @@ Further example datasets that use approximate vector search:
 - [dbpedia](../../../getting-started/example-datasets/dbpedia-dataset)
 - [hackernews](../../../getting-started/example-datasets/hackernews-vector-search-dataset)
 
-### Quantized Bit (QBit) 
-
-<ExperimentalBadge/>
+### Quantized Bit (QBit) {#approximate-nearest-neighbor-search-qbit}
 
 One common approach to speed up exact vector search is to use a lower-precision [float data type](../../../sql-reference/data-types/float.md).
 For example, if vectors are stored as `Array(BFloat16)` instead of `Array(Float32)`, the data size is reduced by half, and query runtimes are expected to decrease proportionally.
@@ -612,11 +631,6 @@ ClickHouse offers the Quantized Bit (`QBit`) data type that addresses these limi
 
 This is achieved by storing data in a bit-grouped format (meaning all i-th bits of all vectors are stored together), enabling reads at only the requested precision level. You get the speed benefits of reduced I/O and computation from quantization while keeping all original data available when needed. When maximum precision is selected, the search becomes exact.
 
-<Note>
-The `QBit` data type and its associated distance functions are currently experimental. To enable them, run `SET allow_experimental_qbit_type = 1`.
-If you encounter problems, please open an issue in the [ClickHouse repository](https://github.com/clickhouse/clickhouse/issues).
-</Note>
-
 To declare a column of `QBit` type, use the following syntax:
 
 ```sql
@@ -627,7 +641,7 @@ Where:
 * `element_type` – the type of each vector element. Supported types are `BFloat16`, `Float32`, and `Float64`
 * `dimension` – the number of elements in each vector
 
-#### Creating a `QBit` Table and Adding Data 
+#### Creating a `QBit` Table and Adding Data {#qbit-create}
 
 ```sql
 CREATE TABLE fruit_animal (
@@ -645,7 +659,7 @@ INSERT INTO fruit_animal VALUES
     ('horse', [-0.61435682, 0.48542571, 1.21091247, -0.62530446, -1.33082533]);
 ```
 
-#### Vector Search with `QBit` 
+#### Vector Search with `QBit` {#qbit-search}
 
 Let's find the nearest neighbors to a vector representing word 'lemon' using L2 distance. The third parameter in the distance function specifies the precision in bits - higher values provide more accuracy but require more computation.
 
@@ -695,19 +709,16 @@ ORDER BY distance;
 
 Notice that with 12-bit quantization, we get a good approximation of the distances with faster query execution. The relative ordering remains largely consistent, with 'apple' still being the closest match.
 
-<Note>
-In the current state, the speed-up is due to reduced I/O as we read less data. If the original data was wide, like `Float64`, choosing a lower precision will still result in distance calculation on data of the same width – just with less precision.
-</Note>
-
-#### Performance Considerations 
+#### Performance Considerations {#qbit-performance}
 
 The performance benefit of `QBit` comes from reduced I/O operations, as less data needs to be read from storage when using lower precision. Moreover, when the `QBit` contains `Float32` data, if the precision parameter is 16 or below, there will be additional benefits from reduced computation. The precision parameter directly controls the trade-off between accuracy and speed:
 
 - **Higher precision** (closer to the original data width): More accurate results, slower queries
 - **Lower precision**: Faster queries with approximate results, reduced memory usage
 
-### References 
+### References {#references}
 
 Blogs:
 - [Vector Search with ClickHouse - Part 1](https://clickhouse.com/blog/vector-search-clickhouse-p1)
 - [Vector Search with ClickHouse - Part 2](https://clickhouse.com/blog/vector-search-clickhouse-p2)
+- [We built a vector search engine that lets you choose precision at query time](https://clickhouse.com/blog/qbit-vector-search)

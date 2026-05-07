@@ -1,14 +1,16 @@
 ---
 description: 'TCP connection limits.'
-sidebarTitle: 'TCP connection limits'
-old-slug: /operations/settings/tcp-connection-limits
+sidebar_label: 'TCP connection limits'
+slug: /operations/settings/tcp-connection-limits
 title: 'TCP connection limits'
 doc_type: 'reference'
 ---
 
-## Overview 
+# TCP connection limits
 
-You may have a ClickHouse TCP connection (i.e., one through the [command-line client](https://clickhouse.com/docs/interfaces/cli))
+## Overview {#overview}
+
+You may have a ClickHouse TCP connection (i.e., one through the [command-line client](https://clickhouse.com/docs/interfaces/client))
 disconnect automatically after some number of queries or duration.
 After disconnecting, no automatic reconnection occurs (unless triggered through something else,
 such as sending another query in the command-line client).
@@ -21,7 +23,7 @@ If both limits are enabled, the connection closes when either limit is hit first
 Upon hitting a limit and disconnecting, the client receives a
 `TCP_CONNECTION_LIMIT_REACHED` exception, and **the query that causes the disconnect is never processed**.
 
-## Query limits 
+## Query limits {#query-limits}
 
 Assuming `tcp_close_connection_after_queries_num` is set to N, then the connection allows
 N successful queries. Then on query N + 1, the client disconnects.
@@ -34,7 +36,7 @@ specified by the session setting `poll_interval`), the number of queries counted
 This means the number of total queries in a single connection can exceed
 `tcp_close_connection_after_queries_num` if idle occurs.
 
-## Duration limits 
+## Duration limits {#duration-limits}
 
 The connection duration is measured starting as soon as the client connects.
 The client is disconnected on the first query after `tcp_close_connection_after_queries_seconds` seconds has passed.

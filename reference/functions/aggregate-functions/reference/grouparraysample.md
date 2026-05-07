@@ -2,13 +2,15 @@
 description: 'Creates an array of sample argument values. The size of the resulting
   array is limited to `max_size` elements. Argument values are selected and added
   to the array randomly.'
-sidebar_position: 145
-old-slug: /sql-reference/aggregate-functions/reference/grouparraysample
+slug: /sql-reference/aggregate-functions/reference/grouparraysample
 title: 'groupArraySample'
 doc_type: 'reference'
 ---
 
-Creates an array of sample argument values. The size of the resulting array is limited to `max_size` elements. Argument values are selected and added to the array randomly.
+Creates an array of sample argument values.
+The size of the resulting array is limited to `max_size` elements.
+Argument values are selected and added to the array randomly.
+    
 
 **Syntax**
 
@@ -16,70 +18,73 @@ Creates an array of sample argument values. The size of the resulting array is l
 groupArraySample(max_size[, seed])(x)
 ```
 
+**Parameters**
+
+- `max_size` — Maximum size of the resulting array. [`UInt64`](/sql-reference/data-types/int-uint)
+- `seed` — Optional. Seed for the random number generator. Default value: 123456. [`UInt64`](/sql-reference/data-types/int-uint)
+- `x` — Argument (column name or expression). [`Any`](/sql-reference/data-types)
+
+
 **Arguments**
 
-- `max_size` — Maximum size of the resulting array. [UInt64](../../data-types/int-uint.md).
-- `seed` — Seed for the random number generator. Optional. [UInt64](../../data-types/int-uint.md). Default value: `123456`.
-- `x` — Argument (column name or expression).
+- `array_column` — Column containing arrays to be aggregated. [`Array`](/sql-reference/data-types/array)
 
-**Returned values**
 
-- Array of randomly selected `x` arguments.
+**Returned value**
 
-Type: [Array](../../data-types/array.md).
+Array of randomly selected x arguments. [`Array(T)`](/sql-reference/data-types/array)
 
 **Examples**
 
-Consider table `colors`:
+**Usage example**
 
-```text
-┌─id─┬─color──┐
-│  1 │ red    │
-│  2 │ blue   │
-│  3 │ green  │
-│  4 │ white  │
-│  5 │ orange │
-└────┴────────┘
+```sql title=Query
+CREATE TABLE default.colors (
+    id Int32,
+    color String
+) ENGINE = Memory;
+
+INSERT INTO default.colors VALUES
+(1, 'red'),
+(2, 'blue'),
+(3, 'green'),
+(4, 'white'),
+(5, 'orange');
+
+SELECT groupArraySample(3)(color) as newcolors FROM default.colors;
 ```
 
-Query with column name as argument:
-
-```sql
-SELECT groupArraySample(3)(color) as newcolors FROM colors;
-```
-
-Result:
-
-```text
+```response title=Response
 ┌─newcolors──────────────────┐
 │ ['white','blue','green']   │
 └────────────────────────────┘
 ```
 
-Query with column name and different seed:
+**Example using a seed**
 
-```sql
-SELECT groupArraySample(3, 987654321)(color) as newcolors FROM colors;
+```sql title=Query
+-- Query with column name and different seed
+SELECT groupArraySample(3, 987654321)(color) as newcolors FROM default.colors;
 ```
 
-Result:
-
-```text
+```response title=Response
 ┌─newcolors──────────────────┐
 │ ['red','orange','green']   │
 └────────────────────────────┘
 ```
 
-Query with expression as argument:
+**Using an expression as an argument**
 
-```sql
-SELECT groupArraySample(3)(concat('light-', color)) as newcolors FROM colors;
+```sql title=Query
+-- Query with expression as argument
+SELECT groupArraySample(3)(concat('light-', color)) as newcolors FROM default.colors;
 ```
 
-Result:
-
-```text
+```response title=Response
 ┌─newcolors───────────────────────────────────┐
 │ ['light-blue','light-orange','light-green'] │
 └─────────────────────────────────────────────┘
 ```
+
+
+

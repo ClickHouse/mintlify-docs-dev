@@ -1,11 +1,13 @@
 ---
 description: 'Documentation for the dense_rank window function'
-sidebarTitle: 'dense_rank'
+sidebar_label: 'dense_rank'
 sidebar_position: 7
-old-slug: /sql-reference/window-functions/dense_rank
+slug: /sql-reference/window-functions/dense_rank
 title: 'dense_rank'
 doc_type: 'reference'
 ---
+
+# dense_rank
 
 Ranks the current row within its partition without gaps. In other words, if the value of any new row encountered is equal to the value of one of the previous rows then it will receive the next successive rank without any gaps in ranking.
 

@@ -1,14 +1,14 @@
 ---
 description: 'Overview of what system tables are and why they are useful.'
 keywords: ['system tables', 'overview']
-sidebarTitle: 'Overview'
+sidebar_label: 'Overview'
 sidebar_position: 52
-old-slug: /operations/system-tables/overview
+slug: /operations/system-tables/overview
 title: 'System Tables Overview'
 doc_type: 'reference'
 ---
 
-## System tables overview 
+## System tables overview {#system-tables-introduction}
 
 System tables provide information about:
 
@@ -44,9 +44,9 @@ An example:
         <table>query_log</table>
         <partition_by>toYYYYMM(event_date)</partition_by>
         <ttl>event_date + INTERVAL 30 DAY DELETE</ttl>
-        {/* <!--
+        <!--
         <engine>ENGINE = MergeTree PARTITION BY toYYYYMM(event_date) ORDER BY (event_date, event_time) SETTINGS index_granularity = 1024</engine>
-        --> */}
+        -->
         <flush_interval_milliseconds>7500</flush_interval_milliseconds>
         <max_size_rows>1048576</max_size_rows>
         <reserved_size_rows>8192</reserved_size_rows>
@@ -58,7 +58,7 @@ An example:
 
 By default, table growth is unlimited. To control a size of a table, you can use [TTL](/sql-reference/statements/alter/ttl) settings for removing outdated log records. Also you can use the partitioning feature of `MergeTree`-engine tables.
 
-## Sources of System Metrics 
+## Sources of System Metrics {#system-tables-sources-of-system-metrics}
 
 For collecting system metrics ClickHouse server uses:
 
@@ -79,12 +79,12 @@ If procfs is supported and enabled on the system, ClickHouse server collects the
 - `OSReadBytes`
 - `OSWriteBytes`
 
-<Note>
+:::note
 `OSIOWaitMicroseconds` is disabled by default in Linux kernels starting from 5.14.x.
 You can enable it using `sudo sysctl kernel.task_delayacct=1` or by creating a `.conf` file in `/etc/sysctl.d/` with `kernel.task_delayacct = 1`
-</Note>
+:::
 
-## System tables in ClickHouse Cloud 
+## System tables in ClickHouse Cloud {#system-tables-in-clickhouse-cloud}
 
 In ClickHouse Cloud, system tables provide critical insights into the state and performance of the service, just as they do in self-managed deployments. Some system tables operate at the cluster-wide level, especially those that derive their data from Keeper nodes, which manage distributed metadata. These tables reflect the collective state of the cluster and should be consistent when queried on individual nodes. For example, the [`parts`](/operations/system-tables/parts) should be consistent irrespective of the node it is queried from:
 
@@ -144,7 +144,7 @@ SHOW TABLES FROM system LIKE 'query_log%'
 11 rows in set. Elapsed: 0.004 sec.
 ```
 
-### Querying multiple versions 
+### Querying multiple versions {#querying-multiple-versions}
 
 We can query across these tables using the [`merge`](/sql-reference/table-functions/merge) function. For example, the query below identifies the latest query issued to the target node in each `query_log` table:
 
@@ -174,21 +174,21 @@ ORDER BY most_recent DESC
 Peak memory usage: 28.45 MiB.
 ```
 
-<Note title="Don't rely on the numerical suffix for ordering">
+:::note Don't rely on the numerical suffix for ordering
 While the numeric suffix on tables can suggest the order of data, it should never be relied upon. For this reason, always use the merge table function combined with a date filter when targeting specific date ranges.
-</Note>
+:::
 
 Importantly, these tables are still **local to each node**.
 
-### Querying across nodes 
+### Querying across nodes {#querying-across-nodes}
 
 To comprehensively view the entire cluster, users can leverage the [`clusterAllReplicas`](/sql-reference/table-functions/cluster) function in combination with the `merge` function. The `clusterAllReplicas` function allows querying system tables across all replicas within the "default" cluster, consolidating node-specific data into a unified result. When combined with the `merge` function this can be used to target all system data for a specific table in a cluster. 
 
 This approach is particularly valuable for monitoring and debugging cluster-wide operations, ensuring users can effectively analyze the health and performance of their ClickHouse Cloud deployment.
 
-<Note>
+:::note
 ClickHouse Cloud provides clusters of multiple replicas for redundancy and failover. This enables its features, such as dynamic autoscaling and zero-downtime upgrades. At a certain moment in time, new nodes could be in the process of being added to the cluster or removed from the cluster. To skip these nodes, add `SETTINGS skip_unavailable_shards = 1` to queries using `clusterAllReplicas` as shown below.
-</Note>
+:::
 
 For example, consider the difference when querying the `query_log` table - often essential to analysis.
 
@@ -222,7 +222,7 @@ GROUP BY host SETTINGS skip_unavailable_shards = 1
 3 rows in set. Elapsed: 0.026 sec. Processed 1.97 million rows, 7.88 MB (75.51 million rows/s., 302.05 MB/s.)
 ```
 
-### Querying across nodes and versions 
+### Querying across nodes and versions {#querying-across-nodes-and-versions}
 
 Due to system table versioning this still does not represent the full data in the cluster. When combining the above with the `merge` function we get an accurate result for our date range:
 
@@ -243,7 +243,7 @@ GROUP BY host SETTINGS skip_unavailable_shards = 1
 3 rows in set. Elapsed: 0.462 sec. Processed 7.94 million rows, 31.75 MB (17.17 million rows/s., 68.67 MB/s.)
 ```
 
-## Related content 
+## Related content {#related-content}
 
 - Blog: [System Tables and a window into the internals of ClickHouse](https://clickhouse.com/blog/clickhouse-debugging-issues-with-system-tables)
 - Blog: [Essential monitoring queries - part 1 - INSERT queries](https://clickhouse.com/blog/monitoring-troubleshooting-insert-queries-clickhouse)

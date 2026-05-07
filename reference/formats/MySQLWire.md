@@ -1,13 +1,13 @@
 ---
 description: 'Documentation for the MySQLWire format'
 keywords: ['MySQLWire']
-old-slug: /interfaces/formats/MySQLWire
+slug: /interfaces/formats/MySQLWire
 title: 'MySQLWire'
 doc_type: 'reference'
 ---
 
-## Description 
+## Description {#description}
 
-## Example usage 
+## Example usage {#example-usage}
 
-## Format settings 
+## Format settings {#format-settings}

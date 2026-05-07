@@ -1,5 +1,5 @@
 ---
-old-slug: /optimize/prewhere
+slug: /optimize/prewhere
 sidebarTitle: 'PREWHERE optimization'
 sidebar_position: 21
 description: 'PREWHERE reduces I/O by avoiding reading unnecessary column data.'

@@ -2,14 +2,14 @@
 description: 'The aggregate function `singleValueOrNull` is used to implement subquery
   operators, such as `x = ALL (SELECT ...)`. It checks if there is only one unique
   non-NULL value in the data.'
-sidebar_position: 184
-old-slug: /sql-reference/aggregate-functions/reference/singlevalueornull
+slug: /sql-reference/aggregate-functions/reference/singlevalueornull
 title: 'singleValueOrNull'
 doc_type: 'reference'
 ---
 
 The aggregate function `singleValueOrNull` is used to implement subquery operators, such as `x = ALL (SELECT ...)`. It checks if there is only one unique non-NULL value in the data.
 If there is only one unique value, it returns it. If there are zero or at least two distinct values, it returns NULL.
+    
 
 **Syntax**
 
@@ -17,44 +17,43 @@ If there is only one unique value, it returns it. If there are zero or at least 
 singleValueOrNull(x)
 ```
 
-**Parameters**
+**Arguments**
 
-- `x` — Column of any [data type](../../data-types/index.md) (except [Map](../../data-types/map.md), [Array](../../data-types/array.md) or [Tuple](../../data-types/tuple) which cannot be of type [Nullable](../../data-types/nullable.md)).
+- `x` — A column of any data type except Map, Array or Tuple which cannot be of type Nullable. [`Any`](/sql-reference/data-types)
 
-**Returned values**
 
-- The unique value, if there is only one unique non-NULL value in `x`.
-- `NULL`, if there are zero or at least two distinct values.
+**Returned value**
+
+Returns the unique value if there is only one unique non-NULL value in `x`. Returns `NULL` if there are zero or at least two distinct values. [`Any`](/sql-reference/data-types) or [`NULL`](/sql-reference/syntax#null)
 
 **Examples**
 
-Query:
+**Single unique value**
 
-```sql
+```sql title=Query
 CREATE TABLE test (x UInt8 NULL) ENGINE=Log;
 INSERT INTO test (x) VALUES (NULL), (NULL), (5), (NULL), (NULL);
 SELECT singleValueOrNull(x) FROM test;
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─singleValueOrNull(x)─┐
 │                    5 │
 └──────────────────────┘
 ```
 
-Query:
+**Multiple distinct values**
 
-```sql
+```sql title=Query
 INSERT INTO test (x) VALUES (10);
 SELECT singleValueOrNull(x) FROM test;
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─singleValueOrNull(x)─┐
 │                 ᴺᵁᴸᴸ │
 └──────────────────────┘
 ```
+
+
+

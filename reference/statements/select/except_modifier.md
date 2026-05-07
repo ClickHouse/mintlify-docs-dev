@@ -1,21 +1,23 @@
 ---
 description: 'Documentation describing the EXCEPT modifier which specifies the names of one or more columns to exclude from the result. All matching column names are omitted from the output.'
-sidebarTitle: 'EXCEPT'
-old-slug: /sql-reference/statements/select/except-modifier
+sidebar_label: 'EXCEPT'
+slug: /sql-reference/statements/select/except-modifier
 title: 'EXCEPT modifier'
 keywords: ['EXCEPT', 'modifier']
 doc_type: 'reference'
 ---
 
+# EXCEPT modifier {#except}
+
 > Specifies the names of one or more columns to exclude from the result. All matching column names are omitted from the output.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 SELECT <expr> EXCEPT ( col_name1 [, col_name2, col_name3, ...] ) FROM [db.]table_name
 ```
 
-## Examples 
+## Examples {#examples}
 
 ```sql title="Query"
 SELECT * EXCEPT (i) from columns_transformers;

@@ -1,9 +1,9 @@
 ---
 description: 'Documentation for geometric data types in ClickHouse used for representing
   geographical objects and locations'
-sidebarTitle: 'Geo'
+sidebar_label: 'Geo'
 sidebar_position: 54
-old-slug: /sql-reference/data-types/geo
+slug: /sql-reference/data-types/geo
 title: 'Geometric'
 doc_type: 'reference'
 ---
@@ -13,7 +13,7 @@ ClickHouse supports data types for representing geographical objects — locatio
 **See Also**
 - [Representing simple geographical features](https://en.wikipedia.org/wiki/GeoJSON).
 
-## Point 
+## Point {#point}
 
 `Point` is represented by its X and Y coordinates, stored as a [Tuple](tuple.md)([Float64](float.md), [Float64](float.md)).
 
@@ -34,7 +34,7 @@ Result:
 └─────────┴───────────────┘
 ```
 
-## Ring 
+## Ring {#ring}
 
 `Ring` is a simple polygon without holes stored as an array of points: [Array](array.md)([Point](#point)).
 
@@ -55,7 +55,7 @@ Result:
 └───────────────────────────────┴───────────────┘
 ```
 
-## LineString 
+## LineString {#linestring}
 
 `LineString` is a line stored as an array of points: [Array](array.md)([Point](#point)).
 
@@ -76,7 +76,7 @@ Result:
 └───────────────────────────────┴───────────────┘
 ```
 
-## MultiLineString 
+## MultiLineString {#multilinestring}
 
 `MultiLineString` is multiple lines stored as an array of `LineString`: [Array](array.md)([LineString](#linestring)).
 
@@ -97,7 +97,7 @@ Result:
 └─────────────────────────────────────────────────────┴─────────────────┘
 ```
 
-## Polygon 
+## Polygon {#polygon}
 
 `Polygon` is a polygon with holes stored as an array of rings: [Array](array.md)([Ring](#ring)). First element of outer array is the outer shape of polygon and all the following elements are holes.
 
@@ -119,7 +119,7 @@ Result:
 └───────────────────────────────────────────────────────────────┴────────────────┘
 ```
 
-## MultiPolygon 
+## MultiPolygon {#multipolygon}
 
 `MultiPolygon` consists of multiple polygons and is stored as an array of polygons: [Array](array.md)([Polygon](#polygon)).
 
@@ -140,7 +140,7 @@ Result:
 └─────────────────────────────────────────────────────────────────────────────────────────────────┴─────────────────┘
 ```
 
-## Geometry 
+## Geometry {#geometry}
 
 `Geometry` is a common type for all the types above. It is equivalent to a Variant of those types.
 
@@ -159,7 +159,7 @@ Result:
    └───────┘
 ```
 
-{/* <!-- --> */}
+<!-- -->
 
 ```sql
 CREATE TABLE IF NOT EXISTS geo_dst (geom Geometry) ENGINE = Memory();
@@ -170,7 +170,7 @@ INSERT INTO geo VALUES ('POINT(0 0)', 2);
 INSERT INTO geo VALUES ('MULTIPOLYGON(((1 0,10 0,10 10,0 10,1 0),(4 4,5 4,5 5,4 5,4 4)),((-10 -10,-10 -9,-9 10,-10 -10)))', 3);
 INSERT INTO geo VALUES ('LINESTRING(1 0,10 0,10 10,0 10,1 0)', 4);
 INSERT INTO geo VALUES ('MULTILINESTRING((1 0,10 0,10 10,0 10,1 0),(4 4,5 4,5 5,4 5,4 4))', 5);
-INSERT INTO geo_dst SELECT readWkt(geom) FROM geo ORDER BY id;
+INSERT INTO geo_dst SELECT readWKT(geom) FROM geo ORDER BY id;
 
 SELECT * FROM geo_dst;
 ```
@@ -186,6 +186,6 @@ Result:
    └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Related Content 
+## Related Content {#related-content}
 
 - [Exploring massive, real-world data sets: 100+ Years of Weather Records in ClickHouse](https://clickhouse.com/blog/real-world-data-noaa-climate-data)

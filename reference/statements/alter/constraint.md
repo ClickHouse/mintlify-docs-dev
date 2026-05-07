@@ -1,11 +1,13 @@
 ---
 description: 'Documentation for Manipulating Constraints'
-sidebarTitle: 'CONSTRAINT'
+sidebar_label: 'CONSTRAINT'
 sidebar_position: 43
-old-slug: /sql-reference/statements/alter/constraint
+slug: /sql-reference/statements/alter/constraint
 title: 'Manipulating Constraints'
 doc_type: 'reference'
 ---
+
+# Manipulating Constraints
 
 Constraints could be added or deleted using following syntax:
 
@@ -18,8 +20,8 @@ See more on [constraints](../../../sql-reference/statements/create/table.md#cons
 
 Queries will add or remove metadata about constraints from table, so they are processed immediately.
 
-<Tip>
+:::tip
 Constraint check **will not be executed** on existing data if it was added.
-</Tip>
+:::
 
 All changes on replicated tables are broadcast to ZooKeeper and will be applied on other replicas as well.

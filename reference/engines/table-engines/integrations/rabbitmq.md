@@ -1,11 +1,13 @@
 ---
 description: 'This engine allows integrating ClickHouse with RabbitMQ.'
-sidebarTitle: 'RabbitMQ table engine'
+sidebar_label: 'RabbitMQ'
 sidebar_position: 170
-old-slug: /engines/table-engines/integrations/rabbitmq
+slug: /engines/table-engines/integrations/rabbitmq
 title: 'RabbitMQ table engine'
 doc_type: 'guide'
 ---
+
+# RabbitMQ table engine
 
 This engine allows integrating ClickHouse with [RabbitMQ](https://www.rabbitmq.com).
 
@@ -14,7 +16,7 @@ This engine allows integrating ClickHouse with [RabbitMQ](https://www.rabbitmq.c
 - Publish or subscribe to data flows.
 - Process streams as they become available.
 
-## Creating a table 
+## Creating a table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -63,7 +65,6 @@ Optional parameters:
 - `rabbitmq_num_consumers` – The number of consumers per table. Specify more consumers if the throughput of one consumer is insufficient. Default: `1`
 - `rabbitmq_num_queues` – Total number of queues. Increasing this number can significantly improve performance. Default: `1`.
 - `rabbitmq_queue_base` - Specify a hint for queue names. Use cases of this setting are described below.
-- `rabbitmq_deadletter_exchange` - Specify name for a [dead letter exchange](https://www.rabbitmq.com/dlx.html). You can create another table with this exchange name and collect messages in cases when they are republished to dead letter exchange. By default dead letter exchange is not specified.
 - `rabbitmq_persistent` - If set to 1 (true), in insert query delivery mode will be set to 2 (marks messages as 'persistent'). Default: `0`.
 - `rabbitmq_skip_broken_messages` – RabbitMQ message parser tolerance to schema-incompatible messages per block. If `rabbitmq_skip_broken_messages = N` then the engine skips *N* RabbitMQ messages that cannot be parsed (a message equals a row of data). Default: `0`.
 - `rabbitmq_max_block_size` - Number of row collected before flushing data from RabbitMQ. Default: [max_insert_block_size](../../../operations/settings/settings.md#max_insert_block_size).
@@ -77,11 +78,12 @@ Optional parameters:
 - `reject_unhandled_messages` - Reject messages (send RabbitMQ negative acknowledgement) in case of errors. This setting is automatically enabled if there is a `x-dead-letter-exchange` defined in `rabbitmq_queue_settings_list`.
 - `rabbitmq_commit_on_select` - Commit messages when select query is made. Default: `false`.
 - `rabbitmq_max_rows_per_message` — The maximum number of rows written in one RabbitMQ message for row-based formats. Default : `1`.
-- `rabbitmq_empty_queue_backoff_start` — A start backoff point to reschedule read if the rabbitmq queue is empty.
-- `rabbitmq_empty_queue_backoff_end` — An end backoff point to reschedule read if the rabbitmq queue is empty.
+- `rabbitmq_empty_queue_backoff_start_ms` — A start backoff point to reschedule read if the rabbitmq queue is empty.
+- `rabbitmq_empty_queue_backoff_end_ms` — An end backoff point to reschedule read if the rabbitmq queue is empty.
+- `rabbitmq_empty_queue_backoff_step_ms` — A backoff step to reschedule read if the rabbitmq queue is empty.
 - `rabbitmq_handle_error_mode` — How to handle errors for RabbitMQ engine. Possible values: default (the exception will be thrown if we fail to parse a message), stream (the exception message and raw message will be saved in virtual columns `_error` and `_raw_message`), dead_letter_queue (error related data will be saved in system.dead_letter_queue).
 
-  * [ ] SSL connection:
+### SSL connection {#ssl-connection}
 
 Use either `rabbitmq_secure = 1` or `amqps` in connection address: `rabbitmq_address = 'amqps://guest:guest@localhost/vhost'`.
 The default behaviour of the used library is not to check if the created TLS connection is sufficiently secure. Whether the certificate is expired, self-signed, missing or invalid: the connection is simply permitted. More strict checking of certificates can possibly be implemented in the future.
@@ -121,7 +123,7 @@ Additional configuration:
  </rabbitmq>
 ```
 
-## Description 
+## Description {#description}
 
 `SELECT` is not particularly useful for reading messages (except for debugging), because each message can be read only once. It is more practical to create real-time threads using [materialized views](../../../sql-reference/statements/create/view.md). To do this:
 
@@ -182,7 +184,7 @@ Example:
   SELECT key, value FROM daily ORDER BY key;
 ```
 
-## Virtual columns 
+## Virtual columns {#virtual-columns}
 
 - `_exchange_name` - RabbitMQ exchange name. Data type: `String`.
 - `_channel_id` - ChannelID, on which consumer, who received the message, was declared. Data type: `String`.
@@ -198,11 +200,11 @@ Additional virtual columns when `rabbitmq_handle_error_mode='stream'`:
 
 Note: `_raw_message` and `_error` virtual columns are filled only in case of exception during parsing, they are always `NULL` when message was parsed successfully.
 
-## Caveats 
+## Caveats {#caveats}
 
 Even though you may specify [default column expressions](/sql-reference/statements/create/table.md/#default_values) (such as `DEFAULT`, `MATERIALIZED`, `ALIAS`) in the table definition, these will be ignored. Instead, the columns will be filled with their respective default values for their types.
 
-## Data formats support 
+## Data formats support {#data-formats-support}
 
 RabbitMQ engine supports all [formats](../../../interfaces/formats.md) supported in ClickHouse.
 The number of rows in one RabbitMQ message depends on whether the format is row-based or block-based:

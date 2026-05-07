@@ -1,525 +1,27 @@
 ---
 description: 'Documentation for Functions for Working with Dictionaries'
-sidebarTitle: 'Dictionaries'
-old-slug: /sql-reference/functions/ext-dict-functions
+sidebar_label: 'Dictionaries'
+slug: /sql-reference/functions/ext-dict-functions
 title: 'Functions for Working with Dictionaries'
 doc_type: 'reference'
 ---
 
-<Note>
-For dictionaries created with [DDL queries](../../sql-reference/statements/create/dictionary.md), the `dict_name` parameter must be fully specified, like `<database>.<dict_name>`. Otherwise, the current database is used.
-</Note>
+# Functions for Working with Dictionaries
 
-For information on connecting and configuring dictionaries, see [Dictionaries](../../sql-reference/dictionaries/index.md).
+:::note
+For dictionaries created with [DDL queries](../statements/create/dictionary/overview.md), the `dict_name` parameter must be fully specified, like `<database>.<dict_name>`. Otherwise, the current database is used.
+:::
 
-## dictGet, dictGetOrDefault, dictGetOrNull 
+For information on connecting and configuring dictionaries, see [Dictionaries](../statements/create/dictionary/overview.md).
 
-Retrieves values from a dictionary.
-
-```sql
-dictGet('dict_name', attr_names, id_expr)
-dictGetOrDefault('dict_name', attr_names, id_expr, default_value_expr)
-dictGetOrNull('dict_name', attr_name, id_expr)
-```
-
-**Arguments**
-
-- `dict_name` — Name of the dictionary. [String literal](/sql-reference/syntax#string).
-- `attr_names` — Name of the column of the dictionary, [String literal](/sql-reference/syntax#string), or tuple of column names, [Tuple](/sql-reference/data-types/tuple)([String literal](/sql-reference/syntax#string).
-- `id_expr` — Key value. [Expression](/sql-reference/syntax#expressions) returning dictionary key-type value or [Tuple](../data-types/tuple.md)-type value depending on the dictionary configuration.
-- `default_value_expr` — Values returned if the dictionary does not contain a row with the `id_expr` key. [Expression](/sql-reference/syntax#expressions) or [Tuple](../data-types/tuple.md)([Expression](/sql-reference/syntax#expressions)), returning the value (or values) in the data types configured for the `attr_names` attribute.
-
-**Returned value**
-
-- If ClickHouse parses the attribute successfully in the [attribute's data type](/sql-reference/dictionaries#dictionary-key-and-fields), functions return the value of the dictionary attribute that corresponds to `id_expr`.
-
-- If there is no the key, corresponding to `id_expr`, in the dictionary, then:
-
-        - `dictGet` returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
-        - `dictGetOrDefault` returns the value passed as the `default_value_expr` parameter.
-        - `dictGetOrNull` returns `NULL` in case key was not found in dictionary.
-
-ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
-
-**Example for simple key dictionary**
-
-Create a text file `ext-dict-test.csv` containing the following:
-
-```text
-1,1
-2,2
-```
-
-The first column is `id`, the second column is `c1`.
-
-Configure the dictionary:
-
-```xml
-<clickhouse>
-    <dictionary>
-        <name>ext-dict-test</name>
-        <source>
-            <file>
-                <path>/path-to/ext-dict-test.csv</path>
-                <format>CSV</format>
-            </file>
-        </source>
-        <layout>
-            <flat />
-        </layout>
-        <structure>
-            <id>
-                <name>id</name>
-            </id>
-            <attribute>
-                <name>c1</name>
-                <type>UInt32</type>
-                <null_value></null_value>
-            </attribute>
-        </structure>
-        <lifetime>0</lifetime>
-    </dictionary>
-</clickhouse>
-```
-
-Perform the query:
-
-```sql
-SELECT
-    dictGetOrDefault('ext-dict-test', 'c1', number + 1, toUInt32(number * 10)) AS val,
-    toTypeName(val) AS type
-FROM system.numbers
-LIMIT 3;
-```
-
-```text
-┌─val─┬─type───┐
-│   1 │ UInt32 │
-│   2 │ UInt32 │
-│  20 │ UInt32 │
-└─────┴────────┘
-```
-
-**Example for complex key dictionary**
-
-Create a text file `ext-dict-mult.csv` containing the following:
-
-```text
-1,1,'1'
-2,2,'2'
-3,3,'3'
-```
-
-The first column is `id`, the second is `c1`, the third is `c2`.
-
-Configure the dictionary:
-
-```xml
-<clickhouse>
-    <dictionary>
-        <name>ext-dict-mult</name>
-        <source>
-            <file>
-                <path>/path-to/ext-dict-mult.csv</path>
-                <format>CSV</format>
-            </file>
-        </source>
-        <layout>
-            <flat />
-        </layout>
-        <structure>
-            <id>
-                <name>id</name>
-            </id>
-            <attribute>
-                <name>c1</name>
-                <type>UInt32</type>
-                <null_value></null_value>
-            </attribute>
-            <attribute>
-                <name>c2</name>
-                <type>String</type>
-                <null_value></null_value>
-            </attribute>
-        </structure>
-        <lifetime>0</lifetime>
-    </dictionary>
-</clickhouse>
-```
-
-Perform the query:
-
-```sql
-SELECT
-    dictGet('ext-dict-mult', ('c1','c2'), number + 1) AS val,
-    toTypeName(val) AS type
-FROM system.numbers
-LIMIT 3;
-```
-
-```text
-┌─val─────┬─type──────────────────┐
-│ (1,'1') │ Tuple(UInt8, String)  │
-│ (2,'2') │ Tuple(UInt8, String)  │
-│ (3,'3') │ Tuple(UInt8, String)  │
-└─────────┴───────────────────────┘
-```
-
-**Example for range key dictionary**
-
-Input table:
-
-```sql
-CREATE TABLE range_key_dictionary_source_table
-(
-    key UInt64,
-    start_date Date,
-    end_date Date,
-    value String,
-    value_nullable Nullable(String)
-)
-ENGINE = TinyLog();
-
-INSERT INTO range_key_dictionary_source_table VALUES(1, toDate('2019-05-20'), toDate('2019-05-20'), 'First', 'First');
-INSERT INTO range_key_dictionary_source_table VALUES(2, toDate('2019-05-20'), toDate('2019-05-20'), 'Second', NULL);
-INSERT INTO range_key_dictionary_source_table VALUES(3, toDate('2019-05-20'), toDate('2019-05-20'), 'Third', 'Third');
-```
-
-Create the dictionary:
-
-```sql
-CREATE DICTIONARY range_key_dictionary
-(
-    key UInt64,
-    start_date Date,
-    end_date Date,
-    value String,
-    value_nullable Nullable(String)
-)
-PRIMARY KEY key
-SOURCE(CLICKHOUSE(HOST 'localhost' PORT tcpPort() TABLE 'range_key_dictionary_source_table'))
-LIFETIME(MIN 1 MAX 1000)
-LAYOUT(RANGE_HASHED())
-RANGE(MIN start_date MAX end_date);
-```
-
-Perform the query:
-
-```sql
-SELECT
-    (number, toDate('2019-05-20')),
-    dictHas('range_key_dictionary', number, toDate('2019-05-20')),
-    dictGetOrNull('range_key_dictionary', 'value', number, toDate('2019-05-20')),
-    dictGetOrNull('range_key_dictionary', 'value_nullable', number, toDate('2019-05-20')),
-    dictGetOrNull('range_key_dictionary', ('value', 'value_nullable'), number, toDate('2019-05-20'))
-FROM system.numbers LIMIT 5 FORMAT TabSeparated;
-```
-Result:
-
-```text
-(0,'2019-05-20')        0       \N      \N      (NULL,NULL)
-(1,'2019-05-20')        1       First   First   ('First','First')
-(2,'2019-05-20')        1       Second  \N      ('Second',NULL)
-(3,'2019-05-20')        1       Third   Third   ('Third','Third')
-(4,'2019-05-20')        0       \N      \N      (NULL,NULL)
-```
-
-**See Also**
-
-- [Dictionaries](../../sql-reference/dictionaries/index.md)
-
-## dictHas 
-
-Checks whether a key is present in a dictionary.
-
-```sql
-dictHas('dict_name', id_expr)
-```
-
-**Arguments**
-
-- `dict_name` — Name of the dictionary. [String literal](/sql-reference/syntax#string).
-- `id_expr` — Key value. [Expression](/sql-reference/syntax#expressions) returning dictionary key-type value or [Tuple](../data-types/tuple.md)-type value depending on the dictionary configuration.
-
-**Returned value**
-
-- 0, if there is no key. [UInt8](../data-types/int-uint.md).
-- 1, if there is a key. [UInt8](../data-types/int-uint.md).
-
-## dictGetHierarchy 
-
-Creates an array, containing all the parents of a key in the [hierarchical dictionary](../../sql-reference/dictionaries/index.md#hierarchical-dictionaries).
-
-**Syntax**
-
-```sql
-dictGetHierarchy('dict_name', key)
-```
-
-**Arguments**
-
-- `dict_name` — Name of the dictionary. [String literal](/sql-reference/syntax#string).
-- `key` — Key value. [Expression](/sql-reference/syntax#expressions) returning a [UInt64](../data-types/int-uint.md)-type value.
-
-**Returned value**
-
-- Parents for the key. [Array(UInt64)](../data-types/array.md).
-
-## dictIsIn 
-
-Checks the ancestor of a key through the whole hierarchical chain in the dictionary.
-
-```sql
-dictIsIn('dict_name', child_id_expr, ancestor_id_expr)
-```
-
-**Arguments**
-
-- `dict_name` — Name of the dictionary. [String literal](/sql-reference/syntax#string).
-- `child_id_expr` — Key to be checked. [Expression](/sql-reference/syntax#expressions) returning a [UInt64](../data-types/int-uint.md)-type value.
-- `ancestor_id_expr` — Alleged ancestor of the `child_id_expr` key. [Expression](/sql-reference/syntax#expressions) returning a [UInt64](../data-types/int-uint.md)-type value.
-
-**Returned value**
-
-- 0, if `child_id_expr` is not a child of `ancestor_id_expr`. [UInt8](../data-types/int-uint.md).
-- 1, if `child_id_expr` is a child of `ancestor_id_expr` or if `child_id_expr` is an `ancestor_id_expr`. [UInt8](../data-types/int-uint.md).
-
-## dictGetChildren 
-
-Returns first-level children as an array of indexes. It is the inverse transformation for [dictGetHierarchy](#dictgethierarchy).
-
-**Syntax**
-
-```sql
-dictGetChildren(dict_name, key)
-```
-
-**Arguments**
-
-- `dict_name` — Name of the dictionary. [String literal](/sql-reference/syntax#string).
-- `key` — Key value. [Expression](/sql-reference/syntax#expressions) returning a [UInt64](../data-types/int-uint.md)-type value.
-
-**Returned values**
-
-- First-level descendants for the key. [Array](../data-types/array.md)([UInt64](../data-types/int-uint.md)).
-
-**Example**
-
-Consider the hierarchic dictionary:
-
-```text
-┌─id─┬─parent_id─┐
-│  1 │         0 │
-│  2 │         1 │
-│  3 │         1 │
-│  4 │         2 │
-└────┴───────────┘
-```
-
-First-level children:
-
-```sql
-SELECT dictGetChildren('hierarchy_flat_dictionary', number) FROM system.numbers LIMIT 4;
-```
-
-```text
-┌─dictGetChildren('hierarchy_flat_dictionary', number)─┐
-│ [1]                                                  │
-│ [2,3]                                                │
-│ [4]                                                  │
-│ []                                                   │
-└──────────────────────────────────────────────────────┘
-```
-
-## dictGetDescendant 
-
-Returns all descendants as if [dictGetChildren](#dictgetchildren) function was applied `level` times recursively.
-
-**Syntax**
-
-```sql
-dictGetDescendants(dict_name, key, level)
-```
-
-**Arguments**
-
-- `dict_name` — Name of the dictionary. [String literal](/sql-reference/syntax#string).
-- `key` — Key value. [Expression](/sql-reference/syntax#expressions) returning a [UInt64](../data-types/int-uint.md)-type value.
-- `level` — Hierarchy level. If `level = 0` returns all descendants to the end. [UInt8](../data-types/int-uint.md).
-
-**Returned values**
-
-- Descendants for the key. [Array](../data-types/array.md)([UInt64](../data-types/int-uint.md)).
-
-**Example**
-
-Consider the hierarchic dictionary:
-
-```text
-┌─id─┬─parent_id─┐
-│  1 │         0 │
-│  2 │         1 │
-│  3 │         1 │
-│  4 │         2 │
-└────┴───────────┘
-```
-All descendants:
-
-```sql
-SELECT dictGetDescendants('hierarchy_flat_dictionary', number) FROM system.numbers LIMIT 4;
-```
-
-```text
-┌─dictGetDescendants('hierarchy_flat_dictionary', number)─┐
-│ [1,2,3,4]                                               │
-│ [2,3,4]                                                 │
-│ [4]                                                     │
-│ []                                                      │
-└─────────────────────────────────────────────────────────┘
-```
-
-First-level descendants:
-
-```sql
-SELECT dictGetDescendants('hierarchy_flat_dictionary', number, 1) FROM system.numbers LIMIT 4;
-```
-
-```text
-┌─dictGetDescendants('hierarchy_flat_dictionary', number, 1)─┐
-│ [1]                                                        │
-│ [2,3]                                                      │
-│ [4]                                                        │
-│ []                                                         │
-└────────────────────────────────────────────────────────────┘
-```
-
-
-## dictGetAll 
-
-Retrieves the attribute values of all nodes that matched each key in a [regular expression tree dictionary](../../sql-reference/dictionaries/index.md#regexp-tree-dictionary).
-
-Besides returning values of type `Array(T)` instead of `T`, this function behaves similarly to [`dictGet`](#dictget-dictgetordefault-dictgetornull).
-
-**Syntax**
-
-```sql
-dictGetAll('dict_name', attr_names, id_expr[, limit])
-```
-
-**Arguments**
-
-- `dict_name` — Name of the dictionary. [String literal](/sql-reference/syntax#string).
-- `attr_names` — Name of the column of the dictionary, [String literal](/sql-reference/syntax#string), or tuple of column names, [Tuple](/sql-reference/data-types/tuple)([String literal](/sql-reference/syntax#string)).
-- `id_expr` — Key value. [Expression](/sql-reference/syntax#expressions) returning array of dictionary key-type value or [Tuple](/sql-reference/data-types/tuple)-type value depending on the dictionary configuration.
-- `limit` - Maximum length for each value array returned. When truncating, child nodes are given precedence over parent nodes, and otherwise the defined list order for the regexp tree dictionary is respected. If unspecified, array length is unlimited.
-
-**Returned value**
-
-- If ClickHouse parses the attribute successfully in the attribute's data type as defined in the dictionary, returns an array of dictionary attribute values that correspond to `id_expr` for each attribute specified by `attr_names`.
-
-- If there is no key corresponding to `id_expr` in the dictionary, then an empty array is returned.
-
-ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
-
-**Example**
-
-Consider the following regexp tree dictionary:
-
-```sql
-CREATE DICTIONARY regexp_dict
-(
-    regexp String,
-    tag String
-)
-PRIMARY KEY(regexp)
-SOURCE(YAMLRegExpTree(PATH '/var/lib/clickhouse/user_files/regexp_tree.yaml'))
-LAYOUT(regexp_tree)
-...
-```
-
-```yaml
-# /var/lib/clickhouse/user_files/regexp_tree.yaml
-- regexp: 'foo'
-  tag: 'foo_attr'
-- regexp: 'bar'
-  tag: 'bar_attr'
-- regexp: 'baz'
-  tag: 'baz_attr'
-```
-
-Get all matching values:
-
-```sql
-SELECT dictGetAll('regexp_dict', 'tag', 'foobarbaz');
-```
-
-```text
-┌─dictGetAll('regexp_dict', 'tag', 'foobarbaz')─┐
-│ ['foo_attr','bar_attr','baz_attr']            │
-└───────────────────────────────────────────────┘
-```
-
-Get up to 2 matching values:
-
-```sql
-SELECT dictGetAll('regexp_dict', 'tag', 'foobarbaz', 2);
-```
-
-```text
-┌─dictGetAll('regexp_dict', 'tag', 'foobarbaz', 2)─┐
-│ ['foo_attr','bar_attr']                          │
-└──────────────────────────────────────────────────┘
-```
-
-## Other Functions 
-
-ClickHouse supports specialized functions that convert dictionary attribute values to a specific data type regardless of the dictionary configuration.
-
-Functions:
-
-- `dictGetInt8`, `dictGetInt16`, `dictGetInt32`, `dictGetInt64`
-- `dictGetUInt8`, `dictGetUInt16`, `dictGetUInt32`, `dictGetUInt64`
-- `dictGetFloat32`, `dictGetFloat64`
-- `dictGetDate`
-- `dictGetDateTime`
-- `dictGetUUID`
-- `dictGetString`
-- `dictGetIPv4`, `dictGetIPv6`
-
-All these functions have the `OrDefault` modification. For example, `dictGetDateOrDefault`.
-
-Syntax:
-
-```sql
-dictGet[Type]('dict_name', 'attr_name', id_expr)
-dictGet[Type]OrDefault('dict_name', 'attr_name', id_expr, default_value_expr)
-```
-
-**Arguments**
-
-- `dict_name` — Name of the dictionary. [String literal](/sql-reference/syntax#string).
-- `attr_name` — Name of the column of the dictionary. [String literal](/sql-reference/syntax#string).
-- `id_expr` — Key value. [Expression](/sql-reference/syntax#expressions) returning a [UInt64](../data-types/int-uint.md) or [Tuple](../data-types/tuple.md)-type value depending on the dictionary configuration.
-- `default_value_expr` — Value returned if the dictionary does not contain a row with the `id_expr` key. [Expression](/sql-reference/syntax#expressions) returning the value in the data type configured for the `attr_name` attribute.
-
-**Returned value**
-
-- If ClickHouse parses the attribute successfully in the [attribute's data type](/sql-reference/dictionaries#dictionary-key-and-fields), functions return the value of the dictionary attribute that corresponds to `id_expr`.
-
-- If there is no requested `id_expr` in the dictionary then:
-
-        - `dictGet[Type]` returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
-        - `dictGet[Type]OrDefault` returns the value passed as the `default_value_expr` parameter.
-
-ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
-
-## Example dictionaries 
+## Example dictionaries {#example-dictionary}
 
 The examples in this section make use of the following dictionaries. You can create them in ClickHouse 
 to run the examples for the functions described below.
 
-<AccordionGroup>
-<Accordion title="Example dictionary for dictGet\<T\> and dictGet\<T\>OrDefault functions">
+<details>
+<summary>Example dictionary for dictGet\<T\> and dictGet\<T\>OrDefault functions</summary>
+
 ```sql
 -- Create table with all the required data types
 CREATE TABLE all_types_test (
@@ -608,8 +110,11 @@ SOURCE(CLICKHOUSE(HOST 'localhost' PORT 9000 USER 'default' TABLE 'all_types_tes
 LAYOUT(HASHED())
 LIFETIME(MIN 300 MAX 600);
 ```
-</Accordion>
-<Accordion title="Example dictionary for dictGetAll">
+</details>
+
+<details>
+<summary>Example dictionary for dictGetAll</summary>
+
 Create a table to store the data for the regexp tree dictionary:
 
 ```sql
@@ -651,8 +156,11 @@ SOURCE(CLICKHOUSE(TABLE 'regexp_os'))
 LIFETIME(MIN 0 MAX 0)
 LAYOUT(REGEXP_TREE);
 ```
-</Accordion>
-<Accordion title="Example range key dictionary">
+</details>
+
+<details>
+<summary>Example range key dictionary</summary>
+
 Create the input table:
 
 ```sql
@@ -692,8 +200,11 @@ LIFETIME(MIN 1 MAX 1000)
 LAYOUT(RANGE_HASHED())
 RANGE(MIN start_date MAX end_date);
 ```
-</Accordion>
-<Accordion title="Example complex key dictionary">
+</details>
+
+<details>
+<summary>Example complex key dictionary</summary>
+
 Create the source table: 
 
 ```sql
@@ -728,8 +239,11 @@ SOURCE(CLICKHOUSE(HOST 'localhost' PORT 9000 USER 'default' TABLE 'dict_mult_sou
 LAYOUT(FLAT())
 LIFETIME(MIN 0 MAX 0);
 ```
-</Accordion>
-<Accordion title="Example hierarchical dictionary">
+</details>
+
+<details>
+<summary>Example hierarchical dictionary</summary>
+
 Create the source table:
 
 ```sql
@@ -776,13 +290,2017 @@ SOURCE(CLICKHOUSE(HOST 'localhost' PORT 9000 USER 'default' TABLE 'hierarchy_sou
 LAYOUT(HASHED())
 LIFETIME(MIN 300 MAX 600);
 ```
-</Accordion>
-</AccordionGroup>
-{/* <!-- 
+</details>
+
+<!-- 
 The inner content of the tags below are replaced at doc framework build time with 
 docs generated from system.functions. Please do not modify or remove the tags.
 See: https://github.com/ClickHouse/clickhouse-docs/blob/main/contribute/autogenerated-documentation-from-source.md
---> */}
+-->
 
-{/* <!--AUTOGENERATED_START--> */}
-{/* <!--AUTOGENERATED_END--> */}
+<!--AUTOGENERATED_START-->
+## dictGet {#dictGet}
+
+Introduced in: v18.16.0
+
+Retrieves values from a dictionary.
+
+**Syntax**
+
+```sql
+dictGet('dict_name', attr_names, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_names` — Name of the column of the dictionary, or tuple of column names. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning UInt64/Tuple(T). [`UInt64`](/sql-reference/data-types/int-uint) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to id_expr if the key is found.
+If the key is not found, returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+**Examples**
+
+**Retrieve a single attribute**
+
+```sql title=Query
+SELECT dictGet('ext_dict_test', 'c1', toUInt64(1)) AS val
+```
+
+```response title=Response
+1
+```
+
+**Multiple attributes**
+
+```sql title=Query
+SELECT
+    dictGet('ext_dict_mult', ('c1','c2'), number + 1) AS val,
+    toTypeName(val) AS type
+FROM system.numbers
+LIMIT 3;
+```
+
+```response title=Response
+┌─val─────┬─type───────────┐
+│ (1,'1') │ Tuple(        ↴│
+│         │↳    c1 UInt32,↴│
+│         │↳    c2 String) │
+│ (2,'2') │ Tuple(        ↴│
+│         │↳    c1 UInt32,↴│
+│         │↳    c2 String) │
+│ (3,'3') │ Tuple(        ↴│
+│         │↳    c1 UInt32,↴│
+│         │↳    c2 String) │
+└─────────┴────────────────┘
+```
+
+
+
+## dictGetAll {#dictGetAll}
+
+Introduced in: v23.5.0
+
+Converts a dictionary attribute value to `All` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetAll(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT
+    'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36' AS user_agent,
+
+    -- This will match ALL applicable patterns
+    dictGetAll('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS all_matches,
+
+    -- This returns only the first match
+    dictGet('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS first_match;
+```
+
+```response title=Response
+┌─user_agent─────────────────────────────────────────────────────┬─all_matches─────────────────────────────┬─first_match─┐
+│ Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36 │ ['Android','Android','Android','Linux'] │ Android     │
+└────────────────────────────────────────────────────────────────┴─────────────────────────────────────────┴─────────────┘
+```
+
+
+
+## dictGetChildren {#dictGetChildren}
+
+Introduced in: v21.4.0
+
+
+Returns first-level children as an array of indexes. It is the inverse transformation for [dictGetHierarchy](#dictGetHierarchy).
+
+
+**Syntax**
+
+```sql
+dictGetChildren(dict_name, key)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `key` — Key to be checked. [`const String`](/sql-reference/data-types/string)
+
+
+**Returned value**
+
+Returns the first-level descendants for the key. [`Array(UInt64)`](/sql-reference/data-types/array)
+
+**Examples**
+
+**Get the first-level children of a dictionary**
+
+```sql title=Query
+SELECT dictGetChildren('hierarchical_dictionary', 2);
+```
+
+```response title=Response
+┌─dictGetChild⋯ionary', 2)─┐
+│ [4,5]                    │
+└──────────────────────────┘
+```
+
+
+
+## dictGetDate {#dictGetDate}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Date` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetDate(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetDate('all_types_dict', 'Date_value', 1)
+```
+
+```response title=Response
+┌─dictGetDate(⋯_value', 1)─┐
+│               2020-01-01 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetDateOrDefault {#dictGetDateOrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Date` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetDateOrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetDate('all_types_dict', 'Date_value', 1);
+
+-- for key which does not exist, returns the provided default value
+SELECT dictGetDateOrDefault('all_types_dict', 'Date_value', 999, toDate('1970-01-01'));
+```
+
+```response title=Response
+┌─dictGetDate(⋯_value', 1)─┐
+│               2024-01-15 │
+└──────────────────────────┘
+┌─dictGetDateO⋯70-01-01'))─┐
+│               1970-01-01 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetDateTime {#dictGetDateTime}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `DateTime` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetDateTime(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetDateTime('all_types_dict', 'DateTime_value', 1)
+```
+
+```response title=Response
+┌─dictGetDateT⋯_value', 1)─┐
+│      2024-01-15 10:30:00 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetDateTimeOrDefault {#dictGetDateTimeOrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `DateTime` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetDateTimeOrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetDateTime('all_types_dict', 'DateTime_value', 1);
+
+-- for key which does not exist, returns the provided default value
+SELECT dictGetDateTimeOrDefault('all_types_dict', 'DateTime_value', 999, toDateTime('1970-01-01 00:00:00'));
+```
+
+```response title=Response
+┌─dictGetDateT⋯_value', 1)─┐
+│      2024-01-15 10:30:00 │
+└──────────────────────────┘
+┌─dictGetDateT⋯0:00:00'))──┐
+│      1970-01-01 00:00:00 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetDescendants {#dictGetDescendants}
+
+Introduced in: v21.4.0
+
+
+Returns all descendants as if the [`dictGetChildren`](#dictGetChildren) function were applied `level` times recursively.
+
+
+**Syntax**
+
+```sql
+dictGetDescendants(dict_name, key, level)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `key` — Key to be checked. [`const String`](/sql-reference/data-types/string)
+- `level` — Key to be checked. Hierarchy level. If `level = 0` returns all descendants to the end. [`UInt8`](/sql-reference/data-types/int-uint)
+
+
+**Returned value**
+
+Returns the descendants for the key. [`Array(UInt64)`](/sql-reference/data-types/array)
+
+**Examples**
+
+**Get the first-level children of a dictionary**
+
+```sql title=Query
+-- consider the following hierarchical dictionary:
+-- 0 (Root)
+-- └── 1 (Level 1 - Node 1)
+--     ├── 2 (Level 2 - Node 2)
+--     │   ├── 4 (Level 3 - Node 4)
+--     │   └── 5 (Level 3 - Node 5)
+--     └── 3 (Level 2 - Node 3)
+--         └── 6 (Level 3 - Node 6)
+
+SELECT dictGetDescendants('hierarchical_dictionary', 0, 2)
+```
+
+```response title=Response
+┌─dictGetDesce⋯ary', 0, 2)─┐
+│ [3,2]                    │
+└──────────────────────────┘
+```
+
+
+
+## dictGetFloat32 {#dictGetFloat32}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Float32` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetFloat32(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetFloat32('all_types_dict', 'Float32_value', 1)
+```
+
+```response title=Response
+┌─dictGetFloat⋯_value', 1)─┐
+│               -123.123   │
+└──────────────────────────┘
+```
+
+
+
+## dictGetFloat32OrDefault {#dictGetFloat32OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Float32` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetFloat32OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetFloat32('all_types_dict', 'Float32_value', 1);
+
+-- for key which does not exist, returns the provided default value (-1.0)
+SELECT dictGetFloat32OrDefault('all_types_dict', 'Float32_value', 999, -1.0);
+```
+
+```response title=Response
+┌─dictGetFloat⋯_value', 1)─┐
+│                   123.45 │
+└──────────────────────────┘
+┌─dictGetFloat⋯e', 999, -1)─┐
+│                       -1  │
+└───────────────────────────┘
+```
+
+
+
+## dictGetFloat64 {#dictGetFloat64}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Float64` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetFloat64(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetFloat64('all_types_dict', 'Float64_value', 1)
+```
+
+```response title=Response
+┌─dictGetFloat⋯_value', 1)─┐
+│                 -123.123 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetFloat64OrDefault {#dictGetFloat64OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Float64` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetFloat64OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetFloat64('all_types_dict', 'Float64_value', 1);
+
+-- for key which does not exist, returns the provided default value (nan)
+SELECT dictGetFloat64OrDefault('all_types_dict', 'Float64_value', 999, nan);
+```
+
+```response title=Response
+┌─dictGetFloat⋯_value', 1)─┐
+│            987654.123456 │
+└──────────────────────────┘
+┌─dictGetFloat⋯, 999, nan)─┐
+│                      nan │
+└──────────────────────────┘
+```
+
+
+
+## dictGetHierarchy {#dictGetHierarchy}
+
+Introduced in: v1.1.0
+
+
+Creates an array, containing all the parents of a key in the [hierarchical dictionary](/docs/sql-reference/statements/create/dictionary/layouts/hierarchical#hierarchical-dictionaries).
+
+
+**Syntax**
+
+```sql
+dictGetHierarchy(dict_name, key)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `key` — Key value. [`const String`](/sql-reference/data-types/string)
+
+
+**Returned value**
+
+Returns parents for the key. [`Array(UInt64)`](/sql-reference/data-types/array)
+
+**Examples**
+
+**Get hierarchy for a key**
+
+```sql title=Query
+SELECT dictGetHierarchy('hierarchical_dictionary', 5)
+```
+
+```response title=Response
+┌─dictGetHiera⋯ionary', 5)─┐
+│ [5,2,1]                  │
+└──────────────────────────┘
+```
+
+
+
+## dictGetIPv4 {#dictGetIPv4}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `IPv4` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetIPv4(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetIPv4('all_types_dict', 'IPv4_value', 1)
+```
+
+```response title=Response
+┌─dictGetIPv4('all_⋯ 'IPv4_value', 1)─┐
+│ 192.168.0.1                         │
+└─────────────────────────────────────┘
+```
+
+
+
+## dictGetIPv4OrDefault {#dictGetIPv4OrDefault}
+
+Introduced in: v23.1.0
+
+Converts a dictionary attribute value to `IPv4` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetIPv4OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetIPv4('all_types_dict', 'IPv4_value', 1);
+
+-- for key which does not exist, returns the provided default value
+SELECT dictGetIPv4OrDefault('all_types_dict', 'IPv4_value', 999, toIPv4('0.0.0.0'));
+```
+
+```response title=Response
+┌─dictGetIPv4('all_⋯ 'IPv4_value', 1)─┐
+│ 192.168.0.1                         │
+└─────────────────────────────────────┘
+┌─dictGetIPv4OrDefa⋯0.0.0.0'))─┐
+│ 0.0.0.0                      │
+└──────────────────────────────┘
+```
+
+
+
+## dictGetIPv6 {#dictGetIPv6}
+
+Introduced in: v23.1.0
+
+Converts a dictionary attribute value to `IPv6` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetIPv6(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetIPv6('all_types_dict', 'IPv6_value', 1)
+```
+
+```response title=Response
+┌─dictGetIPv6('all_⋯ 'IPv6_value', 1)─┐
+│ 2001:db8:85a3::8a2e:370:7334        │
+└─────────────────────────────────────┘
+```
+
+
+
+## dictGetIPv6OrDefault {#dictGetIPv6OrDefault}
+
+Introduced in: v23.1.0
+
+Converts a dictionary attribute value to `IPv6` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetIPv6OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetIPv6('all_types_dict', 'IPv6_value', 1);
+
+-- for key which does not exist, returns the provided default value
+SELECT dictGetIPv6OrDefault('all_types_dict', 'IPv6_value', 999, '::1'::IPv6);
+```
+
+```response title=Response
+┌─dictGetIPv6('all_⋯ 'IPv6_value', 1)─┐
+│ 2001:db8:85a3::8a2e:370:7334        │
+└─────────────────────────────────────┘
+┌─dictGetIPv6OrDefa⋯:1'::IPv6)─┐
+│ ::1                          │
+└──────────────────────────────┘
+```
+
+
+
+## dictGetInt16 {#dictGetInt16}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Int16` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetInt16(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetInt16('all_types_dict', 'Int16_value', 1)
+```
+
+```response title=Response
+┌─dictGetInt16⋯_value', 1)─┐
+│                    -5000 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetInt16OrDefault {#dictGetInt16OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Int16` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetInt16OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetInt16('all_types_dict', 'Int16_value', 1);
+
+-- for key which does not exist, returns the provided default value (-1)
+SELECT dictGetInt16OrDefault('all_types_dict', 'Int16_value', 999, -1);
+```
+
+```response title=Response
+┌─dictGetInt16⋯_value', 1)─┐
+│                    -5000 │
+└──────────────────────────┘
+┌─dictGetInt16⋯', 999, -1)─┐
+│                       -1 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetInt32 {#dictGetInt32}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Int32` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetInt32(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetInt32('all_types_dict', 'Int32_value', 1)
+```
+
+```response title=Response
+┌─dictGetInt32⋯_value', 1)─┐
+│                -1000000  │
+└──────────────────────────┘
+```
+
+
+
+## dictGetInt32OrDefault {#dictGetInt32OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Int32` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetInt32OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetInt32('all_types_dict', 'Int32_value', 1);
+
+-- for key which does not exist, returns the provided default value (-1)
+SELECT dictGetInt32OrDefault('all_types_dict', 'Int32_value', 999, -1);
+```
+
+```response title=Response
+┌─dictGetInt32⋯_value', 1)─┐
+│                -1000000  │
+└──────────────────────────┘
+┌─dictGetInt32⋯', 999, -1)─┐
+│                       -1 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetInt64 {#dictGetInt64}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Int64` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetInt64(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetInt64('all_types_dict', 'Int64_value', 1)
+```
+
+```response title=Response
+┌─dictGetInt64⋯_value', 1)───┐
+│       -9223372036854775807 │
+└────────────────────────────┘
+```
+
+
+
+## dictGetInt64OrDefault {#dictGetInt64OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Int64` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetInt64OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetInt64('all_types_dict', 'Int64_value', 1);
+
+-- for key which does not exist, returns the provided default value (-1)
+SELECT dictGetInt64OrDefault('all_types_dict', 'Int64_value', 999, -1);
+```
+
+```response title=Response
+┌─dictGetInt64⋯_value', 1)─┐
+│     -9223372036854775808 │
+└──────────────────────────┘
+┌─dictGetInt64⋯', 999, -1)─┐
+│                       -1 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetInt8 {#dictGetInt8}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Int8` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetInt8(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetInt8('all_types_dict', 'Int8_value', 1)
+```
+
+```response title=Response
+┌─dictGetInt8(⋯_value', 1)─┐
+│                     -100 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetInt8OrDefault {#dictGetInt8OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `Int8` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetInt8OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetInt8('all_types_dict', 'Int8_value', 1);
+
+-- for key which does not exist, returns the provided default value (-1)
+SELECT dictGetInt8OrDefault('all_types_dict', 'Int8_value', 999, -1);
+```
+
+```response title=Response
+┌─dictGetInt8(⋯_value', 1)─┐
+│                     -100 │
+└──────────────────────────┘
+┌─dictGetInt8O⋯', 999, -1)─┐
+│                       -1 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetKeys {#dictGetKeys}
+
+Introduced in: v25.12.0
+
+
+Returns the dictionary key(s) whose attribute equals the specified value. This is the inverse of the function `dictGet` on a single attribute.
+
+Use setting `max_reverse_dictionary_lookup_cache_size_bytes` to cap the size of the per-query reverse-lookup cache used by `dictGetKeys`.
+The cache stores serialized key tuples for each attribute value to avoid re-scanning the dictionary within the same query.
+The cache is not persistent across queries. When the limit is reached, entries are evicted with LRU.
+This is most effective with large dictionaries when the input has low cardinality and the working set fits in the cache. Set to `0` to disable caching.
+    
+
+**Syntax**
+
+```sql
+dictGetKeys('dict_name', 'attr_name', value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Attribute to match. [`String`](/sql-reference/data-types/string)
+- `value_expr` — Value to match against the attribute. [`Expression`](/sql-reference/data-types/special-data-types/expression)
+
+
+**Returned value**
+
+For single key dictionaries: an array of keys whose attribute equals `value_expr`. For multi key dictionaries: an array of tuples of keys whose attribute equals `value_expr`. If there is no attribute corresponding to `value_expr` in the dictionary, then an empty array is returned. ClickHouse throws an exception if it cannot parse the value of the attribute or the value cannot be converted to the attribute data type.
+
+**Examples**
+
+**Sample usage**
+
+```sql title=Query
+SELECT dictGetKeys('task_id_to_priority_dictionary', 'priority_level', 'high') AS ids;
+```
+
+```response title=Response
+┌─ids───┐
+│ [4,2] │
+└───────┘
+```
+
+
+
+## dictGetOrDefault {#dictGetOrDefault}
+
+Introduced in: v18.16.0
+
+Retrieves values from a dictionary, with a default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetOrDefault('dict_name', attr_names, id_expr, default_value)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_names` — Name of the column of the dictionary, or tuple of column names. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning UInt64/Tuple(T). [`UInt64`](/sql-reference/data-types/int-uint) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value` — Default value to return if the key is not found. Type must match the attribute's data type. 
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr` if the key is found.
+If the key is not found, returns the `default_value` provided.
+
+**Examples**
+
+**Get value with default**
+
+```sql title=Query
+SELECT dictGetOrDefault('ext_dict_mult', 'c1', toUInt64(999), 0) AS val
+```
+
+```response title=Response
+0
+```
+
+
+
+## dictGetOrNull {#dictGetOrNull}
+
+Introduced in: v21.4.0
+
+Retrieves values from a dictionary, returning NULL if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetOrNull('dict_name', 'attr_name', id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. String literal. - `attr_name` — Name of the column to retrieve. String literal. - `id_expr` — Key value. Expression returning dictionary key-type value. 
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr` if the key is found.
+If the key is not found, returns `NULL`.
+
+**Examples**
+
+**Example using the range key dictionary**
+
+```sql title=Query
+SELECT
+    (number, toDate('2019-05-20')),
+    dictGetOrNull('range_key_dictionary', 'value', number, toDate('2019-05-20')),
+FROM system.numbers LIMIT 5 FORMAT TabSeparated;
+```
+
+```response title=Response
+(0,'2019-05-20')  \N
+(1,'2019-05-20')  First
+(2,'2019-05-20')  Second
+(3,'2019-05-20')  Third
+(4,'2019-05-20')  \N
+```
+
+
+
+## dictGetString {#dictGetString}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `String` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetString(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetString('all_types_dict', 'String_value', 1)
+```
+
+```response title=Response
+┌─dictGetString(⋯_value', 1)─┐
+│ test string                │
+└────────────────────────────┘
+```
+
+
+
+## dictGetStringOrDefault {#dictGetStringOrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `String` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetStringOrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetString('all_types_dict', 'String_value', 1);
+
+-- for key which does not exist, returns the provided default value
+SELECT dictGetStringOrDefault('all_types_dict', 'String_value', 999, 'default');
+```
+
+```response title=Response
+┌─dictGetString(⋯_value', 1)─┐
+│ test string                │
+└────────────────────────────┘
+┌─dictGetStringO⋯ 999, 'default')─┐
+│ default                         │
+└─────────────────────────────────┘
+```
+
+
+
+## dictGetUInt16 {#dictGetUInt16}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UInt16` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetUInt16(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetUInt16('all_types_dict', 'UInt16_value', 1)
+```
+
+```response title=Response
+┌─dictGetUInt1⋯_value', 1)─┐
+│                     5000 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetUInt16OrDefault {#dictGetUInt16OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UInt16` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetUInt16OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetUInt16('all_types_dict', 'UInt16_value', 1);
+
+-- for key which does not exist, returns the provided default value (0)
+SELECT dictGetUInt16OrDefault('all_types_dict', 'UInt16_value', 999, 0);
+```
+
+```response title=Response
+┌─dictGetUInt1⋯_value', 1)─┐
+│                     5000 │
+└──────────────────────────┘
+┌─dictGetUInt1⋯e', 999, 0)─┐
+│                        0 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetUInt32 {#dictGetUInt32}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UInt32` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetUInt32(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetUInt32('all_types_dict', 'UInt32_value', 1)
+```
+
+```response title=Response
+┌─dictGetUInt3⋯_value', 1)─┐
+│                  1000000 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetUInt32OrDefault {#dictGetUInt32OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UInt32` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetUInt32OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetUInt32('all_types_dict', 'UInt32_value', 1);
+
+-- for key which does not exist, returns the provided default value (0)
+SELECT dictGetUInt32OrDefault('all_types_dict', 'UInt32_value', 999, 0);
+```
+
+```response title=Response
+┌─dictGetUInt3⋯_value', 1)─┐
+│                  1000000 │
+└──────────────────────────┘
+┌─dictGetUInt3⋯e', 999, 0)─┐
+│                        0 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetUInt64 {#dictGetUInt64}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UInt64` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetUInt64(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetUInt64('all_types_dict', 'UInt64_value', 1)
+```
+
+```response title=Response
+┌─dictGetUInt6⋯_value', 1)─┐
+│      9223372036854775807 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetUInt64OrDefault {#dictGetUInt64OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UInt64` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetUInt64OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetUInt64('all_types_dict', 'UInt64_value', 1);
+
+-- for key which does not exist, returns the provideddefault value (0)
+SELECT dictGetUInt64OrDefault('all_types_dict', 'UInt64_value', 999, 0);
+```
+
+```response title=Response
+┌─dictGetUInt6⋯_value', 1)─┐
+│      9223372036854775807 │
+└──────────────────────────┘
+┌─dictGetUInt6⋯e', 999, 0)─┐
+│                        0 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetUInt8 {#dictGetUInt8}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UInt8` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetUInt8(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetUInt8('all_types_dict', 'UInt8_value', 1)
+```
+
+```response title=Response
+┌─dictGetUInt8⋯_value', 1)─┐
+│                      100 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetUInt8OrDefault {#dictGetUInt8OrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UInt8` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetUInt8OrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetUInt8('all_types_dict', 'UInt8_value', 1);
+
+-- for key which does not exist, returns the provided default value (0)
+SELECT dictGetUInt8OrDefault('all_types_dict', 'UInt8_value', 999, 0);
+```
+
+```response title=Response
+┌─dictGetUInt8⋯_value', 1)─┐
+│                      100 │
+└──────────────────────────┘
+┌─dictGetUInt8⋯e', 999, 0)─┐
+│                        0 │
+└──────────────────────────┘
+```
+
+
+
+## dictGetUUID {#dictGetUUID}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UUID` data type regardless of the dictionary configuration.
+
+**Syntax**
+
+```sql
+dictGetUUID(dict_name, attr_name, id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+SELECT dictGetUUID('all_types_dict', 'UUID_value', 1)
+```
+
+```response title=Response
+┌─dictGetUUID(⋯_value', 1)─────────────┐
+│ 123e4567-e89b-12d3-a456-426614174000 │
+└──────────────────────────────────────┘
+```
+
+
+
+## dictGetUUIDOrDefault {#dictGetUUIDOrDefault}
+
+Introduced in: v1.1.0
+
+Converts a dictionary attribute value to `UUID` data type regardless of the dictionary configuration, or returns the provided default value if the key is not found.
+
+**Syntax**
+
+```sql
+dictGetUUIDOrDefault(dict_name, attr_name, id_expr, default_value_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `attr_name` — Name of the column of the dictionary. [`String`](/sql-reference/data-types/string) or [`Tuple(String)`](/sql-reference/data-types/tuple)
+- `id_expr` — Key value. Expression returning dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+- `default_value_expr` — Value(s) returned if the dictionary does not contain a row with the `id_expr` key. [`Expression`](/sql-reference/data-types/special-data-types/expression) or [`Tuple(T)`](/sql-reference/data-types/tuple)
+
+
+**Returned value**
+
+Returns the value of the dictionary attribute that corresponds to `id_expr`,
+otherwise returns the value passed as the `default_value_expr` parameter.
+
+:::note
+ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
+:::
+
+**Examples**
+
+**Usage example**
+
+```sql title=Query
+-- for key which exists
+SELECT dictGetUUID('all_types_dict', 'UUID_value', 1);
+
+-- for key which does not exist, returns the provided default value
+SELECT dictGetUUIDOrDefault('all_types_dict', 'UUID_value', 999, '00000000-0000-0000-0000-000000000000'::UUID);
+```
+
+```response title=Response
+┌─dictGetUUID('all_t⋯ 'UUID_value', 1)─┐
+│ 550e8400-e29b-41d4-a716-446655440000 │
+└──────────────────────────────────────┘
+┌─dictGetUUIDOrDefa⋯000000000000'::UUID)─┐
+│ 00000000-0000-0000-0000-000000000000   │
+└────────────────────────────────────────┘
+```
+
+
+
+## dictHas {#dictHas}
+
+Introduced in: v1.1.0
+
+Checks whether a key is present in a dictionary.
+
+**Syntax**
+
+```sql
+dictHas('dict_name', id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `id_expr` — Key value [`const String`](/sql-reference/data-types/string)
+
+
+**Returned value**
+
+Returns `1` if the key exists, otherwise `0`. [`UInt8`](/sql-reference/data-types/int-uint)
+
+**Examples**
+
+**Check for the existence of a key in a dictionary**
+
+```sql title=Query
+-- consider the following hierarchical dictionary:
+-- 0 (Root)
+-- └── 1 (Level 1 - Node 1)
+--     ├── 2 (Level 2 - Node 2)
+--     │   ├── 4 (Level 3 - Node 4)
+--     │   └── 5 (Level 3 - Node 5)
+--     └── 3 (Level 2 - Node 3)
+--         └── 6 (Level 3 - Node 6)
+
+SELECT dictHas('hierarchical_dictionary', 2);
+SELECT dictHas('hierarchical_dictionary', 7);
+```
+
+```response title=Response
+┌─dictHas('hie⋯ionary', 2)─┐
+│                        1 │
+└──────────────────────────┘
+┌─dictHas('hie⋯ionary', 7)─┐
+│                        0 │
+└──────────────────────────┘
+```
+
+
+
+## dictIsIn {#dictIsIn}
+
+Introduced in: v1.1.0
+
+
+Checks the ancestor of a key through the whole hierarchical chain in the dictionary.
+
+
+**Syntax**
+
+```sql
+dictIsIn(dict_name, child_id_expr, ancestor_id_expr)
+```
+
+**Arguments**
+
+- `dict_name` — Name of the dictionary. [`String`](/sql-reference/data-types/string)
+- `child_id_expr` — Key to be checked. [`String`](/sql-reference/data-types/string)
+- `ancestor_id_expr` — Alleged ancestor of the `child_id_expr` key. [`const String`](/sql-reference/data-types/string)
+
+
+**Returned value**
+
+Returns `0` if `child_id_expr` is not a child of `ancestor_id_expr`, `1` if `child_id_expr` is a child of `ancestor_id_expr` or if `child_id_expr` is an `ancestor_id_expr`. [`UInt8`](/sql-reference/data-types/int-uint)
+
+**Examples**
+
+**Check hierarchical relationship**
+
+```sql title=Query
+-- valid hierarchy
+SELECT dictIsIn('hierarchical_dictionary', 6, 3)
+
+-- invalid hierarchy
+SELECT dictIsIn('hierarchical_dictionary', 3, 5)
+```
+
+```response title=Response
+┌─dictIsIn('hi⋯ary', 6, 3)─┐
+│                        1 │
+└──────────────────────────┘
+┌─dictIsIn('hi⋯ary', 3, 5)─┐
+│                        0 │
+└──────────────────────────┘
+```
+
+
+
+<!--AUTOGENERATED_END-->

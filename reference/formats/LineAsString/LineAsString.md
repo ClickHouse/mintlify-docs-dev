@@ -4,20 +4,22 @@ description: 'Documentation for the LineAsString format'
 input_format: true
 keywords: ['LineAsString']
 output_format: true
-old-slug: /interfaces/formats/LineAsString
+slug: /interfaces/formats/LineAsString
 title: 'LineAsString'
 doc_type: 'reference'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 The `LineAsString` format interprets every line of input data as a single string value. 
 This format can only be parsed for a table with a single field of type [String](/sql-reference/data-types/string.md). 
 The remaining columns must be set to [`DEFAULT`](/sql-reference/statements/create/table.md/#default), [`MATERIALIZED`](/sql-reference/statements/create/view#materialized-view), or omitted.
 
-## Example usage 
+## Example usage {#example-usage}
 
 ```sql title="Query"
 DROP TABLE IF EXISTS line_as_string;
@@ -32,4 +34,4 @@ SELECT * FROM line_as_string;
 └───────────────────────────────────────────────────┘
 ```
 
-## Format settings 
+## Format settings {#format-settings}

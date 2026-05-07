@@ -1,8 +1,8 @@
 ---
 description: 'Documentation for Settings Profile'
-sidebarTitle: 'SETTINGS PROFILE'
+sidebar_label: 'SETTINGS PROFILE'
 sidebar_position: 48
-old-slug: /sql-reference/statements/alter/settings-profile
+slug: /sql-reference/statements/alter/settings-profile
 title: 'ALTER SETTINGS PROFILE'
 doc_type: 'reference'
 ---

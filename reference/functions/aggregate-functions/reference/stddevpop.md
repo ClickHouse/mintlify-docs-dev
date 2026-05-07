@@ -1,18 +1,17 @@
 ---
 description: 'The result is equal to the square root of varPop.'
-sidebar_position: 188
-old-slug: /sql-reference/aggregate-functions/reference/stddevpop
+slug: /sql-reference/aggregate-functions/reference/stddevpop
 title: 'stddevPop'
 doc_type: 'reference'
 ---
 
-The result is equal to the square root of [varPop](../../../sql-reference/aggregate-functions/reference/varpop.md).
+Returns the population standard deviation of a numeric data sequence.
+The result is equal to the square root of [`varPop`](/sql-reference/aggregate-functions/reference/varPop).
 
-Aliases: `STD`, `STDDEV_POP`.
-
-<Note>
-This function uses a numerically unstable algorithm. If you need [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability) in calculations, use the [`stddevPopStable`](../reference/stddevpopstable.md) function. It works slower but provides a lower computational error.
-</Note>
+:::note
+This function uses a numerically unstable algorithm. If you need [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability) in calculations, use the [`stddevPopStable`](/sql-reference/aggregate-functions/reference/stddevpopstable) function. It works slower but provides a lower computational error.
+:::
+    
 
 **Syntax**
 
@@ -20,37 +19,33 @@ This function uses a numerically unstable algorithm. If you need [numerical stab
 stddevPop(x)
 ```
 
-**Parameters**
+**Aliases**: `STD`, `STDDEV_POP`
 
-- `x`: Population of values to find the standard deviation of. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal*](../../data-types/decimal.md).
+**Arguments**
+
+- `x` — Population of values to find the standard deviation of. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
+
 
 **Returned value**
 
-- Square root of standard deviation of `x`. [Float64](../../data-types/float.md).
+Returns the square root of population variance of `x`. [`Float64`](/sql-reference/data-types/float)
 
-**Example**
+**Examples**
 
-Query:
+**Computing population standard deviation**
 
-```sql
-DROP TABLE IF EXISTS test_data;
-CREATE TABLE test_data
-(
-    population UInt8,
-)
-ENGINE = Log;
-
+```sql title=Query
+CREATE TABLE test_data (population UInt8) ENGINE = Log;
 INSERT INTO test_data VALUES (3),(3),(3),(4),(4),(5),(5),(7),(11),(15);
 
-SELECT
-    stddevPop(population) AS stddev
-FROM test_data;
+SELECT stddevPop(population) AS stddev FROM test_data;
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌────────────stddev─┐
 │ 3.794733192202055 │
 └───────────────────┘
 ```
+
+
+

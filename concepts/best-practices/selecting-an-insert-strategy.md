@@ -1,5 +1,5 @@
 ---
-old-slug: /best-practices/selecting-an-insert-strategy
+slug: /best-practices/selecting-an-insert-strategy
 sidebar_position: 10
 sidebarTitle: 'Selecting an insert strategy'
 title: 'Selecting an insert strategy'

@@ -1,16 +1,18 @@
 ---
 description: 'The engine allows querying remote datasets via Apache Arrow Flight.'
-sidebarTitle: 'ArrowFlight table engine'
+sidebar_label: 'ArrowFlight'
 sidebar_position: 186
-old-slug: /engines/table-engines/integrations/arrowflight
+slug: /engines/table-engines/integrations/arrowflight
 title: 'ArrowFlight table engine'
 doc_type: 'reference'
 ---
 
+# ArrowFlight table engine
+
 The ArrowFlight table engine enables ClickHouse to query remote datasets via the [Apache Arrow Flight](https://arrow.apache.org/docs/format/Flight.html) protocol.
 This integration allows ClickHouse to fetch data from external Flight-enabled servers in a columnar Arrow format with high performance.
 
-## Creating a Table 
+## Creating a Table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name (name1 [type1], name2 [type2], ...)
@@ -26,7 +28,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name (name1 [type1], name2 [type2], ...)
 If `username` and `password` are not specified, it means that authentication is not used
 (that will work only if the Arrow Flight server allows it).
 
-## Usage Example 
+## Usage Example {#usage-example}
 
 This example shows how to create a table that reads data from a remote Arrow Flight server:
 
@@ -53,12 +55,12 @@ SELECT * FROM remote_flight_data ORDER BY id;
 └────┴─────────┴───────┘
 ```
 
-## Notes 
+## Notes {#notes}
 
 * The schema defined in ClickHouse must match the schema returned by the Flight server.
 * This engine is suitable for federated queries, data virtualization, and decoupling storage from compute.
 
-## See Also 
+## See Also {#see-also}
 
 * [Apache Arrow Flight SQL](https://arrow.apache.org/docs/format/FlightSql.html)
 * [Arrow format integration in ClickHouse](/interfaces/formats/Arrow)

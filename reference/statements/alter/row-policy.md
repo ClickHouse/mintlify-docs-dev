@@ -1,11 +1,13 @@
 ---
 description: 'Documentation for ALTER ROW POLICY'
-sidebarTitle: 'ROW POLICY'
+sidebar_label: 'ROW POLICY'
 sidebar_position: 47
-old-slug: /sql-reference/statements/alter/row-policy
+slug: /sql-reference/statements/alter/row-policy
 title: 'ALTER ROW POLICY'
 doc_type: 'reference'
 ---
+
+# ALTER ROW POLICY
 
 Changes row policy.
 

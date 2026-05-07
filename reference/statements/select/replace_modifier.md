@@ -1,11 +1,13 @@
 ---
 description: 'Documentation describing the APPLY modifier which allows you to invoke some function for each row returned by an outer table expression of a query.'
-sidebarTitle: 'REPLACE'
-old-slug: /sql-reference/statements/select/replace-modifier
+sidebar_label: 'REPLACE'
+slug: /sql-reference/statements/select/replace-modifier
 title: 'Replace modifier'
 keywords: ['REPLACE', 'modifier']
 doc_type: 'reference'
 ---
+
+# Replace modifier {#replace}
 
 > Allows you to specify one or more [expression aliases](/sql-reference/syntax#expression-aliases). 
 

@@ -2,15 +2,14 @@
 description: 'Computes the sum of the numbers, using the same data type for the result
   as for the input parameters. If the sum exceeds the maximum value for this data
   type, it is calculated with overflow.'
-sidebar_position: 200
-old-slug: /sql-reference/aggregate-functions/reference/sumwithoverflow
+slug: /sql-reference/aggregate-functions/reference/sumwithoverflow
 title: 'sumWithOverflow'
 doc_type: 'reference'
 ---
 
-Computes the sum of the numbers, using the same data type for the result as for the input parameters. If the sum exceeds the maximum value for this data type, it is calculated with overflow.
-
-Only works for numbers.
+Computes a sum of numeric values, using the same data type for the result as for the input parameters.
+If the sum exceeds the maximum value for this data type, it is calculated with overflow.
+    
 
 **Syntax**
 
@@ -18,56 +17,51 @@ Only works for numbers.
 sumWithOverflow(num)
 ```
 
-**Parameters**
-- `num`: Column of numeric values. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal*](../../data-types/decimal.md).
+**Arguments**
+
+- `num` — Column of numeric values. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
+
 
 **Returned value**
 
-- The sum of the values. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal*](../../data-types/decimal.md).
+The sum of the values. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
 
-**Example**
+**Examples**
 
-First we create a table `employees` and insert some fictional employee data into it. For this example we will select `salary` as `UInt16` such that a sum of these values may produce an overflow.
+**Demonstrating overflow behavior with UInt16**
 
-Query:
-
-```sql
+```sql title=Query
 CREATE TABLE employees
 (
-    `id` UInt32,
-    `name` String,
-    `monthly_salary` UInt16
+    id UInt32,
+    name String,
+    monthly_salary UInt16 -- selected so that the sum of values produces an overflow
 )
-ENGINE = Log
-```
+ENGINE = Memory;
 
-```sql
+INSERT INTO employees VALUES
+    (1, 'John', 20000),
+    (2, 'Jane', 18000),
+    (3, 'Bob', 12000),
+    (4, 'Alice', 10000),
+    (5, 'Charlie', 8000);
+
+-- Query for the total amount of the employee salaries using the sum and sumWithOverflow functions and show their types using the toTypeName function
+-- For the sum function the resulting type is UInt64, big enough to contain the sum, whilst for sumWithOverflow the resulting type remains as UInt16.
+
 SELECT
     sum(monthly_salary) AS no_overflow,
     sumWithOverflow(monthly_salary) AS overflow,
     toTypeName(no_overflow),
     toTypeName(overflow)
-FROM employees
-```
-
-We query for the total amount of the employee salaries using the `sum` and `sumWithOverflow` functions and show their types using the `toTypeName` function.
-For the `sum` function the resulting type is `UInt64`, big enough to contain the sum, whilst for `sumWithOverflow` the resulting type remains as `UInt16`.  
-
-Query:
-
-```sql
-SELECT 
-    sum(monthly_salary) AS no_overflow,
-    sumWithOverflow(monthly_salary) AS overflow,
-    toTypeName(no_overflow),
-    toTypeName(overflow),    
 FROM employees;
 ```
 
-Result:
-
-```response
-   ┌─no_overflow─┬─overflow─┬─toTypeName(no_overflow)─┬─toTypeName(overflow)─┐
-1. │      118700 │    53164 │ UInt64                  │ UInt16               │
-   └─────────────┴──────────┴─────────────────────────┴──────────────────────┘
+```response title=Response
+┌─no_overflow─┬─overflow─┬─toTypeName(no_overflow)─┬─toTypeName(overflow)─┐
+│       68000 │     2464 │ UInt64                  │ UInt16               │
+└─────────────┴──────────┴─────────────────────────┴──────────────────────┘
 ```
+
+
+

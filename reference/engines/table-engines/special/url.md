@@ -1,12 +1,14 @@
 ---
 description: 'Queries data to/from a remote HTTP/HTTPS server. This engine is similar
   to the File engine.'
-sidebarTitle: 'URL'
+sidebar_label: 'URL'
 sidebar_position: 80
-old-slug: /engines/table-engines/special/url
+slug: /engines/table-engines/special/url
 title: 'URL table engine'
 doc_type: 'reference'
 ---
+
+# URL table engine
 
 Queries data to/from a remote HTTP/HTTPS server. This engine is similar to the [File](../../../engines/table-engines/special/file.md) engine.
 
@@ -38,7 +40,7 @@ If `CompressionMethod` is not specified, it defaults to `auto`. This means Click
 
 For example, for engine expression `URL('http://localhost/test.gzip')`, `gzip` compression method is applied, but for `URL('http://localhost/test.fr')`, no compression is enabled because the suffix `fr` does not match any compression methods above.
 
-## Usage 
+## Usage {#using-the-engine-in-the-clickhouse-server}
 
 `INSERT` and `SELECT` queries are transformed to `POST` and `GET` requests,
 respectively. For processing `POST` requests, the remote server must support
@@ -46,7 +48,7 @@ respectively. For processing `POST` requests, the remote server must support
 
 You can limit the maximum number of HTTP GET redirect hops using the [max_http_get_redirects](/operations/settings/settings#max_http_get_redirects) setting.
 
-## Example 
+## Example {#example}
 
 **1.** Create a `url_engine_table` table on the server :
 
@@ -91,7 +93,7 @@ SELECT * FROM url_engine_table
 └───────┴───────┘
 ```
 
-## Details of Implementation 
+## Details of Implementation {#details-of-implementation}
 
 - Reads and writes can be parallel
 - Not supported:
@@ -99,7 +101,7 @@ SELECT * FROM url_engine_table
   - Indexes.
   - Replication.
 
-## Virtual columns 
+## Virtual columns {#virtual-columns}
 
 - `_path` — Path to the `URL`. Type: `LowCardinality(String)`.
 - `_file` — Resource name of the `URL`. Type: `LowCardinality(String)`.
@@ -107,7 +109,20 @@ SELECT * FROM url_engine_table
 - `_time` — Last modified time of the file. Type: `Nullable(DateTime)`. If the time is unknown, the value is `NULL`.
 - `_headers` - HTTP response headers. Type: `Map(LowCardinality(String), LowCardinality(String))`.
 
-## Storage settings 
+## Resolving relative URLs {#resolving-relative-urls}
+
+The [url_base](/operations/settings/settings.md#url_base) setting allows using a relative URL in the `URL` engine. When `url_base` is set, the URL passed to the engine is resolved against it per [RFC 3986](https://datatracker.ietf.org/doc/html/rfc3986). For a full description of the resolution rules, see the [url table function docs](../../../sql-reference/table-functions/url.md#resolving-relative-urls).
+
+**Example**
+
+```sql
+SET url_base = 'http://127.0.0.1:12345/';
+CREATE TABLE url_engine_table (word String, value UInt64) ENGINE = URL('hello.csv', CSV);
+SELECT * FROM url_engine_table;
+```
+
+## Storage settings {#storage-settings}
 
 - [engine_url_skip_empty_files](/operations/settings/settings.md#engine_url_skip_empty_files) - allows to skip empty files while reading. Disabled by default.
 - [enable_url_encoding](/operations/settings/settings.md#enable_url_encoding) - allows to enable/disable decoding/encoding path in uri. Enabled by default.
+- [url_base](/operations/settings/settings.md#url_base) - base URL for resolving relative URLs passed to the engine.

@@ -1,12 +1,12 @@
 ---
 description: 'Calculates the weighted arithmetic mean.'
-sidebar_position: 113
-old-slug: /sql-reference/aggregate-functions/reference/avgweighted
+slug: /sql-reference/aggregate-functions/reference/avgweighted
 title: 'avgWeighted'
 doc_type: 'reference'
 ---
 
 Calculates the [weighted arithmetic mean](https://en.wikipedia.org/wiki/Weighted_arithmetic_mean).
+    
 
 **Syntax**
 
@@ -16,84 +16,67 @@ avgWeighted(x, weight)
 
 **Arguments**
 
-- `x` — Values.
-- `weight` — Weights of the values.
+- `x` — Values. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float)
+- `weight` — Weights of the values. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float)
 
-`x` and `weight` must both be
-[Integer](../../../sql-reference/data-types/int-uint.md) or [floating-point](../../../sql-reference/data-types/float.md),
-but may have different types.
 
 **Returned value**
 
-- `NaN` if all the weights are equal to 0 or the supplied weights parameter is empty.
-- Weighted mean otherwise.
+Returns `NaN` if all the weights are equal to 0 or the supplied weights parameter is empty, or the weighted mean otherwise. [`Float64`](/sql-reference/data-types/float)
 
-**Return type** is always [Float64](../../../sql-reference/data-types/float.md).
+**Examples**
 
-**Example**
+**Usage example**
 
-Query:
-
-```sql
+```sql title=Query
 SELECT avgWeighted(x, w)
 FROM VALUES('x Int8, w Int8', (4, 1), (1, 0), (10, 2))
 ```
 
-Result:
-
-```text
-┌─avgWeighted(x, weight)─┐
-│                      8 │
-└────────────────────────┘
+```response title=Response
+┌─avgWeighted(x, w)─┐
+│                 8 │
+└───────────────────┘
 ```
 
-**Example**
+**Mixed integer and float weights**
 
-Query:
-
-```sql
+```sql title=Query
 SELECT avgWeighted(x, w)
 FROM VALUES('x Int8, w Float64', (4, 1), (1, 0), (10, 2))
 ```
 
-Result:
-
-```text
-┌─avgWeighted(x, weight)─┐
-│                      8 │
-└────────────────────────┘
+```response title=Response
+┌─avgWeighted(x, w)─┐
+│                 8 │
+└───────────────────┘
 ```
 
-**Example**
+**All weights are zero returns NaN**
 
-Query:
-
-```sql
+```sql title=Query
 SELECT avgWeighted(x, w)
 FROM VALUES('x Int8, w Int8', (0, 0), (1, 0), (10, 0))
 ```
 
-Result:
-
-```text
-┌─avgWeighted(x, weight)─┐
-│                    nan │
-└────────────────────────┘
+```response title=Response
+┌─avgWeighted(x, w)─┐
+│               nan │
+└───────────────────┘
 ```
 
-**Example**
+**Empty table returns NaN**
 
-Query:
-
-```sql
+```sql title=Query
 CREATE TABLE test (t UInt8) ENGINE = Memory;
-SELECT avgWeighted(t) FROM test
+SELECT avgWeighted(t, t) FROM test
 ```
 
-Result:
-
-```text
-┌─avgWeighted(x, weight)─┐
-│                    nan │
-└────────────────────────┘
+```response title=Response
+┌─avgWeighted(t, t)─┐
+│               nan │
+└───────────────────┘
 ```
+
+
+

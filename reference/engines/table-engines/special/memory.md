@@ -2,18 +2,20 @@
 description: 'The Memory engine stores data in RAM, in uncompressed form. Data is
   stored in exactly the same form as it is received when read. In other words, reading
   from this table is completely free.'
-sidebarTitle: 'Memory'
+sidebar_label: 'Memory'
 sidebar_position: 110
-old-slug: /engines/table-engines/special/memory
+slug: /engines/table-engines/special/memory
 title: 'Memory table engine'
 doc_type: 'reference'
 ---
 
-<Note>
+# Memory table engine
+
+:::note
 When using the Memory table engine on ClickHouse Cloud, data is not replicated across all nodes (by design). To guarantee that all queries are routed to the same node and that the Memory table engine works as expected, you can do one of the following:
 - Execute all operations in the same session
-- Use a client that uses TCP or the native interface (which enables support for sticky connections) such as [clickhouse-client](/interfaces/cli)
-</Note>
+- Use a client that uses TCP or the native interface (which enables support for sticky connections) such as [clickhouse-client](/interfaces/client)
+:::
 
 The Memory engine stores data in RAM, in uncompressed form. Data is stored in exactly the same form as it is received when read. In other words, reading from this table is completely free.
 Concurrent data access is synchronized. Locks are short: read and write operations do not block each other.
@@ -27,7 +29,7 @@ The Memory engine is used by the system for temporary tables with external query
 
 Upper and lower bounds can be specified to limit Memory engine table size, effectively allowing it to act as a circular buffer (see [Engine Parameters](#engine-parameters)).
 
-## Engine parameters 
+## Engine parameters {#engine-parameters}
 
 - `min_bytes_to_keep` — Minimum bytes to keep when memory table is size-capped.
   - Default value: `0`
@@ -42,7 +44,7 @@ Upper and lower bounds can be specified to limit Memory engine table size, effec
 - `compress` - Whether to compress data in memory.
   - Default value: `false`
 
-## Usage 
+## Usage {#usage}
 
 **Initialize settings**
 ```sql
@@ -56,7 +58,7 @@ ALTER TABLE memory MODIFY SETTING min_rows_to_keep = 100, max_rows_to_keep = 100
 
 **Note:** Both `bytes` and `rows` capping parameters can be set at the same time, however, the lower bounds of `max` and `min` will be adhered to.
 
-## Examples 
+## Examples {#examples}
 ```sql
 CREATE TABLE memory (i UInt32) ENGINE = Memory SETTINGS min_bytes_to_keep = 4096, max_bytes_to_keep = 16384;
 

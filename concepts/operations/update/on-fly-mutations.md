@@ -1,5 +1,5 @@
 ---
-old-slug: /guides/developer/on-the-fly-mutations
+slug: /guides/developer/on-the-fly-mutations
 sidebarTitle: 'On-the-fly mutation'
 title: 'On-the-fly Mutations'
 keywords: ['On-the-fly mutation']

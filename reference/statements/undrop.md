@@ -1,10 +1,12 @@
 ---
 description: 'Documentation for UNDROP TABLE'
-sidebarTitle: 'UNDROP'
-old-slug: /sql-reference/statements/undrop
+sidebar_label: 'UNDROP'
+slug: /sql-reference/statements/undrop
 title: 'UNDROP TABLE'
 doc_type: 'reference'
 ---
+
+# UNDROP TABLE
 
 Cancels the dropping of the table.
 
@@ -14,9 +16,9 @@ a system table called `system.dropped_tables`.
 
 If you have a materialized view without a `TO` clause associated with the dropped table, then you will also have to UNDROP the inner table of that view.
 
-<Tip>
+:::tip
 Also see [DROP TABLE](/sql-reference/statements/drop.md)
-</Tip>
+:::
 
 Syntax:
 

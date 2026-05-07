@@ -1,6 +1,6 @@
 ---
 title: 'Best Practices'
-old-slug: /best-practices
+slug: /best-practices
 description: 'Best practices for designing and optimizing your ClickHouse tables and queries.'
 ---
 

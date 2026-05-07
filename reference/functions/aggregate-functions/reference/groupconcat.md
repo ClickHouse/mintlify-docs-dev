@@ -1,105 +1,86 @@
 ---
 description: 'Calculates a concatenated string from a group of strings, optionally
   separated by a delimiter, and optionally limited by a maximum number of elements.'
-sidebarTitle: 'groupConcat'
-sidebar_position: 363
-old-slug: /sql-reference/aggregate-functions/reference/groupconcat
+sidebar_label: 'groupConcat'
+slug: /sql-reference/aggregate-functions/reference/groupconcat
 title: 'groupConcat'
 doc_type: 'reference'
 ---
 
 Calculates a concatenated string from a group of strings, optionally separated by a delimiter, and optionally limited by a maximum number of elements.
 
-**Syntax**
-
-```sql
-groupConcat[(delimiter [, limit])](expression);
-```
-
-Alias: `group_concat`
-
-**Arguments**
-
-- `expression` — The expression or column name that outputs strings to be concatenated.
-- `delimiter` — A [string](../../../sql-reference/data-types/string.md) that will be used to separate concatenated values. This parameter is optional and defaults to an empty string or delimiter from parameters if not specified.
-
-**Parameters**
-
-- `delimiter` — A [string](../../../sql-reference/data-types/string.md) that will be used to separate concatenated values. This parameter is optional and defaults to an empty string if not specified.
-- `limit` — A positive [integer](../../../sql-reference/data-types/int-uint.md) specifying the maximum number of elements to concatenate. If more elements are present, excess elements are ignored. This parameter is optional.
-
-<Note>
+:::note
 If delimiter is specified without limit, it must be the first parameter. If both delimiter and limit are specified, delimiter must precede limit.
 
 Also, if different delimiters are specified as parameters and arguments, the delimiter from arguments will be used only.
-</Note>
+:::
+    
+
+**Syntax**
+
+```sql
+groupConcat[(delimiter [, limit])](expression)
+```
+
+**Aliases**: `group_concat`
+
+**Parameters**
+
+- `delimiter` — A string that will be used to separate concatenated values. This parameter is optional and defaults to an empty string if not specified. [`String`](/sql-reference/data-types/string)
+- `limit` — A positive integer specifying the maximum number of elements to concatenate. If more elements are present, excess elements are ignored. This parameter is optional. [`UInt*`](/sql-reference/data-types/int-uint)
+
+
+**Arguments**
+
+- `expression` — The expression or column name that outputs strings to be concatenated. [`String`](/sql-reference/data-types/string)
+- `delimiter` — A string that will be used to separate concatenated values. This parameter is optional and defaults to an empty string or delimiter from parameters if not specified. [`String`](/sql-reference/data-types/string)
+
 
 **Returned value**
 
-- Returns a [string](../../../sql-reference/data-types/string.md) consisting of the concatenated values of the column or expression. If the group has no elements or only null elements, and the function does not specify a handling for only null values, the result is a nullable string with a null value.
+Returns a string consisting of the concatenated values of the column or expression. If the group has no elements or only null elements, and the function does not specify a handling for only null values, the result is a nullable string with a null value. [`String`](/sql-reference/data-types/string)
 
 **Examples**
 
-Input table:
+**Basic usage without a delimiter**
 
-```text
-┌─id─┬─name─┐
-│  1 │ John │
-│  2 │ Jane │
-│  3 │ Bob  │
-└────┴──────┘
-```
-
-1.    Basic usage without a delimiter:
-
-Query:
-
-```sql
+```sql title=Query
 SELECT groupConcat(Name) FROM Employees;
 ```
 
-Result:
-
-```text
+```response title=Response
 JohnJaneBob
 ```
 
-This concatenates all names into one continuous string without any separator.
+**Using comma as a delimiter (parameter syntax)**
 
-2. Using comma as a delimiter:
-
-Query:
-
-```sql
-SELECT groupConcat(', ')(Name)  FROM Employees;
+```sql title=Query
+SELECT groupConcat(', ')(Name) FROM Employees;
 ```
 
-or
-
-```sql
-SELECT groupConcat(Name, ', ')  FROM Employees;
-```
-
-Result:
-
-```text
+```response title=Response
 John, Jane, Bob
 ```
 
-This output shows the names separated by a comma followed by a space.
+**Using comma as a delimiter (argument syntax)**
 
-3. Limiting the number of concatenated elements
+```sql title=Query
+SELECT groupConcat(Name, ', ') FROM Employees;
+```
 
-Query:
+```response title=Response
+John, Jane, Bob
+```
 
-```sql
+**Limiting the number of concatenated elements**
+
+```sql title=Query
 SELECT groupConcat(', ', 2)(Name) FROM Employees;
 ```
 
-Result:
-
-```text
+```response title=Response
 John, Jane
 ```
 
-This query limits the output to the first two names, even though there are more names in the table.
+
+

@@ -1,6 +1,6 @@
 ---
 description: 'Documentation for Clickhouse Obfuscator'
-old-slug: /operations/utilities/clickhouse-obfuscator
+slug: /operations/utilities/clickhouse-obfuscator
 title: 'clickhouse-obfuscator'
 doc_type: 'reference'
 ---

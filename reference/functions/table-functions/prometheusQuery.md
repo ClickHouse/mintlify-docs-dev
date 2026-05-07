@@ -1,15 +1,17 @@
 ---
 description: 'Evaluates a prometheus query using data from a TimeSeries table.'
-sidebarTitle: 'prometheusQuery'
+sidebar_label: 'prometheusQuery'
 sidebar_position: 145
-old-slug: /sql-reference/table-functions/prometheusQuery
+slug: /sql-reference/table-functions/prometheusQuery
 title: 'prometheusQuery'
 doc_type: 'reference'
 ---
 
+# prometheusQuery Table Function
+
 Evaluates a prometheus query using data from a TimeSeries table.
 
-## Syntax 
+## Syntax {#syntax}
 
 ```sql
 prometheusQuery('db_name', 'time_series_table', 'promql_query', evaluation_time)
@@ -17,14 +19,14 @@ prometheusQuery(db_name.time_series_table, 'promql_query', evaluation_time)
 prometheusQuery('time_series_table', 'promql_query', evaluation_time)
 ```
 
-## Arguments 
+## Arguments {#arguments}
 
 - `db_name` - The name of the database where a TimeSeries table is located.
 - `time_series_table` - The name of a TimeSeries table.
 - `promql_query` - A query written in [PromQL syntax](https://prometheus.io/docs/prometheus/latest/querying/basics/).
 - `evaluation_time - The evaluation timestamp. To evaluate a query at the current time, use `now()` as `evaluation_time`.
 
-## Returned value 
+## Returned value {#returned_value}
 
 The function can returns different columns depending on the result type of the query passed to parameter `promql_query`:
 
@@ -35,7 +37,7 @@ The function can returns different columns depending on the result type of the q
 | scalar      | scalar ValueType | prometheusQuery(mytable, '1h30m') |
 | string      | string String | prometheusQuery(mytable, '"abc"') |
 
-## Example 
+## Example {#example}
 
 ```sql
 SELECT * FROM prometheusQuery(mytable, 'rate(http_requests{job="prometheus"}[10m])[1h:10m]', now())

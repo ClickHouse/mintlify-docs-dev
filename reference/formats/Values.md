@@ -4,21 +4,23 @@ description: 'Documentation for the Values format'
 input_format: true
 keywords: ['Values']
 output_format: true
-old-slug: /interfaces/formats/Values
+slug: /interfaces/formats/Values
 title: 'Values'
 doc_type: 'guide'
 ---
 
-<Badge intent="success">Input</Badge> <Badge intent="success">Output</Badge>
+| Input | Output | Alias |
+|-------|--------|-------|
+| ✔     | ✔      |       |
 
-## Description 
+## Description {#description}
 
 The `Values` format prints every row in brackets. 
 
 - Rows are separated by commas without a comma after the last row. 
 - The values inside the brackets are also comma-separated. 
 - Numbers are output in a decimal format without quotes. 
-- Arrays are output in square brackets. 
+- Arrays are output in `[]`.
 - Strings, dates, and dates with times are output in quotes. 
 - Escaping rules and parsing are similar to the [TabSeparated](TabSeparated/TabSeparated.md) format.
 
@@ -31,9 +33,9 @@ The minimum set of characters that you need to escape when passing data in the `
 
 This is the format that is used in `INSERT INTO t VALUES ...`, but you can also use it for formatting query results.
 
-## Example usage 
+## Example usage {#example-usage}
 
-## Format settings 
+## Format settings {#format-settings}
 
 | Setting                                                                                                                                                     | Description                                                                                                                                                                                   | Default |
 |-------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|

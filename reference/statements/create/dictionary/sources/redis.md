@@ -1,15 +1,19 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/sources/redis
+slug: /sql-reference/statements/create/dictionary/sources/redis
 title: 'Redis dictionary source'
+sidebar_position: 10
+sidebar_label: 'Redis'
 description: 'Configure Redis as a dictionary source in ClickHouse.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 SOURCE(REDIS(
@@ -20,8 +24,8 @@ SOURCE(REDIS(
 ))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <source>
@@ -34,7 +38,7 @@ SOURCE(REDIS(
 </source>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 

@@ -1,18 +1,18 @@
 ---
 description: 'The result is equal to the square root of varSamp'
-sidebar_position: 190
-old-slug: /sql-reference/aggregate-functions/reference/stddevsamp
+slug: /sql-reference/aggregate-functions/reference/stddevsamp
 title: 'stddevSamp'
 doc_type: 'reference'
 ---
 
-The result is equal to the square root of [varSamp](../../../sql-reference/aggregate-functions/reference/varsamp.md).
+Returns the sample standard deviation of a numeric data sequence.
+The result is equal to the square root of [`varSamp`](/sql-reference/aggregate-functions/reference/varSamp).
 
-Alias: `STDDEV_SAMP`.
-
-<Note>
-This function uses a numerically unstable algorithm. If you need [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability) in calculations, use the [`stddevSampStable`](../reference/stddevsampstable.md) function. It works slower but provides a lower computational error.
-</Note>
+:::note
+This function uses a numerically unstable algorithm.
+If you need [numerical stability](https://en.wikipedia.org/wiki/Numerical_stability) in calculations, use the [`stddevSampStable`](/sql-reference/aggregate-functions/reference/stddevsampstable) function. It works slower but provides a lower computational error.
+:::
+    
 
 **Syntax**
 
@@ -20,19 +20,22 @@ This function uses a numerically unstable algorithm. If you need [numerical stab
 stddevSamp(x)
 ```
 
-**Parameters**
+**Aliases**: `STDDEV_SAMP`
 
-- `x`: Values for which to find the square root of sample variance. [(U)Int*](../../data-types/int-uint.md), [Float*](../../data-types/float.md), [Decimal*](../../data-types/decimal.md).
+**Arguments**
+
+- `x` — Values for which to find the square root of sample variance. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal*`](/sql-reference/data-types/decimal)
+
 
 **Returned value**
 
-Square root of sample variance of `x`. [Float64](../../data-types/float.md).
+Returns the square root of sample variance of `x`. [`Float64`](/sql-reference/data-types/float)
 
-**Example**
+**Examples**
 
-Query:
+**Computing sample standard deviation**
 
-```sql
+```sql title=Query
 DROP TABLE IF EXISTS test_data;
 CREATE TABLE test_data
 (
@@ -47,10 +50,11 @@ SELECT
 FROM test_data;
 ```
 
-Result:
-
-```response
+```response title=Response
 ┌─stddevSamp(population)─┐
 │                      4 │
 └────────────────────────┘
 ```
+
+
+

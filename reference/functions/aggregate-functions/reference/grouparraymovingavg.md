@@ -1,80 +1,82 @@
 ---
 description: 'Calculates the moving average of input values.'
-sidebar_position: 144
-old-slug: /sql-reference/aggregate-functions/reference/grouparraymovingavg
+slug: /sql-reference/aggregate-functions/reference/grouparraymovingavg
 title: 'groupArrayMovingAvg'
 doc_type: 'reference'
 ---
 
 Calculates the moving average of input values.
 
+:::note
+The function uses rounding towards zero.
+It truncates the decimal places insignificant for the resulting data type.
+:::
+    
+
+**Syntax**
+
 ```sql
 groupArrayMovingAvg(numbers_for_summing)
 groupArrayMovingAvg(window_size)(numbers_for_summing)
 ```
 
-The function can take the window size as a parameter. If left unspecified, the function takes the window size equal to the number of rows in the column.
+**Parameters**
+
+- `window_size` — Size of the calculation window. If left unspecified, the function takes the window size equal to the number of rows in the column. [`UInt64`](/sql-reference/data-types/int-uint)
+
 
 **Arguments**
 
-- `numbers_for_summing` — [Expression](/sql-reference/syntax#expressions) resulting in a numeric data type value.
-- `window_size` — Size of the calculation window.
+- `numbers_for_summing` — Expression resulting in a numeric data type value. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float) or [`Decimal`](/sql-reference/data-types/decimal)
 
-**Returned values**
 
-- Array of the same size and type as the input data.
+**Returned value**
 
-The function uses [rounding towards zero](https://en.wikipedia.org/wiki/Rounding#Rounding_towards_zero). It truncates the decimal places insignificant for the resulting data type.
+Returns an array of the same size as the input data. For non-Decimal input, the array contains Float64 values. For Decimal input, the array contains Decimal values with the input scale. [`Array`](/sql-reference/data-types/array)
 
-**Example**
+**Examples**
 
-The sample table `b`:
+**Usage example**
 
-```sql
+```sql title=Query
 CREATE TABLE t
 (
     `int` UInt8,
     `float` Float32,
     `dec` Decimal32(2)
 )
-ENGINE = TinyLog
-```
+ENGINE = Memory;
 
-```text
-┌─int─┬─float─┬──dec─┐
-│   1 │   1.1 │ 1.10 │
-│   2 │   2.2 │ 2.20 │
-│   4 │   4.4 │ 4.40 │
-│   7 │  7.77 │ 7.77 │
-└─────┴───────┴──────┘
-```
+INSERT INTO t VALUES (1, 1.1, 1.10), (2, 2.2, 2.20), (4, 4.4, 4.40), (7, 7.77, 7.77);
 
-The queries:
-
-```sql
 SELECT
     groupArrayMovingAvg(int) AS I,
     groupArrayMovingAvg(float) AS F,
     groupArrayMovingAvg(dec) AS D
-FROM t
+FROM t;
 ```
 
-```text
-┌─I─────────┬─F───────────────────────────────────┬─D─────────────────────┐
-│ [0,0,1,3] │ [0.275,0.82500005,1.9250001,3.8675] │ [0.27,0.82,1.92,3.86] │
-└───────────┴─────────────────────────────────────┴───────────────────────┘
+```response title=Response
+┌─I────────────────────┬─F─────────────────────────────────────────────────────────────────────────────┬─D─────────────────────┐
+│ [0.25,0.75,1.75,3.5] │ [0.2750000059604645,0.8250000178813934,1.9250000417232513,3.8675000369548798] │ [0.27,0.82,1.92,3.86] │
+└──────────────────────┴───────────────────────────────────────────────────────────────────────────────┴───────────────────────┘
 ```
 
-```sql
+**With window size**
+
+```sql title=Query
 SELECT
     groupArrayMovingAvg(2)(int) AS I,
     groupArrayMovingAvg(2)(float) AS F,
     groupArrayMovingAvg(2)(dec) AS D
-FROM t
+FROM t;
 ```
 
-```text
-┌─I─────────┬─F────────────────────────────────┬─D─────────────────────┐
-│ [0,1,3,5] │ [0.55,1.6500001,3.3000002,6.085] │ [0.55,1.65,3.30,6.08] │
-└───────────┴──────────────────────────────────┴───────────────────────┘
+```response title=Response
+┌─I───────────────┬─F───────────────────────────────────────────────────────────────────────────┬─D─────────────────────┐
+│ [0.5,1.5,3,5.5] │ [0.550000011920929,1.6500000357627869,3.3000000715255737,6.085000038146973] │ [0.55,1.65,3.30,6.08] │
+└─────────────────┴─────────────────────────────────────────────────────────────────────────────┴───────────────────────┘
 ```
+
+
+

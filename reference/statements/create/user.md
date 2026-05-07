@@ -1,8 +1,8 @@
 ---
 description: 'Documentation for User'
-sidebarTitle: 'USER'
+sidebar_label: 'USER'
 sidebar_position: 39
-old-slug: /sql-reference/statements/create/user
+slug: /sql-reference/statements/create/user
 title: 'CREATE USER'
 doc_type: 'reference'
 ---
@@ -18,6 +18,7 @@ CREATE USER [IF NOT EXISTS | OR REPLACE] name1 [, name2 [,...]] [ON CLUSTER clus
     [HOST {LOCAL | NAME 'name' | REGEXP 'name_regexp' | IP 'address' | LIKE 'pattern'} [,...] | ANY | NONE]
     [VALID UNTIL datetime]
     [IN access_storage_type]
+    [ROLE role [,...]]
     [DEFAULT ROLE role [,...]]
     [DEFAULT DATABASE database | NONE]
     [GRANTEES {user | role | ANY | NONE} [,...] [EXCEPT {user | role} [,...]]]
@@ -26,7 +27,7 @@ CREATE USER [IF NOT EXISTS | OR REPLACE] name1 [, name2 [,...]] [ON CLUSTER clus
 
 `ON CLUSTER` clause allows creating users on a cluster, see [Distributed DDL](../../../sql-reference/distributed-ddl.md).
 
-## Identification 
+## Identification {#identification}
 
 There are multiple ways of user identification:
 
@@ -62,16 +63,16 @@ Password complexity requirements can be edited in [config.xml](/operations/confi
 </clickhouse>
 ```
 
-<Note>
+:::note
 In ClickHouse Cloud, by default, passwords must meet the following complexity requirements:
 - Be at least 12 characters long
 - Contain at least 1 numeric character
 - Contain at least 1 uppercase character
 - Contain at least 1 lowercase character
 - Contain at least 1 special character
-</Note>
+:::
 
-## Examples 
+## Examples {#examples}
 
 1. The following username is `name1` and does not require a password - which obviously doesn't provide much security:
 
@@ -85,9 +86,9 @@ In ClickHouse Cloud, by default, passwords must meet the following complexity re
     CREATE USER name2 IDENTIFIED WITH plaintext_password BY 'my_password'
     ```
 
-    <Tip>
+    :::tip
     The password is stored in a SQL text file in `/var/lib/clickhouse/access`, so it's not a good idea to use `plaintext_password`. Try `sha256_password` instead, as demonstrated next...
-    </Tip>
+    :::
 
 3. The most common option is to use a password that is hashed using SHA-256. ClickHouse will hash the password for you when you specify `IDENTIFIED WITH sha256_password`. For example:
 
@@ -102,9 +103,9 @@ In ClickHouse Cloud, by default, passwords must meet the following complexity re
     ATTACH USER name3 IDENTIFIED WITH sha256_hash BY '0C268556C1680BEF0640AAC1E7187566704208398DA31F03D18C74F5C5BE5053' SALT '4FB16307F5E10048196966DD7E6876AE53DE6A1D1F625488482C75F14A5097C7';
     ```
 
-    <Tip>
+    :::tip
     If you have already created a hash value and corresponding salt value for a username, then you can use `IDENTIFIED WITH sha256_hash BY 'hash'` or `IDENTIFIED WITH sha256_hash BY 'hash' SALT 'salt'`. For identification with `sha256_hash` using `SALT` - hash must be calculated from concatenation of 'password' and 'salt'.
-    </Tip>
+    :::
 
 4. The `double_sha1_password` is not typically needed, but comes in handy when working with clients that require it (like the MySQL interface):
 
@@ -133,12 +134,12 @@ In ClickHouse Cloud, by default, passwords must meet the following complexity re
 
     The work factor must be between 4 and 31, with a default value of 12.
 
-   <Warning>
+   :::warning
    For applications with high-frequency authentication,
    consider alternative authentication methods due to
    bcrypt's computational overhead at higher work factors.
-   </Warning>
-6. 
+   :::
+
 6. The type of the password can also be omitted:
 
     ```sql
@@ -164,7 +165,7 @@ Notes:
 2. `no_password` can not co-exist with other authentication methods for security reasons. Therefore, you can only specify
 `no_password` if it is the only authentication method in the query. 
 
-## User Host 
+## User Host {#user-host}
 
 User host is a host from which a connection to ClickHouse server could be established. The host can be specified in the `HOST` query section in the following ways:
 
@@ -181,11 +182,11 @@ Another way of specifying host is to use `@` syntax following the username. Exam
 - `CREATE USER mira@'localhost'` — Equivalent to the `HOST LOCAL` syntax.
 - `CREATE USER mira@'192.168.%.%'` — Equivalent to the `HOST LIKE` syntax.
 
-<Tip>
+:::tip
 ClickHouse treats `user_name@'address'` as a username as a whole. Thus, technically you can create multiple users with the same `user_name` and different constructions after `@`. However, we do not recommend to do so.
-</Tip>
+:::
 
-## VALID UNTIL Clause 
+## VALID UNTIL Clause {#valid-until-clause}
 
 Allows you to specify the expiration date and, optionally, the time for an authentication method. It accepts a string as a parameter. It is recommended to use the `YYYY-MM-DD [hh:mm:ss] [timezone]` format for datetime. By default, this parameter equals `'infinity'`.
 The `VALID UNTIL` clause can only be specified along with an authentication method, except for the case where no authentication method has been specified in the query. In this scenario, the `VALID UNTIL` clause will be applied to all existing authentication methods.
@@ -198,7 +199,7 @@ Examples:
 - ```CREATE USER name1 VALID UNTIL '2025-01-01 12:00:00 `Asia/Tokyo`'```
 - `CREATE USER name1 IDENTIFIED WITH plaintext_password BY 'no_expiration', bcrypt_password BY 'expiration_set' VALID UNTIL '2025-01-01''`
 
-## GRANTEES Clause 
+## GRANTEES Clause {#grantees-clause}
 
 Specifies users or roles which are allowed to receive [privileges](../../../sql-reference/statements/grant.md#privileges) from this user on the condition this user has also all required access granted with [GRANT OPTION](../../../sql-reference/statements/grant.md#granting-privilege-syntax). Options of the `GRANTEES` clause:
 
@@ -209,7 +210,7 @@ Specifies users or roles which are allowed to receive [privileges](../../../sql-
 
 You can exclude any user or role by using the `EXCEPT` expression. For example, `CREATE USER user1 GRANTEES ANY EXCEPT user2`. It means if `user1` has some privileges granted with `GRANT OPTION` it will be able to grant those privileges to anyone except `user2`.
 
-## Examples 
+## Examples {#examples-1}
 
 Create the user account `mira` protected by the password `qwerty`:
 
@@ -219,24 +220,22 @@ CREATE USER mira HOST IP '127.0.0.1' IDENTIFIED WITH sha256_password BY 'qwerty'
 
 `mira` should start client app at the host where the ClickHouse server runs.
 
-Create the user account `john`, assign roles to it and make this roles default:
+Create the user account `john` and assign roles:
 
 ```sql
-CREATE USER john DEFAULT ROLE role1, role2;
+CREATE USER john ROLE role1, role2;
 ```
 
-Create the user account `john` and make all his future roles default:
+Create the user account `john`, assign roles and make some of them default:
 
 ```sql
-CREATE USER john DEFAULT ROLE ALL;
+CREATE USER john ROLE role1, role2 DEFAULT ROLE role1;
 ```
 
-When some role is assigned to `john` in the future, it will become default automatically.
-
-Create the user account `john` and make all his future roles default excepting `role1` and `role2`:
+or
 
 ```sql
-CREATE USER john DEFAULT ROLE ALL EXCEPT role1, role2;
+CREATE USER john ROLE role1, role2 DEFAULT ROLE ALL EXCEPT role2;
 ```
 
 Create the user account `john` and allow him to grant his privileges to the user with `jack` account:

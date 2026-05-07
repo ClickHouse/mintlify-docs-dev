@@ -1,10 +1,14 @@
 ---
-old-slug: /sql-reference/statements/create/dictionary/layouts/cache
+slug: /sql-reference/statements/create/dictionary/layouts/cache
 title: 'cache dictionary layout'
+sidebar_label: 'cache'
+sidebar_position: 6
 description: 'Store a dictionary in a fixed-size in-memory cache.'
 doc_type: 'reference'
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 The `cached` dictionary layout type is stores the dictionary in a cache that has a fixed number of cells.
 These cells contain frequently used elements.
@@ -28,14 +32,14 @@ All types of sources are supported.
 Example of settings:
 
 <Tabs>
-<Tab title="DDL">
+<TabItem value="ddl" label="DDL" default>
 
 ```sql
 LAYOUT(CACHE(SIZE_IN_CELLS 1000000000))
 ```
 
-</Tab>
-<Tab title="Configuration file">
+</TabItem>
+<TabItem value="xml" label="Configuration file">
 
 ```xml
 <layout>
@@ -56,7 +60,7 @@ LAYOUT(CACHE(SIZE_IN_CELLS 1000000000))
 </layout>
 ```
 
-</Tab>
+</TabItem>
 </Tabs>
 <br/>
 
@@ -67,6 +71,6 @@ Set a large enough cache size. You need to experiment to select the number of ce
 3.  Assess memory consumption using the `system.dictionaries` table.
 4.  Increase or decrease the number of cells until the required memory consumption is reached.
 
-<Note>
-**ClickHouse is not recommended as a source for this layout. Dictionary lookups require random point reads, which are not the access pattern ClickHouse is optimized for.**
-</Note>
+:::note
+ClickHouse is not recommended as a source for this layout. Dictionary lookups require random point reads, which are not the access pattern ClickHouse is optimized for.
+:::

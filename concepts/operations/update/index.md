@@ -1,5 +1,5 @@
 ---
-old-slug: /updating-data
+slug: /updating-data
 title: 'Updating Data'
 description: 'Updating Data Table Of Contents'
 keywords: ['update', 'updating data']

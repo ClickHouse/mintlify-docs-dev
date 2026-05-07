@@ -2,15 +2,15 @@
 description: 'Aggregate function that calculates the maximum number of times that
   a group of intervals intersects each other (if all the intervals intersect at least
   once).'
-sidebar_position: 163
-old-slug: /sql-reference/aggregate-functions/reference/maxintersections
+slug: /sql-reference/aggregate-functions/reference/maxintersections
 title: 'maxIntersections'
 doc_type: 'reference'
 ---
 
 Aggregate function that calculates the maximum number of times that a group of intervals intersects each other (if all the intervals intersect at least once).
+    
 
-The syntax is:
+**Syntax**
 
 ```sql
 maxIntersections(start_column, end_column)
@@ -18,17 +18,19 @@ maxIntersections(start_column, end_column)
 
 **Arguments**
 
-- `start_column` – the numeric column that represents the start of each interval. If `start_column` is `NULL` or 0 then the interval will be skipped.
+- `start_column` — A numeric column that represents the start of each interval. If `start_column` is `NULL` or 0 then the interval will be skipped. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float)
+- `end_column` — A numeric column that represents the end of each interval. If `end_column` is `NULL` or 0 then the interval will be skipped. [`(U)Int*`](/sql-reference/data-types/int-uint) or [`Float*`](/sql-reference/data-types/float)
 
-- `end_column` - the numeric column that represents the end of each interval. If `end_column` is `NULL` or 0 then the interval will be skipped.
 
 **Returned value**
 
-Returns the maximum number of intersected intervals.
+Returns the maximum number of intersected intervals. [`UInt64`](/sql-reference/data-types/int-uint)
 
-**Example**
+**Examples**
 
-```sql
+**Calculating maximum intersections**
+
+```sql title=Query
 CREATE TABLE my_events (
     start UInt32,
     end UInt32
@@ -37,30 +39,19 @@ ENGINE = MergeTree
 ORDER BY tuple();
 
 INSERT INTO my_events VALUES
-   (1, 3),
-   (1, 6),
-   (2, 5),
-   (3, 7);
-```
+(1, 3),
+(1, 6),
+(2, 5),
+(3, 7);
 
-The intervals look like the following:
-
-```response
-1 - 3
-1 - - - - 6
-  2 - - 5
-    3 - - - 7
-```
-
-Three of these intervals have a common value (the value is `4`, but the value that is common is not important, we are measuring the count of the intersections). The intervals `(1,3)` and `(3,7)` share an endpoint but are not considered intersecting by the `maxIntersections` function.
-
-```sql
 SELECT maxIntersections(start, end) FROM my_events;
 ```
 
-Response:
-```response
-3
+```response title=Response
+┌─maxIntersections(start, end)─┐
+│                            3 │
+└──────────────────────────────┘
 ```
 
-If you have multiple occurrences of the maximum interval, you can use the [`maxIntersectionsPosition` function](./maxintersectionsposition.md) to locate the number and location of those occurrences.
+
+

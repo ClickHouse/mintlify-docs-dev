@@ -1,12 +1,14 @@
 ---
 description: 'This engine allows integrating ClickHouse with NATS to publish or subscribe
   to message subjects, and process new messages as they become available.'
-sidebarTitle: 'NATS table engine'
+sidebar_label: 'NATS'
 sidebar_position: 140
-old-slug: /engines/table-engines/integrations/nats
+slug: /engines/table-engines/integrations/nats
 title: 'NATS table engine'
 doc_type: 'guide'
 ---
+
+# NATS table engine {#redisstreams-engine}
 
 This engine allows integrating ClickHouse with [NATS](https://nats.io/).
 
@@ -15,7 +17,7 @@ This engine allows integrating ClickHouse with [NATS](https://nats.io/).
 - Publish or subscribe to message subjects.
 - Process new messages as they become available.
 
-## Creating a table 
+## Creating a table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -76,7 +78,8 @@ Optional parameters:
 SSL connection:
 
 For secure connection use `nats_secure = 1`.
-The default behaviour of the used library is not to check if the created TLS connection is sufficiently secure. Whether the certificate is expired, self-signed, missing or invalid: the connection is simply permitted. More strict checking of certificates can possibly be implemented in the future.
+Certificate verification is controlled by the `CLICKHOUSE_NATS_TLS_SECURE` environment variable;
+If the certificate is expired, self-signed, missing, or otherwise invalid, disable verification by setting `CLICKHOUSE_NATS_TLS_SECURE=0`.
 
 Writing to NATS table:
 
@@ -116,7 +119,7 @@ Example:
 ```
 
 The NATS server configuration can be added using the ClickHouse config file.
-More specifically you can add Redis password for NATS engine:
+More specifically you can add your password for the NATS engine:
 
 ```xml
 <nats>
@@ -126,7 +129,7 @@ More specifically you can add Redis password for NATS engine:
 </nats>
 ```
 
-## Description 
+## Description {#description}
 
 `SELECT` is not particularly useful for reading messages (except for debugging), because each message can be read only once. It is more practical to create real-time threads using [materialized views](../../../sql-reference/statements/create/view.md). To do this:
 
@@ -167,7 +170,7 @@ To stop receiving streams data or to change the conversion logic, detach the mat
 
 If you want to change the target table by using `ALTER`, we recommend disabling the material view to avoid discrepancies between the target table and the data from the view.
 
-## Virtual columns 
+## Virtual columns {#virtual-columns}
 
 - `_subject` - NATS message subject. Data type: `String`.
 
@@ -178,7 +181,7 @@ Additional virtual columns when `nats_handle_error_mode='stream'`:
 
 Note: `_raw_message` and `_error` virtual columns are filled only in case of exception during parsing, they are always `NULL` when message was parsed successfully.
 
-## Data formats support 
+## Data formats support {#data-formats-support}
 
 NATS engine supports all [formats](../../../interfaces/formats.md) supported in ClickHouse.
 The number of rows in one NATS message depends on whether the format is row-based or block-based:
@@ -186,11 +189,12 @@ The number of rows in one NATS message depends on whether the format is row-base
 - For row-based formats the number of rows in one NATS message can be controlled by setting `nats_max_rows_per_message`.
 - For block-based formats we cannot divide block into smaller parts, but the number of rows in one block can be controlled by general setting [max_block_size](/operations/settings/settings#max_block_size).
 
-## Using JetStream 
+## Using JetStream {#using-jetstream}
 
 Before using NATS engine with NATS JetStream, you must create a NATS stream and a durable pull consumer. For this, you can use, for example, the nats utility from the [NATS CLI](https://github.com/nats-io/natscli) package:
-<AccordionGroup>
-<Accordion title="creating stream">
+<details>
+<summary>creating stream</summary>
+
 ```bash
 $ nats stream add
 ? Stream Name stream_name
@@ -245,8 +249,11 @@ State:
            Last Sequence: 0
         Active Consumers: 0
 ```
-</Accordion>
-<Accordion title="creating durable pull consumer">
+</details>
+
+<details>
+<summary>creating durable pull consumer</summary>
+
 ```bash
 $ nats consumer add
 ? Select a Stream stream_name
@@ -282,8 +289,8 @@ State:
     Unprocessed Messages: 0
            Waiting Pulls: 0 of maximum 512
 ```
-</Accordion>
-</AccordionGroup>
+</details>
+
 After creating stream and durable pull consumer, we can create a table with NATS engine. To do this, you need to initialize: nats_stream, nats_consumer_name, and nats_subjects:
 
 ```SQL

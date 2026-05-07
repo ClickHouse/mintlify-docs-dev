@@ -1,7 +1,6 @@
 ---
 description: 'Computes the sample skewness of a sequence.'
-sidebar_position: 186
-old-slug: /sql-reference/aggregate-functions/reference/skewsamp
+slug: /sql-reference/aggregate-functions/reference/skewsamp
 title: 'skewSamp'
 doc_type: 'reference'
 ---
@@ -9,6 +8,9 @@ doc_type: 'reference'
 Computes the [sample skewness](https://en.wikipedia.org/wiki/Skewness) of a sequence.
 
 It represents an unbiased estimate of the skewness of a random variable if passed values form its sample.
+    
+
+**Syntax**
 
 ```sql
 skewSamp(expr)
@@ -16,14 +18,38 @@ skewSamp(expr)
 
 **Arguments**
 
-`expr` — [Expression](/sql-reference/syntax#expressions) returning a number.
+- `expr` — An expression returning a number. [`Expression`](/sql-reference/data-types/special-data-types/expression)
+
 
 **Returned value**
 
-The skewness of the given distribution. Type — [Float64](../../../sql-reference/data-types/float.md). If `n <= 1` (`n` is the size of the sample), then the function returns `nan`.
+Returns the skewness of the given distribution. If `n <= 1` (`n` is the size of the sample), then the function returns `nan`. [`Float64`](/sql-reference/data-types/float)
 
-**Example**
+**Examples**
 
-```sql
-SELECT skewSamp(value) FROM series_with_value_column;
+**Symmetric distribution**
+
+```sql title=Query
+SELECT skewSamp(number) FROM numbers(100);
 ```
+
+```response title=Response
+┌─skewSamp(number)─┐
+│                0 │
+└──────────────────┘
+```
+
+**Right-skewed distribution**
+
+```sql title=Query
+SELECT skewSamp(x) FROM (SELECT pow(number, 2) AS x FROM numbers(10));
+```
+
+```response title=Response
+┌────────skewSamp(x)─┐
+│ 0.5751042382747413 │
+└────────────────────┘
+```
+
+
+

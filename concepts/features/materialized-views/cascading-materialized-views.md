@@ -1,16 +1,16 @@
 ---
-old-slug: /guides/developer/cascading-materialized-views
-title: 'Cascading Materialized Views'
+slug: /guides/developer/cascading-materialized-views
+title: 'Cascading materialized views'
 description: 'How to use multiple materialized views from a source table.'
 keywords: ['materialized view', 'aggregation']
 doc_type: 'guide'
 ---
 
+# Cascading materialized views
+
 This example demonstrates how to create a materialized view, and then how to cascade a second materialized view on to the first. In this page, you will see how to do it, many of the possibilities, and the limitations. Different use cases can be answered by creating a Materialized view using a second Materialized view as the source.
 
-<Frame>
-<iframe src="https://www.youtube.com/embed/QDAJTKZT8y4?si=1KqPNHHfaKfxtPat" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-</Frame>
+<iframe width="1024" height="576" src="https://www.youtube.com/embed/QDAJTKZT8y4?si=1KqPNHHfaKfxtPat" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 <br />
 
@@ -31,7 +31,7 @@ You could choose one of these options:
 
 Preparing the data using Materialized views will allow you to limit the amount of data and calculation ClickHouse needs to do, making your SELECT requests faster.
 
-## Source table for the materialized views 
+## Source table for the materialized views {#source-table-for-the-materialized-views}
 
 Create the source table, because our goals involve reporting on the aggregated data and not the individual rows, we can parse it, pass the information on to the Materialized Views, and discard the actual incoming data. This meets our goals and saves on storage so we will use the `Null` table engine.
 
@@ -49,11 +49,11 @@ CREATE TABLE analytics.hourly_data
 ENGINE = Null
 ```
 
-<Note>
+:::note
 You can create a materialized view on a Null table. So the data written to the table will end up affecting the view, but the original raw data will still be discarded.
-</Note>
+:::
 
-## Monthly aggregated table and materialized view 
+## Monthly aggregated table and materialized view {#monthly-aggregated-table-and-materialized-view}
 
 For the first materialized view, we need to create the `Target` table, for this example, it will be `analytics.monthly_aggregated_data` and we will store the sum of the views by month and domain name.
 
@@ -84,7 +84,7 @@ GROUP BY
     month
 ```
 
-## Yearly aggregated table and materialized view 
+## Yearly aggregated table and materialized view {#yearly-aggregated-table-and-materialized-view}
 
 Now we will create the second Materialized view that will be linked to our previous target table `monthly_aggregated_data`.
 
@@ -121,15 +121,15 @@ GROUP BY
     year
 ```
 
-<Note>
-A common misinterpretation when working with Materialized views is that data is read from the table, This is not how `Materialized views` work; the data forwarded is the inserted block, not the final result in your table.
+:::note
+A common misinterpretation when working with Materialized views is that data is read from the table, This isn't how `Materialized views` work; the data forwarded is the inserted block, not the final result in your table.
 
-Let's imagine in this example that the engine used in `monthly_aggregated_data` is a CollapsingMergeTree, the data forwarded to our second Materialized view `year_aggregated_data_mv` will not be the final result of the collapsed table, it will forward the block of data with the fields defined as in the `SELECT ... GROUP BY`.
+Let's imagine in this example that the engine used in `monthly_aggregated_data` is a CollapsingMergeTree, the data forwarded to our second Materialized view `year_aggregated_data_mv` won't be the final result of the collapsed table, it will forward the block of data with the fields defined as in the `SELECT ... GROUP BY`.
 
-If you are using CollapsingMergeTree, ReplacingMergeTree, or even SummingMergeTree and you plan to create a cascade Materialized view you need to understand the limitations described here.
-</Note>
+If you're using CollapsingMergeTree, ReplacingMergeTree, or even SummingMergeTree and you plan to create a cascade Materialized view you need to understand the limitations described here.
+:::
 
-## Sample data 
+## Sample data {#sample-data}
 
 Now is the time to test our cascade materialized view by inserting some data:
 
@@ -153,11 +153,11 @@ Ok.
 0 rows in set. Elapsed: 0.002 sec.
 ```
 
-We have used a small dataset to be sure we can follow and compare the result with what we are expecting, once your flow is correct with a small data set, you could just move to a large amount of data.
+We have used a small dataset to be sure we can follow and compare the result with what we're expecting, once your flow is correct with a small data set, you could just move to a large amount of data.
 
-## Results 
+## Results {#results}
 
-If you try to query the target table by selecting the `sumCountViews` field, you will see the binary representation (in some terminals), as the value is not stored as a number but as an AggregateFunction type.
+If you try to query the target table by selecting the `sumCountViews` field, you will see the binary representation (in some terminals), as the value isn't stored as a number but as an AggregateFunction type.
 To get the final result of the aggregation you should use the `-Merge` suffix.
 
 You can see the special characters stored in AggregateFunction with this query:
@@ -252,7 +252,7 @@ GROUP BY
 2 rows in set. Elapsed: 0.004 sec.
 ```
 
-## Combining multiple source tables to single target table 
+## Combining multiple source tables to single target table {#combining-multiple-source-tables-to-single-target-table}
 
 Materialized views can also be used to combine multiple source tables into the same destination table. This is useful for creating a materialized view that is similar to a `UNION ALL` logic.
 

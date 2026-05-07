@@ -1,5 +1,5 @@
 ---
-old-slug: /best-practices/use-materialized-views
+slug: /best-practices/use-materialized-views
 sidebar_position: 10
 sidebarTitle: 'Use materialized views'
 title: 'Use Materialized Views'
