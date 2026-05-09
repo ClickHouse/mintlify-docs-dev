@@ -6,31 +6,29 @@ keywords: ['sparse primary index', 'primary index', 'index']
 doc_type: 'guide'
 ---
 
-import visual01 from '@site/static/images/managing-data/core-concepts/primary-index-light_01.gif';
-import visual02 from '@site/static/images/managing-data/core-concepts/primary-index-light_02.gif';
-import visual03 from '@site/static/images/managing-data/core-concepts/primary-index-light_03.gif';
+import { Image } from "/snippets/components/Image.jsx";
 
-import Image from '@theme/IdealImage';
+<Tip>
+**Looking for advanced indexing details?**
 
-:::tip Looking for advanced indexing details?
 This page introduces ClickHouse's sparse primary index, how it's built, how it works, and how it helps accelerate queries.
 
-For advanced indexing strategies and deeper technical detail, see the [primary indexes deep dive](/guides/best-practices/sparse-primary-indexes).
-:::
+For advanced indexing strategies and deeper technical detail, see the [primary indexes deep dive](/guides/cloud-oss/data-modelling/sparse-primary-indexes).
+</Tip>
 
 ## How does the sparse primary index work in ClickHouse? \{#how-does-the-sparse-primary-index-work-in-clickHouse\}
 
 <br/>
 
-The sparse primary index in ClickHouse helps efficiently identify [granules](/guides/best-practices/sparse-primary-indexes#data-is-organized-into-granules-for-parallel-data-processing)—blocks of rows—that might contain data matching a query's condition on the table's primary key columns. In the next section, we explain how this index is constructed from the values in those columns.
+The sparse primary index in ClickHouse helps efficiently identify [granules](/guides/cloud-oss/data-modelling/sparse-primary-indexes#data-is-organized-into-granules-for-parallel-data-processing)—blocks of rows—that might contain data matching a query's condition on the table's primary key columns. In the next section, we explain how this index is constructed from the values in those columns.
 
 ### Sparse primary index creation \{#sparse-primary-index-creation\}
 
-To illustrate how the sparse primary index is built, we use the [uk_price_paid_simple](/parts) table along with some animations.
+To illustrate how the sparse primary index is built, we use the [uk_price_paid_simple](/concepts/core-concepts/parts) table along with some animations.
 
-As a [reminder](/parts), in our ① example table with the primary key (town, street), ② inserted data is ③ stored on disk, sorted by the primary key column values, and compressed, in separate files for each column:
+As a [reminder](/concepts/core-concepts/parts), in our ① example table with the primary key (town, street), ② inserted data is ③ stored on disk, sorted by the primary key column values, and compressed, in separate files for each column:
 
-<Image img={visual01} size="lg"/>
+<Image img="/static/images/managing-data/core-concepts/primary-index-light_01.gif" size="lg"/>
 
 <br/><br/>
 
@@ -38,7 +36,7 @@ For processing, each column's data is ④ logically divided into granules—each
 
 This granule structure is also what makes the primary index **sparse**: instead of indexing every row, ClickHouse stores ⑤ the primary key values from just one row per granule—specifically, the first row. This results in one index entry per granule:
 
-<Image img={visual02} size="lg"/>
+<Image img="/static/images/managing-data/core-concepts/primary-index-light_02.gif" size="lg"/>
 
 <br/><br/>
 
@@ -48,7 +46,7 @@ Thanks to its sparseness, the primary index is small enough to fit entirely in m
 
 We sketch how the sparse primary index is used for query acceleration with another animation:
 
-<Image img={visual03} size="lg"/>
+<Image img="/static/images/managing-data/core-concepts/primary-index-light_03.gif" size="lg"/>
 
 <br/><br/>
 
@@ -58,11 +56,11 @@ We sketch how the sparse primary index is used for query acceleration with anoth
 
 ③ It then scans the index entries to identify which granules might contain rows matching the predicate—in other words, which granules can't be skipped.
 
-④ These potentially relevant granules are then loaded and [processed](/optimize/query-parallelism) in memory, along with the corresponding granules from any other columns required for the query.
+④ These potentially relevant granules are then loaded and [processed](/concepts/core-concepts/query-parallelism) in memory, along with the corresponding granules from any other columns required for the query.
 
 ## Monitoring primary indexes \{#monitoring-primary-indexes\}
 
-Each [data part](/parts) in the table has its own primary index. We can inspect the contents of these indexes using the [mergeTreeIndex](/sql-reference/table-functions/mergeTreeIndex) table function.
+Each [data part](/concepts/core-concepts/parts) in the table has its own primary index. We can inspect the contents of these indexes using the [mergeTreeIndex](/reference/functions/table-functions/mergeTreeIndex) table function.
 
 The following query lists the number of entries in the primary index for each data part of our example table:
 
@@ -82,7 +80,7 @@ GROUP BY part_name;
    └───────────┴─────────┘
 ```
 
-This query shows the first 10 entries from the primary index of one of the current data parts. Note that these parts are continuously [merged](/merges) in the background into larger parts:
+This query shows the first 10 entries from the primary index of one of the current data parts. Note that these parts are continuously [merged](/concepts/core-concepts/merges) in the background into larger parts:
 
 ```sql 
 SELECT 
@@ -110,7 +108,7 @@ LIMIT 10;
     └───────┴────────────────┴──────────────────┘
 ```
 
-Lastly, we use the [EXPLAIN](/sql-reference/statements/explain) clause to see how the primary indexes of all data parts are used to skip granules that can't possibly contain rows matching the example query's predicates. These granules are excluded from loading and processing:
+Lastly, we use the [EXPLAIN](/reference/statements/explain) clause to see how the primary indexes of all data parts are used to skip granules that can't possibly contain rows matching the example query's predicates. These granules are excluded from loading and processing:
 ```sql
 EXPLAIN indexes = 1
 SELECT
@@ -182,6 +180,6 @@ SELECT count() FROM uk.uk_price_paid_simple;
 
 ## Where to find more information \{#where-to-find-more-information\}
 
-For a deeper look at how sparse primary indexes work in ClickHouse, including how they differ from traditional database indexes and best practices for using them, check out our detailed indexing [deep dive](/guides/best-practices/sparse-primary-indexes).
+For a deeper look at how sparse primary indexes work in ClickHouse, including how they differ from traditional database indexes and best practices for using them, check out our detailed indexing [deep dive](/guides/cloud-oss/data-modelling/sparse-primary-indexes).
 
-If you're interested in how ClickHouse processes data selected by the primary index scan in a highly parallel way, see the query parallelism guide [here](/optimize/query-parallelism).
+If you're interested in how ClickHouse processes data selected by the primary index scan in a highly parallel way, see the query parallelism guide [here](/concepts/core-concepts/query-parallelism).

@@ -1,6 +1,6 @@
 ---
 slug: /optimize/lazy-materialization
-sidebar_label: 'Lazy materialization'
+sidebarTitle: 'Lazy materialization'
 description: 'Article describing what lazy materialization is in ClickHouse'
 title: 'Lazy materialization'
 doc_type: 'guide'
@@ -10,9 +10,11 @@ keywords: ['optimization', 'lazy materialization']
 This article describes how lazy materialization works and how it fits into ClickHouse’s broader I/O optimization stack.
 It presents a real-world example demonstrating how lazy materialization increases query performance.
 
-:::tip[Available from version 25.4]
+<Tip>
+**Available from version 25.4**
+
 Lazy materialization was introduced in version 25.4 of ClickHouse, and is turned on by default.
-:::
+</Tip>
 
 ## Overview {#overview}
 
@@ -21,10 +23,10 @@ These techniques form the foundation of its speed and efficiency:
 
 | Optimization | Description |
 |---|---|
-| [**Columnar storage**](/intro#row-oriented-vs-column-oriented-storage) | Allows skipping entire columns that aren't needed for a query and also enables high compression by grouping similar values together, minimizing I/O during data loading. |
-| [**Sparse primary indexes**](/guides/best-practices/sparse-primary-indexes) \| [**secondary data-skipping indexes**](/optimize/skipping-indexes) \| [**projections**](/data-modeling/projections) | Prune irrelevant data by identifying which [granules](/concepts/glossary#granule) (row blocks) might match filters on _indexed columns_. These techniques operate at the granule level and can be used individually or in combination. |
-| [**PREWHERE**](/sql-reference/statements/select/prewhere) | Checks matches also for filters on _non-indexed_ columns to skip data early that would otherwise be loaded and discarded. It can work independently or refine the granules selected by indexes, complementing granule pruning by skipping rows that don't match _all_ column filters. |
-| [**Query condition cache**](/operations/query-condition-cache) | Speeds up repeated queries by remembering which granules matched all filters last time. ClickHouse can then skip reading and filtering granules that didn't match, even if the query shape changes. |
+| [**Columnar storage**](/get-started/about/intro#row-oriented-vs-column-oriented-storage) | Allows skipping entire columns that aren't needed for a query and also enables high compression by grouping similar values together, minimizing I/O during data loading. |
+| [**Sparse primary indexes**](/guides/cloud-oss/data-modelling/sparse-primary-indexes) \| [**secondary data-skipping indexes**](/concepts/features/performance/skip-indexes/skipping-indexes) \| [**projections**](/concepts/features/projections/projections) | Prune irrelevant data by identifying which [granules](/concepts/core-concepts/glossary#granule) (row blocks) might match filters on _indexed columns_. These techniques operate at the granule level and can be used individually or in combination. |
+| [**PREWHERE**](/reference/statements/select/prewhere) | Checks matches also for filters on _non-indexed_ columns to skip data early that would otherwise be loaded and discarded. It can work independently or refine the granules selected by indexes, complementing granule pruning by skipping rows that don't match _all_ column filters. |
+| [**Query condition cache**](/concepts/features/performance/caches/query-condition-cache) | Speeds up repeated queries by remembering which granules matched all filters last time. ClickHouse can then skip reading and filtering granules that didn't match, even if the query shape changes. |
 
 While the aforementioned I/O optimizations can significantly reduce data read, they still assume that all columns for rows passing the `WHERE` clause must be loaded before running operations like sorting, aggregation, or `LIMIT`. But what if some columns aren’t needed until later, or some data, despite passing the `WHERE` clause, is never needed at all?
 That’s where lazy materialization comes in. It is an orthogonal enhancement that completes the I/O optimization stack:
@@ -45,7 +47,7 @@ Lazy materialization layers cleanly on top, but unlike the other optimizations m
 
 Consider the following example query which finds Amazon reviews with the highest number of helpful votes, regardless of date, product, rating, or verification status, and returns the top 3 along with their title, headline, and full text.
 
-First running the query (with cold filesystem caches) with lazy materialization disabled (using [`query_plan_optimize_lazy_materialization`](/operations/settings/settings#query_plan_optimize_lazy_materialization)):
+First running the query (with cold filesystem caches) with lazy materialization disabled (using [`query_plan_optimize_lazy_materialization`](/reference/settings/session-settings#query_plan_optimize_lazy_materialization)):
 
 ```sql title="Query"
 SELECT
@@ -106,10 +108,10 @@ SETTINGS
 query_plan_optimize_lazy_materialization = true;
 ```
 
-:::tip
+<Tip>
 Ordinarily you don't need to explicitly set `query_plan_optimize_lazy_materialization = true` to gain the benefit of lazy materialization.
 It is enabled by default.
-:::
+</Tip>
 
 ```response title="Response"
 Row 1:
@@ -149,7 +151,7 @@ Consider the difference in performance with lazy materialization turned off and 
 
 ## How to confirm lazy materialization in the query execution plan {#confirm-lazy-materialization}
 
-You can observe usage of lazy materialization for the previous query by inspecting the query’s logical execution plan using the [`EXPLAIN`](/sql-reference/statements/explain) clause:
+You can observe usage of lazy materialization for the previous query by inspecting the query’s logical execution plan using the [`EXPLAIN`](/reference/statements/explain) clause:
 
 ```sql
 EXPLAIN actions = 1

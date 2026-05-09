@@ -58,4 +58,4 @@ ORDER BY partition;
 -- Warning signs: hundreds or thousands of partitions
 ```
 
-Reference: [Choosing a Partitioning Key](https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key)
+Reference: [Choosing a Partitioning Key](/concepts/best-practices/partitioning-keys)

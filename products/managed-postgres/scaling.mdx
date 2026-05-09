@@ -4,11 +4,17 @@ sidebarTitle: 'Scaling'
 title: 'Scaling'
 description: 'Scale your Postgres managed by ClickHouse instance vertically with flexible VM types and independent resource scaling'
 keywords: ['postgres scaling', 'vertical scaling', 'vm types', 'nvme scaling', 'instance types', 'performance scaling']
+doc_type: 'guide'
 ---
+
+import PrivatePreviewBadge from "/snippets/components/PrivatePreviewBadge/PrivatePreviewBadge.jsx";
+import { Image } from "/snippets/components/Image.jsx";
+
+<PrivatePreviewBadge link="https://clickhouse.com/cloud/postgres" galaxyTrack={true} slug="scaling" />
 
 Managed Postgres provides flexible scaling options to match your workload requirements. With 50+ NVMe-backed instance types to choose from, you can independently scale CPU, memory, and storage to optimize performance and cost for your specific use case.
 
-## Instance types and flexibility
+## Instance types and flexibility {#instance-types}
 
 Managed Postgres offers a wide range of instance types, each optimized for different workload characteristics:
 
@@ -16,9 +22,9 @@ Managed Postgres offers a wide range of instance types, each optimized for diffe
 - **NVMe-backed storage** on all instance types for consistent, high-performance disk I/O
 - **Independent resource scaling**: Choose the right balance of CPU, memory, and storage based on your workload
 
-<img src="/images/managed-postgres/instance-types.png" alt="Instance types" />
+<Image img="/static/images/managed-postgres/instance-types.png" alt="Instance types" size="md" border/>
 
-### Choosing the right instance type
+### Choosing the right instance type {#choosing-instance}
 
 Different workloads benefit from different resource configurations:
 
@@ -28,13 +34,13 @@ Different workloads benefit from different resource configurations:
 | **Memory optimized** (large working set)          | Medium | High   | Medium  | Memory-optimized (high memory-to-CPU ratio) |
 | **Storage optimized** (large datasets, heavy I/O) | Medium | Medium | High    | Storage-optimized (high NVMe capacity)      |
 
-## How scaling works
+## How scaling works {#how-scaling-works}
 
 When you change instance types, Managed Postgres performs a vertical scaling operation that provisions new infrastructure and migrates your database with minimal downtime.
 
-<img src="/images/managed-postgres/scaling-settings.png" alt="Scaling Settings" />
+<Image img="/static/images/managed-postgres/scaling-settings.png" alt="Scaling Settings" size="md" border/>
 
-### Scaling process
+### Scaling process {#scaling-process}
 
 The scaling workflow brings up a new standby from backups and performs a controlled failover:
 
@@ -55,7 +61,7 @@ The scaling workflow brings up a new standby from backups and performs a control
 
 6. **Old instance decommission**: The original instance is decommissioned after the failover completes
 
-### Scaling duration
+### Scaling duration {#scaling-duration}
 
 The total time required for scaling depends primarily on the size of your database and the amount of WAL data that needs to be replayed from backups:
 
@@ -65,11 +71,11 @@ The total time required for scaling depends primarily on the size of your databa
 
 The restore time can range from a few minutes to a few hours, but the maintenance/downtime is very low (only ~30 seconds).
 
-<Warning title="Minimal downtime">
+:::important[Minimal downtime]
 Your application will experience approximately 30 seconds of downtime during the failover, regardless of how long the overall scaling process takes. All the restore and catch-up work happens in the background on the standby instance.
-</Warning>
+:::
 
-### Parallel restore with WAL-G
+### Parallel restore with WAL-G {#parallel-restore}
 
 Managed Postgres uses [WAL-G](https://github.com/wal-g/wal-g) to accelerate backup restoration during scaling operations. Notably, the creator of WAL-G is part of the Ubicloud team who we have partnered with, bringing deep expertise to the restoration process.
 
@@ -82,7 +88,7 @@ WAL-G provides:
 
 These optimizations significantly reduce the time required to bring up the new standby instance. Most importantly, the restore happens entirely in the background—your application only experiences downtime during the brief ~30-second failover window.
 
-### Initiating a scaling operation
+### Initiating a scaling operation {#initiating-scaling}
 
 To scale your Managed Postgres instance:
 
@@ -91,9 +97,9 @@ To scale your Managed Postgres instance:
 3. Select the target instance type
 4. Review the changes and click "Apply changes"
 
-## Scaling strategies
+## Scaling strategies {#scaling-strategies}
 
-### Vertical scaling
+### Vertical scaling {#vertical-scaling}
 
 Vertical scaling (changing instance types) is the primary method for adjusting resources in Managed Postgres. This approach provides:
 
@@ -101,9 +107,9 @@ Vertical scaling (changing instance types) is the primary method for adjusting r
 - **Workload optimization**: Select configurations optimized for your specific workload (compute, memory, or storage-intensive)
 - **Cost efficiency**: Pay only for the resources you need without over-provisioning
 
-### Read replicas for horizontal scaling
+### Read replicas for horizontal scaling {#read-replicas}
 
-For read-heavy workloads, consider using [read replicas](/managed-postgres/read-replicas) to scale read capacity horizontally:
+For read-heavy workloads, consider using [read replicas](/products/managed-postgres/read-replicas) to scale read capacity horizontally:
 
 - Offload read queries to dedicated read replica instances
 - Each read replica is a fully independent Postgres instance with its own compute and memory
@@ -111,9 +117,9 @@ For read-heavy workloads, consider using [read replicas](/managed-postgres/read-
 
 This approach is ideal for applications with high read-to-write ratios, such as reporting dashboards, analytics queries, or read-intensive API endpoints.
 
-### CDC scaling for ClickHouse integration
+### CDC scaling for ClickHouse integration {#cdc-scaling}
 
-If you're replicating data to ClickHouse using [ClickPipes](/managed-postgres/clickhouse-integration), you can independently scale the CDC (Change Data Capture) pipeline:
+If you're replicating data to ClickHouse using [ClickPipes](/products/managed-postgres/clickhouse-integration), you can independently scale the CDC (Change Data Capture) pipeline:
 
 - Scale CDC workers from 1 to 24 CPU cores
 - Memory automatically scales at 4x the CPU core count
@@ -121,15 +127,16 @@ If you're replicating data to ClickHouse using [ClickPipes](/managed-postgres/cl
 
 This allows you to optimize the replication throughput separately from your Postgres instance resources.
 
-## Autoscaling (roadmap)
+## Autoscaling (roadmap) {#autoscaling}
 
-<Note title="Coming soon">
+<Info>
+**Coming soon**
+
 Automatic storage scaling is on the roadmap for Managed Postgres. This feature will automatically increase instance size as your database grows, eliminating the need for manual intervention.
-</Note>
+</Info>
 
-## Additional resources
+## Additional resources {#resources}
 
-- [Settings and configuration](/managed-postgres/settings)
-- [Read replicas](/managed-postgres/read-replicas)
-- [High availability](/managed-postgres/high-availability)
-- [Performance benchmarks](/managed-postgres/benchmarks)
+- [Settings and configuration](/products/managed-postgres/settings)
+- [Read replicas](/products/managed-postgres/read-replicas)
+- [High availability](/products/managed-postgres/high-availability)

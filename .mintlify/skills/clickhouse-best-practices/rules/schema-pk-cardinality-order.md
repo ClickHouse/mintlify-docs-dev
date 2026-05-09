@@ -42,4 +42,4 @@ ORDER BY (event_type, event_date, event_id);
 
 **Tip:** Use `toDate(timestamp)` instead of raw `DateTime` columns when day-level filtering suffices - this reduces index size from 32-bit to 16-bit representations.
 
-Reference: [Choosing a Primary Key](https://clickhouse.com/docs/best-practices/choosing-a-primary-key)
+Reference: [Choosing a Primary Key](/concepts/best-practices/choosing-a-primary-key)

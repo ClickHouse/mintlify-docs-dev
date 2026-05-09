@@ -40,4 +40,4 @@ SELECT * FROM table_a a JOIN table_b b ON b.pk_col = a.pk_col;
 
 **Note:** ClickHouse 24.12+ automatically positions smaller tables on the right side. For earlier versions, manually ensure the smaller table is on the RIGHT.
 
-Reference: [Minimize and Optimize JOINs](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)
+Reference: [Minimize and Optimize JOINs](/concepts/best-practices/minimize-optimize-joins)

@@ -49,4 +49,4 @@ WHERE tenant_id = 123 AND event_type = 'click' AND timestamp >= '2024-01-01';
 | `WHERE event_type = 'click'` | None (skipped prefix) |
 | `WHERE timestamp > '2024-01-01'` | None (skipped both) |
 
-Reference: [Choosing a Primary Key](https://clickhouse.com/docs/best-practices/choosing-a-primary-key)
+Reference: [Choosing a Primary Key](/concepts/best-practices/choosing-a-primary-key)

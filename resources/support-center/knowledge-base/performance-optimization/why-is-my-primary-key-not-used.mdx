@@ -6,8 +6,6 @@ tags: ['Performance and Optimizations']
 keywords: ['Primary Key']
 ---
 
-
-
 ## Checking your Primary Key
 
 Users may see cases where their query is slower than expected, in the belief they are ordering or filtering by a primary key. In this article we show how users can confirm the key is used, highlighting common reasons its not.
@@ -100,12 +98,11 @@ PrimaryKey
    code 
 ```
 
-Granules are the unit of data processing in ClickHouse, with each typically holding 8192 rows. For further details on granules and how they are filtered we recommend reading [this guide](/guides/best-practices/sparse-primary-indexes#mark-files-are-used-for-locating-granules).
+Granules are the unit of data processing in ClickHouse, with each typically holding 8192 rows. For further details on granules and how they are filtered we recommend reading [this guide](/guides/cloud-oss/data-modelling/sparse-primary-indexes#mark-files-are-used-for-locating-granules).
 
-:::note
-Filtering on keys later in an ordering key will not be as efficient as filtering on those that are earlier in the tuple. For reasons why, see [here](/guides/best-practices/sparse-primary-indexes#secondary-key-columns-can-not-be-inefficient)
-:::
-
+<Note>
+Filtering on keys later in an ordering key will not be as efficient as filtering on those that are earlier in the tuple. For reasons why, see [here](/guides/cloud-oss/data-modelling/sparse-primary-indexes#secondary-key-columns-can-not-be-inefficient)
+</Note>
 ## Multi-key filtering
 
 Suppose we filter, by `code` and `timestamp`:
@@ -120,7 +117,6 @@ WHERE (code = '200') AND (timestamp >= '2025-01-01 00:00:00') AND (timestamp <= 
 └─────────┘
 
 1 row in set. Elapsed: 0.008 sec. Processed 712.70 thousand rows, 6.41 MB (88.92 million rows/s., 799.27 MB/s.)
-
 
 EXPLAIN indexes = 1
 SELECT count()
@@ -153,7 +149,7 @@ In this case both ordering keys are used to filter rows, resulting in the need t
 
 ClickHouse can also exploit ordering keys for efficient sorting. Specifically,
 
-When the [optimize_read_in_order](/sql-reference/statements/select/order-by#optimization-of-data-reading) setting is enabled (by default), the ClickHouse server uses the table index and reads the data in order of the ORDER BY key. This allows us to avoid reading all data in case of specified LIMIT. So, queries on big data with small limits are processed faster. See [here](/sql-reference/statements/select/order-by#optimization-of-data-reading) and [here](/knowledgebase/async_vs_optimize_read_in_order#what-about-optimize_read_in_order) for further details.
+When the [optimize_read_in_order](/reference/statements/select/order-by#optimization-of-data-reading) setting is enabled (by default), the ClickHouse server uses the table index and reads the data in order of the ORDER BY key. This allows us to avoid reading all data in case of specified LIMIT. So, queries on big data with small limits are processed faster. See [here](/reference/statements/select/order-by#optimization-of-data-reading) and [here](/resources/support-center/knowledge-base/performance-optimization/async-vs-optimize-read-in-order#what-about-optimize_read_in_order) for further details.
 
 This, however, requires alignment of the keys used.
 

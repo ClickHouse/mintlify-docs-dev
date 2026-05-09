@@ -1,7 +1,6 @@
 ---
 slug: /getting-started/quick-start/oss
 sidebarTitle: 'OSS'
-sidebar_position: 2
 keywords: ['getting started', 'quick start', 'beginner-friendly']
 title: 'ClickHouse OSS quick start'
 description: 'ClickHouse Quick Start guide'
@@ -9,67 +8,62 @@ show_related_blogs: true
 doc_type: 'guide'
 ---
 
-> In this quick start tutorial, we'll get you set up with OSS ClickHouse in 8
-easy steps. You'll download an appropriate binary for your OS,
-learn to run ClickHouse server, and use the ClickHouse client to create a table,
-then insert data into it and run a query to select that data.
+import {VerticalStepper} from '@clickhouse/click-ui/bundled';
 
-<Steps>
+> In this quick start tutorial, we'll get you set up with OSS ClickHouse in a few
+easy steps. You'll use the ClickHouse CLI `clickhousectl` to install ClickHouse, 
+start a ClickHouse server, connect to your server to create a table, 
+insert data into it, and run a SELECT query.
 
-## Download ClickHouse
+<VerticalStepper>
 
-ClickHouse runs natively on Linux, FreeBSD and macOS, and runs on Windows via
-the [WSL](https://learn.microsoft.com/en-us/windows/wsl/about). The simplest way to download ClickHouse locally is to run the
-following `curl` command. It determines if your operating system is supported,
-then downloads an appropriate ClickHouse binary.
+## Install the ClickHouse CLI \{#install-the-cli\}
+
+The ClickHouse CLI (`clickhousectl`) helps you install and manage local ClickHouse
+versions, launch servers, and run queries. Install it with:
+
+```bash
+curl https://clickhouse.com/cli | sh
+```
+
+A `chctl` alias is also created automatically for convenience.
+
+## Install ClickHouse {#install-clickhouse}
+
+ClickHouse runs natively on Linux and macOS, and runs on Windows via
+the [WSL](https://learn.microsoft.com/en-us/windows/wsl/about).
+
+Use the CLI to install the latest stable version of ClickHouse:
+
+```bash
+clickhousectl local install stable
+```
 
 <Note>
-We recommend running the command below from a new and empty subdirectory as
-some configuration files will be created in the directory the binary is located
-in the first time ClickHouse server is run.
+This isn't the recommended way to install ClickHouse for production.
+If you're looking to install a production instance of ClickHouse, please see the [install page](/get-started/setup/self-managed/install).
 </Note>
 
-```bash
-curl https://clickhouse.com/ | sh
-```
+## Start the server {#start-the-server}
 
-You should see:
-
-```
-Successfully downloaded the ClickHouse binary, you can run it as:
-    ./clickhouse
-
-You can also install it:
-sudo ./clickhouse install
-```
-
-At this stage, you can ignore the prompt to run the `install` command.
-
-<Note>
-For Mac users: If you are getting errors that the developer of the binary cannot
-be verified, please see ["Fix the Developer Verification Error in MacOS"](https://clickhouse.com/docs/knowledgebase/fix-developer-verification-error-in-macos).
-</Note>
-
-## Start the server
-
-Run the following command to start the ClickHouse server:
+Start a ClickHouse server instance:
 
 ```bash
-./clickhouse server
+clickhousectl local server start --name my-first-server
 ```
 
-You should see the terminal fill up with logging. This is expected. In ClickHouse
-the [default logging level](https://clickhouse.com/docs/knowledgebase/why_default_logging_verbose)
-is set to `trace` rather than `warning`.
-
-## Start the client
-
-Use `clickhouse-client` to connect to your ClickHouse service. Open a new
-terminal, change directories to where your `clickhouse` binary is saved, and
-run the following command:
+The server runs in the background by default. To verify it's running:
 
 ```bash
-./clickhouse client
+clickhousectl local server list
+```
+
+## Start the client {#start-the-client}
+
+Connect to your running ClickHouse server:
+
+```bash
+clickhousectl local client --name my-first-server
 ```
 
 You should see a smiling face as it connects to your service running on localhost:
@@ -78,11 +72,11 @@ You should see a smiling face as it connects to your service running on localhos
 my-host :)
 ```
 
-## Create a table
+## Create a table {#create-table}
 
 Use `CREATE TABLE` to define a new table. Typical SQL DDL commands work in
 ClickHouse with one addition - tables in ClickHouse require
-an `ENGINE` clause. Use [`MergeTree`](/engines/table-engines/mergetree-family/mergetree)
+an `ENGINE` clause. Use [`MergeTree`](/reference/engines/table-engines/mergetree-family/mergetree)
 to take advantage of the performance benefits of ClickHouse:
 
 ```sql
@@ -97,7 +91,7 @@ ENGINE = MergeTree
 PRIMARY KEY (user_id, timestamp)
 ```
 
-## Insert data
+## Insert data {#insert-data}
 
 You can use the familiar `INSERT INTO TABLE` command with ClickHouse, but it is
 important to understand that each insert into a `MergeTree` table causes what we
@@ -105,7 +99,7 @@ call a **part** in ClickHouse to be created in storage. These parts later get
 merged in the background by ClickHouse.
 
 In ClickHouse, we try to bulk insert lots of rows at a time
-(tens of thousands or even millions at once) to minimize the number of [**parts**](/parts)
+(tens of thousands or even millions at once) to minimize the number of [**parts**](/concepts/core-concepts/parts)
 that need to get merged in the background process.
 
 In this guide, we won't worry about that just yet. Run the following command to
@@ -119,7 +113,7 @@ INSERT INTO my_first_table (user_id, message, timestamp, metric) VALUES
     (101, 'Granules are the smallest chunks of data read',      now() + 5,   3.14159 )
 ```
 
-## Query your new table
+## Query your new table {#query}
 
 You can write a `SELECT` query just like you would with any SQL database:
 
@@ -141,24 +135,23 @@ Notice the response comes back in a nice table format:
 4 rows in set. Elapsed: 0.008 sec.
 ```
 
-## Insert your own data
+## Insert your own data {#insert-own-data}
 
-The next step is to get your own data into ClickHouse. We have lots of [table functions](/sql-reference/table-functions/index.md)
-and [integrations](/integrations) for ingesting data. We have some examples in the tabs
-below, or you can check out our [Integrations](/integrations) page for a long list of
+The next step is to get your own data into ClickHouse. We have lots of [table functions](/reference/functions/table-functions)
+and [integrations](/integrations/connectors/home) for ingesting data. We have some examples in the tabs
+below, or you can check out our [Integrations](/integrations/connectors/home) page for a long list of
 technologies that integrate with ClickHouse.
-
 
 <Tabs>
     <Tab title="S3">
 
-        Use the [`s3` table function](/sql-reference/table-functions/s3.md) to
+        Use the [`s3` table function](/reference/functions/table-functions/s3) to
         read files from S3. It's a table function - meaning that the result is a table
         that can be:
 
         1. used as the source of a `SELECT` query (allowing you to run ad-hoc queries and
         leave your data in S3), or...
-        2. insert the resulting table into a `MergeTree` table (when you are ready to
+        2. insert the resulting table into a `MergeTree` table (when you're ready to
         move your data into ClickHouse)
 
         An ad-hoc query looks like:
@@ -187,12 +180,12 @@ technologies that integrate with ClickHouse.
         SETTINGS input_format_allow_errors_num=25000;
         ```
 
-        View our [collection of AWS S3 documentation pages](/integrations/data-ingestion/s3/index.md) for lots more details and examples of using S3 with ClickHouse.
+        View our [collection of AWS S3 documentation pages](/integrations/connectors/data-ingestion/AWS/integrating-s3-with-clickhouse) for lots more details and examples of using S3 with ClickHouse.
         <br/>
     </Tab>
     <Tab title="GCS">
 
-        The [`s3` table function](/sql-reference/table-functions/s3.md) used for
+        The [`s3` table function](/reference/functions/table-functions/s3) used for
         reading data in AWS S3 also works on files in Google Cloud Storage.
 
         For example:
@@ -209,12 +202,12 @@ technologies that integrate with ClickHouse.
         LIMIT 1000
         ```
 
-        Find more details on the [`s3` table function page](/sql-reference/table-functions/s3.md).
+        Find more details on the [`s3` table function page](/reference/functions/table-functions/s3).
         <br/>
     </Tab>
     <Tab title="Web">
 
-        The [`url` table function](/sql-reference/table-functions/url) reads
+        The [`url` table function](/reference/functions/table-functions/url) reads
         files accessible from the web:
 
         ```sql
@@ -229,12 +222,12 @@ technologies that integrate with ClickHouse.
         );
         ```
 
-        Find more details on the [`url` table function page](/sql-reference/table-functions/url).
+        Find more details on the [`url` table function page](/reference/functions/table-functions/url).
         <br/>
     </Tab>
     <Tab title="Local">
 
-        Use the [`file` table engine](/sql-reference/table-functions/file) to
+        Use the [`file` table engine](/reference/functions/table-functions/file) to
         read a local file. For simplicity, copy the file to the `user_files` directory
         (which is found in the directory where you downloaded the ClickHouse binary).
 
@@ -265,13 +258,13 @@ technologies that integrate with ClickHouse.
         )
         ```
 
-        View the [`file` table function](/sql-reference/table-functions/file)
+        View the [`file` table function](/reference/functions/table-functions/file)
         docs page for more details.
         <br/>
     </Tab>
     <Tab title="PostgreSQL">
 
-        Use the [`postgresql` table function](/sql-reference/table-functions/postgresql)
+        Use the [`postgresql` table function](/reference/functions/table-functions/postgresql)
         to read data from a table in PostgreSQL:
 
         ```sql
@@ -286,13 +279,13 @@ technologies that integrate with ClickHouse.
         ;
         ```
 
-        View the [`postgresql` table function](/sql-reference/table-functions/postgresql)
+        View the [`postgresql` table function](/reference/functions/table-functions/postgresql)
         docs page for more details.
         <br/>
     </Tab>
     <Tab title="MySQL">
 
-        Use the [`mysql` table function](/sql-reference/table-functions/mysql)
+        Use the [`mysql` table function](/reference/functions/table-functions/mysql)
         to read data from a table in MySQL:
 
         ```sql
@@ -307,7 +300,7 @@ technologies that integrate with ClickHouse.
         ;
         ```
 
-        View the [`mysql` table function](/sql-reference/table-functions/mysql)
+        View the [`mysql` table function](/reference/functions/table-functions/mysql)
         docs page for more details.
         <br/>
     </Tab>
@@ -325,8 +318,8 @@ technologies that integrate with ClickHouse.
         );
         ```
 
-        View the [`odbc` table function](/sql-reference/table-functions/odbc)
-        and the [`jdbc` table function](/sql-reference/table-functions/jdbc) docs
+        View the [`odbc` table function](/reference/functions/table-functions/odbc)
+        and the [`jdbc` table function](/reference/functions/table-functions/jdbc) docs
         pages for more details.
         <br/>
     </Tab>
@@ -335,36 +328,36 @@ technologies that integrate with ClickHouse.
         Message queues can stream data into ClickHouse using the corresponding table
         engine, including:
 
-        - **Kafka**: integrate with Kafka using the [`Kafka` table engine](/engines/table-engines/integrations/kafka)
-        - **Amazon MSK**: integrate with [Amazon Managed Streaming for Apache Kafka (MSK)](/integrations/kafka/cloud/amazon-msk/)
-        - **RabbitMQ**: integrate with RabbitMQ using the [`RabbitMQ` table engine](/engines/table-engines/integrations/rabbitmq)
+        - **Kafka**: integrate with Kafka using the [`Kafka` table engine](/reference/engines/table-engines/integrations/kafka)
+        - **Amazon MSK**: integrate with [Amazon Managed Streaming for Apache Kafka (MSK)](/integrations/connectors/data-ingestion/kafka/msk)
+        - **RabbitMQ**: integrate with RabbitMQ using the [`RabbitMQ` table engine](/reference/engines/table-engines/integrations/rabbitmq)
         <br/>
     </Tab>
     <Tab title="Data Lakes">
 
         ClickHouse has table functions to read data from the following sources:
 
-        - **Hadoop**: integrate with Apache Hadoop using the [`hdfs` table function](/sql-reference/table-functions/hdfs)
-        - **Hudi**: read from existing Apache Hudi tables in S3 using the [`hudi` table function](/sql-reference/table-functions/hudi)
-        - **Iceberg**: read from existing Apache Iceberg tables in S3 using the [`iceberg` table function](/sql-reference/table-functions/iceberg)
-        - **DeltaLake**: read from existing Delta Lake tables in S3 using the [`deltaLake` table function](/sql-reference/table-functions/deltalake)
+        - **Hadoop**: integrate with Apache Hadoop using the [`hdfs` table function](/reference/functions/table-functions/hdfs)
+        - **Hudi**: read from existing Apache Hudi tables in S3 using the [`hudi` table function](/reference/functions/table-functions/hudi)
+        - **Iceberg**: read from existing Apache Iceberg tables in S3 using the [`iceberg` table function](/reference/functions/table-functions/iceberg)
+        - **DeltaLake**: read from existing Delta Lake tables in S3 using the [`deltaLake` table function](/reference/functions/table-functions/deltalake)
         <br/>
     </Tab>
     <Tab title="Other">
 
-        Check out our [long list of ClickHouse integrations](/integrations) to find how to connect your existing frameworks and data sources to ClickHouse.
+        Check out our [long list of ClickHouse integrations](/integrations/connectors/home) to find how to connect your existing frameworks and data sources to ClickHouse.
         <br/>
     </Tab>
 </Tabs>
 
-## Explore
+## Explore {#explore}
 
-- Check out our [Core Concepts](/managing-data/core-concepts) section to learn some of the fundamentals of how ClickHouse works under the hood.
-- Check out the [Advanced Tutorial](tutorial.md) which takes a much deeper dive into the key concepts and capabilities of ClickHouse.
+- Check out our [Core Concepts](/concepts/core-concepts) section to learn some of the fundamentals of how ClickHouse works under the hood.
+- Check out the [Advanced Tutorial](/get-started/quickstarts/tutorial) which takes a much deeper dive into the key concepts and capabilities of ClickHouse.
 - Continue your learning by taking our free on-demand training courses at the [ClickHouse Academy](https://learn.clickhouse.com/visitor_class_catalog).
-- We have a list of [example datasets](/getting-started/example-datasets/) with instructions on how to insert them.
-- If your data is coming from an external source, view our [collection of integration guides](/integrations/) for connecting to message queues, databases, pipelines and more.
-- If you are using a UI/BI visualization tool, view the [user guides for connecting a UI to ClickHouse](/integrations/data-visualization/).
-- The user guide on [primary keys](/guides/best-practices/sparse-primary-indexes.md) is everything you need to know about primary keys and how to define them.
+- We have a list of [example datasets](/get-started/sample-datasets) with instructions on how to insert them.
+- If your data is coming from an external source, view our [collection of integration guides](/integrations/connectors/home) for connecting to message queues, databases, pipelines and more.
+- If you're using a UI/BI visualization tool, view the [user guides for connecting a UI to ClickHouse](/integrations/connectors/data-visualization).
+- The user guide on [primary keys](/guides/cloud-oss/data-modelling/sparse-primary-indexes) is everything you need to know about primary keys and how to define them.
 
-</Steps>
+</VerticalStepper>

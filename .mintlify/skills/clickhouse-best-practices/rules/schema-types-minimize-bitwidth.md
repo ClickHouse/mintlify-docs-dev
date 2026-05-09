@@ -46,4 +46,4 @@ CREATE TABLE metrics (
 | Int32 | -2.1 billion to 2.1 billion | 4 |
 | Int64 | -9 quintillion to 9 quintillion | 8 |
 
-Reference: [Select Data Types](https://clickhouse.com/docs/best-practices/select-data-types)
+Reference: [Select Data Types](/concepts/best-practices/select-data-type)

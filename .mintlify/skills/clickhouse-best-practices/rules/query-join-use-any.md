@@ -37,4 +37,4 @@ LEFT ANY JOIN customers c ON c.id = o.customer_id;
 | `INNER ANY JOIN` | At most one match, only matching rows |
 | `RIGHT ANY JOIN` | At most one match from left table |
 
-Reference: [Minimize and Optimize JOINs](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)
+Reference: [Minimize and Optimize JOINs](/concepts/best-practices/minimize-optimize-joins)

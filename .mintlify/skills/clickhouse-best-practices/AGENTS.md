@@ -117,7 +117,7 @@ CREATE TABLE users (
 
 | UUID | `generateUUIDv4()` |
 
-Reference: [https://clickhouse.com/docs/best-practices/select-data-types](https://clickhouse.com/docs/best-practices/select-data-types)
+Reference: [https://clickhouse.com/docs/best-practices/select-data-types](/concepts/best-practices/select-data-type)
 
 ### 1.2 Consider Starting Without Partitioning
 
@@ -161,7 +161,7 @@ ORDER BY (event_type, timestamp);
 
 | No specific lifecycle needs | No |
 
-Reference: [https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key](https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key)
+Reference: [https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key](/concepts/best-practices/partitioning-keys)
 
 ### 1.3 Filter on ORDER BY Columns in Queries
 
@@ -212,7 +212,7 @@ WHERE tenant_id = 123 AND event_type = 'click' AND timestamp >= '2024-01-01';
 
 | `WHERE timestamp > '2024-01-01'` | None (skipped both) |
 
-Reference: [https://clickhouse.com/docs/best-practices/choosing-a-primary-key](https://clickhouse.com/docs/best-practices/choosing-a-primary-key)
+Reference: [https://clickhouse.com/docs/best-practices/choosing-a-primary-key](/concepts/best-practices/choosing-a-primary-key)
 
 ### 1.4 Keep Partition Cardinality Low (100-1,000 Values)
 
@@ -267,7 +267,7 @@ ORDER BY partition;
 -- Warning signs: hundreds or thousands of partitions
 ```
 
-Reference: [https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key](https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key)
+Reference: [https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key](/concepts/best-practices/partitioning-keys)
 
 ### 1.5 Minimize Bit-Width for Numeric Types
 
@@ -319,7 +319,7 @@ CREATE TABLE metrics (
 
 | Int64 | -9 quintillion to 9 quintillion | 8 |
 
-Reference: [https://clickhouse.com/docs/best-practices/select-data-types](https://clickhouse.com/docs/best-practices/select-data-types)
+Reference: [https://clickhouse.com/docs/best-practices/select-data-types](/concepts/best-practices/select-data-type)
 
 ### 1.6 Order Columns by Cardinality (Low to High)
 
@@ -363,7 +363,7 @@ ORDER BY (event_type, event_date, event_id);
 
 **Tip:** Use `toDate(timestamp)` instead of raw `DateTime` columns when day-level filtering suffices - this reduces index size from 32-bit to 16-bit representations.
 
-Reference: [https://clickhouse.com/docs/best-practices/choosing-a-primary-key](https://clickhouse.com/docs/best-practices/choosing-a-primary-key)
+Reference: [https://clickhouse.com/docs/best-practices/choosing-a-primary-key](/concepts/best-practices/choosing-a-primary-key)
 
 ### 1.7 Plan PRIMARY KEY Before Table Creation
 
@@ -426,7 +426,7 @@ ORDER BY (user_id, event_date, event_id);
 
 - [ ] Limited to 4-5 key columns (typically sufficient)
 
-Reference: [https://clickhouse.com/docs/best-practices/choosing-a-primary-key](https://clickhouse.com/docs/best-practices/choosing-a-primary-key)
+Reference: [https://clickhouse.com/docs/best-practices/choosing-a-primary-key](/concepts/best-practices/choosing-a-primary-key)
 
 ### 1.8 Prioritize Filter Columns in ORDER BY
 
@@ -464,7 +464,7 @@ SELECT * FROM events WHERE tenant_id = 123;
 -- Look for "PrimaryKey" with Key Condition
 ```
 
-Reference: [https://clickhouse.com/docs/best-practices/choosing-a-primary-key](https://clickhouse.com/docs/best-practices/choosing-a-primary-key)
+Reference: [https://clickhouse.com/docs/best-practices/choosing-a-primary-key](/concepts/best-practices/choosing-a-primary-key)
 
 ### 1.9 Understand Partition Query Performance Trade-offs
 
@@ -495,7 +495,7 @@ WHERE timestamp >= '2024-01-01' AND timestamp < '2024-02-01'
   AND event_type = 'click';
 ```
 
-Reference: [https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key](https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key)
+Reference: [https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key](/concepts/best-practices/partitioning-keys)
 
 ### 1.10 Use Enum for Finite Value Sets
 
@@ -554,7 +554,7 @@ SELECT * FROM orders WHERE status > 'processing';  -- shipped and delivered
 
 | 256-65,536 distinct values | Enum16 (2 bytes) |
 
-Reference: [https://clickhouse.com/docs/best-practices/select-data-types](https://clickhouse.com/docs/best-practices/select-data-types)
+Reference: [https://clickhouse.com/docs/best-practices/select-data-types](/concepts/best-practices/select-data-type)
 
 ### 1.11 Use JSON Type for Dynamic Schemas
 
@@ -630,7 +630,7 @@ CREATE TABLE events (
 
 **Optimization: specify types for known paths:**
 
-Reference: [https://clickhouse.com/docs/best-practices/use-json-where-appropriate](https://clickhouse.com/docs/best-practices/use-json-where-appropriate)
+Reference: [https://clickhouse.com/docs/best-practices/use-json-where-appropriate](/concepts/best-practices/json-type)
 
 ### 1.12 Use LowCardinality for Repeated Strings
 
@@ -685,7 +685,7 @@ country_name LowCardinality(String),  -- "United States", "Germany"
 
 Reserve `FixedString` for strictly fixed-length data (e.g., 2-char country codes). For most low-cardinality text, `LowCardinality(String)` outperforms `FixedString`.
 
-Reference: [https://clickhouse.com/docs/best-practices/select-data-types](https://clickhouse.com/docs/best-practices/select-data-types)
+Reference: [https://clickhouse.com/docs/best-practices/select-data-types](/concepts/best-practices/select-data-type)
 
 ### 1.13 Use Native Types Instead of String
 
@@ -739,7 +739,7 @@ CREATE TABLE events (
 
 | Booleans | Bool or UInt8 | String |
 
-Reference: [https://clickhouse.com/docs/best-practices/select-data-types](https://clickhouse.com/docs/best-practices/select-data-types)
+Reference: [https://clickhouse.com/docs/best-practices/select-data-types](/concepts/best-practices/select-data-type)
 
 ### 1.14 Use Partitioning for Data Lifecycle Management
 
@@ -787,7 +787,7 @@ ALTER TABLE events DROP PARTITION '202301';
 ALTER TABLE events_archive ATTACH PARTITION '202301' FROM events;
 ```
 
-Reference: [https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key](https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key)
+Reference: [https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key](/concepts/best-practices/partitioning-keys)
 
 ---
 
@@ -840,7 +840,7 @@ SELECT * FROM table_a a JOIN table_b b ON b.pk_col = a.pk_col;
 
 **Note:** ClickHouse 24.12+ automatically positions smaller tables on the right side. For earlier versions, manually ensure the smaller table is on the RIGHT.
 
-Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)
+Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](/concepts/best-practices/minimize-optimize-joins)
 
 ### 2.2 Consider Alternatives to JOINs
 
@@ -911,7 +911,7 @@ JOIN customers c ON c.id = o.customer_id;
 
 **Critical dictionary caveat:** Dictionaries silently deduplicate duplicate keys, retaining only the final value. Only use when source has unique keys.
 
-Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)
+Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](/concepts/best-practices/minimize-optimize-joins)
 
 ### 2.3 Filter Tables Before Joining
 
@@ -959,7 +959,7 @@ FROM (
 JOIN customers c ON c.id = o.customer_id;
 ```
 
-Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)
+Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](/concepts/best-practices/minimize-optimize-joins)
 
 ### 2.4 Optimize NULL Handling in Outer JOINs
 
@@ -989,7 +989,7 @@ LEFT JOIN customers c ON c.id = o.customer_id;
 
 | `join_use_nulls = 1` (default) | NULL for non-matches | When you need to distinguish "no match" from "matched with default" |
 
-Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)
+Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](/concepts/best-practices/minimize-optimize-joins)
 
 ### 2.5 Use ANY JOIN When Only One Match Needed
 
@@ -1027,7 +1027,7 @@ LEFT ANY JOIN customers c ON c.id = o.customer_id;
 
 | `RIGHT ANY JOIN` | At most one match from left table |
 
-Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)
+Reference: [https://clickhouse.com/docs/best-practices/minimize-optimize-joins](/concepts/best-practices/minimize-optimize-joins)
 
 ### 2.6 Use Data Skipping Indices for Non-ORDER BY Filters
 
@@ -1110,7 +1110,7 @@ SELECT * FROM events WHERE user_id = 12345;
 -- Look for "Skip" in output showing granules skipped
 ```
 
-Reference: [https://clickhouse.com/docs/best-practices/use-data-skipping-indices-where-appropriate](https://clickhouse.com/docs/best-practices/use-data-skipping-indices-where-appropriate)
+Reference: [https://clickhouse.com/docs/best-practices/use-data-skipping-indices-where-appropriate](/concepts/best-practices/using-data-skipping-indices)
 
 ### 2.7 Use Incremental MVs for Real-Time Aggregations
 
@@ -1175,7 +1175,7 @@ GROUP BY event_type, hour;
 
 - Minimal cluster overhead at insert time
 
-Reference: [https://clickhouse.com/docs/best-practices/use-materialized-views](https://clickhouse.com/docs/best-practices/use-materialized-views)
+Reference: [https://clickhouse.com/docs/best-practices/use-materialized-views](/concepts/best-practices/use-materialized-views)
 
 ### 2.8 Use Refreshable MVs for Complex Joins and Batch Workflows
 
@@ -1240,7 +1240,7 @@ SELECT * FROM orders_denormalized WHERE segment = 'enterprise';
 
 **Critical warning:** Query should run quickly compared to refresh interval. Don't schedule every 10 seconds if the query takes 10+ seconds.
 
-Reference: [https://clickhouse.com/docs/best-practices/use-materialized-views](https://clickhouse.com/docs/best-practices/use-materialized-views)
+Reference: [https://clickhouse.com/docs/best-practices/use-materialized-views](/concepts/best-practices/use-materialized-views)
 
 ---
 
@@ -1321,7 +1321,7 @@ ALTER TABLE events DELETE WHERE toYYYYMM(timestamp) = 202301;
 
 | DROP PARTITION | Instant | Bulk deletion by partition |
 
-Reference: [https://clickhouse.com/docs/best-practices/avoid-mutations](https://clickhouse.com/docs/best-practices/avoid-mutations)
+Reference: [https://clickhouse.com/docs/best-practices/avoid-mutations](/concepts/best-practices/avoid-mutations)
 
 ### 3.2 Avoid ALTER TABLE UPDATE
 
@@ -1377,7 +1377,7 @@ SELECT user_id, argMax(status, updated_at) as status
 FROM users GROUP BY user_id;
 ```
 
-Reference: [https://clickhouse.com/docs/best-practices/avoid-mutations](https://clickhouse.com/docs/best-practices/avoid-mutations)
+Reference: [https://clickhouse.com/docs/best-practices/avoid-mutations](/concepts/best-practices/avoid-mutations)
 
 ### 3.3 Avoid OPTIMIZE TABLE FINAL
 
@@ -1438,7 +1438,7 @@ SELECT * FROM events FINAL WHERE user_id = 123;
 
 | Reduce part count | Rely on background merges |
 
-Reference: [https://clickhouse.com/docs/best-practices/avoid-optimize-final](https://clickhouse.com/docs/best-practices/avoid-optimize-final)
+Reference: [https://clickhouse.com/docs/best-practices/avoid-optimize-final](/concepts/best-practices/avoid-optimize-final)
 
 ### 3.4 Batch Inserts Appropriately (10K-100K rows)
 
@@ -1490,7 +1490,7 @@ GROUP BY table
 ORDER BY parts DESC;
 ```
 
-Reference: [https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy](https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy)
+Reference: [https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy](/concepts/best-practices/selecting-an-insert-strategy)
 
 ### 3.5 Use Async Inserts for High-Frequency Small Batches
 
@@ -1535,7 +1535,7 @@ ALTER USER my_app_user SETTINGS
 
 | `wait_for_async_insert=0` | Fire-and-forget, unaware of errors | **Risky** - only if you accept data loss |
 
-Reference: [https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy](https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy)
+Reference: [https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy](/concepts/best-practices/selecting-an-insert-strategy)
 
 ### 3.6 Use Native Format for Best Insert Performance
 
@@ -1562,11 +1562,11 @@ Data format affects insert performance. Native format is column-oriented with mi
 client.execute("INSERT INTO events VALUES", data, settings={'input_format': 'Native'})
 ```
 
-Reference: [https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy](https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy)
+Reference: [https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy](/concepts/best-practices/selecting-an-insert-strategy)
 
 ---
 
 ## References
 
-1. [https://clickhouse.com/docs](https://clickhouse.com/docs)
+1. [https://clickhouse.com/docs](/)
 2. [https://github.com/ClickHouse/ClickHouse](https://github.com/ClickHouse/ClickHouse)
