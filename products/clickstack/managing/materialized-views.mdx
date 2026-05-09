@@ -32,7 +32,7 @@ The primary motivation for using materialized views is that the data written to 
 
 Materialized views in ClickHouse are updated continuously as data flows into the source table, behaving more like always-up-to-date indexes. This differs from many other databases, where materialized views are static snapshots that must be periodically refreshed, similar to ClickHouse [Refreshable Materialized Views](/concepts/features/materialized-views/refreshable-materialized-view).
 
-<Image img="/static/images/materialized-view/materialized-view-diagram.png" size="md" alt="Materialized view diagram"/>
+<Image img="/images/materialized-view/materialized-view-diagram.png" size="md" alt="Materialized view diagram"/>
 
 Incremental materialized views compute only the changes to the view as new data arrives, pushing computation to insert time. Because ClickHouse is highly optimized for ingestion, the incremental cost of maintaining the view for each inserted block is small relative to the savings achieved during query execution. The cost of computing the aggregation is amortized across inserts rather than paid repeatedly on every read. Querying the pre-aggregated results is therefore far less expensive than recomputing them, resulting in lower operational cost and near real-time performance for downstream visualizations, even at petabyte scale.
 
@@ -110,7 +110,7 @@ At this stage, **focus on the queries** that will be issued by the visualization
 
 Once you have identified a visualization, or set of visualizations, that you want to accelerate, the next step is to identify the underlying queries. In practice, this means inspecting the visualization configuration and reviewing the generated SQL, paying close attention to the aggregation metrics used, and the functions applied.
 
-<Image img="/static/images/clickstack/materialized_views/generated_sql.png" size="lg" alt="Generated SQL"/>
+<Image img="/images/clickstack/materialized_views/generated_sql.png" size="lg" alt="Generated SQL"/>
 
 <Note>
 In cases where a debug panel isn't available inside HyperDX for a component, users can inspect the browser console, where all queries are logged.
@@ -205,20 +205,22 @@ Once materialized views have been created in ClickHouse, they must be registered
 
 Materialized views should be registered against the **source** in HyperDX that corresponds to the **original source table** from which the view was derived.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Edit the source {#edit-the-source}
 
 Navigate to the relevant **source** in HyperDX and open the **Edit configuration** dialog. Scroll to the section for materialized views.
 
-<Image img="/static/images/clickstack/materialized_views/edit_source.png" size="lg" alt="Edit sources"/>
-
+<Image img="/images/clickstack/materialized_views/edit_source.png" size="lg" alt="Edit sources"/>
+</Step>
+<Step>
 #### Add the materialized view {#add-the-materialized-view}
 
 Select **Add materialized view**, then choose the database and target table that back the materialized view.
 
-<Image img="/static/images/clickstack/materialized_views/add_view.png" size="lg" alt="Edit sources"/>
-
+<Image img="/images/clickstack/materialized_views/add_view.png" size="lg" alt="Edit sources"/>
+</Step>
+<Step>
 #### Select metrics {#select-metrics}
 
 In most cases, the timestamp, dimension, and metric columns will be inferred automatically. If not, specify them manually.
@@ -229,14 +231,16 @@ For metrics, you must map:
 
 For dimensions, specify all the columns, other than the timestamp, that the view groups by.
 
-<Image img="/static/images/clickstack/materialized_views/select_metrics.png" size="lg" alt="Select Metrics"/>
-
+<Image img="/images/clickstack/materialized_views/select_metrics.png" size="lg" alt="Select Metrics"/>
+</Step>
+<Step>
 #### Select the time granularity {#select-time-granularity}
 
 Select the **time granularity** of the materialized view, for example, one minute.
 
-<Image img="/static/images/clickstack/materialized_views/select_time_granularity.png" size="lg" alt="Select Time Granularity"/>
-
+<Image img="/images/clickstack/materialized_views/select_time_granularity.png" size="lg" alt="Select Time Granularity"/>
+</Step>
+<Step>
 #### Select the minimum date {#specify-the-minimum-date}
 
 Specify the minimum date for which the materialized view contains data. This represents the earliest timestamp available in the view and is typically the time at which the view was created, assuming ingestion has been continuous.
@@ -246,21 +250,22 @@ Materialized views are **not automatically backfilled** when they're created, so
 A full guide on backfilling materialized views can be found under ["Backfilling Data."](/guides/cloud-oss/data-modelling/backfilling#scenario-2-adding-materialized-views-to-existing-tables)
 </Note>
 
-<Image img="/static/images/clickstack/materialized_views/select_min_time.png" size="lg" alt="Select Min Time"/>
+<Image img="/images/clickstack/materialized_views/select_min_time.png" size="lg" alt="Select Min Time"/>
 
 If the exact start time is unclear, you can determine it by querying the minimum timestamp from the target table, for example:
 
 ```sql
 SELECT min(Timestamp) FROM otel_traces_1m
 ```
-
+</Step>
+<Step>
 #### Save the source {#save-the-source}
 
 Save the source configuration.
 
-<Image img="/static/images/clickstack/materialized_views/save_source.png" size="lg" alt="Save Source"/>
-
-</VerticalStepper>
+<Image img="/images/clickstack/materialized_views/save_source.png" size="lg" alt="Save Source"/>
+</Step>
+</Steps>
 
 Once a materialized view has been registered, it's used automatically by ClickStack whenever a query is eligible without requiring changes to dashboards, visualizations, or alerts. ClickStack evaluates each query at execution time and determines whether a materialized view can be applied.
 
@@ -278,7 +283,7 @@ ClickStack provides clear visual indicators to confirm whether a materialized vi
 - **Green lightning bolt** indicates the query is accelerated by a materialized view.
 - **Orange lightning bolt** indicates the query is executed against the source table.
 
-<Image img="/static/images/clickstack/materialized_views/accelerated_visual.png" size="lg" alt="Accelerated Visualization"/>
+<Image img="/images/clickstack/materialized_views/accelerated_visual.png" size="lg" alt="Accelerated Visualization"/>
 
 2. **Inspect optimization details**  Click the lightning bolt icon to open a details panel showing:
 - **Active materialized view**: the view selected for the query, including its estimated row count.
@@ -426,8 +431,8 @@ As discussed earlier, incremental materialized views aren't backfilled automatic
 
 This approach is best suited for **smaller datasets** or **relatively lightweight aggregation queries** where the full backfill can be completed in a reasonable amount of time without exhausting cluster resources. It's typically appropriate when the backfill query can run in minutes, or at most a few hours, and when temporary increases in CPU, and I/O usage are acceptable. For larger datasets or more expensive aggregations, consider the incremental, or block-based backfilling approaches below instead.
 
-<VerticalStepper headerLevel="h5">
-
+<Steps>
+<Step>
 ##### Determine the current coverage of the view {#determine-current-coverage-of-view}
 
 Before attempting any backfill, first establish what data the materialized view already contains. This is done by querying the minimum timestamp present in the target table:
@@ -438,7 +443,8 @@ FROM otel_traces_1m;
 ```
 
 This timestamp represents the earliest point from which the view can satisfy queries. Any query from ClickStack requesting data earlier than this timestamp will fall back to the base table.
-
+</Step>
+<Step>
 ##### Decide whether backfilling is necessary {#decide-whether-backfilling-is-neccessary}
 
 In most ClickStack deployments, queries focus on recent data, such as the last 24 hours. In these cases, newly created views become fully usable shortly after creation, and backfilling is unnecessary.
@@ -448,7 +454,8 @@ If the timestamp returned in the previous step is sufficiently old for your use 
 - Queries frequently span long historical ranges.
 - The view is critical for performance across those ranges.
 - The dataset size and aggregation cost make backfilling feasible.
-
+</Step>
+<Step>
 ##### Backfill missing historical data {#backfill-missing-historical-data}
 
 If backfilling is required, populate the materialized view's target table for timestamps earlier than the current minimum using the query from the view modified to only read data older than the timestamp recorded above. Because the target table uses AggregatingMergeTree, the backfill query **must insert aggregation states, not final values**.
@@ -480,7 +487,8 @@ GROUP BY
     ServiceName,
     StatusCode;
 ```
-</VerticalStepper>
+</Step>
+</Steps>
 
 #### Incremental backfilling using a Null table {#incremental-backfill-null-table}
 
@@ -495,8 +503,8 @@ This approach is appropriate when:
 
 The key idea is to use a [**Null table**](/reference/engines/table-engines/special/null) as an ingestion buffer. While the Null table doesn't store data, any materialized views attached to it will still execute, allowing aggregation states to be computed incrementally as data flows through.
 
-<VerticalStepper headerLevel="h5">
-
+<Steps>
+<Step>
 ##### Create a Null table for backfilling {#create-null-table}
 
 Create a lightweight Null table that contains only the columns required by the materialized view's aggregation. This minimizes I/O and memory usage.
@@ -511,7 +519,8 @@ CREATE TABLE otel_traces_backfill
 )
 ENGINE = Null;
 ```
-
+</Step>
+<Step>
 ##### Attach a materialized view to the Null table {#attach-mv-to-null-table}
 
 Next, create a materialized view on the Null table that targets the same aggregation table used by your primary materialized view.
@@ -536,7 +545,8 @@ GROUP BY
 ```
 
 This materialized view will execute incrementally as rows are inserted into the Null table, producing aggregation states in small blocks.
-
+</Step>
+<Step>
 ##### Backfill data incrementally {#incremental-backfill}
 
 Finally, insert historical data into the Null table. The materialized view will process the data block by block, emitting aggregation states into the target table without persisting the raw rows.
@@ -561,8 +571,8 @@ For additional safety, consider directing the backfill materialized view to a te
 </Note>
 
 For further details on tuning this process, including improving insert performance and reducing and controlling resources, see ["Backfilling."](/guides/cloud-oss/data-modelling/backfilling#tuning-performance--resources)
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Recommendations {#recommendations}
 

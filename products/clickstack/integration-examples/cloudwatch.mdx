@@ -44,8 +44,8 @@ If you would like to test the integration before configuring your production set
 Unlike file-based log integrations (nginx, Redis), CloudWatch requires running a separate OpenTelemetry Collector that polls the CloudWatch API. This collector can't run inside ClickStack's all-in-one image as it needs AWS credentials and API access.
 </Note>
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Get ClickStack API key {#get-api-key}
 
 The OpenTelemetry Collector sends data to ClickStack's OTLP endpoint, which requires authentication.
@@ -55,13 +55,14 @@ The OpenTelemetry Collector sends data to ClickStack's OTLP endpoint, which requ
 3. Navigate to **Team Settings → API Keys**
 4. Copy your **Ingestion API Key**
 
-<Image img="/static/images/clickstack/api-key.png" alt="ClickStack API Key"/>
+<Image img="/images/clickstack/api-key.png" alt="ClickStack API Key"/>
 
 Save this as an environment variable:
 ```bash
 export CLICKSTACK_API_KEY="your-api-key-here"
 ```
-
+</Step>
+<Step>
 #### Configure AWS credentials {#configure-aws}
 
 Export your AWS credentials as environment variables. The method depends on your authentication type:
@@ -111,7 +112,8 @@ The AWS account associated with these credentials needs the following IAM policy
 ```
 
 Replace `YOUR_ACCOUNT_ID` with your AWS account ID.
-
+</Step>
+<Step>
 #### Configure the CloudWatch receiver {#configure-receiver}
 
 Create an `otel-collector-config.yaml` file with the CloudWatch receiver configuration.
@@ -202,7 +204,8 @@ For more configuration options, see the [CloudWatch receiver documentation](http
 <Note>
 The CloudWatch receiver only fetches logs from recent time windows (based on `poll_interval`). When first started, it begins from the current time. Historical logs aren't retrieved by default.
 </Note>
-
+</Step>
+<Step>
 #### Start the collector {#start-collector}
 
 Create a `docker-compose.yaml` file:
@@ -236,7 +239,8 @@ View collector logs:
 ```bash
 docker compose logs -f otel-collector
 ```
-
+</Step>
+<Step>
 #### Verify logs in HyperDX {#verify-logs}
 
 Once the collector is running:
@@ -246,7 +250,7 @@ Once the collector is running:
 3. Wait 1-2 minutes for logs to appear (based on your poll interval)
 4. Search for logs from your CloudWatch log groups
 
-<Image img="/static/images/clickstack/cloudwatch/log-search-view.png" alt="Log Search View"/>
+<Image img="/images/clickstack/cloudwatch/log-search-view.png" alt="Log Search View"/>
 
 Look for these key attributes in the logs:
 - `ResourceAttributes['aws.region']`: Your AWS region (e.g., "us-east-1")
@@ -254,16 +258,16 @@ Look for these key attributes in the logs:
 - `ResourceAttributes['cloudwatch.log.stream']`: The log stream name
 - `Body`: The actual log message content
 
-<Image img="/static/images/clickstack/cloudwatch/error-log-column-values.png" alt="Error Log Column Values"/>
-
-</VerticalStepper>
+<Image img="/images/clickstack/cloudwatch/error-log-column-values.png" alt="Error Log Column Values"/>
+</Step>
+</Steps>
 
 ## Demo dataset {#demo-dataset}
 
 For users who want to test the CloudWatch logs integration before configuring their production AWS environment, we provide a sample dataset with pre-generated logs showing realistic patterns from multiple AWS services.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Download the sample dataset {#download-sample}
 
 ```bash
@@ -274,7 +278,8 @@ The dataset includes 24 hours of CloudWatch logs from multiple services:
 - **Lambda functions**: Payment processing, order management, authentication
 - **ECS services**: API gateway with rate limiting and timeouts
 - **Background jobs**: Batch processing with retry patterns
-
+</Step>
+<Step>
 #### Start ClickStack {#start-clickstack}
 
 If you don't already have ClickStack running:
@@ -286,7 +291,8 @@ docker run -d --name clickstack \
 ```
 
 Wait a few moments for ClickStack to fully start up.
-
+</Step>
+<Step>
 #### Import the demo dataset {#import-demo-data}
 
 ```bash
@@ -296,7 +302,8 @@ docker exec -i clickstack clickhouse-client --query="
 ```
 
 This imports the logs directly into ClickStack's logs table.
-
+</Step>
+<Step>
 #### Verify the demo data {#verify-demo-logs}
 
 Once imported:
@@ -308,46 +315,48 @@ Once imported:
 
 You should see logs from multiple CloudWatch log groups.
 
-<Image img="/static/images/clickstack/cloudwatch/demo-search-view.png" alt="Demo search view"/>
+<Image img="/images/clickstack/cloudwatch/demo-search-view.png" alt="Demo search view"/>
 
 <Info>
 **Timezone Display**
 
 HyperDX displays timestamps in your browser's local timezone. The demo data spans **2025-12-07 00:00:00 - 2025-12-08 00:00:00 (UTC)**. Set your time range to **2025-12-06 00:00:00 - 2025-12-09 00:00:00** to ensure you see the demo logs regardless of your location. Once you see the logs, you can narrow the range to a 24-hour period for clearer visualizations.
 </Info>
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Dashboards and visualization {#dashboards}
 
 To help you monitor CloudWatch logs with ClickStack, we provide a pre-built dashboard with essential visualizations.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### <TrackedLink href={'/examples/cloudwatch-logs-dashboard.json'} download="cloudwatch-logs-dashboard.json" eventName="docs.cloudwatch_logs_monitoring.dashboard_download">Download</TrackedLink> the dashboard configuration {#download}
-
+</Step>
+<Step>
 #### Import the dashboard {#import-dashboard}
 
 1. Open HyperDX and navigate to the Dashboards section
 2. Click **Import Dashboard** in the upper right corner under the ellipses
 
-<Image img="/static/images/clickstack/import-dashboard.png" alt="Import dashboard button"/>
+<Image img="/images/clickstack/import-dashboard.png" alt="Import dashboard button"/>
 
 3. Upload the `cloudwatch-logs-dashboard.json` file and click **Finish Import**
 
-<Image img="/static/images/clickstack/cloudwatch/finish-import.png" alt="Finish import dialog"/>
-
+<Image img="/images/clickstack/cloudwatch/finish-import.png" alt="Finish import dialog"/>
+</Step>
+<Step>
 #### View the dashboard {#created-dashboard}
 
 The dashboard will be created with all visualizations pre-configured:
 
-<Image img="/static/images/clickstack/cloudwatch/logs-dashboard.png" alt="CloudWatch Logs dashboard"/>
+<Image img="/images/clickstack/cloudwatch/logs-dashboard.png" alt="CloudWatch Logs dashboard"/>
 
 <Note>
 For the demo dataset, set the time range to **2025-12-07 00:00:00 - 2025-12-08 00:00:00 (UTC)** (adjust based on your local timezone). The imported dashboard won't have a time range specified by default.
 </Note>
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Troubleshooting {#troubleshooting}
 

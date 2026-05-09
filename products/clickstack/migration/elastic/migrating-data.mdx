@@ -24,31 +24,34 @@ We demonstrate an approach for migrating essential data from Elasticsearch to Cl
 
 ### Implementation steps {#implementation-steps}
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Configure dual ingestion {#configure-dual-ingestion}
 
 Set up your data collection pipeline to send data to both Elastic and ClickStack simultaneously. 
 
 How this is achieved depends on your current agents for collection - see ["Migrating Agents"](/products/clickstack/migration/elastic/migrating-agents).
-
+</Step>
+<Step>
 #### Adjust retention periods {#adjust-retention-period}
 
 Configure Elastic's TTL settings to match your desired retention period. Set up the ClickStack [TTL](/products/clickstack/managing#configure-ttl) to maintain data for the same duration.
-
+</Step>
+<Step>
 #### Validate and compare {#validate-and-compare}
 
 - Run queries against both systems to ensure data consistency
 - Compare query performance and results
 - Migrate dashboards and alerts to ClickStack. This is currently a manual process.
 - Verify that all critical dashboards and alerts work as expected in ClickStack
-
+</Step>
+<Step>
 #### Gradual transition {#graudal-transition}
 
 - As data naturally expires from Elastic, you will increasingly rely on ClickStack
 - Once confidence in ClickStack is established, you can begin redirecting queries and dashboards
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ### Long-term retention {#long-term-retention}
 
@@ -114,8 +117,8 @@ This approach is only viable for datasets under 10 million rows, as Elasticsearc
 
 The following steps allow the migration of a single Elasticsearch index from ClickHouse.
 
-<VerticalStepper headerLevel="h3">
-
+<Steps>
+<Step>
 ### Migrate schema {#migrate-scheme}
 
 Create a table in ClickHouse for the index being migrated from Elasticsearch. You can map [Elasticsearch types to their ClickHouse](/products/clickstack/migration/elastic/types) equivalent. Alternatively, you can simply rely on the JSON data type in ClickHouse, which will dynamically create columns of the appropriate type as data is inserted.
@@ -548,7 +551,8 @@ We provide a type hint for the `host.name` and `timestamp` columns in the JSON d
 This latter approach, while simpler, is best for prototyping and data engineering tasks. For production, use `JSON` only for dynamic sub structures where necessary.
 
 For more details on using the JSON type in schemas, and how to efficiently apply it, we recommend the guide ["Designing your schema"](/integrations/connectors/data-ingestion/data-formats/json/schema).
-
+</Step>
+<Step>
 ### Install `elasticdump` {#install-elasticdump}
 
 We recommend [`elasticdump`](https://github.com/elasticsearch-dump/elasticsearch-dump) for exporting data from Elasticsearch. This tool requires `node` and should be installed on a machine with network proximity to both Elasticsearch and ClickHouse. We recommend a dedicated server with at least 4 cores and 16GB of RAM for most exports.
@@ -564,11 +568,13 @@ npm install elasticdump -g
 - Exports data directly to JSON format, which can be streamed to the ClickHouse client for insertion.
 
 Where possible, we recommend running both ClickHouse, Elasticsearch, and `elastic dump` in the same availability zone or data center to minimize network egress and maximize throughput.
-
+</Step>
+<Step>
 ### Install ClickHouse client {#install-clickhouse-client}
 
 Ensure ClickHouse is [installed on the server](/get-started/setup/self-managed/install) on which `elasticdump` is located. **Don't start a ClickHouse server** - these steps only require the client.
-
+</Step>
+<Step>
 ### Stream data {#stream-data}
 
 To stream data between Elasticsearch and ClickHouse, use the `elasticdump` command - piping the output directly to the ClickHouse client. The following inserts the data into our well structured table `logs_system_syslog`.
@@ -620,7 +626,8 @@ clickhouse-client --host ${CLICKHOUSE_HOST} --secure --password ${CLICKHOUSE_PAS
 
 See ["Reading JSON as an object"](/integrations/connectors/data-ingestion/data-formats/json/formats#reading-json-as-an-object) for further details.
 </Info>
-
+</Step>
+<Step>
 ### Transform data (optional) {#transform-data}
 
 The above commands assume a 1:1 mapping of Elasticsearch fields to ClickHouse columns. Users often need to filter and transform Elasticsearch data before insertion into ClickHouse.
@@ -648,5 +655,5 @@ clickhouse-client --host ${CLICKHOUSE_HOST} --secure --password ${CLICKHOUSE_PAS
 ```
 
 Note the need to escape the `@timestamp` field name and use the `JSONAsObject` input format.
-
-</VerticalStepper>
+</Step>
+</Steps>

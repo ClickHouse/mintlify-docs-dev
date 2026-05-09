@@ -20,8 +20,8 @@ In this mode, the S3 ClickPipe does an initial load of **all files** in the sele
 
 Various types of failures can occur when ingesting data, which can result in partial inserts or duplicate data. Object Storage ClickPipes are resilient to insert failures and provide exactly-once semantics using temporary staging tables. Data is first inserted into a staging table; if something goes wrong, the staging table is truncated and the insert is retried from a clean state. Only once an insert completes successfully are the partitions moved to the target table.
 
-<VerticalStepper type="numbered" headerLevel="h2">
-
+<Steps>
+<Step>
 ## Create an Amazon SQS queue {#create-sqs-queue}
 
 **1.** In the AWS Console, navigate to **Simple Queue Service > Create queue**. Use the defaults to create a new standard queue.
@@ -37,11 +37,11 @@ We strongly recommend configuring a **Dead-Letter-Queue (DLQ)** for the SQS queu
 
 **a.** In the S3 bucket properties, navigate to **Event notifications > Amazon EventBridge** and enable sending notifications to EventBridge. Click **Save changes**.
 
-<Image img="/static/images/integrations/data-ingestion/clickpipes/object-storage/amazon-s3/cp_eb_s3_enable.png" alt="Enabling Amazon EventBridge notifications in S3 bucket properties" size="lg" border/>
+<Image img="/images/integrations/data-ingestion/clickpipes/object-storage/amazon-s3/cp_eb_s3_enable.png" alt="Enabling Amazon EventBridge notifications in S3 bucket properties" size="lg" border/>
 
 **b.** In the AWS Console, navigate to **Amazon EventBridge > Rules > Create rule**. Name the rule (e.g. `S3ObjectCreated`), choose the **default** event bus, and click **Next**. On the **Build event pattern** step, select **AWS events or EventBridge partner events** as the event source, then enter the following event pattern manually, replacing `<bucket-name>` with your bucket name:
 
-<Image img="/static/images/integrations/data-ingestion/clickpipes/object-storage/amazon-s3/cp_eb_rule_define.png" alt="Defining the EventBridge rule name and event bus" size="lg" border/>
+<Image img="/images/integrations/data-ingestion/clickpipes/object-storage/amazon-s3/cp_eb_rule_define.png" alt="Defining the EventBridge rule name and event bus" size="lg" border/>
 
 ```json
 {
@@ -59,9 +59,9 @@ Optionally, add an `object.key` condition to the pattern to filter by prefix or 
 
 **c.** On the **Select target(s)** step, choose **AWS service** as the target type and select **SQS queue**. Pick the queue created in the previous step. Leave **Use execution role (recommended)** checked to let EventBridge auto-create the required IAM role, then click **Next** and complete the wizard.
 
-<Image img="/static/images/integrations/data-ingestion/clickpipes/object-storage/amazon-s3/cp_eb_rule_target.png" alt="Setting the SQS queue as the EventBridge rule target" size="lg" border/>
+<Image img="/images/integrations/data-ingestion/clickpipes/object-storage/amazon-s3/cp_eb_rule_target.png" alt="Setting the SQS queue as the EventBridge rule target" size="lg" border/>
 
-<Image img="/static/images/integrations/data-ingestion/clickpipes/object-storage/amazon-s3/cp_eb_rule_created.png" alt="EventBridge rule successfully created" size="lg" border/>
+<Image img="/images/integrations/data-ingestion/clickpipes/object-storage/amazon-s3/cp_eb_rule_created.png" alt="EventBridge rule successfully created" size="lg" border/>
 
 **d.** Edit the SQS queue access policy to allow EventBridge to send messages to it. Replace `<sqs-queue-arn>` and `<eventbridge-rule-arn>` with the appropriate values:
 
@@ -127,7 +127,8 @@ S3 doesn't allow multiple overlapping notification rules for the same event type
 
 </Tab>
 </Tabs>
-
+</Step>
+<Step>
 ## Configure an IAM role {#configure-iam-role}
 
 **1.** In the ClickHouse Cloud console, navigate to **Settings > Network security information** and copy the **IAM role ARN** for your service.
@@ -188,7 +189,8 @@ S3 doesn't allow multiple overlapping notification rules for the same event type
   ]
 }
 ```
-
+</Step>
+<Step>
 ## Create a ClickPipe with unordered mode {#create-clickpipe}
 
 **1.** In the ClickHouse Cloud console, navigate to **Data Sources > Create ClickPipe** and select **Amazon S3**. Enter the details to connect to your S3 bucket. Under **Authentication method**, choose **IAM role** and provide the ARN of the role you created in the previous step.
@@ -198,5 +200,5 @@ S3 doesn't allow multiple overlapping notification rules for the same event type
 **3.** Under **Parse information**, define a **Sorting key** for the target table. Make any necessary adjustments to the mapped schema, then configure a role for the ClickPipes database user.
 
 **4.** Review the configuration and click **Create ClickPipe**. ClickPipes will perform an initial scan of your bucket to load all existing files that match the specified path, and will then begin processing files as new `ObjectCreated:*` events arrive in the queue.
-
-</VerticalStepper>
+</Step>
+</Steps>

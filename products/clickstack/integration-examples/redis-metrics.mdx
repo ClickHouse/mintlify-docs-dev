@@ -31,8 +31,8 @@ If you would like to test the Redis Metrics integration before configuring your 
 - Network access from ClickStack to Redis (default port 6379)
 - Redis password if authentication is enabled
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Verify Redis connection {#verify-redis}
 
 First, verify you can connect to Redis and that the INFO command works:
@@ -55,7 +55,8 @@ redis-cli -a <your-password> ping
 - **Local installation**: `localhost:6379`
 - **Docker**: Use container name or service name (e.g., `redis:6379`)
 - **Remote**: `<redis-host>:6379`
-
+</Step>
+<Step>
 #### Create custom OTel collector configuration {#custom-otel}
 
 ClickStack allows you to extend the base OpenTelemetry collector configuration by mounting a custom configuration file and setting an environment variable. The custom configuration is merged with the base configuration managed by HyperDX via OpAMP.
@@ -133,7 +134,8 @@ This configuration:
 - Adjust `collection_interval` based on your needs (10s default; lower values increase data volume)
 - For multiple Redis instances, customize `service.name` to distinguish them (e.g., `"redis-cache"`, `"redis-sessions"`)
 </Note>
-
+</Step>
+<Step>
 #### Configure ClickStack to load custom configuration {#load-custom}
 
 To enable custom collector configuration in your existing ClickStack deployment, you must:
@@ -196,7 +198,8 @@ docker run --name clickstack \
   -v "$(pwd)/redis-metrics.yaml:/etc/otelcol-contrib/custom.config.yaml:ro" \
   clickhouse/clickstack-all-in-one:latest
 ```
-
+</Step>
+<Step>
 #### Verify metrics in HyperDX {#verifying-metrics}
 
 Once configured, log into HyperDX and verify metrics are flowing:
@@ -206,15 +209,15 @@ Once configured, log into HyperDX and verify metrics are flowing:
 3. You should see metric data points appearing at your configured collection interval
 
 {/* <Image img={metrics_view} alt="Redis Metrics view"/> */}
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Demo dataset {#demo-dataset}
 
 For users who want to test the Redis Metrics integration before configuring their production systems, we provide a pre-generated dataset with realistic Redis Metrics patterns.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Download the sample metrics dataset {#download-sample}
 
 Download the pre-generated metrics files (24 hours of Redis Metrics with realistic patterns):
@@ -231,7 +234,8 @@ The dataset includes realistic patterns:
 - **Traffic spike (14:30-14:45)** - 5x traffic surge with connection pressure
 - **Memory pressure (20:00)** - Key evictions and cache performance degradation
 - **Daily traffic patterns** - Business hours peaks, evening drops, random micro-spikes
-
+</Step>
+<Step>
 #### Start ClickStack {#start-clickstack}
 
 Start a ClickStack instance:
@@ -242,7 +246,8 @@ docker run -d --name clickstack-demo \
 ```
 
 Wait approximately 30 seconds for ClickStack to fully start.
-
+</Step>
+<Step>
 #### Load metrics into ClickStack {#load-metrics}
 
 Load the metrics directly into ClickHouse:
@@ -255,7 +260,8 @@ cat redis-metrics-gauge.csv | docker exec -i clickstack-demo \
 cat redis-metrics-sum.csv | docker exec -i clickstack-demo \
   clickhouse-client --query "INSERT INTO otel_metrics_sum FORMAT CSVWithNames"
 ```
-
+</Step>
+<Step>
 #### Verify metrics in HyperDX {#verify-metrics}
 
 Once loaded, the quickest way to see your metrics is through the pre-built dashboard.
@@ -270,39 +276,41 @@ Look for these interesting patterns:
 - **14:30-14:45** - Traffic spike (high client connections, some rejections)
 - **20:00** - Memory pressure (key evictions begin)
 </Note>
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Dashboards and visualization {#dashboards}
 
 To help you get started monitoring Redis with ClickStack, we provide essential visualizations for Redis Metrics.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### <TrackedLink href={'/examples/redis-metrics-dashboard.json'} download="redis-metrics-dashboard.json" eventName="docs.redis_metrics_monitoring.dashboard_download">Download</TrackedLink> the dashboard configuration {#download}
-
+</Step>
+<Step>
 #### Import the pre-built dashboard {#import-dashboard}
 
 1. Open HyperDX and navigate to the Dashboards section
 2. Click **Import Dashboard** in the upper right corner under the ellipses
 
-<Image img="/static/images/clickstack/import-dashboard.png" alt="Import dashboard button"/>
+<Image img="/images/clickstack/import-dashboard.png" alt="Import dashboard button"/>
 
 3. Upload the `redis-metrics-dashboard.json` file and click **Finish Import**
 
-<Image img="/static/images/clickstack/import-redis-metrics-dashboard.png" alt="Finish import dialog"/>
-
+<Image img="/images/clickstack/import-redis-metrics-dashboard.png" alt="Finish import dialog"/>
+</Step>
+<Step>
 #### View the dashboard {#created-dashboard}
 
 The dashboard will be created with all visualizations pre-configured:
 
-<Image img="/static/images/clickstack/redis-metrics-dashboard.png" alt="Redis Metrics dashboard"/>
+<Image img="/images/clickstack/redis-metrics-dashboard.png" alt="Redis Metrics dashboard"/>
 
 <Note>
 For the demo dataset, set the time range to **2025-10-20 05:00:00 - 2025-10-21 05:00:00 (UTC)** (adjust based on your local timezone). The imported dashboard won't have a time range specified by default.
 </Note>
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Troubleshooting {#troubleshooting}
 

@@ -37,8 +37,8 @@ If you would like to test the EC2 host logs integration before configuring your 
 - Network connectivity from EC2 instance to ClickStack's OTLP endpoint (port 4318 for HTTP or 4317 for gRPC)
 - EC2 instance metadata service accessible (enabled by default)
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Verify EC2 metadata is accessible {#verify-metadata}
 
 From your EC2 instance, verify the metadata service is accessible:
@@ -60,7 +60,8 @@ You should see your instance ID, region, and instance type. If these commands fa
 <Note>
 EC2 metadata is available at `http://169.254.169.254` from within the instance. The OpenTelemetry `resourcedetection` processor uses this endpoint to automatically enrich logs with cloud context.
 </Note>
-
+</Step>
+<Step>
 #### Verify syslog files exist {#verify-syslog}
 
 Verify that your EC2 instance is writing syslog files:
@@ -76,7 +77,8 @@ tail -20 /var/log/syslog
 # or
 tail -20 /var/log/messages
 ```
-
+</Step>
+<Step>
 #### Install OpenTelemetry Collector {#install-collector}
 
 Install the OpenTelemetry Collector Contrib distribution on your EC2 instance:
@@ -91,7 +93,8 @@ sudo mv otelcol-contrib /usr/local/bin/
 # Verify installation
 otelcol-contrib --version
 ```
-
+</Step>
+<Step>
 #### Create collector configuration {#create-config}
 
 Create a configuration file for the OpenTelemetry Collector at `/etc/otelcol-contrib/config.yaml`:
@@ -240,7 +243,8 @@ The `resourcedetection` processor automatically adds these attributes to every l
 - `host.type`: Instance type (e.g., "t3.medium")
 - `host.name`: Instance hostname
 </Info>
-
+</Step>
+<Step>
 #### Set ClickStack API key {#set-api-key}
 
 Export your ClickStack API key as an environment variable:
@@ -253,7 +257,8 @@ To make this persistent across reboots, add it to your shell profile:
 echo 'export CLICKSTACK_API_KEY="your-api-key-here"' >> ~/.bashrc
 source ~/.bashrc
 ```
-
+</Step>
+<Step>
 #### Run the collector {#run-collector}
 
 Start the OpenTelemetry Collector:
@@ -266,7 +271,8 @@ CLICKSTACK_API_KEY="your-api-key-here" /usr/local/bin/otelcol-contrib --config /
 
 Configure the collector to run as a systemd service so it starts automatically on boot and restarts on failure. See the [OpenTelemetry Collector documentation](https://opentelemetry.io/docs/collector/deployment/) for details.
 </Info>
-
+</Step>
+<Step>
 #### Verifying Logs in HyperDX {#verifying-logs}
 
 Once the collector is running, log into HyperDX and verify logs are flowing with EC2 metadata:
@@ -282,17 +288,17 @@ Once the collector is running, log into HyperDX and verify logs are flowing with
    - `host.type` (instance type)
    - `cloud.availability_zone`
 
-<Image img="/static/images/clickstack/host-logs/ec2/search-view.png" alt="EC2 logs search view"/>
-<Image img="/static/images/clickstack/host-logs/ec2/log-view.png" alt="EC2 log detail showing metadata"/>
-
-</VerticalStepper>
+<Image img="/images/clickstack/host-logs/ec2/search-view.png" alt="EC2 logs search view"/>
+<Image img="/images/clickstack/host-logs/ec2/log-view.png" alt="EC2 log detail showing metadata"/>
+</Step>
+</Steps>
 
 ## Demo dataset {#demo-dataset}
 
 For users who want to test the EC2 host logs integration before configuring their production instances, we provide a sample dataset with simulated EC2 metadata.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Download the sample dataset {#download-sample}
 
 Download the sample log file:
@@ -308,7 +314,8 @@ The dataset includes:
 - Service restarts (rsyslog)
 - Kernel messages and firewall activity
 - Mix of normal operations and notable events
-
+</Step>
+<Step>
 #### Create test collector configuration {#test-config}
 
 Create a file named `ec2-host-logs-demo.yaml` with the following configuration:
@@ -379,7 +386,8 @@ EOF
 <Note>
 For demo purposes, we manually add EC2 metadata using the `resource` processor. In production with real EC2 instances, use the `resourcedetection` processor which automatically queries the EC2 metadata API.
 </Note>
-
+</Step>
+<Step>
 #### Run ClickStack with demo configuration {#run-demo}
 
 Run ClickStack with the demo logs and configuration:
@@ -392,7 +400,8 @@ docker run --name clickstack-demo \
   -v "$(pwd)/journal.log:/tmp/host-demo/journal.log:ro" \
   docker.hyperdx.io/hyperdx/hyperdx-all-in-one:latest
 ```
-
+</Step>
+<Step>
 #### Verify logs in HyperDX {#verify-demo-logs}
 
 Once the collector is running:
@@ -403,8 +412,8 @@ Once the collector is running:
 4. Filter by `source:ec2-demo`
 5. Expand a log entry to view EC2 metadata in the resource attributes
 
-<Image img="/static/images/clickstack/host-logs/ec2/search-view-demo.png" alt="EC2 logs search view"/>
-<Image img="/static/images/clickstack/host-logs/ec2/log-view-demo.png" alt="EC2 log detail with metadata"/>
+<Image img="/images/clickstack/host-logs/ec2/search-view-demo.png" alt="EC2 logs search view"/>
+<Image img="/images/clickstack/host-logs/ec2/log-view-demo.png" alt="EC2 log detail with metadata"/>
 
 <Info>
 **Timezone display**
@@ -417,33 +426,35 @@ You should see logs with simulated EC2 context including:
 - Region: `us-east-1`
 - Availability Zone: `us-east-1a`
 - Instance Type: `t3.medium`
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Dashboards and visualization {#dashboards}
 
 To help you get started monitoring EC2 host logs with ClickStack, we provide essential visualizations with cloud context.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### <TrackedLink href={'/examples/host-logs-dashboard.json'} download="host-logs-dashboard.json" eventName="docs.ec2_host_logs_monitoring.dashboard_download">Download</TrackedLink> the dashboard configuration {#download}
-
+</Step>
+<Step>
 #### Import the pre-built dashboard {#import-dashboard}
 
 1. Open HyperDX and navigate to the Dashboards section
 2. Click **Import Dashboard** in the upper right corner under the ellipses
 
-<Image img="/static/images/clickstack/import-dashboard.png" alt="Import dashboard button"/>
+<Image img="/images/clickstack/import-dashboard.png" alt="Import dashboard button"/>
 
 3. Upload the `host-logs-dashboard.json` file and click **Finish Import**
 
-<Image img="/static/images/clickstack/host-logs/import-dashboard.png" alt="Finish import"/>
-
+<Image img="/images/clickstack/host-logs/import-dashboard.png" alt="Finish import"/>
+</Step>
+<Step>
 #### View the dashboard {#created-dashboard}
 
 The dashboard will be created with all visualizations pre-configured:
 
-<Image img="/static/images/clickstack/host-logs/host-logs-dashboard.png" alt="EC2 logs dashboard"/>
+<Image img="/images/clickstack/host-logs/host-logs-dashboard.png" alt="EC2 logs dashboard"/>
 
 You can filter dashboard visualizations by EC2 context:
 - `cloud.region:us-east-1` - Show logs from specific region
@@ -453,8 +464,8 @@ You can filter dashboard visualizations by EC2 context:
 <Note>
 For the demo dataset, set the time range to **2025-11-11 00:00:00 - 2025-11-12 00:00:00 (UTC)** (adjust based on your local timezone). The imported dashboard won't have a time range specified by default.
 </Note>
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Troubleshooting {#troubleshooting}
 

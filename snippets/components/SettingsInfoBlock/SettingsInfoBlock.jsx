@@ -1,7 +1,6 @@
 /**
  * SettingsInfoBlock — compact "Type / Default / Changeable" summary for a
- * setting, rendered inside an <Accordion> so it doesn't take vertical space
- * when the reader is skimming.
+ * setting, rendered as a plain table.
  *
  * Mintlify equivalent of clickhouse-docs's `src/theme/SettingsInfoBlock`.
  *
@@ -13,31 +12,35 @@
  */
 const SettingsInfoBlock = ({ type, default_value, changeable_without_restart }) => {
   const cells = [
-    ["Type", type],
-    ["Default value", default_value],
+    ["Type", <Badge color="surface">{type}</Badge>],
+    ["Default value", <Badge color="surface">{default_value}</Badge>],
   ];
   if (changeable_without_restart) {
-    cells.push(["Changeable without restart", changeable_without_restart]);
+    const isYes = String(changeable_without_restart).trim().toLowerCase() === "yes";
+    const badge = isYes ? (
+      <Badge icon="check" stroke color="green" size="sm">Yes</Badge>
+    ) : (
+      <Badge icon="x" stroke color="red" size="sm">No</Badge>
+    );
+    cells.push(["Changeable without restart", badge]);
   }
   return (
-    <Accordion title="Settings info">
-      <table>
-        <thead>
-          <tr>
-            {cells.map(([h]) => (
-              <th key={h}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            {cells.map(([h, v]) => (
-              <td key={h}>{v}</td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
-    </Accordion>
+    <table>
+      <thead>
+        <tr>
+          {cells.map(([h]) => (
+            <th key={h}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          {cells.map(([h, v]) => (
+            <td key={h}>{v}</td>
+          ))}
+        </tr>
+      </tbody>
+    </table>
   );
 };
 

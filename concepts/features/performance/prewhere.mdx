@@ -17,7 +17,7 @@ This guide explains how PREWHERE works, how to measure its impact, and how to tu
 
 We'll start by illustrating how a query on the [uk_price_paid_simple](/concepts/core-concepts/parts) table is processed without using PREWHERE:
 
-<Image img="/static/images/guides/best-practices/prewhere_01.gif" size="md" alt="Query processing without PREWHERE optimization"/>
+<Image img="/images/guides/best-practices/prewhere_01.gif" size="md" alt="Query processing without PREWHERE optimization"/>
 
 <br/><br/>
 ① The query includes a filter on the `town` column, which is part of the table's primary key, and therefore also part of the primary index.
@@ -38,7 +38,7 @@ The following animations show how the query from above is processed with a PREWH
 
 The first three processing steps are the same as before:
 
-<Image img="/static/images/guides/best-practices/prewhere_02.gif" size="md" alt="Query processing with PREWHERE optimization"/>
+<Image img="/images/guides/best-practices/prewhere_02.gif" size="md" alt="Query processing with PREWHERE optimization"/>
 
 <br/><br/>
 ① The query includes a filter on the `town` column, which is part of the table's primary key—and therefore also part of the primary index.
@@ -56,7 +56,7 @@ ClickHouse begins PREWHERE processing by ① reading the selected granules from 
 
 In our example, all selected granules do match, so ② the corresponding positionally aligned granules for the next filter column—`date`—are then selected for processing:
 
-<Image img="/static/images/guides/best-practices/prewhere_03.gif" size="md" alt="Step 1: Filtering by town"/>
+<Image img="/images/guides/best-practices/prewhere_03.gif" size="md" alt="Step 1: Filtering by town"/>
 
 <br/><br/>
 **Step 2: Filtering by date**<br/>
@@ -64,7 +64,7 @@ Next, ClickHouse ① reads the selected `date` column granules to evaluate the f
 
 In this case, two out of three granules contain matching rows, so ② only their positionally aligned granules from the next filter column—`price`—are selected for further processing:
 
-<Image img="/static/images/guides/best-practices/prewhere_04.gif" size="md" alt="Step 2: Filtering by date"/>
+<Image img="/images/guides/best-practices/prewhere_04.gif" size="md" alt="Step 2: Filtering by date"/>
 
 <br/><br/>
 **Step 3: Filtering by price**<br/>
@@ -72,7 +72,7 @@ Finally, ClickHouse ① reads the two selected granules from the `price` column 
 
 Only one of the two granules contains matching rows, so ② just its positionally aligned granule from the `SELECT` column—`street`—needs to be loaded for further processing:
 
-<Image img="/static/images/guides/best-practices/prewhere_05.gif" size="md" alt="Step 2: Filtering by price"/>
+<Image img="/images/guides/best-practices/prewhere_05.gif" size="md" alt="Step 2: Filtering by price"/>
 
 <br/><br/>
 By the final step, only the minimal set of column granules, those containing matching rows, are loaded. This leads to lower memory usage, less disk I/O, and faster query execution.

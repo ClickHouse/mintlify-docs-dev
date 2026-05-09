@@ -22,7 +22,9 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
+import shutil
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -213,6 +215,17 @@ USE_BASE_URL_RE = re.compile(r"useBaseUrl\(\s*(['\"][^'\"]*['\"])(?:\s*,[^)]*)?\
 
 def transform_use_base_url(text: str) -> str:
     return USE_BASE_URL_RE.sub(r"\1", text)
+
+
+# Docusaurus headings escape the anchor braces (`# Title \{#anchor\}`) because
+# its MDX parser would otherwise treat `{` as a JSX expression. Mintlify's MDX
+# accepts `{#anchor}` directly, so the backslashes leak through as visible
+# characters. Strip them on heading lines.
+HEADING_ANCHOR_RE = re.compile(r"^(#{1,6} .*?)\s*\\\{(#[^\\}]+)\\\}\s*$", re.MULTILINE)
+
+
+def transform_heading_anchors(text: str) -> str:
+    return HEADING_ANCHOR_RE.sub(r"\1 {\2}", text)
 
 
 # `<iframe ...>...</iframe>` -> `<Frame><iframe ...>...</iframe></Frame>`
@@ -520,16 +533,85 @@ POST_TRANSFORM_OVERRIDES: dict[str, callable] = {
 }
 
 
-def transform_imports(text: str, lk: Lookups, issues: list[str]) -> tuple[str, dict[str, str]]:
+def transform_imports(text: str, lk: Lookups, issues: list[str], source_docu_path: Path | None = None, json_vars: dict[str, str] | None = None, dest_path: Path | None = None) -> tuple[str, dict[str, str]]:
     image_vars: dict[str, str] = {}
+    if json_vars is None:
+        json_vars = {}
+
+    def _is_self_import(target_url: str) -> bool:
+        # Snippet basename matching can resolve an import to the same file
+        # being migrated (this happens when a Docusaurus page is also copied
+        # into /snippets/ under the same basename). The resulting self-import
+        # makes Mintlify's MDX loader recurse infinitely and hangs the dev
+        # server, so detect and drop it.
+        if dest_path is None:
+            return False
+        try:
+            return ("/" + dest_path.relative_to(THIS_REPO).as_posix()) == target_url
+        except ValueError:
+            return False
+
+    def _import_or_drop(spec: str, target_url: str, basename: str) -> str:
+        if _is_self_import(target_url):
+            issues.append(f"dropped self-referential snippet import in {dest_path}: {basename}")
+            return ""
+        return f"import {spec} from '{target_url}';"
 
     def replace(m: re.Match) -> str:
         spec = m.group("spec").strip()
         src = m.group("src")
 
+        # Drop `import { ... } from 'react';` — Mintlify only allows local
+        # imports, but exposes React hooks as runtime globals so the import is
+        # both forbidden and unnecessary.
+        if src == "react":
+            return ""
+
+        # Relative `./*.json` data imports — record the var → resolved-path
+        # mapping so a body-level transform can inline the data later, then
+        # drop the import (Mintlify cannot import JSON modules).
+        if (src.startswith("./") or src.startswith("../")) and src.endswith(".json"):
+            varname = spec.lstrip("{").rstrip("}").strip().split(" as ")[-1]
+            if source_docu_path is not None:
+                resolved = (source_docu_path.parent / src).resolve()
+                json_vars[varname] = str(resolved)
+            return ""
+
+        # Relative `./X.md` / `../X.md` imports point to a sibling file in the
+        # upstream Docusaurus tree. Map by basename to the migrated
+        # `/snippets/<basename>.mdx` (sibling layout flattens during migration).
+        if src.startswith("./") or src.startswith("../"):
+            basename = src.rsplit("/", 1)[-1]
+            mdx_basename = basename if basename.endswith(".mdx") else basename.rsplit(".", 1)[0] + ".mdx"
+            paths = lk.snippet_basename_to_paths.get(mdx_basename, [])
+            if paths:
+                # When multiple snippets share a basename, prefer the one whose
+                # path best matches the import's resolved upstream path.
+                if len(paths) > 1 and source_docu_path is not None:
+                    try:
+                        resolved = (source_docu_path.parent / src).resolve().with_suffix(".mdx")
+                        src_parts = resolved.parts
+                        best, best_len = paths[0], -1
+                        for path in paths:
+                            cand_parts = path.lstrip("/").split("/")
+                            n = 0
+                            while n < len(cand_parts) and n < len(src_parts) and cand_parts[-1-n] == src_parts[-1-n]:
+                                n += 1
+                            if n > best_len:
+                                best, best_len = path, n
+                        return _import_or_drop(spec, best, basename)
+                    except (OSError, ValueError):
+                        pass
+                return _import_or_drop(spec, paths[0], basename)
+            issues.append(f"relative snippet not found in /snippets/: {basename}")
+            return f"import {spec} from '{src}'; {{/* MIGRATE: snippet {basename!s} not found */}}"
+
         if src.startswith("@site/static/images/"):
             varname = spec.lstrip("{").rstrip("}").strip().split(" as ")[-1]
-            path = "/static/images/" + src[len("@site/static/images/"):]
+            # Upstream Docusaurus serves /static/images/... but in this repo
+            # the assets live at /images/... — the leading `static/` segment
+            # is dropped by the file copy, not the URL.
+            path = "/images/" + src[len("@site/static/images/"):]
             image_vars[varname] = path
             return ""
 
@@ -557,7 +639,7 @@ def transform_imports(text: str, lk: Lookups, issues: list[str]) -> tuple[str, d
                 if n > best_len:
                     best, best_len = path, n
             if best:
-                return f"import {spec} from '{best}';"
+                return _import_or_drop(spec, best, basename)
             issues.append(f"snippet not found in /snippets/: {basename}")
             return f"import {spec} from '{src}'; {{/* MIGRATE: snippet {basename!s} not found */}}"
 
@@ -629,6 +711,22 @@ def transform_imports(text: str, lk: Lookups, issues: list[str]) -> tuple[str, d
         if src == "@docusaurus/useBrokenLinks":
             return ""
 
+        # @clickhouse/click-ui/bundled — Mintlify only allows local imports.
+        # We transform the body usages of these components to native Mintlify
+        # equivalents (<Card>, <Steps>/<Step>) elsewhere in the pipeline, so
+        # the import line is no longer needed.
+        if src == "@clickhouse/click-ui/bundled":
+            return ""
+
+        # `/src/components/...` — Docusaurus-style absolute import path that
+        # points into the upstream React component tree. Mintlify has no
+        # equivalent, and these particular components (TwoColumnList,
+        # ClickableSquare, HorizontalDivide, ViewAllLink, VideoContainer)
+        # are handled by dedicated body transforms (or simply unused once the
+        # body is rewritten). Drop the import.
+        if src.startswith("/src/components/") or src.startswith("/src/theme/"):
+            return ""
+
         if src.startswith("@docusaurus/") or src.startswith("@site/src/"):
             issues.append(f"unmapped import: {src}")
             return f"{{/* MIGRATE: unmapped import {src!r} */}}"
@@ -646,7 +744,7 @@ ADMON_RE = re.compile(
     r"^[ \t]*:::(?P<type>note|tip|info|warning|caution|danger)"
     r"(?:\[(?P<btitle>[^\]]+)\]| +(?P<stitle>[^\n]+))?[ \t]*\n"
     r"(?P<body>.*?)"
-    r"^[ \t]*:::[ \t]*$",  # do not match \n in trailing whitespace — it eats a blank line
+    r"^[ \t]*:::+[ \t]*$",  # tolerate upstream typos like `::::`; do not match \n in trailing whitespace — it eats a blank line
     re.MULTILINE | re.DOTALL,
 )
 
@@ -672,9 +770,26 @@ DETAILS_RE = re.compile(
 )
 
 
+def _strip_inline_markdown(s: str) -> str:
+    # Mintlify's `<Accordion title="...">` is plain text — markdown isn't
+    # rendered, so leave-in `**bold**` etc. would print as literal asterisks.
+    # Strip the most common inline markers; keep link text from `[text](url)`.
+    s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)  # [text](url) -> text
+    s = re.sub(r"\*\*([^*]+)\*\*", r"\1", s)         # **bold**
+    s = re.sub(r"__([^_]+)__", r"\1", s)             # __bold__
+    s = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"\1", s)  # *italic*
+    s = re.sub(r"(?<!_)_([^_\n]+)_(?!_)", r"\1", s)      # _italic_
+    s = re.sub(r"`([^`]+)`", r"\1", s)               # `code`
+    # Inline HTML formatting tags (Mintlify renders the title as plain text,
+    # so any leftover `<strong>` / `<em>` / etc. would print as literal tags).
+    s = re.sub(r"</?(?:strong|b|em|i|u|span|code|small|mark|sub|sup)\b[^>]*>", "", s, flags=re.IGNORECASE)
+    return s
+
+
 def transform_details(text: str) -> str:
     def repl(m: re.Match) -> str:
         title = re.sub(r"\s+", " ", m.group("title")).strip()
+        title = _strip_inline_markdown(title)
         body = m.group("body").strip("\n")
         title_attr = title.replace('"', '\\"')
         return f'<Accordion title="{title_attr}">\n{body}\n</Accordion>'
@@ -716,6 +831,188 @@ def transform_image_components(text: str, image_vars: dict[str, str]) -> str:
             return m.group(0)
         return f'<Image{before}img="{path}"{after}>'
     return pattern.sub(repl, text)
+
+
+# ----- click-ui body transforms ---------------------------------------------
+
+# Convert `<VerticalStepper>...</VerticalStepper>` (Click UI, splits content by
+# headings of `headerLevel` — defaults to h2) into Mintlify `<Steps>`/`<Step>`
+# blocks. Each matching heading inside the stepper marks the start of a new
+# Step; the heading line (anchor and all) is preserved inside the Step body so
+# existing in-page links keep working. Headings inside fenced code blocks are
+# ignored — e.g. `## comment` inside a `shell` fence is a shell comment, not a
+# Markdown heading.
+VERTICAL_STEPPER_RE = re.compile(r"<VerticalStepper\b(?P<attrs>[^>]*)>(?P<body>.*?)</VerticalStepper>", re.DOTALL)
+VERTICAL_STEPPER_SELFCLOSE_RE = re.compile(r"<VerticalStepper\b[^>]*/>\s*\n?")
+HEADER_LEVEL_RE = re.compile(r'\bheaderLevel\s*=\s*"h([1-6])"')
+FENCE_RE = re.compile(r"^[ \t]*(```+|~~~+)", re.MULTILINE)
+
+
+def _heading_positions_outside_fences(body: str, level: int) -> list[int]:
+    heading_re = re.compile(rf"^{'#' * level}[ \t]+\S.*$", re.MULTILINE)
+    skip_spans: list[tuple[int, int]] = []
+    # Headings inside fenced code blocks are not Markdown headings.
+    in_fence = False
+    fence_start = 0
+    for fm in FENCE_RE.finditer(body):
+        if not in_fence:
+            in_fence = True
+            fence_start = fm.start()
+        else:
+            in_fence = False
+            skip_spans.append((fence_start, fm.end()))
+    if in_fence:
+        skip_spans.append((fence_start, len(body)))
+
+    # Headings inside nested grouping containers (`<Tabs>`, `<details>`,
+    # `<Accordion>`) belong to the inner block, not to the stepper. A
+    # `<VerticalStepper>` page typically opens a `<Tabs>` per step body, with
+    # its own `<TabItem>` h3s — those must not be promoted to step boundaries
+    # or the resulting `<Steps>` close mid-`<Tab>`.
+    for tag in ("Tabs", "details", "Accordion"):
+        for cm in re.finditer(rf"<{tag}\b[^>]*>", body):
+            close = re.search(rf"</{tag}>", body[cm.end():])
+            if not close:
+                continue
+            skip_spans.append((cm.start(), cm.end() + close.end()))
+
+    def in_skip(pos: int) -> bool:
+        return any(s <= pos < e for s, e in skip_spans)
+
+    return [hm.start() for hm in heading_re.finditer(body) if not in_skip(hm.start())]
+
+
+def transform_vertical_stepper(text: str) -> str:
+    # Self-closing `<VerticalStepper .../>` has no content — drop it entirely.
+    text = VERTICAL_STEPPER_SELFCLOSE_RE.sub("", text)
+    def repl(m: re.Match) -> str:
+        attrs = m.group("attrs")
+        body = m.group("body")
+        level_m = HEADER_LEVEL_RE.search(attrs)
+        level = int(level_m.group(1)) if level_m else 2
+        positions = _heading_positions_outside_fences(body, level)
+        if not positions:
+            # No matching heading inside — unwrap, preserving content as-is.
+            return body.strip("\n")
+        prelude = body[: positions[0]].strip("\n")
+        steps = []
+        for i, start in enumerate(positions):
+            end = positions[i + 1] if i + 1 < len(positions) else len(body)
+            seg = body[start:end].strip("\n")
+            steps.append(f"<Step>\n{seg}\n</Step>")
+        out = ("" if not prelude else prelude + "\n\n") + "<Steps>\n" + "\n".join(steps) + "\n</Steps>"
+        return out
+    return VERTICAL_STEPPER_RE.sub(repl, text)
+
+
+# Convert `<CardPrimary ... />` (Click UI hero card) to a Mintlify `<Card>`.
+# We keep title, description (as body), icon, and href (from infoUrl). Other
+# Click UI-only props (alignContent, size, isSelected, onButtonClick, etc.)
+# don't have Mintlify equivalents and are dropped.
+CARD_PRIMARY_RE = re.compile(r"<CardPrimary\b(?P<attrs>[^>]*?)/>", re.DOTALL)
+JSX_ATTR_RE = re.compile(r'(?P<name>\w+)\s*=\s*(?:"(?P<dq>[^"]*)"|\{(?P<expr>[^{}]*)\}|\'(?P<sq>[^\']*)\')')
+
+
+def _parse_jsx_attrs(attrs: str) -> dict[str, str]:
+    out = {}
+    for m in JSX_ATTR_RE.finditer(attrs):
+        name = m.group("name")
+        if m.group("dq") is not None:
+            out[name] = m.group("dq")
+        elif m.group("sq") is not None:
+            out[name] = m.group("sq")
+        else:
+            out[name] = "{" + m.group("expr") + "}"
+    return out
+
+
+def transform_card_primary(text: str) -> str:
+    def repl(m: re.Match) -> str:
+        a = _parse_jsx_attrs(m.group("attrs"))
+        title = a.get("title", "")
+        description = a.get("description", "").strip()
+        icon = a.get("icon")
+        href = a.get("infoUrl")
+        cta = a.get("infoText")
+        parts = [f'title="{title}"']
+        if icon:
+            parts.append(f'icon="{icon}"')
+        if href:
+            parts.append(f'href="{href}"')
+        if cta:
+            parts.append(f'cta="{cta}"')
+        return f'<Card {" ".join(parts)}>\n  {description}\n</Card>'
+    return CARD_PRIMARY_RE.sub(repl, text)
+
+
+# Some upstream pages declare an inline `Anchor` component (so Docusaurus's
+# useBrokenLinks() can collect span ids) and use `<Anchor id="..."/>` markers
+# inline. Mintlify has no useBrokenLinks() equivalent — replace the markers
+# with plain `<a id="...">` anchors and strip the component definition along
+# with the explanatory comment that precedes it.
+ANCHOR_USE_RE = re.compile(r"<Anchor\s+id=\"([^\"]+)\"\s*/>")
+ANCHOR_DEF_RE = re.compile(
+    r"(?:\{/\*\s*needed as docusaurus can't resolve links to span ids[^*]*\*/\}\s*\n)?"
+    r"export function Anchor\(props\)\s*\{.*?^\}\s*\n",
+    re.DOTALL | re.MULTILINE,
+)
+
+
+def transform_inline_anchor(text: str) -> str:
+    text = ANCHOR_DEF_RE.sub("", text)
+    text = ANCHOR_USE_RE.sub(r'<a id="\1"></a>', text)
+    return text
+
+
+# Upstream pages reference image assets as `/static/images/...` (Docusaurus
+# serves the `static/` dir at the URL root). In this Mintlify repo the assets
+# live directly under `/images/...`, so rewrite any inline reference.
+STATIC_IMAGES_RE = re.compile(r"/static/images/")
+
+
+def transform_static_image_paths(text: str) -> str:
+    return STATIC_IMAGES_RE.sub("/images/", text)
+
+
+# `<HorizontalDivide />` (Docusaurus component) -> markdown horizontal rule.
+HORIZONTAL_DIVIDE_RE = re.compile(r"<HorizontalDivide\s*/>")
+
+
+def transform_horizontal_divide(text: str) -> str:
+    return HORIZONTAL_DIVIDE_RE.sub("---", text)
+
+
+# `<TwoColumnList items={IDENT} />` (Docusaurus component, paired with a
+# JSON data import) -> Mintlify <Columns cols={2}> with one <Card> per JSON row.
+# We resolve `IDENT` against the json_vars map collected in transform_imports
+# (which holds the absolute upstream path of the JSON file).
+TWO_COLUMN_LIST_RE = re.compile(r"<TwoColumnList\s+items=\{(?P<ident>\w+)\}\s*/>")
+
+
+def transform_two_column_list(text: str, json_vars: dict[str, str]) -> str:
+    if not json_vars:
+        return text
+
+    def repl(m: re.Match) -> str:
+        ident = m.group("ident")
+        path = json_vars.get(ident)
+        if not path or not Path(path).exists():
+            return m.group(0)
+        try:
+            data = json.loads(Path(path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return m.group(0)
+        cards = []
+        for item in data:
+            title = item.get("title", "")
+            desc = item.get("description", "").strip()
+            url = item.get("url", "")
+            # Strip Docusaurus '/docs' prefix so links resolve in Mintlify.
+            if url.startswith("/docs/"):
+                url = url[len("/docs"):]
+            cards.append(f'  <Card title="{title}" href="{url}">\n    {desc}\n  </Card>')
+        return "<Columns cols={2}>\n" + "\n".join(cards) + "\n</Columns>"
+    return TWO_COLUMN_LIST_RE.sub(repl, text)
 
 
 # ----- runnable code fences --------------------------------------------------
@@ -1162,7 +1459,9 @@ def migrate_file(path: Path, lk: Lookups, force: bool, dry_run: bool, docusaurus
     original = source_path.read_text(encoding="utf-8")
     text, slug, title = transform_frontmatter(original)
     text = drop_redundant_h1(text, title)
-    text, image_vars = transform_imports(text, lk, issues)
+    text = transform_heading_anchors(text)
+    json_vars: dict[str, str] = {}
+    text, image_vars = transform_imports(text, lk, issues, source_docu_path=source_path, json_vars=json_vars, dest_path=path)
     text = transform_use_base_url(text)
     text = transform_tocinline(text)
     text = transform_iframes(text)
@@ -1170,6 +1469,12 @@ def migrate_file(path: Path, lk: Lookups, force: bool, dry_run: bool, docusaurus
     text = transform_details(text)
     text = transform_tabs(text)
     text = transform_image_components(text, image_vars)
+    text = transform_static_image_paths(text)
+    text = transform_inline_anchor(text)
+    text = transform_vertical_stepper(text)
+    text = transform_card_primary(text)
+    text = transform_horizontal_divide(text)
+    text = transform_two_column_list(text, json_vars)
     text, used_runnable = transform_runnable(text)
 
     source_docu_file = row["docusaurus_file"] if row else None
@@ -1207,6 +1512,17 @@ def migrate_file(path: Path, lk: Lookups, force: bool, dry_run: bool, docusaurus
 # ----- driver ----------------------------------------------------------------
 
 SKIP_TOPLEVEL = {"AGENTS.md", "README.md", "LICENSE.md", "CHANGELOG.md", "CONTRIBUTING.md"}
+# Hand-authored files that have no faithful upstream counterpart and must not
+# be regenerated by the migrator. Paths are relative to THIS_REPO.
+SKIP_FILES = {
+    # Bridges the Docusaurus pattern of importing one .md page inline into
+    # another (`@site/docs/sql-reference/statements/truncate.md`). Mintlify
+    # can't import full pages, so this snippet holds the SQL-ref body and is
+    # consumed by `concepts/operations/delete/truncate.mdx`. Re-migrating it
+    # would replace the body with the wrapper page's content and break the
+    # render.
+    "snippets/truncate.mdx",
+}
 
 
 def iter_targets(target: Path | None) -> list[Path]:
@@ -1221,15 +1537,42 @@ def iter_targets(target: Path | None) -> list[Path]:
             # Repo-root meta files (AGENTS, README, LICENSE …) aren't pages.
             if len(rel.parts) == 1 and rel.parts[0] in SKIP_TOPLEVEL:
                 continue
+            if rel.as_posix() in SKIP_FILES:
+                continue
             out.append(p)
         return sorted(out)
     if target.is_file():
+        if target.relative_to(THIS_REPO).as_posix() in SKIP_FILES:
+            return []
         return [target]
     if target.is_dir():
         for ext in EXTS:
             out.extend(target.rglob(f"*{ext}"))
-        return sorted(p for p in out if not any(part in ITER_SKIP_DIRS for part in p.relative_to(THIS_REPO).parts))
+        return sorted(p for p in out if not any(part in ITER_SKIP_DIRS for part in p.relative_to(THIS_REPO).parts) and p.relative_to(THIS_REPO).as_posix() not in SKIP_FILES)
     return []
+
+
+def sync_image_assets(docusaurus_root: Path) -> int:
+    """Copy upstream `static/images/**` files into this repo's `images/**`.
+    Only files missing locally are copied — existing ones are left alone so
+    repo-specific overrides aren't clobbered. Returns number copied.
+    """
+    src_root = docusaurus_root / "static" / "images"
+    dst_root = THIS_REPO / "images"
+    if not src_root.exists():
+        return 0
+    copied = 0
+    for src in src_root.rglob("*"):
+        if not src.is_file():
+            continue
+        rel = src.relative_to(src_root)
+        dst = dst_root / rel
+        if dst.exists():
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        copied += 1
+    return copied
 
 
 def update_slug_map(slug_map_csv: Path, all_rows: list[dict], updates: dict[str, dict[str, str]]) -> None:
@@ -1253,10 +1596,17 @@ def main():
     ap.add_argument("--slug-map", type=Path, default=THIS_REPO / "slug-map.csv")
     ap.add_argument("--docusaurus", type=Path, default=DEFAULT_DOCUSAURUS,
                     help="path to the clickhouse-docs (Docusaurus) repo — content source of truth")
+    ap.add_argument("--sync-assets", action="store_true",
+                    help="copy upstream static/images/** into this repo's images/** (skips files that already exist)")
     args = ap.parse_args()
 
+    if args.sync_assets and not args.path and not args.all:
+        copied = sync_image_assets(args.docusaurus)
+        print(f"Synced {copied} image file(s) from {args.docusaurus}/static/images")
+        return 0
+
     if not args.all and not args.path:
-        ap.error("provide a path or pass --all")
+        ap.error("provide a path or pass --all (or --sync-assets)")
     if not args.slug_map.exists():
         ap.error(f"slug-map.csv not found at {args.slug_map}; run scripts/generate-slug-map.py first")
 
@@ -1270,6 +1620,13 @@ def main():
     if not targets:
         print("No targets found", file=sys.stderr)
         return 1
+
+    # Always sync image assets when running --all so missing referenced
+    # /images/... assets get pulled in automatically.
+    if args.all:
+        copied = sync_image_assets(args.docusaurus)
+        if copied:
+            print(f"Synced {copied} image file(s) from {args.docusaurus}/static/images")
 
     lk, all_rows = build_lookups(args.slug_map)
 

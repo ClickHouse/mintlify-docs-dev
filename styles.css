@@ -10,6 +10,16 @@
     border-radius: 4px;
 }
 
+/* Mintlify's built-in `rounded-t-2xl` (12px) on the accordion summary doesn't
+   match the 4px override above on the surrounding `details.accordion`, so on
+   hover the summary's wider corner curve produces a visible gap inside the
+   parent's tighter clip. Match the summary's top corners to 4px. */
+details.accordion > summary,
+.accordion-group > details > summary {
+    border-top-left-radius: 4px !important;
+    border-top-right-radius: 4px !important;
+}
+
 /* ============================================
    Accordion Dark Mode Background
    ============================================ */
@@ -779,7 +789,6 @@ body.clickpipes_home .hero-text {
 .dark .prose a:not(.card):not(.card *):hover,
 :is(.dark) .prose a:not(.card):not(.card *):hover {
     color: #FAFF69 !important;
-    text-decoration: underline;
     opacity: 1;
 }
 
@@ -1612,6 +1621,22 @@ html:not(.dark) [data-callout-type="error"] [data-component-part="callout-icon"]
     color: lch(41.001 86.638 40.858 / 0.75);
 }
 
+/* The Ask-AI sticky-bottom overlay's parent is only 26px tall with
+   `overflow-hidden`, so the inner pill's 1px border collapses into a thin
+   horizontal line that visually appears as a stray border below the
+   Previous/Next pagination pill. Suppress the border on the floating input
+   so the artifact disappears; the focus-within border still works. */
+.chat-assistant-floating-input > div > div {
+    border-color: transparent !important;
+}
+
+/* Inline code inside callouts (light mode) - tint to match callout color */
+html:not(.dark) [data-callout-type] [data-component-part="callout-content"] code:not(pre code) {
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    color: inherit !important;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 /* Dark Mode Callouts */
 
 /* Note (Neutral) */
@@ -1773,6 +1798,51 @@ div[data-radix-popper-content-wrapper]:has([role="menu"] > .nav-dropdown-item) {
     stroke: #FAFF69 !important;
 }
 
+/* Hide language-picker flag icons. Some country flags (e.g. Russia) are
+   politically sensitive given current geopolitics — language choice is not
+   meant to imply national affiliation. We hide the wrapper div (not just
+   the img) so the 16x16 placeholder doesn't leave a gap. */
+div:has(> img[src*="cloudfront.net/flags/"]) {
+    display: none !important;
+}
+
+/* Pseudo-section headers in the Products dropdown.
+   Mintlify has no built-in section divider, so we add placeholder menu items
+   with the `section-header.svg` icon and style them as non-clickable labels. */
+.nav-dropdown-item:has(img[src$="section-header.svg"]) {
+    pointer-events: none;
+    cursor: default;
+    padding-top: 8px !important;
+    padding-bottom: 2px !important;
+    margin-top: 2px !important;
+    font-size: 7px !important;
+    line-height: 1 !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em;
+    color: #6b7280 !important;
+    background: transparent !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+.nav-dropdown-item:has(img[src$="section-header.svg"]):first-child {
+    border-top: none;
+    margin-top: 0 !important;
+    padding-top: 4px !important;
+}
+.dark .nav-dropdown-item:has(img[src$="section-header.svg"]),
+:is(.dark) .nav-dropdown-item:has(img[src$="section-header.svg"]) {
+    color: #9ca3af !important;
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+/* Hide the placeholder icon and its hover background */
+.nav-dropdown-item:has(img[src$="section-header.svg"]) img,
+.nav-dropdown-item:has(img[src$="section-header.svg"]) svg {
+    display: none !important;
+}
+.nav-dropdown-item:has(img[src$="section-header.svg"]):hover {
+    background: transparent !important;
+}
+
 /* ============================================
    Update Component (Changelog) Layout Fix
    ============================================ */
@@ -1882,3 +1952,52 @@ html.dark #banner a,
 #navigation-items ul.sidebar-group.space-y-px> :not([hidden])~ :not([hidden]) {
     margin-top: -4px !important;
 }
+/* ============================================
+   Callout: left-bar icon style
+   ============================================
+   Restyle Note/Tip/Warning/Info/Danger so the icon sits inside a solid
+   colored bar on the left, content fills the rest. Overrides the default
+   horizontal flex layout from the Mintlify theme. */
+
+[data-callout-type] {
+    position: relative !important;
+    padding: 0.75rem 1rem 0.75rem 4rem !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    border: none !important;
+}
+
+[data-callout-type] [data-component-part="callout-icon"] {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 3rem !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: #9ca3af; /* default neutral; overridden per type below */
+}
+
+[data-callout-type] [data-component-part="callout-icon"] svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    color: #fff !important;
+}
+
+[data-callout-type] [data-component-part="callout-content"] {
+    padding-left: 0 !important;
+}
+
+/* Per-type bar colors (light + dark share the same accent).
+   `!important` is required to override earlier per-type rules in this file
+   that set the icon background to transparent. */
+[data-callout-type="note"] [data-component-part="callout-icon"] { background-color: #6b7280 !important; }
+[data-callout-type="info"] [data-component-part="callout-icon"] { background-color: #3b82f6 !important; }
+[data-callout-type="tip"] [data-component-part="callout-icon"],
+[data-callout-type="success"] [data-component-part="callout-icon"],
+[data-callout-type="check"] [data-component-part="callout-icon"] { background-color: #10b981 !important; }
+[data-callout-type="warning"] [data-component-part="callout-icon"] { background-color: #f59e0b !important; }
+[data-callout-type="danger"] [data-component-part="callout-icon"],
+[data-callout-type="error"] [data-component-part="callout-icon"] { background-color: #ef4444 !important; }

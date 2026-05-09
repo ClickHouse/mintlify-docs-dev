@@ -30,8 +30,8 @@ If you want to test this integration first without modifying your existing setup
 - Linux system with systemd (Ubuntu 16.04+, CentOS 7+, Debian 8+)
 - Docker or Docker Compose installed on the monitored system
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Get ClickStack API key {#get-api-key}
 
 The OpenTelemetry Collector sends data to ClickStack's OTLP endpoint, which requires authentication.
@@ -41,14 +41,15 @@ The OpenTelemetry Collector sends data to ClickStack's OTLP endpoint, which requ
 3. Navigate to **Team Settings → API Keys**
 4. Copy your **Ingestion API Key**
 
-<Image img="/static/images/clickstack/api-key.png" alt="ClickStack API Key"/>
+<Image img="/images/clickstack/api-key.png" alt="ClickStack API Key"/>
 
 5. Set it as an environment variable:
 
 ```bash
 export CLICKSTACK_API_KEY=your-api-key-here
 ```
-
+</Step>
+<Step>
 #### Verify systemd journal is running {#verify-systemd}
 
 Ensure your system is using systemd and has journal logs:
@@ -71,7 +72,8 @@ sudo mkdir -p /var/log/journal
 sudo systemd-tmpfiles --create --prefix /var/log/journal
 sudo systemctl restart systemd-journald
 ```
-
+</Step>
+<Step>
 #### Create OpenTelemetry Collector configuration {#create-otel-config}
 
 Create a configuration file for the OpenTelemetry Collector:
@@ -126,7 +128,8 @@ service:
       exporters: [otlphttp]
 EOF
 ```
-
+</Step>
+<Step>
 #### Deploy with Docker Compose {#deploy-docker-compose}
 
 <Note>
@@ -174,7 +177,8 @@ Start the services:
 ```bash
 docker compose up -d
 ```
-
+</Step>
+<Step>
 #### Verify logs in HyperDX {#verifying-logs}
 
 Once configured, log into HyperDX and verify logs are flowing:
@@ -184,18 +188,18 @@ Once configured, log into HyperDX and verify logs are flowing:
 3. Filter by `service.name:systemd-logs`
 4. You should see structured log entries with fields like `unit`, `priority`, `MESSAGE`, `_HOSTNAME`
 
-<Image img="/static/images/clickstack/systemd/systemd-search-view.png" alt="Log search view"/>
+<Image img="/images/clickstack/systemd/systemd-search-view.png" alt="Log search view"/>
 
-<Image img="/static/images/clickstack/systemd/systemd-log-view.png" alt="Log view"/>
-
-</VerticalStepper>
+<Image img="/images/clickstack/systemd/systemd-log-view.png" alt="Log view"/>
+</Step>
+</Steps>
 
 ## Demo dataset {#demo-dataset}
 
 For users who want to test the systemd logs integration before configuring their production systems, we provide a sample dataset of pre-generated systemd logs with realistic patterns.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Download the sample dataset {#download-sample}
 
 Download the sample log file:
@@ -203,7 +207,8 @@ Download the sample log file:
 ```bash
 curl -O https://datasets-documentation.s3.eu-west-3.amazonaws.com/clickstack-integrations/systemd/systemd-demo.log
 ```
-
+</Step>
+<Step>
 #### Create demo collector configuration {#demo-config}
 
 Create a configuration file for the demo:
@@ -239,7 +244,8 @@ service:
         - clickhouse
 EOF
 ```
-
+</Step>
+<Step>
 #### Run ClickStack with demo data {#run-demo}
 
 Start ClickStack with the demo logs:
@@ -256,7 +262,8 @@ docker run -d --name clickstack-demo \
 <Note>
 The demo uses the `filelog` receiver with text logs instead of `journald` to avoid requiring `journalctl` in the container.
 </Note>
-
+</Step>
+<Step>
 #### Verify logs in HyperDX {#verify-demo-logs}
 
 Once ClickStack is running:
@@ -265,37 +272,39 @@ Once ClickStack is running:
 2. Navigate to the Search view and set the source to `Logs`
 3. Set the time range to **2025-11-14 00:00:00 - 2025-11-17 00:00:00**
 
-<Image img="/static/images/clickstack/systemd/systemd-search-view.png" alt="Log search view"/>
+<Image img="/images/clickstack/systemd/systemd-search-view.png" alt="Log search view"/>
 
-<Image img="/static/images/clickstack/systemd/systemd-log-view.png" alt="Log view"/>
+<Image img="/images/clickstack/systemd/systemd-log-view.png" alt="Log view"/>
 
 <Info>
 **Timezone display**
 
 HyperDX displays timestamps in your browser's local timezone. The demo data spans **2025-11-15 00:00:00 - 2025-11-16 00:00:00 (UTC)**. The wide time range ensures you'll see the demo logs regardless of your location.
 </Info>
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Dashboards and visualization {#dashboards}
 
 To help you get started monitoring systemd logs with ClickStack, we provide essential visualizations for systemd journal data.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### <TrackedLink href={'/examples/systemd-logs-dashboard.json'} download="systemd-logs-dashboard.json" eventName="docs.systemd_logs_monitoring.dashboard_download">Download</TrackedLink> the dashboard configuration {#download}
-
+</Step>
+<Step>
 #### Import the pre-built dashboard {#import-dashboard}
 
 1. Open HyperDX and navigate to the Dashboards section
 2. Click **Import Dashboard** in the upper right corner under the ellipses
 
-<Image img="/static/images/clickstack/import-dashboard.png" alt="Import dashboard button"/>
+<Image img="/images/clickstack/import-dashboard.png" alt="Import dashboard button"/>
 
 3. Upload the `systemd-logs-dashboard.json` file and click **Finish Import**
 
-<Image img="/static/images/clickstack/systemd/finish-import-systemd.png" alt="Finish import"/>
-
+<Image img="/images/clickstack/systemd/finish-import-systemd.png" alt="Finish import"/>
+</Step>
+<Step>
 #### View the dashboard {#created-dashboard}
 
 The dashboard includes visualizations for:
@@ -305,13 +314,13 @@ The dashboard includes visualizations for:
 - Service failures
 - Error rates
 
-<Image img="/static/images/clickstack/systemd/systemd-logs-dashboard.png" alt="Example dashboard"/>
+<Image img="/images/clickstack/systemd/systemd-logs-dashboard.png" alt="Example dashboard"/>
 
 <Note>
 For the demo dataset, set the time range to **2025-11-15 00:00:00 - 2025-11-16 00:00:00 (UTC)** (adjust based on your local timezone).
 </Note>
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 ## Troubleshooting {#troubleshooting}
 

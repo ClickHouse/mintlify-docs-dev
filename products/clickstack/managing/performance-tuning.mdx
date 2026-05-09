@@ -140,7 +140,7 @@ SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
 
 A user may filter traces using Lucene syntax e.g. `ResourceAttributes.k8s.pod.name:"checkout-675775c4cc-f2p9c"`:
 
-<Image img="/static/images/clickstack/performance_guide/trace_filtering.png" size="lg" alt="Trace filtering"/>
+<Image img="/images/clickstack/performance_guide/trace_filtering.png" size="lg" alt="Trace filtering"/>
 
 This results in a SQL predicate similar to:
 
@@ -164,7 +164,7 @@ From this point forward, **new** data will store the Pod name as a dedicated col
 
 Users can now query for pod names efficiently, using Lucene syntax e.g. `PodName:"checkout-675775c4cc-f2p9c"`
 
-<Image img="/static/images/clickstack/performance_guide/trace_filtering_v2.png" size="lg" alt="Trace filtering v2"/>
+<Image img="/images/clickstack/performance_guide/trace_filtering_v2.png" size="lg" alt="Trace filtering v2"/>
 
 For newly inserted data, this avoids map access entirely and significantly reduces I/O.
 
@@ -532,8 +532,8 @@ If you're confident of your access patterns prior to data ingestion, simply drop
 
 The example below shows a simple way to create a new logs table with the existing schema, but with a new primary key that includes the column `SeverityText` before the `ServiceName`.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Create new table {#create-new-table-with-key}
 
 ```sql
@@ -550,7 +550,8 @@ In ClickStack, these are almost always the same.
 The `ORDER BY` controls the physical data layout, while the `PRIMARY KEY` defines the sparse index.
 In rare, very large workloads, these may differ, but most users should keep them aligned.
 </Info>
-
+</Step>
+<Step>
 #### Exchange and drop table {#exhange-and-drop-table}
 
 The `EXCHANGE` statement is used to swap the names of the tables [atomically](/concepts/core-concepts/glossary#atomicity). The temporary table (now the old default table), can be dropped.
@@ -559,8 +560,8 @@ The `EXCHANGE` statement is used to swap the names of the tables [atomically](/c
 EXCHANGE TABLES otel_logs_temp AND otel_logs
 DROP TABLE otel_logs_temp
 ```
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 However, **the primary key can't be modified on an existing table**. Changing it requires creating a new table.
 
@@ -570,10 +571,10 @@ The following process can be used to ensure the old data can be retained and sti
 Backfilling existing data into a new table is rarely worthwhile at scale. The compute and IO cost is usually high, and doesn't justify the performance benefits. Instead, allow older data to expire [via TTL](/products/clickstack/ttl) while newer data benefits from the improved key.
 </Note>
 
-<VerticalStepper headerLevel="h4">
-
 The same example of introducing the `SeverityText` as the first column in the primary key is used below. In this case, a table is created for new data, retaining the old table for historical analysis.
 
+<Steps>
+<Step>
 #### Create new table {#create-new-table-with-key-2}
 
 Create the new table with the desired primary key. Note the `_23_01_2025` suffix - adapt this to be the current date. e.g.
@@ -583,7 +584,8 @@ CREATE TABLE otel_logs_23_01_2025 AS otel_logs
 PRIMARY KEY (SeverityText, ServiceName, TimestampTime)
 ORDER BY (SeverityText, ServiceName, TimestampTime)
 ```
-
+</Step>
+<Step>
 #### Create a Merge table {#create-merge-table}
 
 The [Merge engine](/reference/engines/table-engines/special/merge) (not to be confused with MergeTree) doesn't store data itself, but allows reading from any number of other tables simultaneously.
@@ -599,15 +601,17 @@ ENGINE = Merge(currentDatabase(), 'otel_logs*')
 </Note>
 
 You can now query this table to confirm it returns data from `otel_logs`.
-
+</Step>
+<Step>
 #### Update HyperDX to read from the merge table {#update-hyperdx-to-read-from-merge-tree}
 
 Configure HyperDX to use `otel_logs_merge` as the table for the logs data source.
 
-<Image img="/static/images/clickstack/performance_guide/select_merge_table.png" size="lg" alt="Select Merge Table"/>
+<Image img="/images/clickstack/performance_guide/select_merge_table.png" size="lg" alt="Select Merge Table"/>
 
 At this point, writes continue to `otel_logs` with the original primary key, while reads use the merge table. There is no visible change for users or impact on ingestion.
-
+</Step>
+<Step>
 #### Exchange the tables {#exchange-the-tables}
 
 An `EXCHANGE` statement is now used to swap the names of the `otel_logs` and `otel_logs_23_01_2025` tables atomically.
@@ -619,13 +623,13 @@ EXCHANGE TABLES otel_logs AND otel_logs_23_01_2025
 Writes now go to the new `otel_logs` table with the updated primary key. Existing data remains in `otel_logs_23_01_2025` and is still accessible via the merge table. The suffix indicates the date the change was applied and represents the latest timestamp contained in that table.
 
 This process allows primary key changes with no ingest interruption and no user-visible impact.
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 This process can be adapted should further changes be required to primary keys. For example, if you decide that actually the `SeverityNumber` should be part of the primary key one week later, rather than the `SeverityText`. The following process can be adapted as many times as primary key changes are required.
 
-<VerticalStepper headerLevel="h4">
-
+<Steps>
+<Step>
 #### Create new table {#create-new-table-with-key-3}
 
 Create the new table with the desired primary key.
@@ -636,7 +640,8 @@ CREATE TABLE otel_logs_30_01_2025 AS otel_logs
 PRIMARY KEY (SeverityNumber, ServiceName, TimestampTime)
 ORDER BY (SeverityNumber, ServiceName, TimestampTime)
 ```
-
+</Step>
+<Step>
 #### Exchange the tables {#exchange-the-tables-v2}
 
 An `EXCHANGE` statement is now used to swap the names of the `otel_logs` and `otel_logs_30_01_2025` tables atomically.
@@ -646,8 +651,8 @@ EXCHANGE TABLES otel_logs AND otel_logs_30_01_2025
 ```
 
 Writes now go to the new `otel_logs` table with the updated primary key. The old data remains in `otel_logs_30_01_2025`, accessible via the merge table.
-
-</VerticalStepper>
+</Step>
+</Steps>
 
 <Info>
 **Redundant tables**
