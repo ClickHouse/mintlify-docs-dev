@@ -55,4 +55,4 @@ SELECT user_id, argMax(status, updated_at) as status
 FROM users GROUP BY user_id;
 ```
 
-Reference: [Avoid Mutations](https://clickhouse.com/docs/best-practices/avoid-mutations)
+Reference: [Avoid Mutations](/concepts/best-practices/avoid-mutations)

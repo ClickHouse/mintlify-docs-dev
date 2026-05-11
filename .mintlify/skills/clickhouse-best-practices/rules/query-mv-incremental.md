@@ -65,4 +65,4 @@ GROUP BY event_type, hour;
 - Incremental - existing data not automatically included (backfill separately)
 - Minimal cluster overhead at insert time
 
-Reference: [Use Materialized Views](https://clickhouse.com/docs/best-practices/use-materialized-views)
+Reference: [Use Materialized Views](/concepts/best-practices/use-materialized-views)

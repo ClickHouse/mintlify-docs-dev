@@ -6,20 +6,19 @@ tags: ['Security and Authentication', 'Managing Cloud']
 keywords: ['AWS PrivateLink', 'Private RDS', 'ClickPipes']
 ---
 
+{frontMatter.description}
+{/* truncate */}
 
-
-## AWS PrivateLink setup to expose private RDS for ClickPipes
-
+## AWS PrivateLink setup to expose private RDS for ClickPipes {#aws-privatelink-setup-to-expose-private-rds-for-clickpipes}
 Setup steps to expose a private RDS via AWS PrivateLink to ClickPipes, also supporting cross-region access.
 
-:::info
+<Info>
 This uses AWS Endpoint Service and is mainly suitable for Cross-Region Access. If you require same-region access,
 [creating a VPC Resource](/integrations/clickpipes/aws-privatelink#vpc-resource) is
 recommended instead.
-:::
+</Info>
 
-## Private link creation
-
+## Private link creation {#private-link-creation}
 Follow these steps to create a **VPC endpoint service** for your RDS instance. Repeat these steps if you have multiple
 RDS instances that require endpoint services (OR you may have different listener ports for different instances):
 
@@ -29,12 +28,11 @@ RDS instances that require endpoint services (OR you may have different listener
 2. Configure the Target Group
     - The target group should point to the RDS instance's endpoint IP and Port (typically 5432 for PostgreSQL or 3306 for MySQL).
 
-    :::note
+<Note>
 
     If you would like to automate the process of updating the target group with the new RDS endpoint IP, you can use AWS Lambda functions or other automation tools.
     One of the terraform modules that can be used for this purpose is [this](https://github.com/MaterializeInc/terraform-aws-rds-privatelink).
-
-    :::
+</Note>
     - **IMPORTANT**: Make sure the RDS instance endpoint used in case of DB Cluster/Aurora is ONLY the WRITER Endpoint and NOT the common endpoint.
     - Ensure that the TCP protocol is used to avoid TLS termination by the NLB.
 
@@ -60,7 +58,7 @@ RDS instances that require endpoint services (OR you may have different listener
 7. **Optional**: Enable Cross-region support in case your database region is different from the ClickPipes region
     - Under `Endpoint Services` in the VPC console, select your endpoint service.
     - Click on the `Actions` button and select `Modify supported Regions`.
-    - Add the regions where you want to allow access to the endpoint service, [refer here](/integrations/clickpipes#list-of-static-ips) for the list of ClickPipes regions.
+    - Add the regions where you want to allow access to the endpoint service, [refer here](/integrations/clickpipes/home#list-of-static-ips) for the list of ClickPipes regions.
 
 8. **Recommended For MySQL**
     - If you are using MySQL, it is recommended to set `skip_name_resolve=1` as a parameter in the source database.
@@ -68,17 +66,14 @@ RDS instances that require endpoint services (OR you may have different listener
      avoids the DNS host name lookup and so it never blocks the NLB hosts. If using RDS, this will require an instance
      reboot.
 
-## Initiating connection
-
+## Initiating connection {#initiating-connection}
 When it's done you can follow the guide to [initiate the connection](/integrations/clickpipes/aws-privatelink#creating-clickpipe)
 
 Once the status shows `Ready` on console, you can follow the next section to create your ClickPipe.
 
-## Creating ClickPipes
-
+## Creating ClickPipes {#creating-clickpipes}
 Use the DNS name you got from the previous step to [create your ClickPipe](/integrations/clickpipes/postgres).
 
-## Dynamically updating the RDS endpoint IP
-
+## Dynamically updating the RDS endpoint IP {#dynamically-updating-the-rds-endpoint-ip}
 When the RDS endpoint IP changes (in case of restarts/failovers/updates), you need to update the NLB target group with
 the new IP. You can automate this process using AWS Lambda functions or other automation tools.

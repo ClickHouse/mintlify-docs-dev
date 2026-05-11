@@ -47,4 +47,4 @@ This skill activates when you:
 ## Related Documentation
 
 All rules link to official ClickHouse documentation:
-- [ClickHouse Best Practices](https://clickhouse.com/docs/best-practices)
+- [ClickHouse Best Practices](/concepts/best-practices)

@@ -1,27 +1,29 @@
 ---
 title: 'Writing data to open table formats'
+sidebarTitle: 'Writing to data lakes'
 slug: /use-cases/data-lake/getting-started/writing-data
+toc_max_heading_level: 3
 description: 'Write data from ClickHouse back to Iceberg tables in object storage for long-term storage and downstream consumption.'
 keywords: ['data lake', 'lakehouse', 'write', 'iceberg', 'reverse ETL', 'INSERT INTO', 'IcebergS3']
 doc_type: 'guide'
 ---
 
-In the previous guides, you queried open table formats in place and loaded data into MergeTree for fast analytics. In many architectures, data also needs to flow in the other direction - from ClickHouse back into lakehouse formats. Two common scenarios drive this:
+In the previous guides, you queried open table formats in place and loaded data into MergeTree for fast analytics. In many architectures, data also needs to flow in the other direction - from ClickHouse back into open table formats. Two common scenarios drive this:
 
 - **Offloading to long-term storage** - Data arrives in ClickHouse as a real-time analytics layer, powering dashboards and operational reporting. Once the data ages beyond its real-time window, it can be written out to Iceberg in object storage for durable, cost-effective retention in an interoperable format.
 - **Reverse ETL** - Transformations, aggregations, and enrichment performed inside ClickHouse produce derived datasets that downstream tools and other teams need to consume. Writing these results to Iceberg tables makes them available across the broader data ecosystem.
 
 In both cases, `INSERT INTO SELECT` lets you move data from ClickHouse tables into Iceberg tables stored in object storage.
 
-:::note
+<Note>
 Writing to open table formats is currently supported for **Iceberg tables only**. Partial support for Delta Lake tables is under development. Tables must not be managed by a catalog.
-:::
+</Note>
 
-## Prepare a source dataset
+## Prepare a source dataset {#prepare-source}
 
-For this guide, we'll use the [UK Price Paid](/getting-started/example-datasets/uk-price-paid) dataset - a public record of every residential property transaction in England and Wales.
+For this guide, we'll use the [UK Price Paid](/get-started/sample-datasets/uk-price-paid) dataset - a public record of every residential property transaction in England and Wales.
 
-### Create and populate a MergeTree table
+### Create and populate a MergeTree table {#create-source-table}
 
 ```sql
 CREATE DATABASE uk;
@@ -91,11 +93,11 @@ FROM url(
 Peak memory usage: 485.15 MiB.
 ```
 
-## Write data to an Iceberg table
+## Write data to an Iceberg table {#write-iceberg}
 
-### Create the Iceberg table
+### Create the Iceberg table {#create-iceberg-table}
 
-To write data into Iceberg, create a table using the [`IcebergS3` table engine](/engines/table-engines/integrations/iceberg).
+To write data into Iceberg, create a table using the [`IcebergS3` table engine](/reference/engines/table-engines/integrations/iceberg).
 
 Note that the schema must be simplified compared to the MergeTree source. ClickHouse supports a richer type system than Iceberg and the underlying Parquet files - types such as `Enum`, `LowCardinality`, and `UInt8` are not supported in Iceberg and must be mapped to compatible types.
 
@@ -120,7 +122,7 @@ CREATE TABLE uk.uk_iceberg
 ENGINE = IcebergS3('https://datasets-documentation.s3.amazonaws.com/lake_formats/iceberg_uk_price_paid/', '<aws_access_key>', '<aws_secret_key>', '<session_token>')
 ```
 
-### Insert a subset of data
+### Insert a subset of data {#insert-subset}
 
 Use `INSERT INTO SELECT` to write data from the MergeTree table into the Iceberg table. In this example, we write only London transactions:
 
@@ -135,7 +137,7 @@ WHERE town = 'LONDON'
 Peak memory usage: 371.60 MiB.
 ```
 
-### Query the Iceberg table
+### Query the Iceberg table {#query-iceberg}
 
 The data is now stored as Iceberg in object storage and can be queried from ClickHouse - or any other tool that reads Iceberg:
 
@@ -166,11 +168,11 @@ LIMIT 10
 Peak memory usage: 12.19 MiB.
 ```
 
-## Write aggregated results
+## Write aggregated results {#write-aggregates}
 
 Iceberg tables are not limited to storing raw rows. They can also hold the output of aggregations and transformations - the results of ETL processes performed inside ClickHouse. This is useful for publishing pre-computed summaries to a lakehouse for downstream consumption.
 
-### Create an Iceberg table for aggregates
+### Create an Iceberg table for aggregates {#create-aggregate-table}
 
 ```sql
 CREATE TABLE uk.uk_avg_town
@@ -181,7 +183,7 @@ CREATE TABLE uk.uk_avg_town
 ENGINE = IcebergS3('https://datasets-documentation.s3.amazonaws.com/lake_formats/iceberg_uk_avg_town/', '<aws_access_key>', '<aws_secret_key>', '<session_token>')
 ```
 
-### Insert aggregated data
+### Insert aggregated data {#insert-aggregates}
 
 Compute average property prices by town and write the results directly into Iceberg:
 
@@ -196,7 +198,7 @@ GROUP BY town
 Peak memory usage: 4.18 MiB.
 ```
 
-### Query the aggregated table
+### Query the aggregated table {#query-aggregates}
 
 Other tools - and other ClickHouse instances - can now read this pre-computed dataset:
 

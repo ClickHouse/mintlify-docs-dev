@@ -69,4 +69,4 @@ JOIN customers c ON c.id = o.customer_id;
 
 **Critical dictionary caveat:** Dictionaries silently deduplicate duplicate keys, retaining only the final value. Only use when source has unique keys.
 
-Reference: [Minimize and Optimize JOINs](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)
+Reference: [Minimize and Optimize JOINs](/concepts/best-practices/minimize-optimize-joins)

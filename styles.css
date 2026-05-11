@@ -1,3 +1,30 @@
+/* The secondary navbar (`#navbar-transition-maple`) and the fixed sidebar
+   (`#sidebar`) both reserve 40px above themselves for the announcement
+   banner (Tailwind `lg:mt-10` / `top-10`). The banner is `position: fixed`
+   and renders on top, so the reservation is purely visual. On initial load,
+   before the banner hydrates, that fixed offset shows as an empty 40px gap
+   above each element which visibly "closes" once the banner paints. Pin
+   the offsets to `--banner-height` so they track the banner's actual
+   presence — no banner, no gap. */
+#navbar-transition-maple {
+    margin-top: 0 !important;
+    top: var(--banner-height, 0px) !important;
+}
+#sidebar {
+    top: var(--banner-height, 0px) !important;
+}
+
+/* `navbar-cta.js` injects the GitHub stars + Get-started button into
+   `#navbar-transition-maple` after Mintlify hydrates. The navbar is
+   `justify-content: flex-end`, so the inserted children push the existing
+   nav tabs left by ~205px, producing a visible flash. Reserve that space
+   via padding-right while the CTA is missing — when the CTA appears, the
+   padding shrinks back and the CTA fills the freed slot, leaving the tabs
+   in the same x position throughout. */
+#navbar-transition-maple:not(:has(#ch-navbar-cta)) {
+    padding-right: calc(48px + 206px) !important;
+}
+
 /* ============================================
    Global Border Radius
    ============================================ */
@@ -8,6 +35,16 @@
 .accordion,
 .callout {
     border-radius: 4px;
+}
+
+/* Mintlify's built-in `rounded-t-2xl` (12px) on the accordion summary doesn't
+   match the 4px override above on the surrounding `details.accordion`, so on
+   hover the summary's wider corner curve produces a visible gap inside the
+   parent's tighter clip. Match the summary's top corners to 4px. */
+details.accordion > summary,
+.accordion-group > details > summary {
+    border-top-left-radius: 4px !important;
+    border-top-right-radius: 4px !important;
 }
 
 /* ============================================
@@ -779,7 +816,6 @@ body.clickpipes_home .hero-text {
 .dark .prose a:not(.card):not(.card *):hover,
 :is(.dark) .prose a:not(.card):not(.card *):hover {
     color: #FAFF69 !important;
-    text-decoration: underline;
     opacity: 1;
 }
 
@@ -1612,6 +1648,22 @@ html:not(.dark) [data-callout-type="error"] [data-component-part="callout-icon"]
     color: lch(41.001 86.638 40.858 / 0.75);
 }
 
+/* The Ask-AI sticky-bottom overlay's parent is only 26px tall with
+   `overflow-hidden`, so the inner pill's 1px border collapses into a thin
+   horizontal line that visually appears as a stray border below the
+   Previous/Next pagination pill. Suppress the border on the floating input
+   so the artifact disappears; the focus-within border still works. */
+.chat-assistant-floating-input > div > div {
+    border-color: transparent !important;
+}
+
+/* Inline code inside callouts (light mode) - tint to match callout color */
+html:not(.dark) [data-callout-type] [data-component-part="callout-content"] code:not(pre code) {
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    color: inherit !important;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 /* Dark Mode Callouts */
 
 /* Note (Neutral) */
@@ -1762,6 +1814,12 @@ div[data-radix-popper-content-wrapper]:has([role="menu"] > .nav-dropdown-item) {
     top: 10px !important;
 }
 
+/* Match clickhouse.com/clickhouse navbar dropdown panel radius (8px instead
+   of Mintlify's default 16px). Targets the panel that wraps `.nav-dropdown-item`. */
+div[data-radix-popper-content-wrapper]:has([role="menu"] > .nav-dropdown-item) > div {
+    border-radius: 8px !important;
+}
+
 /* External link arrow on nav dropdown items: black in light, white in dark */
 .nav-dropdown-item .lucide-arrow-up-right {
     color: #000 !important;
@@ -1771,6 +1829,80 @@ div[data-radix-popper-content-wrapper]:has([role="menu"] > .nav-dropdown-item) {
 .dark .nav-dropdown-item .lucide-arrow-up-right {
     color: #FAFF69 !important;
     stroke: #FAFF69 !important;
+}
+
+/* Hide language-picker flag icons. Some country flags (e.g. Russia) are
+   politically sensitive given current geopolitics — language choice is not
+   meant to imply national affiliation. We hide the wrapper div (not just
+   the img) so the 16x16 placeholder doesn't leave a gap. */
+div:has(> img[src*="cloudfront.net/flags/"]) {
+    display: none !important;
+}
+
+/* Pseudo-section headers in the Products dropdown.
+   Mintlify has no built-in section divider, so we add placeholder menu items
+   with the `section-header.svg` icon and style them as non-clickable labels. */
+/* Match the section labels in clickhouse.com/clickhouse navbar dropdowns:
+   text-sm (14px) bold, sentence case, no letter-spacing tweaks, p-2 padding. */
+.nav-dropdown-item:has(img[src$="section-header.svg"]) {
+    pointer-events: none;
+    cursor: default;
+    padding: 8px !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    font-weight: 700 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    color: #111827 !important;
+    background: transparent !important;
+}
+.dark .nav-dropdown-item:has(img[src$="section-header.svg"]),
+:is(.dark) .nav-dropdown-item:has(img[src$="section-header.svg"]) {
+    color: #ffffff !important;
+    background: transparent !important;
+}
+/* Hide the placeholder icon and its hover background */
+.nav-dropdown-item:has(img[src$="section-header.svg"]) img,
+.nav-dropdown-item:has(img[src$="section-header.svg"]) svg {
+    display: none !important;
+}
+.nav-dropdown-item:has(img[src$="section-header.svg"]):hover {
+    background: transparent !important;
+}
+
+/* Two-column layout for the Solutions dropdown. Browsers don't allow
+   `:has()` inside `:has()`, so we gate on "menu contains a section-header
+   img" — only Solutions has those, so the targeting is unique. Items before
+   the second header land in column 1; the second header and everything
+   after it land in column 2. Mirrors `clickhouse.com/clickhouse`. */
+[role="menu"]:has(.nav-dropdown-item img[src$="section-header.svg"]) {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 8px;
+    align-content: start;
+    grid-auto-flow: dense;
+    min-width: 440px;
+    /* Vertical separator between columns. The gradient + 50% positioning
+       paints a single 1px line down the middle of the gap. */
+    background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.08));
+    background-size: 1px calc(100% - 24px);
+    background-position: 50% 12px;
+    background-repeat: no-repeat;
+}
+.dark [role="menu"]:has(.nav-dropdown-item img[src$="section-header.svg"]),
+:is(.dark) [role="menu"]:has(.nav-dropdown-item img[src$="section-header.svg"]) {
+    background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+}
+[role="menu"]:has(.nav-dropdown-item img[src$="section-header.svg"]) > .nav-dropdown-item {
+    grid-column: 2;
+}
+[role="menu"]:has(.nav-dropdown-item img[src$="section-header.svg"]) > .nav-dropdown-item:has(~ .nav-dropdown-item img[src$="section-header.svg"]) {
+    grid-column: 1;
+}
+/* Pin the second header (the one with no following header sibling) to row 1
+   so column 2 starts at the top of the panel instead of below column 1. */
+[role="menu"]:has(.nav-dropdown-item img[src$="section-header.svg"]) > .nav-dropdown-item:has(img[src$="section-header.svg"]):not(:has(~ .nav-dropdown-item img[src$="section-header.svg"])) {
+    grid-row: 1;
 }
 
 /* ============================================
@@ -1882,3 +2014,52 @@ html.dark #banner a,
 #navigation-items ul.sidebar-group.space-y-px> :not([hidden])~ :not([hidden]) {
     margin-top: -4px !important;
 }
+/* ============================================
+   Callout: left-bar icon style
+   ============================================
+   Restyle Note/Tip/Warning/Info/Danger so the icon sits inside a solid
+   colored bar on the left, content fills the rest. Overrides the default
+   horizontal flex layout from the Mintlify theme. */
+
+[data-callout-type] {
+    position: relative !important;
+    padding: 0.75rem 1rem 0.75rem 4rem !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    border: none !important;
+}
+
+[data-callout-type] [data-component-part="callout-icon"] {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 3rem !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: #9ca3af; /* default neutral; overridden per type below */
+}
+
+[data-callout-type] [data-component-part="callout-icon"] svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    color: #fff !important;
+}
+
+[data-callout-type] [data-component-part="callout-content"] {
+    padding-left: 0 !important;
+}
+
+/* Per-type bar colors (light + dark share the same accent).
+   `!important` is required to override earlier per-type rules in this file
+   that set the icon background to transparent. */
+[data-callout-type="note"] [data-component-part="callout-icon"] { background-color: #6b7280 !important; }
+[data-callout-type="info"] [data-component-part="callout-icon"] { background-color: #3b82f6 !important; }
+[data-callout-type="tip"] [data-component-part="callout-icon"],
+[data-callout-type="success"] [data-component-part="callout-icon"],
+[data-callout-type="check"] [data-component-part="callout-icon"] { background-color: #10b981 !important; }
+[data-callout-type="warning"] [data-component-part="callout-icon"] { background-color: #f59e0b !important; }
+[data-callout-type="danger"] [data-component-part="callout-icon"],
+[data-callout-type="error"] [data-component-part="callout-icon"] { background-color: #ef4444 !important; }

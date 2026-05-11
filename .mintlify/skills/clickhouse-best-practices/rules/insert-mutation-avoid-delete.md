@@ -71,4 +71,4 @@ ALTER TABLE events DELETE WHERE toYYYYMM(timestamp) = 202301;
 | Lightweight DELETE | Medium | Occasional deletes |
 | DROP PARTITION | Instant | Bulk deletion by partition |
 
-Reference: [Avoid Mutations](https://clickhouse.com/docs/best-practices/avoid-mutations)
+Reference: [Avoid Mutations](/concepts/best-practices/avoid-mutations)

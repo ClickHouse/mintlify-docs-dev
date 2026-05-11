@@ -48,4 +48,4 @@ CREATE TABLE events (
 | Money | Decimal(P,S) or Int64 (cents) | Float64, String |
 | Booleans | Bool or UInt8 | String |
 
-Reference: [Select Data Types](https://clickhouse.com/docs/best-practices/select-data-types)
+Reference: [Select Data Types](/concepts/best-practices/select-data-type)

@@ -1,26 +1,28 @@
 ---
 title: 'Accelerating analytics with MergeTree'
+sidebarTitle: 'Accelerating queries'
 slug: /use-cases/data-lake/getting-started/accelerating-analytics
+toc_max_heading_level: 3
 description: 'Load data from open table formats into ClickHouse MergeTree tables for dramatically faster analytical queries.'
 keywords: ['data lake', 'lakehouse', 'MergeTree', 'accelerate', 'analytics', 'inverted index', 'full-text index', 'INSERT INTO SELECT']
 doc_type: 'guide'
 ---
 
-In the [previous section](/use-cases/data-lake/getting-started/connecting-catalogs), you connected ClickHouse to a data catalog and queried open table formats directly. While querying data in place is convenient, lakehouse formats are not optimized for the low-latency, high-concurrency workloads that power dashboards and operational reporting. For these use cases, loading data into ClickHouse's [MergeTree](/engines/table-engines/mergetree-family/mergetree) engine delivers dramatically better performance.
+In the [previous section](/guides/data-warehousing/getting-started/connecting-catalogs), you connected ClickHouse to a data catalog and queried open table formats directly. While querying data in place is convenient, open table formats are not optimized for the low-latency, high-concurrency workloads that power dashboards and operational reporting. For these use cases, loading data into ClickHouse's [MergeTree](/reference/engines/table-engines/mergetree-family/mergetree) engine delivers dramatically better performance.
 
 MergeTree offers several advantages over reading open table formats directly:
 
-- **[Sparse primary index](/optimize/sparse-primary-indexes)** - Orders data on disk by a chosen key, allowing ClickHouse to skip over large ranges of irrelevant rows during queries.
-- **Enhanced data types** - Native support for types such as [JSON](/sql-reference/data-types/json), [LowCardinality](/sql-reference/data-types/lowcardinality), and [Enum](/sql-reference/data-types/enum), enabling more compact storage and faster processing.
-- **[Skip indices](/engines/table-engines/mergetree-family/mergetree#table_engine-mergetree-data_skipping-indexes)** and **[full-text indices](/engines/table-engines/mergetree-family/invertedindexes)** - Secondary index structures that let ClickHouse skip granules that don't match a query's filter predicates, particularly effective for text search workloads.
+- **[Sparse primary index](/guides/cloud-oss/data-modelling/sparse-primary-indexes)** - Orders data on disk by a chosen key, allowing ClickHouse to skip over large ranges of irrelevant rows during queries.
+- **Enhanced data types** - Native support for types such as [JSON](/concepts/best-practices/json-type), [LowCardinality](/reference/data-types/lowcardinality), and [Enum](/reference/data-types/enum), enabling more compact storage and faster processing.
+- **[Skip indices](/reference/engines/table-engines/mergetree-family/mergetree#table_engine-mergetree-data_skipping-indexes)** and **[full-text indices](/reference/engines/table-engines/mergetree-family/textindexes)** - Secondary index structures that let ClickHouse skip granules that don't match a query's filter predicates, particularly effective for text search workloads.
 - **Fast inserts with automatic compaction** - ClickHouse is designed for high-throughput inserts and automatically merges data parts in the background, analogous to compaction in open table formats.
-- **Optimized for concurrent reads** - MergeTree columnar storage layout, combined with [multiple caching layers](/operations/caches), supports real-time analytical workloads with high concurrency - something open table formats are not designed for.
+- **Optimized for concurrent reads** - MergeTree columnar storage layout, combined with [multiple caching layers](/concepts/features/performance/caches/caches), supports real-time analytical workloads with high concurrency - something open table formats are not designed for.
 
 This guide shows how to load data from a catalog into a MergeTree table using `INSERT INTO SELECT` for faster analytics.
 
-## Connect to the catalog
+## Connect to the catalog {#connect-catalog}
 
-We'll use the same Unity Catalog connection from the [previous guide](/use-cases/data-lake/getting-started/connecting-catalogs), connecting via the Iceberg REST endpoint:
+We'll use the same Unity Catalog connection from the [previous guide](/guides/data-warehousing/getting-started/connecting-catalogs), connecting via the Iceberg REST endpoint:
 
 ```sql
 SET allow_database_iceberg = 1;
@@ -31,7 +33,7 @@ SETTINGS catalog_type = 'rest', catalog_credential = '<client-id>:<client-secret
 oauth_server_uri = 'https://<workspace-id>.cloud.databricks.com/oidc/v1/token', auth_scope = 'all-apis,sql';
 ```
 
-### List tables
+### List tables {#list-tables}
 
 ```sql
 SHOW TABLES FROM unity
@@ -42,7 +44,7 @@ SHOW TABLES FROM unity
 └────────────────────────────────────────────────────┘
 ```
 
-### Explore the schema
+### Explore the schema {#explore-schema}
 
 ```sql
 SHOW CREATE TABLE unity.`icebench.single_day_log`
@@ -85,7 +87,7 @@ FROM unity.`icebench.single_day_log`
 1 row in set. Elapsed: 1.265 sec.
 ```
 
-## Query over the lakehouse table
+## Query over the data lake table {#query-lakehouse}
 
 Let's run a query that filters logs by thread name and instance type, searches the message text for errors, and groups results by logger:
 
@@ -113,18 +115,18 @@ LIMIT 5
 Peak memory usage: 4.35 GiB.
 ```
 
-The query takes nearly **9 seconds** because ClickHouse must perform a full table scan across all Parquet files in object storage. Performance could be improved with partitioning, but columns like `logger_name` may be too high cardinality to partition effectively. We also have no indices such as [Text indices](/engines/table-engines/mergetree-family/mergetree#text) to further prune data. This is where MergeTree excels.
+The query takes nearly **9 seconds** because ClickHouse must perform a full table scan across all Parquet files in object storage. Performance could be improved with partitioning, but columns like `logger_name` may be too high cardinality to partition effectively. We also have no indices such as [Text indices](/reference/engines/table-engines/mergetree-family/mergetree#text) to further prune data. This is where MergeTree excels.
 
-## Load data into MergeTree
+## Load data into MergeTree {#load-data}
 
-### Create an optimized table
+### Create an optimized table {#create-table}
 
 We create a MergeTree table with some effort to optimize the schema. Notice a few key differences from the Iceberg schema:
 
 - **No `Nullable` wrappers** - removing `Nullable` improves storage efficiency and query performance.
 - **`LowCardinality(String)`** on the `level`, `instance_type`, `thread_name` and `check_name` columns - dictionary-encodes a column with few distinct values for better compression and faster filtering.
-- **A [full-text index](/engines/table-engines/mergetree-family/invertedindexes)** on the `message` column - accelerates token-based text searches like `hasToken(message, 'error')`.
-- **An `ORDER BY` key** of `(instance_type, thread_name, toStartOfMinute(event_time))` - aligns data on disk with common filter patterns so the [sparse primary index](/guides/best-practices/sparse-primary-indexes) can skip irrelevant granules.
+- **A [full-text index](/reference/engines/table-engines/mergetree-family/textindexes)** on the `message` column - accelerates token-based text searches like `hasToken(message, 'error')`.
+- **An `ORDER BY` key** of `(instance_type, thread_name, toStartOfMinute(event_time))` - aligns data on disk with common filter patterns so the [sparse primary index](/guides/cloud-oss/data-modelling/sparse-primary-indexes) can skip irrelevant granules.
 
 ```sql
 SET enable_full_text_index = 1;
@@ -156,9 +158,9 @@ ENGINE = MergeTree
 ORDER BY (instance_type, thread_name, toStartOfMinute(event_time))
 ```
 
-### Insert data from the catalog
+### Insert data from the catalog {#insert-data}
 
-Use `INSERT INTO SELECT` to load the ~300m from the lakehouse table into our ClickHouse table:
+Use `INSERT INTO SELECT` to load the ~300m from the data lake table into our ClickHouse table:
 
 ```sql
 INSERT INTO single_day_log SELECT * FROM icebench.`icebench.single_day_log`
@@ -167,7 +169,7 @@ INSERT INTO single_day_log SELECT * FROM icebench.`icebench.single_day_log`
 Peak memory usage: 18.62 GiB.
 ```
 
-## Re-execute the query
+## Re-execute the query {#reexecute-query}
 
 If we now run the same query against the MergeTree table we see performance improves dramatically:
 

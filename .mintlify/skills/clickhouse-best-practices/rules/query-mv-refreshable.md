@@ -61,4 +61,4 @@ SELECT * FROM orders_denormalized WHERE segment = 'enterprise';
 
 **Critical warning:** Query should run quickly compared to refresh interval. Don't schedule every 10 seconds if the query takes 10+ seconds.
 
-Reference: [Use Materialized Views](https://clickhouse.com/docs/best-practices/use-materialized-views)
+Reference: [Use Materialized Views](/concepts/best-practices/use-materialized-views)

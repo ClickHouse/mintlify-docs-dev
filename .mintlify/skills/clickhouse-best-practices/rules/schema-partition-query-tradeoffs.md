@@ -32,4 +32,4 @@ WHERE timestamp >= '2024-01-01' AND timestamp < '2024-02-01'
   AND event_type = 'click';
 ```
 
-Reference: [Choosing a Partitioning Key](https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key)
+Reference: [Choosing a Partitioning Key](/concepts/best-practices/partitioning-keys)
