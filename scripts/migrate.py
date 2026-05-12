@@ -833,6 +833,66 @@ def transform_image_components(text: str, image_vars: dict[str, str]) -> str:
     return pattern.sub(repl, text)
 
 
+# ----- <SvgVar ... /> -> plain <img src="..." style={{width:"3rem"}} /> -----
+# Docusaurus' webpack SVG loader treats `import Foo from '...foo.svg'` as a
+# React component, so authors write `<Foo class="image" alt="..." style={...} />`
+# inline in tables. Mintlify's MDX renderer has no equivalent — an undefined
+# `<Foo>` blanks the whole page. The import itself is already stripped by
+# transform_imports (image_vars records the mapping); this transform rewrites
+# the body usage to a plain `<img>` HTML element. Deliberately NOT wrapping in
+# Mintlify's `<Image>` component: that adds a Frame (border/padding) which is
+# wrong for tiny inline icons in table cells, and the component ignores `size`
+# anyway. Width is constrained inline to match the original Docusaurus look.
+SVG_ALT_RE = re.compile(r'\balt\s*=\s*"([^"]*)"')
+# Plain HTML `width` attribute, not JSX `style={{...}}`. The double-brace JSX
+# style attribute breaks MDX parsing when an `<img>` sits inside a markdown
+# table cell — the row parser sees the inner `{` as the start of an MDX
+# expression and 500s the whole page. `width` in pixels has no such hazard,
+# and browsers auto-scale `height` from the intrinsic aspect ratio.
+SVG_INLINE_STYLE = ' width="32"'
+
+
+def transform_svg_components(text: str, image_vars: dict[str, str]) -> str:
+    svg_vars = {v: p for v, p in image_vars.items() if p.lower().endswith(".svg")}
+    if not svg_vars:
+        return text
+    name_alt = "|".join(re.escape(n) for n in svg_vars)
+    pattern = re.compile(rf"<({name_alt})\b([^>]*?)/?>")
+
+    def repl(m: re.Match) -> str:
+        name, attrs = m.group(1), m.group(2)
+        path = svg_vars[name]
+        alt_m = SVG_ALT_RE.search(attrs)
+        alt = f' alt="{alt_m.group(1)}"' if alt_m else ""
+        return f'<img src="{path}"{alt}{SVG_INLINE_STYLE} />'
+    return pattern.sub(repl, text)
+
+
+# ----- <Image size="logo"> -> plain <img> -----------------------------------
+# Mintlify's <Image> component wraps content in a Frame (border/padding) and
+# ignores the `size` prop. For inline icons in table cells that's the wrong
+# look, so lower every `<Image ... size="logo" .../>` to a plain `<img>` with
+# an inline width. This also catches the Docusaurus pattern where a PNG is
+# imported as a variable and used as `<Image img={var} size="logo" />`
+# (transform_image_components has already inlined the path by this point).
+IMAGE_LOGO_RE = re.compile(r'<Image\b([^>]*?)/?>')
+
+
+def transform_image_logo_to_img(text: str) -> str:
+    def repl(m: re.Match) -> str:
+        attrs = m.group(1)
+        if not re.search(r'\bsize\s*=\s*"logo"', attrs):
+            return m.group(0)
+        img_m = re.search(r'\bimg\s*=\s*"([^"]*)"', attrs)
+        if not img_m:
+            return m.group(0)
+        src = img_m.group(1)
+        alt_m = SVG_ALT_RE.search(attrs)
+        alt = f' alt="{alt_m.group(1)}"' if alt_m else ""
+        return f'<img src="{src}"{alt}{SVG_INLINE_STYLE} />'
+    return IMAGE_LOGO_RE.sub(repl, text)
+
+
 # ----- click-ui body transforms ---------------------------------------------
 
 # Convert `<VerticalStepper>...</VerticalStepper>` (Click UI, splits content by
@@ -1469,6 +1529,8 @@ def migrate_file(path: Path, lk: Lookups, force: bool, dry_run: bool, docusaurus
     text = transform_details(text)
     text = transform_tabs(text)
     text = transform_image_components(text, image_vars)
+    text = transform_svg_components(text, image_vars)
+    text = transform_image_logo_to_img(text)
     text = transform_static_image_paths(text)
     text = transform_inline_anchor(text)
     text = transform_vertical_stepper(text)
@@ -1523,6 +1585,20 @@ SKIP_FILES = {
     # render.
     "snippets/truncate.mdx",
 }
+# Path prefixes (relative to THIS_REPO) whose pages are tracked outside the
+# Docusaurus pipeline. The migrator must never overwrite them: their canonical
+# source lives elsewhere (e.g. a product team's own repo) and the Docusaurus
+# copy is downstream / often stale.
+SKIP_PATH_PREFIXES = (
+    # Synced manually from https://github.com/ClickHouse/clickhouse-operator/tree/main/docs
+    "products/kubernetes-operator/",
+)
+
+
+def _is_skip_path(rel_posix: str) -> bool:
+    return rel_posix in SKIP_FILES or any(
+        rel_posix.startswith(p) for p in SKIP_PATH_PREFIXES
+    )
 
 
 def iter_targets(target: Path | None) -> list[Path]:
@@ -1537,18 +1613,18 @@ def iter_targets(target: Path | None) -> list[Path]:
             # Repo-root meta files (AGENTS, README, LICENSE …) aren't pages.
             if len(rel.parts) == 1 and rel.parts[0] in SKIP_TOPLEVEL:
                 continue
-            if rel.as_posix() in SKIP_FILES:
+            if _is_skip_path(rel.as_posix()):
                 continue
             out.append(p)
         return sorted(out)
     if target.is_file():
-        if target.relative_to(THIS_REPO).as_posix() in SKIP_FILES:
+        if _is_skip_path(target.relative_to(THIS_REPO).as_posix()):
             return []
         return [target]
     if target.is_dir():
         for ext in EXTS:
             out.extend(target.rglob(f"*{ext}"))
-        return sorted(p for p in out if not any(part in ITER_SKIP_DIRS for part in p.relative_to(THIS_REPO).parts) and p.relative_to(THIS_REPO).as_posix() not in SKIP_FILES)
+        return sorted(p for p in out if not any(part in ITER_SKIP_DIRS for part in p.relative_to(THIS_REPO).parts) and not _is_skip_path(p.relative_to(THIS_REPO).as_posix()))
     return []
 
 
