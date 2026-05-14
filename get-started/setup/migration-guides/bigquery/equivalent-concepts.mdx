@@ -7,42 +7,31 @@ sidebarTitle: 'Equivalent concepts'
 doc_type: 'reference'
 ---
 
-A scannable, table-format reference mapping each core BigQuery concept
-to its ClickHouse equivalent.
-
-**Scope.** Conceptual translation only — what is the equivalent of X,
-and how do the two systems differ at the model level. For
-function-by-function syntax mapping (array, window, date, JSON
-functions, etc.), see the BigQuery → ClickHouse SQL translation
-reference. For the end-to-end migration walkthrough, see
-[Migrating from BigQuery to ClickHouse Cloud](/get-started/setup/migration-guides/bigquery/migrating-to-clickhouse-cloud).
-
-**Audience.** Anyone moving a BigQuery workload onto ClickHouse —
-scoping a migration, evaluating ClickHouse, or porting your first
-query. Scan the tables to find your concept; read the callouts under
-each table for the few places the analogy isn't clean.
-
-**How to read the tables.** Column 2 names the ClickHouse approach for each BigQuery concept on the left; Notes call out trade-offs and model differences.
+The tables below map each BigQuery concept to its ClickHouse equivalent — what to use instead, and where the model differs. For function-by-function SQL syntax mapping, see the BigQuery → ClickHouse SQL translation reference. For the end-to-end migration walkthrough, see [Migrating from BigQuery to ClickHouse Cloud](/get-started/setup/migration-guides/bigquery/migrating-to-clickhouse-cloud).
 
 ## Resource hierarchy {#resource-hierarchy}
 
-| BigQuery | In ClickHouse | Notes |
+How the platform organizes accounts, logical containers for data, and where compute is provisioned.
+
+| BigQuery | ClickHouse | Notes |
 |---|---|---|
-| Organization | An [organization](/products/cloud/reference/security/console-roles#organization-roles) | Root node of the hierarchy in both. |
-| Project | A service in a region; group services into a [warehouse](/products/cloud/features/infrastructure/warehouses) for shared storage with independent compute | A CH service is one storage + one compute pool; a BQ project holds many datasets and reserves slots at the project or org level. |
-| Dataset | A [database](/reference/statements/create/database) | Logical container that organizes tables and scopes access. |
-| Folder | Group services into a [warehouse](/products/cloud/features/infrastructure/warehouses), or split workloads across separate services | CH has no folder primitive — grouping is achieved at the service/warehouse level. |
-| IAM permissions | Combine [console roles](/products/cloud/guides/security/cloud-access-management/manage-sql-console-role-assignments) with SQL [grants](/reference/statements/grant) | Two-layer access: roles in `console.clickhouse.cloud` plus SQL grants in the database. Console users can also be granted DB roles for SQL Console use. |
+| Organization | [Organization](/products/cloud/reference/security/console-roles#organization-roles) | Root node of the hierarchy in both. |
+| Project | Service (region-scoped); [warehouse](/products/cloud/features/infrastructure/warehouses) for grouping services with shared storage and independent compute | A ClickHouse service is one storage + one compute pool. Use a warehouse to group services that share storage but scale compute independently. |
+| Dataset | [Database](/reference/statements/create/database) | Logical container that organizes tables and scopes access. |
+| Folder | [Warehouse](/products/cloud/features/infrastructure/warehouses) grouping, or separate services per workload | ClickHouse has no folder primitive — grouping is at the service / warehouse level. |
+| IAM permissions | [Console roles](/products/cloud/guides/security/cloud-access-management/manage-sql-console-role-assignments) plus SQL [grants](/reference/statements/grant) | Two-layer access: roles in `console.clickhouse.cloud` plus SQL grants in the database. Console users can also be granted DB roles for SQL Console use. |
 
 ## Compute, capacity, pricing {#compute-capacity}
 
-| BigQuery | In ClickHouse | Notes |
+How processing is allocated to a query, sized, and billed.
+
+| BigQuery | ClickHouse | Notes |
 |---|---|---|
-| Slot | Compute is allocated in replicas (whole nodes); a query [parallelizes](/optimize/query-parallelism) across them | A BQ slot is a virtual CPU executing a query slice; a CH replica is a whole node. See callout below for the granularity difference. |
-| Slot reservation | Set vertical and horizontal [autoscaling](/products/cloud/features/autoscaling/vertical) bounds; isolate workloads using [warehouses](/products/cloud/features/infrastructure/warehouses) | CH uses bounds-based autoscaling rather than guaranteed-capacity reservations. |
-| Quotas | Apply [workload classes](/concepts/features/configuration/server-config/workload-scheduling) plus per-query limits | Covers memory, CPU, concurrency, and I/O scheduling. The two quota models don't map row-by-row, but concept-level coverage is similar. |
-| On-demand pricing (per TB scanned) | Billed per compute-time (replica-hours) plus storage and transfer — see [billing overview](/cloud/manage/billing/overview) | The two pricing models aren't directly comparable; see the [pricing calculator](https://clickhouse.com/pricing). |
-| Logical vs physical storage billing | Billed for compressed storage only — see [billing overview](/cloud/manage/billing/overview) | BQ bills either uncompressed (logical) or compressed (physical) storage; CH Cloud bills compressed only. Worth normalizing when comparing storage costs head-to-head. |
+| Slot | Replica (whole node); queries [parallelize](/optimize/query-parallelism) across replicas | A replica is the unit of compute in a ClickHouse service; queries run across all replicas of the service. See the callout below for the granularity difference with BigQuery slots. |
+| Slot reservation | Vertical and horizontal [autoscaling](/products/cloud/features/autoscaling/vertical) bounds; [warehouses](/products/cloud/features/infrastructure/warehouses) for workload isolation | ClickHouse uses bounds-based autoscaling rather than guaranteed-capacity reservations. |
+| Quotas | [Workload classes](/concepts/features/configuration/server-config/workload-scheduling) plus per-query limits | Covers memory, CPU, concurrency, and I/O scheduling. The two quota models don't map row-by-row, but concept-level coverage is similar. |
+| On-demand pricing (per TB scanned) | Compute-time (replica-hours) plus storage and transfer — see [billing overview](/cloud/manage/billing/overview) | The two pricing models are not directly comparable. |
+| Logical vs physical storage billing | Compressed storage only — see [billing overview](/cloud/manage/billing/overview) | ClickHouse Cloud bills compressed storage. The logical-vs-physical distinction does not apply. |
 
 <Note>
 **Slot vs replica.** A BigQuery slot is much finer-grained than a
@@ -53,115 +42,133 @@ allocated to a query, but with very different sizing.
 
 ## Storage and tables {#storage-tables}
 
-| BigQuery | In ClickHouse | Notes |
+How tables are stored: engines, schema, partitioning, snapshots, and access primitives.
+
+In ClickHouse, a table's behavior is set at creation time: the engine (MergeTree family) determines merge and storage semantics, and `ORDER BY` / `PARTITION BY` / `TTL` clauses configure physical layout and retention. Many BigQuery per-feature settings map to a clause in the ClickHouse `CREATE TABLE` statement.
+
+| BigQuery | ClickHouse | Notes |
 |---|---|---|
-| Table | Create a table with a [MergeTree-family engine](/reference/engines/table-engines/mergetree-family/mergetree) | Engine choice determines storage and merge behavior — pick by access pattern ([`MergeTree`](/reference/engines/table-engines/mergetree-family/mergetree) for append-mostly facts, [`ReplacingMergeTree`](/reference/engines/table-engines/mergetree-family/replacingmergetree) for upserts, [`AggregatingMergeTree`](/reference/engines/table-engines/mergetree-family/aggregatingmergetree) for pre-aggregations). |
-| Column schema modes (`NULLABLE`, `REQUIRED`, `REPEATED`) | Use type wrappers — [`Nullable(T)`](/reference/data-types/nullable) for optional, omit it for required, [`Array(T)`](/reference/data-types/array) for repeated, and `Array(Tuple(...))` or [`Nested`](/reference/data-types/nested-data-structures) for repeated records | Same semantics, different syntax. CH is strict-by-default — wrap with `Nullable(T)` only when needed, since nullability has a small storage and query cost. |
-| Schema evolution (add / drop / modify columns) | Use [`ALTER TABLE ... ADD / DROP / MODIFY COLUMN`](/reference/statements/alter/column) | Same DDL surface as BQ. Many column changes are metadata-only in CH, so large tables aren't fully rewritten on column add. |
-| Partitioning | Add a [`PARTITION BY`](/reference/engines/table-engines/mergetree-family/custom-partitioning-key) clause to the table | Same concept and similar mechanics as BQ partitioning. |
-| Clustering | Set the table's [`ORDER BY`](/guides/cloud-oss/data-modelling/sparse-primary-indexes) columns | Ordering is part of the table definition in CH, not a separate operation. Data is physically sorted on disk by the order-by columns. |
-| External tables / BigLake | Query files directly with the [`s3`](/reference/functions/table-functions/s3) / [`gcs`](/reference/functions/table-functions/gcs) / [`azureBlobStorage`](/reference/functions/table-functions/azureBlobStorage) table functions; use the [Iceberg engine](/reference/engines/table-engines/integrations/iceberg) for open catalogs | Object storage and open-table formats are first-class. BigLake's unified governance / fine-grained ACL story doesn't have a direct CH counterpart. |
-| Object tables (SQL access to unstructured files) | Use the [`s3`](/reference/functions/table-functions/s3) / [`gcs`](/reference/functions/table-functions/gcs) table functions over binary formats | CH treats unstructured-object access as a special case of external file reading via table functions, not as a dedicated table type. |
-| Apache Iceberg: managed vs external | Read with the [Iceberg engine](/reference/engines/table-engines/integrations/iceberg); native CH writes to Iceberg are in active development | CH reads Iceberg catalogs today. BQ's *managed* Iceberg tables (BQ writes Iceberg natively) don't yet have a fully-equivalent CH write story — track maturity before relying on it. |
-| Default table / partition / dataset expiration | Add a [`TTL` clause](/reference/statements/create/table#ttl-expression) on the table, column, or partition | Both support automatic deletion of data older than a configured window. CH `TTL` can also be set after the fact via [`ALTER TABLE ... MODIFY TTL`](/reference/statements/alter/ttl). |
-| Table snapshot | Take a [backup](/products/cloud/guides/backups/review-and-restore-backups) of the service | See callout below — granularity differs significantly. |
-| Time travel | Restore a point-in-time [backup](/products/cloud/guides/backups/review-and-restore-backups) into a new service | Backups are service-scoped, not table-scoped, so the restore unit is the whole service rather than a single table at a moment in time. |
-| Authorized views | Define a [view](/reference/statements/create/view) with `SQL SECURITY DEFINER` so it runs with the view-owner's privileges | Same model as BQ authorized views. See [CREATE VIEW](/reference/statements/create/view) for the syntax and the `INVOKER` / `DEFINER` / `NONE` modes. |
-| Row-level security | Attach a [row policy](/reference/statements/create/row-policy) — a `WHERE`-style expression evaluated per user | Same model as BQ row-level security; applied transparently to every query against the table. |
-| Wildcard tables (`_TABLE_SUFFIX`) | Use the [`Merge`](/reference/engines/table-engines/special/merge) table engine for a persistent grouping, or the [`merge()`](/reference/functions/table-functions/merge) function inline | Same idea, different syntax. `Merge` is a persistent table-of-tables; `merge()` is inline without creating one. |
-| Table clone | Copy with [`CREATE TABLE ... AS SELECT`](/reference/statements/create/table), or restore a [backup](/products/cloud/guides/backups/review-and-restore-backups) into a new service | CH has no copy-on-write primitive — every copy reads the source data fully. |
+| Table | [MergeTree-family table](/reference/engines/table-engines/mergetree-family/mergetree) | Engine choice determines storage and merge behavior — pick by access pattern ([`MergeTree`](/reference/engines/table-engines/mergetree-family/mergetree) for append-mostly facts, [`ReplacingMergeTree`](/reference/engines/table-engines/mergetree-family/replacingmergetree) for upserts, [`AggregatingMergeTree`](/reference/engines/table-engines/mergetree-family/aggregatingmergetree) for pre-aggregations). |
+| Column schema modes (`NULLABLE`, `REQUIRED`, `REPEATED`) | [`Nullable(T)`](/reference/data-types/nullable) for optional; omit for required; [`Array(T)`](/reference/data-types/array) for repeated; `Array(Tuple(...))` or [`Nested`](/reference/data-types/nested-data-structures) for repeated records | In ClickHouse, columns are non-nullable unless wrapped with `Nullable(T)`. Nullability has a small storage and query cost, so use it only when the column actually needs nulls. |
+| Schema evolution (add / drop / modify columns) | [`ALTER TABLE ... ADD / DROP / MODIFY COLUMN`](/reference/statements/alter/column) | Same DDL surface as BigQuery. Many column changes are metadata-only. |
+| Partitioning | [`PARTITION BY`](/reference/engines/table-engines/mergetree-family/custom-partitioning-key) clause on the table | Partitions are defined at table creation; a partition expression determines how rows are grouped into parts on disk. |
+| Clustering | [`ORDER BY`](/guides/cloud-oss/data-modelling/sparse-primary-indexes) columns in the table definition | Defined as part of the table; data is physically sorted on disk by the `ORDER BY` columns. |
+| External tables / BigLake | [`s3`](/reference/functions/table-functions/s3) / [`gcs`](/reference/functions/table-functions/gcs) / [`azureBlobStorage`](/reference/functions/table-functions/azureBlobStorage) table functions for direct file access; [Iceberg engine](/reference/engines/table-engines/integrations/iceberg) for open catalogs | Object storage and open-table formats are read directly through these functions and engines. ClickHouse does not provide a unified-governance layer over external storage. |
+| Object tables (SQL access to unstructured files) | [`s3`](/reference/functions/table-functions/s3) / [`gcs`](/reference/functions/table-functions/gcs) table functions over binary formats | ClickHouse treats unstructured-object access as a special case of external file reading via table functions, not as a dedicated table type. |
+| Apache Iceberg | [Iceberg engine](/reference/engines/table-engines/integrations/iceberg) (read-only) | Reads Iceberg tables stored in S3, Azure, HDFS, or local storage; writes are not supported. See the engine page for the current list of supported features. |
+| Default table / partition / dataset expiration | [`TTL` clause](/reference/statements/create/table#ttl-expression) on the table, column, or partition | Both support automatic deletion of data older than a configured window. `TTL` can be set at table creation or via [`ALTER TABLE ... MODIFY TTL`](/reference/statements/alter/ttl). |
+| Table snapshot | Service-level [backup](/products/cloud/guides/backups/review-and-restore-backups) | See callout below — granularity differs significantly. |
+| Time travel | Point-in-time [backup](/products/cloud/guides/backups/review-and-restore-backups) restore into a new service | Backups are service-scoped, not table-scoped, so the restore unit is the whole service rather than a single table at a moment in time. |
+| Authorized views | [View](/reference/statements/create/view) with `SQL SECURITY DEFINER` (runs with the view-owner's privileges) | See [CREATE VIEW](/reference/statements/create/view) for the syntax and the `INVOKER` / `DEFINER` / `NONE` modes. |
+| Row-level security | [Row policy](/reference/statements/create/row-policy) — a `WHERE`-style expression evaluated per user | Row policies apply transparently to every query against the table. |
+| Wildcard tables (`_TABLE_SUFFIX`) | [`Merge`](/reference/engines/table-engines/special/merge) table engine (persistent grouping) or [`merge()`](/reference/functions/table-functions/merge) function (inline) | Same idea, different syntax. `Merge` is a persistent table-of-tables; `merge()` is inline without creating one. |
+| Table clone | [`CREATE TABLE ... AS SELECT`](/reference/statements/create/table) copy, or [backup](/products/cloud/guides/backups/review-and-restore-backups) restore into a new service | ClickHouse has no copy-on-write primitive — every copy reads the source data fully. |
 
 <Note>
-**Snapshots vs backups.** Granularity differs significantly.
-BigQuery snapshots are per-table and copy-on-write cheap; ClickHouse
-Cloud backups are per-service. Restoring a CH backup creates a new
-service — you can't restore a single table back into the original.
+**Backups.** ClickHouse Cloud backups are per-service. Restoring
+a backup creates a new service — a single table cannot be restored
+back into the original service. Plan accordingly if your current
+workflow relies on per-table snapshots.
 </Note>
 
 ## Query model and performance {#query-model}
 
-| BigQuery | In ClickHouse | Notes |
+How queries run and are accelerated — indexes, materialized views, caches, and streaming inputs.
+
+Query acceleration in ClickHouse comes from three layers: primary-key ordering (a sparse index over the on-disk sort order), secondary indexes on non-key columns, and materialized views — incremental or refreshable. The rows below map BigQuery's acceleration features onto these primitives.
+
+| BigQuery | ClickHouse | Notes |
 |---|---|---|
-| Primary key (advisory) | Define a primary key — drives the on-disk sort order and the [sparse primary index](/guides/cloud-oss/data-modelling/sparse-primary-indexes) | Neither system enforces uniqueness; the optimizer uses the key to prune granules, avoid re-sorts, and short-circuit `LIMIT`. |
-| Foreign key (advisory) | Model relationships via wide tables or [dictionaries](/reference/dictionaries) for lookups | CH doesn't accept foreign-key declarations even as advisory hints. |
-| Search index | Add a [full-text index](/reference/engines/table-engines/mergetree-family/textindexes) | Token index over string columns. |
-| Vector index | Add a [vector ANN index](/reference/engines/table-engines/mergetree-family/annindexes) | Both in active development — verify current maturity status before production use. |
-| Materialized view | Create an [incremental MV](/concepts/features/materialized-views/incremental-materialized-view) (updates on every insert) or a [refreshable MV](/concepts/features/materialized-views/refreshable-materialized-view) (runs on a schedule) | CH supports two MV models — see callout. |
-| Scheduled query | Create a [refreshable MV](/concepts/features/materialized-views/refreshable-materialized-view) that runs the query on a schedule and maintains its result table | Same role as a BQ scheduled query writing into a target table. |
-| Streaming inserts | Use native [`INSERT`](/reference/statements/insert-into) over HTTP or the native protocol for direct ingest, or [ClickPipes](/integrations/clickpipes/home) for managed streaming | ClickPipes covers Kafka, Kinesis, Pub/Sub, MySQL, Postgres, and object storage. |
-| Continuous queries | Attach a streaming [table engine](/reference/engines/table-engines/integrations/kafka) (Kafka, Pub/Sub, etc.) to a materialized view that writes to a destination table | Same end-to-end model: ingest → transform → write. |
-| Dry run | Run [`EXPLAIN ESTIMATE`](/reference/statements/explain) to get rows, parts, and marks the query would read | Other [`EXPLAIN`](/reference/statements/explain) variants (`PLAN`, `PIPELINE`, `SYNTAX`) cover deeper plan inspection. |
-| Federated queries (Spanner, Cloud SQL, AlloyDB) | Attach an external OLTP database with a [database engine](/reference/engines/database-engines) (PostgreSQL, MySQL, MongoDB, SQLite) | Distinct from external tables in object storage — these attach a live source so its tables are queryable directly. |
-| Cached results | Enable the [query cache](/concepts/features/performance/caches/query-cache) | Both transparently reuse results of recently executed queries. |
-| Sessions / multi-statement queries | Run each statement independently; manage multi-step state in the client or an orchestrator | CH has no per-session variables or shared state. |
+| Primary key (advisory) | Primary key — drives the on-disk sort order and the [sparse primary index](/guides/cloud-oss/data-modelling/sparse-primary-indexes) | Neither system enforces uniqueness; the optimizer uses the key to prune granules, avoid re-sorts, and short-circuit `LIMIT`. |
+| Foreign key (advisory) | Wide tables or [dictionaries](/reference/dictionaries) for lookups | ClickHouse doesn't accept foreign-key declarations even as advisory hints. |
+| Search index | [Full-text index](/reference/engines/table-engines/mergetree-family/textindexes) | Token index over string columns. |
+| Vector index | [Vector ANN index](/reference/engines/table-engines/mergetree-family/annindexes) | Approximate nearest-neighbor lookups over embedding columns. |
+| Materialized view | [Incremental MV](/concepts/features/materialized-views/incremental-materialized-view) (updates on every insert) or [refreshable MV](/concepts/features/materialized-views/refreshable-materialized-view) (runs on a schedule) | ClickHouse supports two MV models — see callout. |
+| Scheduled query | [Refreshable MV](/concepts/features/materialized-views/refreshable-materialized-view) — runs the query on a schedule and maintains its result table | Refreshable MVs replace the scheduled-query-into-target-table pattern. |
+| Streaming inserts | Native [`INSERT`](/reference/statements/insert-into) over HTTP or the native protocol for direct ingest; [ClickPipes](/integrations/clickpipes/home) for managed streaming | ClickPipes covers Kafka, Kinesis, Pub/Sub, MySQL, Postgres, and object storage. |
+| Continuous queries | Streaming [table engine](/reference/engines/table-engines/integrations/kafka) (Kafka, Pub/Sub, etc.) feeding a materialized view that writes to a destination table | Same end-to-end model: ingest → transform → write. |
+| Dry run | [`EXPLAIN ESTIMATE`](/reference/statements/explain) — reports rows, parts, and marks the query would read | Other [`EXPLAIN`](/reference/statements/explain) variants (`PLAN`, `PIPELINE`, `SYNTAX`) cover deeper plan inspection. |
+| Federated queries (Spanner, Cloud SQL, AlloyDB) | External OLTP attached via [database engine](/reference/engines/database-engines) (PostgreSQL, MySQL, MongoDB, SQLite) | Distinct from external tables in object storage — these attach a live source so its tables are queryable directly. |
+| Cached results | [Query cache](/concepts/features/performance/caches/query-cache) | Both transparently reuse results of recently executed queries. |
+| Sessions / multi-statement queries | Per-statement execution; multi-step state managed in the client or an orchestrator | ClickHouse has no per-session variables or shared state. |
 
-### Also in ClickHouse {#secondary-indexes}
+### Secondary indexes {#secondary-indexes}
 
-**Secondary indexes** on non-primary-key columns, useful when you
-query by columns outside the sort order:
+Indexes on non-primary-key columns, used when queries filter by columns outside the sort order:
 
 - [Bloom-filter](/reference/engines/table-engines/mergetree-family/mergetree#bloom-filter) — equality lookups (`=`, `IN`)
 - Token-bloom — substring search on tokenized text
 - [Minmax](/reference/engines/table-engines/mergetree-family/mergetree#minmax) — range pruning by per-part min/max
 
 <Note>
-**Materialized view update model.** BigQuery materialized views
-refresh periodically (at most every 30 minutes), and the optimizer
-can route queries to MVs. ClickHouse has two MV models:
-**incremental** MVs update on every base-table insert (always in
-sync, cost proportional to the insert) and **refreshable** MVs run
-on a schedule like BigQuery. Use incremental for high-throughput
-aggregations, refreshable for periodic snapshots.
+**Materialized view update model.** ClickHouse has two MV models:
+**incremental** MVs update on every base-table insert (cost
+proportional to the insert) and **refreshable** MVs run on a
+schedule. BigQuery materialized views correspond to the refreshable
+model. Use incremental for high-throughput aggregations, refreshable
+for periodic snapshots.
 </Note>
 
 ## SQL and functions {#sql-and-functions}
 
-| BigQuery | In ClickHouse | Notes |
+The query-language surface: SQL coverage, UDFs, and the built-in function library.
+
+ClickHouse SQL covers the standard `SELECT` / `JOIN` / `GROUP BY` / window-function surface. Function-by-function mapping (date, JSON, string, regex, window) lives in the BigQuery → ClickHouse SQL translation reference; the rows below are concept-level only.
+
+| BigQuery | ClickHouse | Notes |
 |---|---|---|
-| Standard SQL | Use ClickHouse SQL — same `SELECT` / `JOIN` / `GROUP BY` plus first-class [lambdas](/reference/functions/regular-functions/overview#arrow-operator-and-lambda) and aggregate [combinators](/reference/functions/aggregate-functions/combinators) | Compatible at the level of basic SQL. The two CH extensions account for most of the "this query is shorter in ClickHouse" effect. |
-| 18 aggregate functions | Choose from [150+ aggregate functions](/reference/functions/aggregate-functions/reference) composable with [combinators](/reference/functions/aggregate-functions/combinators) (`-Array`, `-Map`, `-ForEach`, `-If`, …) | Combinators compose any aggregate with any input shape. |
-| 8 array functions, `UNNEST` for most ops | Use [80+ array functions](/reference/functions/regular-functions/array-functions) plus lambdas — most `UNNEST` round-trips collapse into a single call | Common patterns: `arrayFilter`, `arrayMap`, `arrayZip`, `arrayReduce`. |
-| SQL UDFs | Define with [`CREATE FUNCTION`](/reference/statements/create/function) | Same model — function from a SQL expression. |
-| JavaScript UDFs | Define an [executable UDF](/reference/functions/regular-functions/udf) that shells out to a Python, shell, or other script | Different language and execution model, similar role. |
-| Stored procedures | Run procedural logic in the client or orchestrator ([dbt](/integrations/dbt), Airflow) | CH has no procedural SQL. |
-| Multi-statement transactions | Rely on per-insert and per-DDL atomic guarantees; combine writes at the application layer if you need them grouped | Multi-statement transactions are on the [roadmap](https://github.com/ClickHouse/ClickHouse/issues/58392). |
-| Sketches (HLL, approximate quantiles) | Use [`uniqHLL12`](/reference/functions/aggregate-functions/reference/uniqhll12), [`quantileTDigest`](/reference/functions/aggregate-functions/reference/quantiletdigest), [`quantileDDSketch`](/reference/functions/aggregate-functions/reference/quantileddsketch), and others — composable via `-State`/`-Merge` combinators | Wide range of approximate aggregates that serialize as state and merge across queries. |
+| Standard SQL | ClickHouse SQL — same `SELECT` / `JOIN` / `GROUP BY`, with [lambdas](/reference/functions/regular-functions/overview#arrow-operator-and-lambda) and aggregate [combinators](/reference/functions/aggregate-functions/combinators) as additional language features | Compatible at the level of basic SQL. Lambdas and combinators are the two extensions worth getting familiar with. |
+| Aggregate functions | [Aggregate functions](/reference/functions/aggregate-functions/reference) composable with [combinators](/reference/functions/aggregate-functions/combinators) (`-Array`, `-Map`, `-ForEach`, `-If`, …) | Combinators compose any aggregate with any input shape. |
+| Array functions, `UNNEST` | [Array functions](/reference/functions/regular-functions/array-functions) and lambdas | Common patterns: `arrayFilter`, `arrayMap`, `arrayZip`, `arrayReduce`. |
+| SQL UDFs | [`CREATE FUNCTION`](/reference/statements/create/function) (SQL expression) | Same model — function from a SQL expression. |
+| JavaScript UDFs | [Executable UDF](/reference/functions/regular-functions/udf) shelling out to a Python, shell, or other script | Different language and execution model, similar role. |
+| Stored procedures | Client-side or orchestrator-side procedural logic ([dbt](/integrations/dbt), Airflow) | ClickHouse has no procedural SQL. |
+| Multi-statement transactions | Per-insert and per-DDL atomic guarantees; application-layer grouping for multi-write batches | Multi-statement transactions are on the [roadmap](https://github.com/ClickHouse/ClickHouse/issues/58392). |
+| Sketches (HLL, approximate quantiles) | [`uniqHLL12`](/reference/functions/aggregate-functions/reference/uniqhll12), [`quantileTDigest`](/reference/functions/aggregate-functions/reference/quantiletdigest), [`quantileDDSketch`](/reference/functions/aggregate-functions/reference/quantileddsketch), and others — composable via `-State`/`-Merge` combinators | Approximate aggregates that serialize as state and merge across queries. |
 
 ## Security and governance {#security-governance}
 
+Access control, encryption, masking, and network boundaries.
+
 Authorized views and row-level security are listed under [Storage and tables](#storage-tables).
 
-| BigQuery | In ClickHouse | Notes |
+| BigQuery | ClickHouse | Notes |
 |---|---|---|
-| Policy tags / column-level access control | Apply column-level [grants](/reference/statements/grant) on specific columns of a table | CH grants scope down to individual columns. BQ's centralized taxonomy/policy-tag governance has no direct equivalent. |
-| Data masking | Mask with views, [row policies](/reference/statements/create/row-policy), or function-based transforms — see [data masking patterns](/products/cloud/guides/security/data-masking) | No first-class column-mask primitive yet; patterns are SQL-level. |
-| Customer-managed encryption keys (CMEK) | Configure [CMEK](/products/cloud/guides/security/cmek) on the service | BYOK in AWS KMS, with rotation and revocation. |
-| AEAD / SQL-level encryption functions | Call the [encryption functions](/reference/functions/regular-functions/encryption-functions) (`encrypt` / `decrypt`) | Covers AES-128/256-CBC/GCM and AEAD modes. |
-| Differential privacy | Apply noise externally or via a [UDF](/reference/functions/regular-functions/udf) | No built-in differential privacy in CH. |
-| VPC Service Controls | Restrict ingress via [PrivateLink](/products/cloud/guides/security/connectivity/private-networking/aws-privatelink) (AWS / Azure) and IP allowlists | Boundary semantics are narrower than VPC SC. |
+| Policy tags / column-level access control | Column-level [grants](/reference/statements/grant) on specific columns of a table | Grants apply at the column level. BigQuery's centralized taxonomy/policy-tag governance has no direct equivalent. |
+| Data masking | Views, [row policies](/reference/statements/create/row-policy), or function-based transforms — see [data masking patterns](/products/cloud/guides/security/data-masking) | No column-mask primitive yet; patterns are SQL-level. |
+| Customer-managed encryption keys (CMEK) | [CMEK](/products/cloud/guides/security/cmek) on the service | BYOK in AWS KMS, with rotation and revocation. |
+| AEAD / SQL-level encryption functions | [Encryption functions](/reference/functions/regular-functions/encryption-functions) (`encrypt` / `decrypt`) | Covers AES-128/256-CBC/GCM and AEAD modes. |
+| Differential privacy | External noise application, or via a [UDF](/reference/functions/regular-functions/udf) | No built-in differential privacy in ClickHouse. |
+| VPC Service Controls | [PrivateLink](/products/cloud/guides/security/connectivity/private-networking/aws-privatelink) (AWS / Azure) and IP allowlists for ingress restriction | Boundary semantics are narrower than VPC SC. |
 
 ## Data sharing {#data-sharing}
 
-| BigQuery | In ClickHouse | Notes |
+Cross-organization data exchange and clean-room patterns.
+
+| BigQuery | ClickHouse | Notes |
 |---|---|---|
-| Analytics Hub / data exchanges / listings | Grant read access to a shared database, or run a dedicated service with consumer-specific [row policies](/reference/statements/create/row-policy) | CH has no in-product data marketplace; sharing is achieved with standard access primitives. |
-| Data clean rooms | Build the equivalent with [row policies](/reference/statements/create/row-policy) and [authorized views](/reference/statements/create/view) | No managed clean-room product. |
+| Analytics Hub / data exchanges / listings | Read access to a shared database, or a dedicated service with consumer-specific [row policies](/reference/statements/create/row-policy) | ClickHouse has no in-product data marketplace; sharing uses standard access primitives. |
+| Data clean rooms | [Row policies](/reference/statements/create/row-policy) and [authorized views](/reference/statements/create/view) — assembled per use case | No managed clean-room product. |
 
 ## Operations and ecosystem {#operations}
 
-| BigQuery | In ClickHouse | Notes |
+Day-2 concerns: ingestion, ML/BI integration, observability, metadata, and disaster recovery.
+
+ClickHouse surfaces operational state through `system.*` tables (queries, sessions, replication, parts, metrics) and the cloud console; managed ingestion is handled by ClickPipes; ML, BI, and notebook workflows are typically handled in external systems that read from ClickHouse.
+
+| BigQuery | ClickHouse | Notes |
 |---|---|---|
-| BigQuery ML | Train and serve models in an external system (notebooks, Spark, Vertex AI, feature stores) that reads from CH; see [AI/ML in Cloud](/cloud/features/ai-ml) for managed-side features | CH has no in-database ML — the typical pattern is to use CH as the analytical store and run training elsewhere. |
-| BI Engine | Query directly — [ClickHouse](/concepts) is itself a column-oriented analytical engine optimized for BI workloads | No separate caching layer to configure. |
-| OMNI / cross-cloud federated query | Run a CH service in each [supported region](/cloud/reference/supported-regions) where the data lives, replicating between them as needed | Pattern is one service per cloud, not federated queries across clouds. |
-| Data sources / file formats (5 / 19) | Ingest from 90+ file formats and native integrations across object storage, message queues, OLTP, and observability sources — see the [integrations overview](/integrations/connectors/home) | CH supports significantly more sources and formats. |
-| Query jobs (ID, history, cancel) | Inspect [`system.query_log`](/reference/system-tables/query_log) and [`system.processes`](/reference/system-tables/processes); cancel with [`KILL QUERY`](/reference/statements/kill) | Same information, exposed through system tables instead of a job API. |
-| `INFORMATION_SCHEMA` | Query the native [`system.*` tables](/reference/system-tables) for CH-specific detail, or the ANSI [`information_schema`](/reference/system-tables/information_schema) views for tool compatibility | Both surfaces available. |
-| Data Transfer Service | Use [ClickPipes](/integrations/clickpipes/home) for scheduled and streaming ingestion from SaaS, storage, and OLTP sources | Covers the same scheduling and source-coverage role. |
-| Audit logs | Read the [cloud audit log](/products/cloud/reference/security/audit-logging) and system tables | Both systems log admin and query activity. |
-| Change data capture ingestion | Use [ClickPipes for Postgres](/integrations/clickpipes/postgres), [MySQL](/integrations/clickpipes/mysql), or Kafka | Managed CDC from OLTP and streaming sources into CH tables. |
-| BigQuery Studio notebooks / BigQuery DataFrames | Use Jupyter with `clickhouse-connect` or another [client library](/integrations/language-clients/python/overview) | No in-product notebook environment or pandas-compatible in-DB API; notebook-side libraries cover the same workflow. |
-| Data Canvas / managed data preparations | Use the [SQL Console](/integrations/connectors/data-integrations/sql-clients/sql-console) and [ClickPipes](/integrations/clickpipes/home); run visual data-prep in an external orchestrator | SQL Console is the UI counterpart; ClickPipes covers managed ingestion. |
-| Gemini in BigQuery (SQL generation, code completion) | Use the Ask-AI button in docs and console | LLM assistance is surfaced through Ask-AI rather than a first-class in-query assistant. |
-| Knowledge Catalog / data lineage / data quality | Query [`system.*`](/reference/system-tables) tables for metadata; integrate external tools (dbt, DataHub) for lineage and quality | CH exposes metadata via system tables rather than a managed catalog product. |
-| Cross-region replication / managed disaster recovery | Run multi-AZ HA within a region (automatic), and replicate across regions with [`Replicated*MergeTree`](/reference/engines/table-engines/mergetree-family/replication) engines or the Enterprise tier's advanced DR features | CH Cloud is multi-AZ HA by default within a region. Cross-region DR is configurable but not as turnkey as BQ's managed DR; latency between regions affects write performance. |
+| BigQuery ML | External training and serving (notebooks, Spark, Vertex AI, feature stores) reading from ClickHouse; see [AI/ML in Cloud](/cloud/features/ai-ml) for managed-side features | ClickHouse has no in-database ML — the typical pattern is to use ClickHouse as the analytical store and run training elsewhere. |
+| BI Engine | Direct querying — [ClickHouse](/concepts) is a column-oriented analytical engine | ClickHouse has no separate caching layer to provision for BI workloads; queries run against the storage engine directly. |
+| OMNI / cross-cloud federated query | One ClickHouse service per [supported region](/cloud/reference/supported-regions) where the data lives, with cross-region replication as needed | Pattern is one service per cloud, not federated queries across clouds. |
+| Data sources / file formats | [File-format and connector library](/integrations/connectors/home) | Managed connectors (ClickPipes) for sources like Kafka, Pub/Sub, MySQL, Postgres, and object storage; SQL table functions for ad-hoc reads of files in object storage. |
+| Query jobs (ID, history, cancel) | [`system.query_log`](/reference/system-tables/query_log) and [`system.processes`](/reference/system-tables/processes) for inspection; [`KILL QUERY`](/reference/statements/kill) to cancel | Same information, exposed through system tables instead of a job API. |
+| `INFORMATION_SCHEMA` | Native [`system.*` tables](/reference/system-tables) for ClickHouse-specific detail, or the ANSI [`information_schema`](/reference/system-tables/information_schema) views for tool compatibility | Both surfaces available. |
+| Data Transfer Service | [ClickPipes](/integrations/clickpipes/home) — scheduled and streaming ingestion from SaaS, storage, and OLTP sources | Covers the same scheduling and source-coverage role. |
+| Audit logs | [Cloud audit log](/products/cloud/reference/security/audit-logging) and system tables | Both systems log admin and query activity. |
+| Change data capture ingestion | [ClickPipes for Postgres](/integrations/clickpipes/postgres), [MySQL](/integrations/clickpipes/mysql), or Kafka | Managed CDC from OLTP and streaming sources into ClickHouse tables. |
+| BigQuery Studio notebooks / BigQuery DataFrames | Jupyter with `clickhouse-connect` or another [client library](/integrations/language-clients/python/overview) | No in-product notebook environment or pandas-compatible in-DB API; notebook-side libraries cover the same workflow. |
+| Data Canvas / managed data preparations | [SQL Console](/integrations/connectors/data-integrations/sql-clients/sql-console) and [ClickPipes](/integrations/clickpipes/home); visual data-prep in an external orchestrator | SQL Console is the UI counterpart; ClickPipes covers managed ingestion. |
+| Gemini in BigQuery (SQL generation, code completion) | Ask-AI button in docs and console | LLM assistance is surfaced through Ask-AI; ClickHouse has no in-query assistant. |
+| Knowledge Catalog / data lineage / data quality | [`system.*`](/reference/system-tables) tables for metadata; external tools (dbt, DataHub) for lineage and quality | ClickHouse exposes metadata via system tables rather than a managed catalog product. |
+| Cross-region replication / managed disaster recovery | Multi-AZ HA within a region (automatic); cross-region replication via [`Replicated*MergeTree`](/reference/engines/table-engines/mergetree-family/replication) engines or the Enterprise tier's advanced DR features | Multi-AZ HA is on by default within a region. Cross-region replication is configurable; latency between regions affects write performance. |
