@@ -8,10 +8,7 @@ keywords: ['replication', 'high availability', 'cluster setup', 'data redundancy
 ---
 
 import { Image } from "/snippets/components/Image.jsx";
-import ReplicationShardingTerminology from '/snippets/_replication-sharding-terminology.mdx';
 
-import ConfigFileNote from '/snippets/_config-files.mdx';
-import KeeperConfigFileNote from '/snippets/_keeper-config-files.mdx';
 import ConfigExplanation from '/snippets/_config_explanation.mdx';
 import ListenHost from '/snippets/_listen_host.mdx';
 import ServerParameterTable from '/snippets/_server_parameter_table.mdx';
@@ -152,7 +149,7 @@ Now modify each empty configuration file `config.xml` located at
 `fs/volumes/clickhouse-{}/etc/clickhouse-server/config.d`. The lines which are
 highlighted below need to be changed to be specific to each node:
 
-```xml
+```xml highlight={9,53-57}
 <clickhouse replace="true">
     <logger>
         <level>debug</level>
@@ -161,7 +158,6 @@ highlighted below need to be changed to be specific to each node:
         <size>1000M</size>
         <count>3</count>
     </logger>
-    <!--highlight-next-line-->
     <display_name>cluster_1S_2R node 1</display_name>
     <listen_host>0.0.0.0</listen_host>
     <http_port>8123</http_port>
@@ -206,13 +202,11 @@ highlighted below need to be changed to be specific to each node:
             <port>9181</port>
         </node>
     </zookeeper>
-    <!--highlight-start-->
     <macros>
         <shard>01</shard>
         <replica>01</replica>
         <cluster>cluster_1S_2R</cluster>
     </macros>
-    <!--highlight-end-->
 </clickhouse>
 ```
 
@@ -516,9 +510,8 @@ SHOW DATABASES;
 From the `clickhouse-01` client run the following **distributed** DDL query using the
 `ON CLUSTER` clause to create a new database called `uk`:
 
-```sql
+```sql highlight={2}
 CREATE DATABASE IF NOT EXISTS uk 
--- highlight-next-line
 ON CLUSTER cluster_1S_2R;
 ```
 
@@ -530,13 +523,12 @@ the query only `clickhouse-01`:
 SHOW DATABASES;
 ```
 
-```response
+```response highlight={6}
    ┌─name───────────────┐
 1. │ INFORMATION_SCHEMA │
 2. │ default            │
 3. │ information_schema │
 4. │ system             │
-#highlight-next-line
 5. │ uk                 │
    └────────────────────┘
 ```
@@ -547,9 +539,8 @@ SHOW DATABASES;
 Now that the database has been created, create a table on the cluster.
 Run the following query from any of the host clients:
 
-```sql
+```sql highlight={2,19}
 CREATE TABLE IF NOT EXISTS uk.uk_price_paid_local
---highlight-next-line
 ON CLUSTER cluster_1S_2R
 (
     price UInt32,
@@ -567,7 +558,6 @@ ON CLUSTER cluster_1S_2R
     district LowCardinality(String),
     county LowCardinality(String)
 )
---highlight-next-line
 ENGINE = ReplicatedMergeTree
 ORDER BY (postcode1, postcode2, addr1, addr2);
 ```

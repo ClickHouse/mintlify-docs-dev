@@ -533,6 +533,73 @@ POST_TRANSFORM_OVERRIDES: dict[str, callable] = {
 }
 
 
+def prune_unused_mdx_imports(text: str) -> str:
+    """Drop `import X from '/path/foo.mdx';` lines where X is never used in
+    the body. Mintlify hoists an imported MDX snippet's own top-level imports
+    into the parent page's compiled scope; if the snippet is never rendered
+    (and only imported as dead code) it still contributes those declarations,
+    which collide with the page's own (e.g. both declare `Image`) and break
+    the page bundle ("Identifier 'X' has already been declared")."""
+
+    def is_used(name: str, body: str) -> bool:
+        # <Name>, <Name />, <Name/>, <Name attr=...>, {Name}, or {expr Name expr}
+        if re.search(r"<\s*" + re.escape(name) + r"(?:[\s/>])", body):
+            return True
+        return bool(re.search(r"\{[^{}]*\b" + re.escape(name) + r"\b[^{}]*\}", body))
+
+    def keep(line: str, rest: str) -> bool:
+        m = IMPORT_LINE_RE.match(line)
+        if not m:
+            return True
+        src = m.group("src")
+        if not src.endswith((".mdx", ".md")):
+            return True
+        spec = m.group("spec").strip()
+        # Only consider plain default imports (`import X from "..."`). Named
+        # imports from MDX snippets are unusual; leave them alone.
+        if "{" in spec or "*" in spec or "," in spec:
+            return True
+        name = spec.strip()
+        return is_used(name, rest)
+
+    lines = text.split("\n")
+    out: list[str] = []
+    for i, line in enumerate(lines):
+        rest = "\n".join(lines[:i] + lines[i + 1 :])
+        if keep(line, rest):
+            out.append(line)
+    return "\n".join(out)
+
+
+def strip_snippet_component_imports(text: str, dest_path: Path | None) -> str:
+    """For files under `/snippets/`, drop imports of components from
+    `/snippets/components/`. Mintlify hoists snippet imports into every
+    page that imports the snippet, so when both the snippet and a host
+    page import (e.g.) `Image`, the combined bundle has two top-level
+    declarations of the same identifier and the page bundle errors out
+    with `Identifier 'Image' has already been declared`. Host pages
+    always carry these component imports themselves, so dropping the
+    snippet's copy is safe (and is the only thing that keeps the page
+    renderable)."""
+    if dest_path is None:
+        return text
+    try:
+        rel = dest_path.relative_to(THIS_REPO).as_posix()
+    except ValueError:
+        return text
+    if not rel.startswith("snippets/"):
+        return text
+
+    def keep(line: str) -> bool:
+        m = IMPORT_LINE_RE.match(line)
+        if not m:
+            return True
+        src = m.group("src")
+        return not src.startswith("/snippets/components/")
+
+    return "\n".join(line for line in text.split("\n") if keep(line))
+
+
 def transform_imports(text: str, lk: Lookups, issues: list[str], source_docu_path: Path | None = None, json_vars: dict[str, str] | None = None, dest_path: Path | None = None) -> tuple[str, dict[str, str]]:
     image_vars: dict[str, str] = {}
     if json_vars is None:
@@ -1096,6 +1163,113 @@ def transform_runnable(text: str) -> tuple[str, bool]:
     return RUNNABLE_FENCE_RE.sub(repl, text), used
 
 
+# Docusaurus "magic comment" highlight directives that live inside code fences:
+#   # highlight-next-line / -start (or -begin) / -end       (Python, bash, …)
+#   // highlight-next-line / -start / -end                  (JS, TS, C, Java, …)
+#   -- highlight-next-line / -start / -end                  (SQL)
+#   <!-- highlight-next-line / -start / -end -->            (HTML, XML, MDX)
+# Mintlify's renderer doesn't recognise these; they leak through as raw text
+# inside the highlighted code block. The transform below rewrites them to
+# Mintlify's `highlight={N-M,P}` info-string syntax and strips the comment
+# lines from the body. See https://docusaurus.io/docs/markdown-features/code-blocks#custom-magic-comments.
+_HIGHLIGHT_COMMENT_RE = re.compile(
+    r"^[ \t]*"
+    r"(?:#|//|--|<!--)\s*"
+    r"highlight-(next-line|start|begin|end)"
+    r"\s*(?:-->)?[ \t]*$",
+    re.IGNORECASE,
+)
+_FENCE_OPEN_RE = re.compile(
+    r"^(?P<indent>[ \t]*)(?P<fence>```+|~~~+)(?P<info>[^\n]*)$",
+    re.MULTILINE,
+)
+
+
+def _highlight_ranges(line_nums: list[int]) -> str:
+    line_nums = sorted(set(line_nums))
+    if not line_nums:
+        return ""
+    out = []
+    a = prev = line_nums[0]
+    for n in line_nums[1:]:
+        if n == prev + 1:
+            prev = n
+            continue
+        out.append(str(a) if a == prev else f"{a}-{prev}")
+        a = prev = n
+    out.append(str(a) if a == prev else f"{a}-{prev}")
+    return ",".join(out)
+
+
+def transform_highlight_comments(text: str) -> str:
+    """Convert Docusaurus highlight-* magic comments inside fenced code blocks
+    to Mintlify's `highlight={ranges}` info-string syntax."""
+    out: list[str] = []
+    pos = 0
+    while True:
+        m = _FENCE_OPEN_RE.search(text, pos)
+        if not m:
+            out.append(text[pos:])
+            break
+        out.append(text[pos:m.start()])
+        indent = m.group("indent")
+        fence = m.group("fence")
+        info = m.group("info")
+        body_start = m.end() + 1  # past the opener's newline
+        close_re = re.compile(
+            r"^" + re.escape(indent) + re.escape(fence) + r"[ \t]*$",
+            re.MULTILINE,
+        )
+        c = close_re.search(text, body_start)
+        if not c:
+            out.append(text[m.start():])
+            break
+        body = text[body_start:c.start()]
+        body_lines = body.split("\n")
+        if body_lines and body_lines[-1] == "":
+            body_lines = body_lines[:-1]
+
+        new_lines: list[str] = []
+        highlights: list[int] = []
+        pending_next = False
+        block_start: int | None = None
+        for line in body_lines:
+            mh = _HIGHLIGHT_COMMENT_RE.match(line)
+            if not mh:
+                if pending_next:
+                    highlights.append(len(new_lines) + 1)
+                    pending_next = False
+                new_lines.append(line)
+                continue
+            tok = mh.group(1).lower()
+            if tok == "next-line":
+                pending_next = True
+            elif tok in ("start", "begin"):
+                block_start = len(new_lines) + 1
+            elif tok == "end":
+                if block_start is not None:
+                    for ln in range(block_start, len(new_lines) + 1):
+                        highlights.append(ln)
+                block_start = None
+            # The magic-comment line itself is consumed (never appended).
+
+        if not highlights or "highlight=" in info:
+            out.append(text[m.start():c.end()])
+            pos = c.end()
+            continue
+        range_str = _highlight_ranges(highlights)
+        new_info = info.rstrip()
+        new_info = f"{new_info} highlight={{{range_str}}}" if new_info else f" highlight={{{range_str}}}"
+        new_body = "\n".join(new_lines)
+        out.append(f"{indent}{fence}{new_info}\n{new_body}\n{indent}{fence}")
+        if c.end() < len(text) and text[c.end()] == "\n":
+            out.append("\n")
+            pos = c.end() + 1
+        else:
+            pos = c.end()
+    return "".join(out)
+
+
 # ----- internal link rewrites ------------------------------------------------
 
 # Capture everything up to the closing paren as the href; rewrite_one strips
@@ -1257,7 +1431,7 @@ def _absolute(slug_path: str, frag: str, lk: Lookups, issues: list[str], origina
         if target and target.exists() and target.is_file():
             return slug_path + frag
     issues.append(f"unknown slug: {original}")
-    return f"{original} <!-- MIGRATE: unknown slug -->"
+    return f"{original}{_LINK_MARK}unknown slug"
 
 
 def _resolve_local_asset(href: str, source_path: Path) -> str | None:
@@ -1293,8 +1467,15 @@ def _resolve_local_asset(href: str, source_path: Path) -> str | None:
     return None
 
 
+_LINK_MARK = "\x00MIGRATE:"
+
+
 def rewrite_links(text: str, source_docu_file: str | None, lk: Lookups, issues: list[str], dest_path: Path | None = None) -> str:
-    marker_re = re.compile(r"\s*<!--\s*MIGRATE:[^>]*-->\s*")
+    # Older revisions of this script emitted MIGRATE markers as HTML comments
+    # inline inside the markdown link href, e.g. `[x](url <!-- MIGRATE: ... -->)`.
+    # That syntax breaks MDX parsing ("Unexpected character `!`") and renders
+    # the page blank. Strip any legacy markers from prior runs.
+    marker_re = re.compile(r"\s*(?:<!--\s*MIGRATE:[^>]*-->|\{/\*\s*MIGRATE:[^*]*\*/\})\s*")
 
     # Lines that start with `[//]:` are markdown reference-style comments —
     # their contents don't render. Skip rewriting any links on those lines.
@@ -1336,12 +1517,12 @@ def rewrite_links(text: str, source_docu_file: str | None, lk: Lookups, issues: 
                     return local
             if not source_docu_file:
                 issues.append(f"relative link with no docusaurus source: {href}")
-                return f"{href} <!-- MIGRATE: cannot resolve relative link -->"
+                return f"{href}{_LINK_MARK}cannot resolve relative link"
             url = resolve_relative(bare, source_docu_file, lk)
             if url:
                 return url + frag
             issues.append(f"unresolved relative link: {href}")
-            return f"{href} <!-- MIGRATE: unresolved relative link -->"
+            return f"{href}{_LINK_MARK}unresolved relative link"
         # Bare relative path without `./` or extension (e.g. `mergetree#x`,
         # `storing-data#x`, `settings/settings#x`). Docusaurus resolved these
         # against the source page's directory; try that path through
@@ -1352,15 +1533,32 @@ def rewrite_links(text: str, source_docu_file: str | None, lk: Lookups, issues: 
                 return url + frag
         return href
 
+    def _split_marker(rewritten: str) -> tuple[str, str | None]:
+        """Pull a sentinel-encoded MIGRATE marker (if any) off the rewritten
+        href. The marker is emitted outside the link/attr by the caller so
+        the URL stays valid and the MDX parser doesn't choke on it."""
+        if _LINK_MARK in rewritten:
+            href, reason = rewritten.split(_LINK_MARK, 1)
+            return href, reason
+        return rewritten, None
+
     def md_repl(m):
         if is_comment_line_at(m.start()):
             return m.group(0)
-        return f"[{m.group('text')}]({rewrite_one(m.group('href'))})"
+        href, marker = _split_marker(rewrite_one(m.group("href")))
+        link = f"[{m.group('text')}]({href})"
+        if marker:
+            link += f"{{/* MIGRATE: {marker} */}}"
+        return link
 
     def html_repl(m):
         if is_comment_line_at(m.start()):
             return m.group(0)
-        return f'{m.group(1)}"{rewrite_one(m.group(2))}"'
+        href, marker = _split_marker(rewrite_one(m.group(2)))
+        attr = f'{m.group(1)}"{href}"'
+        if marker:
+            attr += f"{{/* MIGRATE: {marker} */}}"
+        return attr
 
     text = LINK_RE.sub(md_repl, text)
     text = HREF_ATTR_RE.sub(html_repl, text)
@@ -1374,7 +1572,11 @@ def rewrite_links(text: str, source_docu_file: str | None, lk: Lookups, issues: 
     def ref_repl(m):
         if m.group("label").strip() == "//":
             return m.group(0)
-        return f'{m.group("indent")}[{m.group("label")}]: {rewrite_one(m.group("href"))}'
+        href, marker = _split_marker(rewrite_one(m.group("href")))
+        line = f'{m.group("indent")}[{m.group("label")}]: {href}'
+        if marker:
+            line += f"  {{/* MIGRATE: {marker} */}}"
+        return line
     text = REF_DEF_RE.sub(ref_repl, text)
     return text
 
@@ -1538,6 +1740,7 @@ def migrate_file(path: Path, lk: Lookups, force: bool, dry_run: bool, docusaurus
     text = transform_horizontal_divide(text)
     text = transform_two_column_list(text, json_vars)
     text, used_runnable = transform_runnable(text)
+    text = transform_highlight_comments(text)
 
     source_docu_file = row["docusaurus_file"] if row else None
     text = rewrite_links(text, source_docu_file, lk, issues, dest_path=path)
@@ -1546,6 +1749,12 @@ def migrate_file(path: Path, lk: Lookups, force: bool, dry_run: bool, docusaurus
         text = _inject_import(text, RUNNABLE_IMPORT)
     if image_vars and "/snippets/components/Image.jsx" not in text:
         text = _inject_import(text, IMAGE_IMPORT)
+
+    # Dedupe imports to avoid `Identifier 'X' has already been declared`
+    # bundle errors that would render the page blank. See the two helpers
+    # for the underlying Mintlify hoisting behaviour.
+    text = prune_unused_mdx_imports(text)
+    text = strip_snippet_component_imports(text, path)
 
     # Apply any per-file override (rare; for upstream patterns that don't map
     # cleanly to a generic transform, e.g. <Link><CardSecondary/></Link>).
@@ -1628,27 +1837,45 @@ def iter_targets(target: Path | None) -> list[Path]:
     return []
 
 
-def sync_image_assets(docusaurus_root: Path) -> int:
+def sync_image_assets(docusaurus_root: Path, overwrite: bool = False) -> tuple[int, int]:
     """Copy upstream `static/images/**` files into this repo's `images/**`.
-    Only files missing locally are copied — existing ones are left alone so
-    repo-specific overrides aren't clobbered. Returns number copied.
+
+    Default: copy only files missing locally. Existing files are left alone so
+    repo-specific overrides aren't clobbered.
+
+    With `overwrite=True`: also replace local copies whose contents differ from
+    upstream (same path, different bytes). Use when upstream images have been
+    updated since the last sync. Orphan files (local-only paths) are never
+    touched.
+
+    Returns (copied_new, overwritten_existing).
     """
     src_root = docusaurus_root / "static" / "images"
     dst_root = THIS_REPO / "images"
     if not src_root.exists():
-        return 0
+        return 0, 0
     copied = 0
+    overwritten = 0
     for src in src_root.rglob("*"):
         if not src.is_file():
             continue
         rel = src.relative_to(src_root)
         dst = dst_root / rel
         if dst.exists():
+            if not overwrite:
+                continue
+            try:
+                if src.read_bytes() == dst.read_bytes():
+                    continue
+            except OSError:
+                continue
+            shutil.copy2(src, dst)
+            overwritten += 1
             continue
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
         copied += 1
-    return copied
+    return copied, overwritten
 
 
 def update_slug_map(slug_map_csv: Path, all_rows: list[dict], updates: dict[str, dict[str, str]]) -> None:
@@ -1674,11 +1901,16 @@ def main():
                     help="path to the clickhouse-docs (Docusaurus) repo — content source of truth")
     ap.add_argument("--sync-assets", action="store_true",
                     help="copy upstream static/images/** into this repo's images/** (skips files that already exist)")
+    ap.add_argument("--overwrite-drifted", action="store_true",
+                    help="with --sync-assets, also overwrite local images whose contents differ from upstream "
+                         "(use when upstream has updated screenshots; orphan local-only files are never touched)")
     args = ap.parse_args()
 
     if args.sync_assets and not args.path and not args.all:
-        copied = sync_image_assets(args.docusaurus)
-        print(f"Synced {copied} image file(s) from {args.docusaurus}/static/images")
+        copied, overwritten = sync_image_assets(args.docusaurus, overwrite=args.overwrite_drifted)
+        print(f"Synced {copied} new image file(s) from {args.docusaurus}/static/images")
+        if args.overwrite_drifted:
+            print(f"Overwrote {overwritten} drifted file(s) with upstream content")
         return 0
 
     if not args.all and not args.path:
@@ -1700,9 +1932,11 @@ def main():
     # Always sync image assets when running --all so missing referenced
     # /images/... assets get pulled in automatically.
     if args.all:
-        copied = sync_image_assets(args.docusaurus)
+        copied, overwritten = sync_image_assets(args.docusaurus, overwrite=args.overwrite_drifted)
         if copied:
-            print(f"Synced {copied} image file(s) from {args.docusaurus}/static/images")
+            print(f"Synced {copied} new image file(s) from {args.docusaurus}/static/images")
+        if overwritten:
+            print(f"Overwrote {overwritten} drifted file(s) with upstream content")
 
     lk, all_rows = build_lookups(args.slug_map)
 

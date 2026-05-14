@@ -290,14 +290,13 @@ The [`toStringCutToZero`](/reference/functions/regular-functions/type-conversion
 With the data in this format, we can easily find the order of the busiest airports by finding the length of the rolled up "Destinations" arrays:
 
 <RunnableCode>
-```sql
+```sql highlight={7}
 WITH
     '2024-01-01' AS date,
     busy_airports AS (
     SELECT
     FlightDate,
     Origin,
---highlight-next-line
     groupArray(toStringCutToZero(Dest)) AS Destinations
     FROM ontime.ontime
     WHERE Origin IN ('ATL', 'ORD', 'DFW', 'DEN', 'LAX', 'JFK', 'LAS', 'CLT', 'SFO', 'SEA')
@@ -351,11 +350,10 @@ The [`arrayZip`](/reference/functions/regular-functions/array-functions#arrayZip
 Next we'll look only at the number of flights that were delayed by 30 minutes or more, for airports `DEN`, `ATL` and `DFW`:
 
 <RunnableCode>
-```sql
+```sql highlight={4}
 SELECT
     Origin,
     OriginCityName,
---highlight-next-line
     length(arrayFilter(d -> d >= 30, groupArray(ArrDelayMinutes))) AS num_delays_30_min_or_more
 FROM ontime.ontime
 WHERE Origin IN ('DEN', 'ATL', 'DFW')
@@ -380,11 +378,10 @@ Next, we'll figure out which pairs of major US airports serve the most common de
 Run the query below to see these two array functions in action:
 
 <RunnableCode>
-```sql
+```sql highlight={4,12}
 WITH airport_routes AS (
     SELECT 
         Origin,
---highlight-next-line
         arraySort(groupArray(DISTINCT toStringCutToZero(Dest))) AS destinations
     FROM ontime.ontime
     WHERE FlightDate = '2024-01-01'
@@ -393,7 +390,6 @@ WITH airport_routes AS (
 SELECT 
     a1.Origin AS airport1,
     a2.Origin AS airport2,
---highlight-next-line
     length(arrayIntersect(a1.destinations, a2.destinations)) AS common_destinations
 FROM airport_routes a1
 CROSS JOIN airport_routes a2
@@ -424,15 +420,13 @@ While we're looking at delays, let's use yet another higher-order array function
 for each route from Denver International Airport:
 
 <RunnableCode>
-```sql
+```sql highlight={5-6}
 SELECT
     Origin,
     toStringCutToZero(Dest) AS Destination,
     groupArray(DepDelayMinutes) AS delays,
---highlight-start
     round(arrayReduce('avg', groupArray(DepDelayMinutes)), 2) AS avg_delay,
     round(arrayReduce('max', groupArray(DepDelayMinutes)), 2) AS worst_delay
---highlight-end
 FROM ontime.ontime
 WHERE Origin = 'DEN'
     AND FlightDate = '2024-01-01'
