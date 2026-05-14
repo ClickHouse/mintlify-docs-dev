@@ -693,6 +693,16 @@ Allows creation of tables with the [TimeSeries](/reference/engines/table-engines
 - 0 — the [TimeSeries](/reference/engines/table-engines/integrations/time-series) table engine is disabled.
 - 1 — the [TimeSeries](/reference/engines/table-engines/integrations/time-series) table engine is enabled.
 
+## allow_experimental_unique_key {#allow_experimental_unique_key} 
+
+<ExperimentalBadge/>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting to gate the experimental UNIQUE KEY clause on MergeTree-family tables"}]}]}/>
+
+Allows creation of tables with the `UNIQUE KEY` clause on MergeTree-family engines.
+
 ## allow_experimental_window_view {#allow_experimental_window_view} 
 
 <ExperimentalBadge/>
@@ -1950,9 +1960,9 @@ Result:
 
 ## cast_string_to_date_time_mode {#cast_string_to_date_time_mode} 
 
-<SettingsInfoBlock type="DateTimeInputFormat" default_value="basic" />
+<SettingsInfoBlock type="DateTimeInputFormat" default_value="best_effort" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.6"},{"label": "basic"},{"label": "Allow to use different DateTime parsing mode in String to DateTime cast"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "best_effort"},{"label": "Better usability"}]}, {"id": "row-2","items": [{"label": "25.6"},{"label": "basic"},{"label": "Allow to use different DateTime parsing mode in String to DateTime cast"}]}]}/>
 
 Allows choosing a parser of the text representation of date and time during cast from String.
 
@@ -6609,7 +6619,7 @@ The recommended value is half of the available system memory.
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "0"},{"label": "New setting to control automatic spilling of hash joins to disk. Non-zero value enables spilling and sets the byte threshold."}]}]}/>
 
-If set to a non-zero value and `join_algorithm` is `hash`, `parallel_hash`, `default`, or `auto`, the hash join will automatically be converted to grace hash join to enable spilling to disk when the right-side data exceeds this many bytes. When set to 0 (default), automatic spilling is disabled. It prevents read in order through join optimization.
+If set to a non-zero value and `join_algorithm` is `hash`, `parallel_hash`, `default`, or `auto`, the hash join will automatically be converted to grace hash join to enable spilling to disk when the right-side data exceeds this many bytes. When set to 0 (default), this absolute byte threshold is disabled, but automatic spilling may still occur via `max_bytes_ratio_before_external_join` (which defaults to `0.5`); set both to `0` to fully disable automatic spilling. It prevents read in order through join optimization.
 
 ## max_bytes_before_external_sort {#max_bytes_before_external_sort} 
 
@@ -6688,15 +6698,15 @@ start using external aggregation.
 
 ## max_bytes_ratio_before_external_join {#max_bytes_ratio_before_external_join} 
 
-<SettingsInfoBlock type="Double" default_value="0" />
+<SettingsInfoBlock type="Double" default_value="0.5" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting: ratio of available memory used as the spill threshold for hash joins. Combined with the absolute `max_bytes_before_external_join` (the smaller of the two applies)."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0.5"},{"label": "New setting: ratio of available memory used as the spill threshold for hash joins. Enabled by default at `0.5`, mirroring `max_bytes_ratio_before_external_group_by` and `max_bytes_ratio_before_external_sort`. Combined with the absolute `max_bytes_before_external_join` (the smaller of the two applies)."}]}]}/>
 
 The ratio of available memory that is allowed for `JOIN`. Once reached, the hash join will be converted to grace hash join to spill the right-side data to disk.
 
 For example, if set to `0.6`, `JOIN` will allow using `60%` of the available memory (to server/user/merges) for the right-side hash table at the beginning of the execution; after that, it starts spilling to disk.
 
-If both `max_bytes_before_external_join` and `max_bytes_ratio_before_external_join` are set, the smaller resulting threshold is used. If the ratio is `0` (default), only the absolute setting applies.
+If both `max_bytes_before_external_join` and `max_bytes_ratio_before_external_join` are set, the smaller resulting threshold is used. If the ratio is `0`, only the absolute setting applies.
 
 Has effect only when `join_algorithm` is `hash`, `parallel_hash`, `default`, or `auto` and a temporary data path is configured.
 
@@ -7301,10 +7311,6 @@ Possible values:
 **Additional Info**
 
 This options will produce different results depending on the settings used.
-
-<Note>
-This setting will produce incorrect results when joins or subqueries are involved, and all tables don't meet certain requirements. See [Distributed Subqueries and max_parallel_replicas](/reference/settings/session-settings#max_parallel_replicas) for more details.
-</Note>
 
 ### Parallel processing using `SAMPLE` key
 
@@ -10765,6 +10771,14 @@ Connection timeout for receiving first packet of data or packet with positive pr
 
 Timeout for receiving data from the network, in seconds. If no bytes were received in this interval, the exception is thrown. If you set this setting on the client, the 'send_timeout' for the socket will also be set on the corresponding connection end on the server.
 
+## recursive_cte_max_steps_in_type_inference {#recursive_cte_max_steps_in_type_inference} 
+
+<SettingsInfoBlock type="UInt64" default_value="10" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "10"},{"label": "Maximum iterations for inferring column types in recursive CTEs via iterative getLeastSupertype"}]}]}/>
+
+Maximum number of iterations for inferring column types in recursive CTEs. Column types are determined by iteratively applying `getLeastSupertype` across the non-recursive and recursive sides of the UNION ALL until convergence. Set to 0 to disable type widening and use the types from the non-recursive part only.
+
 ## regexp_dict_allow_hyperscan {#regexp_dict_allow_hyperscan} 
 
 <SettingsInfoBlock type="Bool" default_value="1" />
@@ -11479,6 +11493,30 @@ Possible values:
 - `throw`: throw an exception (default).
 - `break`: stop executing the query and return the partial result, as if the
 source data ran out.
+
+## shared_merge_tree_sequential_consistency_initial_parts_update_backoff_ms {#shared_merge_tree_sequential_consistency_initial_parts_update_backoff_ms} 
+
+<SettingsInfoBlock type="UInt64" default_value="50" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "50"},{"label": "New setting to reduce sporadic UNFINISHED errors in queries with sequential consistency for SharedMergeTree."}]}]}/>
+
+Initial backoff in milliseconds for parts update when using `select_sequential_consistency` with `SharedMergeTree`. Only available in ClickHouse Cloud.
+
+## shared_merge_tree_sequential_consistency_max_parts_update_backoff_ms {#shared_merge_tree_sequential_consistency_max_parts_update_backoff_ms} 
+
+<SettingsInfoBlock type="UInt64" default_value="1000" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1000"},{"label": "New setting to reduce sporadic UNFINISHED errors in queries with sequential consistency for SharedMergeTree."}]}]}/>
+
+Max backoff in milliseconds for parts update when using `select_sequential_consistency` with `SharedMergeTree`. Only available in ClickHouse Cloud.
+
+## shared_merge_tree_sequential_consistency_parts_update_max_retries {#shared_merge_tree_sequential_consistency_parts_update_max_retries} 
+
+<SettingsInfoBlock type="UInt64" default_value="10" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "10"},{"label": "New setting to reduce sporadic UNFINISHED errors in queries with sequential consistency for SharedMergeTree."}]}]}/>
+
+Max retries for parts update when using `select_sequential_consistency` with `SharedMergeTree`. Only available in ClickHouse Cloud.
 
 ## shared_merge_tree_sync_parts_on_partition_operations {#shared_merge_tree_sync_parts_on_partition_operations} 
 

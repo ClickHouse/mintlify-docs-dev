@@ -132,8 +132,10 @@
     style.id = 'ch-footer-styles';
     style.textContent = ''
       + '#' + FOOTER_ID + ' { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }'
-      // On desktop the sidebar is fixed at 19rem wide; offset the footer so it clears it
-      + '@media (min-width: 1024px) { #' + FOOTER_ID + ' { padding-left: calc(19rem + 24px) !important; } }'
+      // On desktop the sidebar is fixed at 19rem wide; match #content-container's
+      // horizontal padding (pl-[32px] / pr-[32px]) so the footer's inner edges
+      // align with the content area used by both doc pages and the home page.
+      + '@media (min-width: 1024px) { #' + FOOTER_ID + ' { padding-left: calc(19rem + 32px) !important; padding-right: 32px !important; } }'
       + '#' + FOOTER_ID + ' * { box-sizing: border-box; }'
       + '#' + FOOTER_ID + ' a { text-decoration: none; transition: color 0.15s, border-color 0.15s; }'
       // Top section: sitemap + CTA side by side only at wide viewports

@@ -247,7 +247,7 @@ to the original table receiving inserts.
 
 For example, consider the following query:
 
-```sql
+```sql highlight={8}
 SELECT avg(Score)
 FROM comments
 WHERE UserId = 8592047
@@ -255,7 +255,6 @@ WHERE UserId = 8592047
    ┌──────────avg(Score)─┐
    │ 0.18181818181818182 │
    └─────────────────────┘
---highlight-next-line
 1 row in set. Elapsed: 0.040 sec. Processed 90.38 million rows, 361.59 MB (2.25 billion rows/s., 9.01 GB/s.)
 Peak memory usage: 201.93 MiB.
 ```
@@ -278,7 +277,7 @@ This latter command causes the data to be stored twice on disk in two different
 orders. The projection can also be defined when the data is created, as shown below,
 and will be automatically maintained as data is inserted.
 
-```sql
+```sql highlight={10-14}
 CREATE TABLE comments
 (
     `Id` UInt32,
@@ -288,13 +287,11 @@ CREATE TABLE comments
     `CreationDate` DateTime64(3, 'UTC'),
     `UserId` Int32,
     `UserDisplayName` LowCardinality(String),
-    --highlight-begin
     PROJECTION comments_user_id
     (
     SELECT *
     ORDER BY UserId
     )
-    --highlight-end
 )
 ENGINE = MergeTree
 ORDER BY PostId
@@ -322,7 +319,7 @@ WHERE (`table` = 'comments') AND (command LIKE '%MATERIALIZE%')
 If we repeat the above query, we can see performance has improved significantly 
 at the expense of additional storage.
 
-```sql
+```sql highlight={8}
 SELECT avg(Score)
 FROM comments
 WHERE UserId = 8592047
@@ -330,7 +327,6 @@ WHERE UserId = 8592047
    ┌──────────avg(Score)─┐
 1. │ 0.18181818181818182 │
    └─────────────────────┘
---highlight-next-line
 1 row in set. Elapsed: 0.008 sec. Processed 16.36 thousand rows, 98.17 KB (2.15 million rows/s., 12.92 MB/s.)
 Peak memory usage: 4.06 MiB.
 ```

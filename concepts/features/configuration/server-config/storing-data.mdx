@@ -203,7 +203,7 @@ disk in configuration in a configuration file, but can be configured in the
 The following example query builds on the above dynamic disk configuration and
 shows how to use a local disk to cache data from a table stored at a URL.
 
-```sql
+```sql highlight={20-23}
 ATTACH TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
 (
     price UInt32,
@@ -223,17 +223,15 @@ ATTACH TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
 )
 ENGINE = MergeTree
 ORDER BY (postcode1, postcode2, addr1, addr2)
-  -- highlight-start
   SETTINGS disk = disk(
     type=web,
     endpoint='https://raw.githubusercontent.com/ClickHouse/web-tables-demo/main/web/'
   );
-  -- highlight-end
 ```
 
 The example below adds a cache to external storage.
 
-```sql
+```sql highlight={20-28}
 ATTACH TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
 (
     price UInt32,
@@ -253,7 +251,6 @@ ATTACH TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
 )
 ENGINE = MergeTree
 ORDER BY (postcode1, postcode2, addr1, addr2)
--- highlight-start
   SETTINGS disk = disk(
     type=cache,
     max_size='1Gi',
@@ -263,7 +260,6 @@ ORDER BY (postcode1, postcode2, addr1, addr2)
       endpoint='https://raw.githubusercontent.com/ClickHouse/web-tables-demo/main/web/'
       )
   );
--- highlight-end
 ```
 
 In the settings highlighted below notice that the disk of `type=web` is nested within
@@ -279,7 +275,7 @@ default, so set that also when using local disk.
 A combination of config-based configuration and sql-defined configuration is 
 also possible:
 
-```sql
+```sql highlight={20-28}
 ATTACH TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
 (
     price UInt32,
@@ -299,7 +295,6 @@ ATTACH TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
 )
 ENGINE = MergeTree
 ORDER BY (postcode1, postcode2, addr1, addr2)
-  -- highlight-start
   SETTINGS disk = disk(
     type=cache,
     max_size='1Gi',
@@ -309,7 +304,6 @@ ORDER BY (postcode1, postcode2, addr1, addr2)
       endpoint='https://raw.githubusercontent.com/ClickHouse/web-tables-demo/main/web/'
       )
   );
-  -- highlight-end
 ```
 
 where `web` is from the server configuration file:
@@ -846,8 +840,7 @@ storage see the tool [clickhouse-static-files-uploader](/concepts/features/tools
 
 In this `ATTACH TABLE` query the `UUID` provided matches the directory name of the data, and the endpoint is the URL for the raw GitHub content.
 
-```sql
--- highlight-next-line
+```sql highlight={1,20-23}
 ATTACH TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
 (
     price UInt32,
@@ -867,12 +860,10 @@ ATTACH TABLE uk_price_paid UUID 'cf712b4f-2ca8-435c-ac23-c4393efe52f7'
 )
 ENGINE = MergeTree
 ORDER BY (postcode1, postcode2, addr1, addr2)
-  -- highlight-start
   SETTINGS disk = disk(
       type=web,
       endpoint='https://raw.githubusercontent.com/ClickHouse/web-tables-demo/main/web/'
       );
-  -- highlight-end
 ```
 
 A ready test case. You need to add this configuration to config:
