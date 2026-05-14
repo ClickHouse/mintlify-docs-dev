@@ -1,3 +1,4 @@
+/*
 (function () {
   'use strict';
 
@@ -87,11 +88,11 @@
             if (data.stargazers_count) {
               el.textContent = formatStars(data.stargazers_count);
             }
-          } catch (e) { /* keep fallback */ }
+          } catch (e) { // keep fallback }
         }
       };
       xhr.send();
-    } catch (e) { /* keep fallback */ }
+    } catch (e) { // keep fallback }
   }
 
   function init() {
@@ -109,3 +110,4 @@
     init();
   }
 })();
+*/
