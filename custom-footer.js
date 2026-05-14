@@ -307,9 +307,31 @@
   function init() {
     injectFooter();
 
-    // Keep watching — Mintlify uses client-side routing so the DOM changes on navigation
-    var observer = new MutationObserver(function () {
-      injectFooter();
+    var scheduled = false;
+    var observer;
+
+    function check() {
+      scheduled = false;
+      var existing = document.getElementById(FOOTER_ID);
+      if (!existing) {
+        injectFooter();
+        return;
+      }
+      var target = findFooterTarget();
+      if (!target) return;
+      if (existing.parentElement === target && existing === target.lastElementChild) return;
+      // Disconnect around our own re-append so the resulting mutation doesn't
+      // re-fire the observer mid-React-render, which corrupts the top-nav
+      // dropdown's SVG icons during reconciliation.
+      observer.disconnect();
+      target.appendChild(existing);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
+
+    observer = new MutationObserver(function () {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(check);
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }
