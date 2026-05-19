@@ -19,6 +19,27 @@
     document.head.appendChild(style);
   }
 
+  // Wait briefly for Kapa to mount (it's loaded async), then open. Kapa's
+  // open() accepts an optional query that's submitted immediately when
+  // submit:true is set.
+  function openKapa(query) {
+    var opts = { mode: 'ai' };
+    if (query) {
+      opts.query = query;
+      opts.submit = true;
+    }
+    var attempts = 0;
+    var iv = setInterval(function () {
+      attempts++;
+      if (window.Kapa && typeof window.Kapa.open === 'function') {
+        clearInterval(iv);
+        window.Kapa.open(opts);
+      } else if (attempts > 60) {
+        clearInterval(iv);
+      }
+    }, 50);
+  }
+
   function injectButton() {
     if (document.getElementById(BTN_ID)) return true;
 
@@ -36,12 +57,9 @@
     btn.innerHTML = sparkleSvg;
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      if (window.RagChatWidget) {
-        window.RagChatWidget.toggle();
-      }
+      openKapa();
     });
 
-    // Insert after the search button, as a sibling
     searchBar.parentNode.insertBefore(btn, searchBar.nextSibling);
     return true;
   }
@@ -63,9 +81,7 @@
     btn.innerHTML = sparkleSvg;
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      if (window.RagChatWidget) {
-        window.RagChatWidget.toggle();
-      }
+      openKapa();
     });
 
     mobileSearchBtn.parentNode.insertBefore(btn, mobileSearchBtn.nextSibling);
@@ -84,37 +100,10 @@
     return input ? input.value.trim() : '';
   }
 
-  // The widget renders inside a shadow root at #rag-chat-host, so document
-  // queries don't see it. Submit by setting the textarea value via the native
-  // setter (so React's controlled input picks it up) then clicking send.
-  function submitToWidget(query) {
-    var host = document.getElementById('rag-chat-host');
-    var sr = host && host.shadowRoot;
-    if (!sr) return false;
-    var ta = sr.querySelector('.rag-composer-input');
-    var btn = sr.querySelector('.rag-composer-send');
-    if (!ta || !btn) return false;
-    ta.focus();
-    var setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-    setter.call(ta, query);
-    ta.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-    btn.click();
-    return true;
-  }
-
   function openCustomAskAi() {
     var query = getSearchQuery();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-
-    if (!window.RagChatWidget || typeof window.RagChatWidget.open !== 'function') return;
-    window.RagChatWidget.open();
-
-    if (!query) return;
-    var attempts = 0;
-    var iv = setInterval(function () {
-      attempts++;
-      if (submitToWidget(query) || attempts > 40) clearInterval(iv);
-    }, 50);
+    openKapa(query);
   }
 
   function interceptAskAi(e) {

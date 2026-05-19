@@ -61,6 +61,22 @@ Initial size of an adaptive write buffer
 If true, adds an implicit constraint for the `sign` column of a CollapsingMergeTree
 or VersionedCollapsingMergeTree table to allow only valid values (`1` and `-1`).
 
+## add_minmax_index_for_block_number_column {#add_minmax_index_for_block_number_column} 
+<SettingsInfoBlock type="Bool" default_value="0" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting."}]}]}/>
+
+When enabled, an implicit min-max (skipping) index is added for the persistent virtual column `_block_number`.
+Requires `enable_block_number_column = 1` to take effect. The index is built only during merges,
+not during inserts: at insert time the block number is provisional and would index a constant.
+
+## add_minmax_index_for_block_offset_column {#add_minmax_index_for_block_offset_column} 
+<SettingsInfoBlock type="Bool" default_value="0" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting."}]}]}/>
+
+When enabled, an implicit min-max (skipping) index is added for the persistent virtual column `_block_offset`.
+Requires `enable_block_offset_column = 1` to take effect. The index is built only during merges,
+not during inserts.
+
 ## add_minmax_index_for_numeric_columns {#add_minmax_index_for_numeric_columns} 
 <SettingsInfoBlock type="Bool" default_value="0" />
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.1"},{"label": "0"},{"label": "New setting"}]}]}/>
@@ -410,6 +426,17 @@ network transmission.
 Activate concurrent part removal (see 'max_part_removal_threads') only if
 the number of inactive data parts is at least this.
 
+## concurrent_part_removal_threshold_for_remote_disk {#concurrent_part_removal_threshold_for_remote_disk} 
+<SettingsInfoBlock type="UInt64" default_value="16" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "16"},{"label": "New setting. Lower threshold to enter the concurrent part removal path when any part being removed is on a remote disk, where each removal is typically one network round-trip. The old value (100) matches the legacy `concurrent_part_removal_threshold` default, so older `compatibility` modes preserve the previous behavior."}]}]}/>
+
+Same as `concurrent_part_removal_threshold`, but used when at least one
+part being removed is stored on a remote disk. The default is lower
+because each part removal on remote storage typically requires a network
+round-trip (e.g. one HTTP `DELETE` per part on object storage), so a
+serial removal of even 100 parts can stall a `DROP TABLE` for tens of
+seconds.
+
 ## deduplicate_merge_projection_mode {#deduplicate_merge_projection_mode} 
 <SettingsInfoBlock type="DeduplicateMergeProjectionMode" default_value="throw" />
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.8"},{"label": "throw"},{"label": "Do not allow to create inconsistent projection"}]}]}/>
@@ -518,7 +545,7 @@ Enable persisting column _block_number for each row.
 ## enable_block_offset_column {#enable_block_offset_column} 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-Persists virtual column `_block_number` on merges.
+Persists virtual column `_block_offset` on merges.
 
 ## enable_index_granularity_compression {#enable_index_granularity_compression} 
 <SettingsInfoBlock type="Bool" default_value="1" />
@@ -527,7 +554,7 @@ Compress in memory values of index granularity if it is possible
 
 ## enable_max_bytes_limit_for_min_age_to_force_merge {#enable_max_bytes_limit_for_min_age_to_force_merge} 
 <SettingsInfoBlock type="Bool" default_value="1" />
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "Limit part sizes even with min_age_to_force_merge_seconds by default"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "New setting"}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "Added new setting to limit max bytes for min_age_to_force_merge."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "Limit part sizes even with min_age_to_force_merge_seconds by default"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "Added new setting to limit max bytes for min_age_to_force_merge."}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "New setting"}]}]}/>
 
 If settings `min_age_to_force_merge_seconds` and
 `min_age_to_force_merge_on_partition_only` should respect setting
@@ -1933,6 +1960,16 @@ This setting works best for tables with no primary key or a low-cardinality
 primary key, i.e. a table with only few distinct primary key values.
 High-cardinality primary keys, e.g. involving timestamp columns of type
 `DateTime64`, are not expected to benefit from this setting.
+
+## part_minmax_index_columns {#part_minmax_index_columns} 
+<SettingsInfoBlock type="MergeTreePartMinMaxIndexColumns" default_value="partition_key_only" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "partition_key_only"},{"label": "New setting."}]}]}/>
+
+Selects which columns the per-part min-max index covers. Each value enables an additional group of columns on top of the previous one.
+
+Possible values:
+- `partition_key_only` — only the partition-key columns are tracked.
+- `with_block_number_offset` — partition-key columns plus the persisted `_block_number` and `_block_offset` virtual columns. Enables part-level pruning by these columns.
 
 ## part_moves_between_shards_delay_seconds {#part_moves_between_shards_delay_seconds} 
 

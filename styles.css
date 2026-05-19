@@ -1,3 +1,15 @@
+/* Reserve the scrollbar gutter at all times so nothing shifts when a modal
+   locks body scroll and the scrollbar disappears. react-remove-scroll
+   compensates with margin-right on body, but that double-compensates when
+   the gutter is already reserved — zero it out. */
+html {
+    scrollbar-gutter: stable;
+}
+
+body[data-scroll-locked] {
+    margin-right: 0 !important;
+}
+
 /* The secondary navbar (`#navbar-transition-maple`) and the fixed sidebar
    (`#sidebar`) both reserve 40px above themselves for the announcement
    banner (Tailwind `lg:mt-10` / `top-10`). The banner is `position: fixed`
@@ -180,12 +192,15 @@ html:not(.dark) #pagination svg.lucide-chevron-right {
 :is(.dark) #page-context-menu-button,
 :is(.dark) #page-context-menu-button + button {
     background-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.07) !important;
+    color: rgb(206, 206, 206) !important;
 }
 .dark #page-context-menu-button:hover,
 .dark #page-context-menu-button + button:hover,
 :is(.dark) #page-context-menu-button:hover,
 :is(.dark) #page-context-menu-button + button:hover {
-    background-color: rgba(255, 255, 255, 0.12) !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
 }
 
 /* Override code block background border radius */
@@ -630,16 +645,14 @@ html:not(.dark) .nav-dropdown-products-selector-item .flex.flex-col p:last-child
    ============================================ */
 
 /* Light mode - remove green, use neutral colors */
-html:not(.dark) a.bg-primary\/10.text-primary,
-html:not(.dark) a[class*="bg-primary/10"][class*="text-primary"] {
+html:not(.dark) a.bg-primary\/10.text-primary {
     text-shadow: -0.2px 0 0 #E6E7E9, 0.2px 0 0 #E6E7E9 !important;
     color: #1f1f1c !important;
     background-color: rgba(31, 31, 28, 0.08) !important;
 }
 
 /* Dark mode - remove green, use neutral colors */
-html.dark a.dark\:bg-primary-light\/10.dark\:text-primary-light,
-html.dark a[class*="dark:bg-primary-light/10"][class*="dark:text-primary-light"] {
+html.dark a.dark\:bg-primary-light\/10.dark\:text-primary-light {
     text-shadow: -0.2px 0 0 #414141, 0.2px 0 0 #414141 !important;
     color: #E6E7E9 !important;
     background-color: rgba(230, 231, 233, 0.1) !important;
@@ -674,6 +687,18 @@ html.dark .dark\:text-primary-light {
     color: #E6E7E9 !important;
 }
 
+/* Dark mode hover variants: the CSS var --primary-light resolves to a near-black
+   in our theme, so the unpatched `dark:hover:text-primary-light` /
+   `dark:hover:bg-primary-light/10` hover styles (used in dropdown items and
+   anywhere else) make text invisible on hover. Override both with the
+   ClickHouse yellow so hovered items stand out. */
+html.dark .dark\:hover\:text-primary-light:hover {
+    color: #FDFF75 !important;
+}
+html.dark .dark\:hover\:bg-primary-light\/10:hover {
+    background-color: rgba(253, 255, 117, 0.1) !important;
+}
+
 /* ============================================
    Card Icon Color Override
    ============================================ */
@@ -687,9 +712,12 @@ html.dark [data-component-part="card-icon"] {
    Background Primary Light Override
    ============================================ */
 
-/* Light mode - subtle gray background like sidebar menu items */
-html:not(.dark) .bg-primary\/10,
-html:not(.dark) [class*="bg-primary/10"] {
+/* Light mode - subtle gray background like sidebar menu items.
+   Match only the exact `bg-primary/10` token: a substring matcher like
+   [class*="bg-primary/10"] also matches `hover:bg-primary/10`,
+   `focus:bg-primary/10`, etc — applying the background unconditionally
+   to every dropdown-menu item, not just the hovered/active one. */
+html:not(.dark) .bg-primary\/10 {
     background-color: rgba(31, 31, 28, 0.08) !important;
 }
 
@@ -742,6 +770,108 @@ html.dark .dark\:bg-primary-light,
 /* Search bar styling */
 #search-bar-entry {
     border-radius: 4px !important;
+}
+
+/* Hide the dropdown chevron on sidebar nav groups whose docs.json entry
+   has no children (`pages: []` + `root`).
+
+   Mintlify removes the child <ul> entirely both when a group is configured
+   with no pages AND when a populated group is collapsed by the user — so
+   purely-structural CSS can't tell those two cases apart. List the empty
+   groups by their stable id (the root path Mintlify writes onto the <li>)
+   instead. Add new entries here when a `pages: []` + `root` group is
+   added to docs.json. */
+li[data-title][id="/integrations/language-clients"] > button svg.transition-transform,
+li[data-title][id="/integrations/language-clients/js"] > button svg.transition-transform,
+li[data-title][id="/integrations/language-clients/csharp/overview"] > button svg.transition-transform,
+li[data-title][id="/integrations/language-clients/rust"] > button svg.transition-transform,
+li[data-title][id="/integrations/language-clients/cpp"] > button svg.transition-transform {
+    display: none !important;
+}
+
+/* Light mode: the Ask AI button ships with a blue ring (rgba(147,197,253,0.5),
+   ≈ Tailwind blue-300/50) that clashes with the search bar's grey ring. Match
+   the search bar's ring color so the two controls look like a set. */
+html:not(.dark) #ch-ask-ai-btn {
+    --tw-ring-color: rgba(159, 159, 159, 0.3) !important;
+    --tw-ring-shadow: 0 0 0 1px rgba(159, 159, 159, 0.3) !important;
+}
+html:not(.dark) #ch-ask-ai-btn:hover {
+    --tw-ring-color: rgba(75, 85, 99, 0.3) !important;
+    --tw-ring-shadow: 0 0 0 1px rgba(75, 85, 99, 0.3) !important;
+}
+
+/* Suppress the default browser focus outline on the search and Ask AI
+   buttons, but keep the resting ring/border in place so the controls don't
+   visually disappear when focused. */
+#search-bar-entry:focus,
+#search-bar-entry:focus-visible,
+#ch-ask-ai-btn:focus,
+#ch-ask-ai-btn:focus-visible {
+    outline: none !important;
+}
+
+/* Dark-mode contrast bump for the navbar controls (search, Ask AI, theme
+   toggle). Mintlify's defaults sit at ~brightness 1.1 of the page bg, which
+   on our #1D1D1D background reads as nearly invisible. Lift the surface,
+   strengthen the ring, and brighten the foreground so the controls are
+   clearly findable. */
+.dark #search-bar-entry,
+:is(.dark) #search-bar-entry,
+.dark #ch-ask-ai-btn,
+:is(.dark) #ch-ask-ai-btn {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    /* Replace Tailwind's box-shadow ring with a real border so it renders
+       like the Copy page button. Also clear the brightness filter so the
+       border doesn't get washed out against the brightened bg. */
+    --tw-ring-shadow: 0 0 0 0 transparent !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    filter: none !important;
+    color: rgb(206, 206, 206) !important;
+}
+
+.dark #search-bar-entry:hover,
+:is(.dark) #search-bar-entry:hover,
+.dark #ch-ask-ai-btn:hover,
+:is(.dark) #ch-ask-ai-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    filter: none !important;
+}
+
+/* Search placeholder text and shortcut hint */
+.dark #search-bar-entry,
+.dark #search-bar-entry *,
+:is(.dark) #search-bar-entry,
+:is(.dark) #search-bar-entry * {
+    color: rgb(206, 206, 206) !important;
+}
+
+/* Ask AI icon */
+.dark #ch-ask-ai-btn svg,
+:is(.dark) #ch-ask-ai-btn svg {
+    color: #fdff75 !important;
+}
+
+/* Theme toggle (Toggle dark mode pill) */
+.dark button[aria-label="Toggle dark mode"],
+:is(.dark) button[aria-label="Toggle dark mode"] {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.07) !important;
+    color: rgb(206, 206, 206) !important;
+}
+
+.dark button[aria-label="Toggle dark mode"]:hover,
+:is(.dark) button[aria-label="Toggle dark mode"]:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.dark button[aria-label="Toggle dark mode"] svg,
+:is(.dark) button[aria-label="Toggle dark mode"] svg {
+    color: rgb(206, 206, 206) !important;
+    stroke: rgb(206, 206, 206) !important;
 }
 
 /* Page context menu styling */
@@ -1570,6 +1700,25 @@ h5#sidebar-title {
     }
 }
 
+/* On wide viewports, doc pages spread their content out: content-area centers
+   via mx-auto while content-side-layout (TOC / API request+response panels) sticks
+   to the right edge, leaving a big gap between them. Cap #content-container at
+   the exact width of content (768) + gap (32) + side-layout (448) + 32px x 2
+   padding = 1312px, and center it. The footer mirrors the same horizontal range
+   so its left and right edges line up with the content block. */
+@media (min-width: 1616px) {
+    html:not([data-page-mode="custom"]) #content-container {
+        max-width: 1312px !important;
+        margin-left: max(19rem, calc((100vw - 1312px) / 2)) !important;
+        margin-right: auto !important;
+    }
+
+    html:not([data-page-mode="custom"]) #ch-custom-footer {
+        padding-left: max(calc(19rem + 2rem), calc((100vw - 1312px) / 2 + 2rem)) !important;
+        padding-right: min(calc(100vw - 19rem - 1312px + 2rem), calc((100vw - 1312px) / 2 + 2rem)) !important;
+    }
+}
+
 /* Reduce inner flex gap and left padding */
 #content-container>.flex.flex-row-reverse {
     gap: 2rem !important;
@@ -1579,11 +1728,6 @@ h5#sidebar-title {
 .dark #content-container {
     border-top: 1px solid !important;
     border-image: linear-gradient(to right, transparent, rgba(250, 255, 105, 0.5) 50%, transparent) 1 0 0 0 !important;
-    background-image:
-        linear-gradient(to bottom, transparent 0%, rgba(250, 255, 105, 0.5) 50%, transparent 100%);
-    background-size: 1px 100%;
-    background-position: top right;
-    background-repeat: no-repeat;
 }
 
 @media (max-width: 640px) {
@@ -1873,6 +2017,21 @@ html:not(.dark) [data-callout-type] [data-component-part="callout-content"] code
     background-color: rgba(0, 0, 0, 0.15) !important;
     color: #000000 !important;
     border: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+/* Links inside the dark-mode warning callout — without this they pick up the
+   page's primary yellow (.dark .prose a:not(.card):not(.card *), which is
+   !important), and the yellow is invisible against the cream background.
+   Selector needs higher specificity than that rule to win. */
+html.dark .prose [data-callout-type="warning"] [data-component-part="callout-content"] a,
+html:is(.dark) .prose [data-callout-type="warning"] [data-component-part="callout-content"] a {
+    color: #a33c00 !important;
+}
+
+html.dark .prose [data-callout-type="warning"] [data-component-part="callout-content"] a:hover,
+html:is(.dark) .prose [data-callout-type="warning"] [data-component-part="callout-content"] a:hover {
+    color: #6b2700 !important;
+    text-decoration: underline !important;
 }
 
 .dark [data-callout-type="warning"] [data-component-part="callout-icon"],
