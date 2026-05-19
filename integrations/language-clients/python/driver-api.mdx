@@ -29,7 +29,7 @@ The `clickhouse_connect.driver.client` class provides the primary interface betw
 | database                 | str         | *None*                        | The default database for the connection. If not set, ClickHouse Connect will use the default database for *username*.                                                                                                                                 |
 | secure                   | bool        | False                         | Use HTTPS/TLS. This overrides inferred values from the interface or port arguments.                                                                                                                                                                   |
 | dsn                      | str         | *None*                        | A string in standard DSN (Data Source Name) format. Other connection values (such as host or user) will be extracted from this string if not set otherwise.                                                                                           |
-| compress                 | bool or str | True                          | Enable compression for ClickHouse HTTP inserts and query results. See [Additional Options (Compression)](/integrations/language-clients/python/reference/additional-options#compression)                                                                                                           |
+| compress                 | bool or str | True                          | Enable compression for ClickHouse HTTP inserts and query results. See [Additional Options (Compression)](/integrations/language-clients/python/additional-options#compression)                                                                                                           |
 | query_limit              | int         | 0 (unlimited)                 | Maximum number of rows to return for any `query` response. Set this to zero to return unlimited rows. Note that large query limits may result in out of memory exceptions if results aren't streamed, as all results are loaded into memory at once. |
 | query_retries            | int         | 2                             | Maximum number of retries for a `query` request. Only "retryable" HTTP responses will be retried. `command` or `insert` requests aren't automatically retried by the driver to prevent unintended duplicate requests.                                |
 | connect_timeout          | int         | 10                            | HTTP connection timeout in seconds.                                                                                                                                                                                                                   |
@@ -38,7 +38,7 @@ The `clickhouse_connect.driver.client` class provides the primary interface betw
 | pool_mgr                 | obj         | *&lt;default PoolManager&gt;* | The `urllib3` library PoolManager to use. For advanced use cases requiring multiple connection pools to different hosts.                                                                                                                              |
 | http_proxy               | str         | *None*                        | HTTP proxy address (equivalent to setting the HTTP_PROXY environment variable).                                                                                                                                                                       |
 | https_proxy              | str         | *None*                        | HTTPS proxy address (equivalent to setting the HTTPS_PROXY environment variable).                                                                                                                                                                     |
-| apply_server_timezone    | bool        | True                          | Use server timezone for timezone aware query results. See [Timezone Precedence](/integrations/language-clients/python/reference/advanced-querying#time-zones)                                                                                                                                      |
+| apply_server_timezone    | bool        | True                          | Use server timezone for timezone aware query results. See [Timezone Precedence](/integrations/language-clients/python/advanced-querying#time-zones)                                                                                                                                      |
 | show_clickhouse_errors   | bool        | True                          | Include detailed ClickHouse server error messages and exception codes in client exceptions.                                                                                                                                                           |
 | autogenerate_session_id  | bool        | *None*                        | Override the global `autogenerate_session_id` setting. If True, automatically generate a UUID4 session ID when none is provided.                                                                                                                      |
 | proxy_path               | str         | &lt;empty string&gt;          | Optional path prefix to add to the ClickHouse server URL for proxy configurations.                                                                                                                                                                    |
@@ -363,7 +363,7 @@ Use the `Client.command` method to send SQL queries to the ClickHouse server tha
 | data          | str or bytes     | *None*     | Optional data to include with the command as the POST body.                                                                                                   |
 | settings      | dict             | *None*     | See [settings description](#settings-argument).                                                                                                               |
 | use_database  | bool             | True       | Use the client database (specified when creating the client). False means the command will use the default ClickHouse server database for the connected user. |
-| external_data | ExternalData     | *None*     | An `ExternalData` object containing file or binary data to use with the query. See [Advanced Queries (External Data)](/integrations/language-clients/python/reference/advanced-querying#external-data)     |
+| external_data | ExternalData     | *None*     | An `ExternalData` object containing file or binary data to use with the query. See [Advanced Queries (External Data)](/integrations/language-clients/python/advanced-querying#external-data)     |
 | transport_settings | dict        | *None*     | Optional dictionary of HTTP headers to include with this request. Each key-value pair is added as an HTTP header (e.g., `{'X-Custom-Header': 'value'}`). Useful for proxy authentication, request tracing, or passing headers required by intermediate infrastructure. |
 
 ### Command examples {#command-examples}
@@ -465,8 +465,8 @@ The `Client.query` method is the primary way to retrieve a single "batch" datase
 | query_tz            | str              | *None*     | A timezone name from the `zoneinfo` database. This timezone will be applied to all datetime or Pandas Timestamp objects returned by the query.                                     |
 | column_tzs          | dict             | *None*     | A dictionary of column name to timezone name. Like `query_tz`, but allows specifying different timezones for different columns.                                                    |
 | use_extended_dtypes | bool             | True       | Use Pandas extended dtypes (like StringArray), and pandas.NA and pandas.NaT for ClickHouse NULL values. Applies only to `query_df` and `query_df_stream` methods.                  |
-| external_data       | ExternalData     | *None*     | An ExternalData object containing file or binary data to use with the query. See [Advanced Queries (External Data)](/integrations/language-clients/python/reference/advanced-querying#external-data)                            |
-| context             | QueryContext     | *None*     | A reusable QueryContext object can be used to encapsulate the above method arguments. See [Advanced Queries (QueryContexts)](/integrations/language-clients/python/reference/advanced-querying#querycontexts)                   |
+| external_data       | ExternalData     | *None*     | An ExternalData object containing file or binary data to use with the query. See [Advanced Queries (External Data)](/integrations/language-clients/python/advanced-querying#external-data)                            |
+| context             | QueryContext     | *None*     | A reusable QueryContext object can be used to encapsulate the above method arguments. See [Advanced Queries (QueryContexts)](/integrations/language-clients/python/advanced-querying#querycontexts)                   |
 | transport_settings  | dict             | *None*     | Optional dictionary of HTTP headers to include with this request. Each key-value pair is added as an HTTP header (e.g., `{'X-Custom-Header': 'value'}`). Useful for proxy authentication, request tracing, or passing headers required by intermediate infrastructure. |
 
 ### Query examples {#query-examples}
@@ -598,15 +598,15 @@ The base `query` method returns a `QueryResult` object with the following public
 
 The `*_stream` properties return a Python Context that can be used as an iterator for the returned data. They should only be accessed indirectly using the Client `*_stream` methods. 
 
-The complete details of streaming query results (using StreamContext objects) are outlined in [Advanced Queries (Streaming Queries)](/integrations/language-clients/python/reference/advanced-querying#streaming-queries).
+The complete details of streaming query results (using StreamContext objects) are outlined in [Advanced Queries (Streaming Queries)](/integrations/language-clients/python/advanced-querying#streaming-queries).
 
 ## Consuming query results with NumPy, Pandas or Arrow {#consuming-query-results-with-numpy-pandas-or-arrow}
 
-ClickHouse Connect provides specialized query methods for NumPy, Pandas, and Arrow data formats. For detailed information on using these methods, including examples, streaming capabilities, and advanced type handling, see [Advanced Querying (NumPy, Pandas and Arrow Queries)](/integrations/language-clients/python/reference/advanced-querying#numpy-pandas-and-arrow-queries).
+ClickHouse Connect provides specialized query methods for NumPy, Pandas, and Arrow data formats. For detailed information on using these methods, including examples, streaming capabilities, and advanced type handling, see [Advanced Querying (NumPy, Pandas and Arrow Queries)](/integrations/language-clients/python/advanced-querying#numpy-pandas-and-arrow-queries).
 
 ## Client streaming query methods {#client-streaming-query-methods}
 
-For streaming large result sets, ClickHouse Connect provides multiple streaming methods. See [Advanced Queries (Streaming Queries)](/integrations/language-clients/python/reference/advanced-querying#streaming-queries) for details and examples.
+For streaming large result sets, ClickHouse Connect provides multiple streaming methods. See [Advanced Queries (Streaming Queries)](/integrations/language-clients/python/advanced-querying#streaming-queries) for details and examples.
 
 ## Client `insert` Method {#client-insert-method}
 
@@ -622,12 +622,12 @@ For the common use case of inserting multiple records into ClickHouse, there is 
 | column_type_names  | Sequence of ClickHouse type names | *None*     | A list of ClickHouse datatype names. If neither column_types or column_type_names is specified, ClickHouse Connect will execute a "pre-query" to retrieve all the column types for the table. |
 | column_oriented    | bool                              | False      | If True, the `data` argument is assumed to be a Sequence of columns (and no "pivot" will be necessary to insert the data). Otherwise `data` is interpreted as a Sequence of rows.             |
 | settings           | dict                              | *None*     | See [settings description](#settings-argument).                                                                                                                                               |
-| context            | InsertContext                     | *None*     | A reusable InsertContext object can be used to encapsulate the above method arguments. See [Advanced Inserts (InsertContexts)](/integrations/language-clients/python/reference/advanced-inserting#insertcontexts)                          |
+| context            | InsertContext                     | *None*     | A reusable InsertContext object can be used to encapsulate the above method arguments. See [Advanced Inserts (InsertContexts)](/integrations/language-clients/python/advanced-inserting#insertcontexts)                          |
 | transport_settings | dict                              | *None*     | Optional dictionary of HTTP headers to include with this request. Each key-value pair is added as an HTTP header (e.g., `{'X-Custom-Header': 'value'}`). Useful for proxy authentication, request tracing, or passing headers required by intermediate infrastructure. |
 
 This method returns a "query summary" dictionary as described under the "command" method. An exception will be raised if the insert fails for any reason.
 
-For specialized insert methods that work with Pandas DataFrames, PyArrow Tables, and Arrow-backed DataFrames, see [Advanced Inserting (Specialized Insert Methods)](/integrations/language-clients/python/reference/advanced-inserting#specialized-insert-methods).
+For specialized insert methods that work with Pandas DataFrames, PyArrow Tables, and Arrow-backed DataFrames, see [Advanced Inserting (Specialized Insert Methods)](/integrations/language-clients/python/advanced-inserting#specialized-insert-methods).
 
 <Note>
 A NumPy array is a valid Sequence of Sequences and can be used as the `data` argument to the main `insert` method, so a specialized method isn't required.
@@ -716,11 +716,11 @@ client.insert(
 
 ## File Inserts {#file-inserts}
 
-For inserting data directly from files into ClickHouse tables, see [Advanced Inserting (File Inserts)](/integrations/language-clients/python/reference/advanced-inserting#file-inserts).
+For inserting data directly from files into ClickHouse tables, see [Advanced Inserting (File Inserts)](/integrations/language-clients/python/advanced-inserting#file-inserts).
 
 ## Raw API {#raw-api}
 
-For advanced use cases requiring direct access to ClickHouse HTTP interfaces without type transformations, see [Advanced Usage (Raw API)](/integrations/language-clients/python/reference/advanced-usage#raw-api).
+For advanced use cases requiring direct access to ClickHouse HTTP interfaces without type transformations, see [Advanced Usage (Raw API)](/integrations/language-clients/python/advanced-usage#raw-api).
 
 ## Utility classes and functions {#utility-classes-and-functions}
 
@@ -736,16 +736,16 @@ The functions and the DT64Param class in the `clickhouse_connect.driver.binding`
 
 ## Multithreaded, multiprocess, and async/event driven use cases {#multithreaded-multiprocess-and-asyncevent-driven-use-cases}
 
-For information on using ClickHouse Connect in multithreaded, multiprocess, and async/event-driven applications, see [Advanced Usage (Multithreaded, multiprocess, and async/event driven use cases)](/integrations/language-clients/python/reference/advanced-usage#multithreaded-multiprocess-and-asyncevent-driven-use-cases).
+For information on using ClickHouse Connect in multithreaded, multiprocess, and async/event-driven applications, see [Advanced Usage (Multithreaded, multiprocess, and async/event driven use cases)](/integrations/language-clients/python/advanced-usage#multithreaded-multiprocess-and-asyncevent-driven-use-cases).
 
 ## AsyncClient wrapper {#asyncclient-wrapper}
 
-For information on using the AsyncClient wrapper for asyncio environments, see [Advanced Usage (AsyncClient wrapper)](/integrations/language-clients/python/reference/advanced-usage#asyncclient-wrapper).
+For information on using the AsyncClient wrapper for asyncio environments, see [Advanced Usage (AsyncClient wrapper)](/integrations/language-clients/python/advanced-usage#asyncclient-wrapper).
 
 ## Managing ClickHouse Session IDs {#managing-clickhouse-session-ids}
 
-For information on managing ClickHouse session IDs in multi-threaded or concurrent applications, see [Advanced Usage (Managing ClickHouse Session IDs)](/integrations/language-clients/python/reference/advanced-usage#managing-clickhouse-session-ids).
+For information on managing ClickHouse session IDs in multi-threaded or concurrent applications, see [Advanced Usage (Managing ClickHouse Session IDs)](/integrations/language-clients/python/advanced-usage#managing-clickhouse-session-ids).
 
 ## Customizing the HTTP connection pool {#customizing-the-http-connection-pool}
 
-For information on customizing the HTTP connection pool for large multi-threaded applications, see [Advanced Usage (Customizing the HTTP connection pool)](/integrations/language-clients/python/reference/advanced-usage#customizing-the-http-connection-pool).
+For information on customizing the HTTP connection pool for large multi-threaded applications, see [Advanced Usage (Customizing the HTTP connection pool)](/integrations/language-clients/python/advanced-usage#customizing-the-http-connection-pool).

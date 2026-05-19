@@ -391,6 +391,16 @@ Allow to create table with the Alias engine.
 
 Allow new query analyzer.
 
+## allow_experimental_cleanup_old_data_files_compaction {#allow_experimental_cleanup_old_data_files_compaction} 
+
+<ExperimentalBadge/>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting"}]}]}/>
+
+Allow to clean up old data files during Iceberg compaction.
+
 ## allow_experimental_codecs {#allow_experimental_codecs} 
 
 <ExperimentalBadge/>
@@ -2682,6 +2692,32 @@ Allows to set default `DEFINER` option while creating a view. [More about SQL se
 
 The default value is `CURRENT_USER`.
 
+## defer_partition_pruning_after_final {#defer_partition_pruning_after_final} 
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "Setting newly added in 26.5 to gate the FINAL partition-pruning behavior that shipped silently in 26.3 (https://github.com/ClickHouse/ClickHouse/pull/98242). The meaningful semantic change is registered under the 26.3 block so `compatibility = '26.2'` reverts it; this entry exists so the upgrade-from-26.4 check accepts the newly-introduced name."}]}, {"id": "row-2","items": [{"label": "26.3"},{"label": "1"},{"label": "Gates the FINAL planner's unconditional skipping of partition pruning when the partition-key column is not in the sorting key. The behavior change itself shipped silently in 26.3 via https://github.com/ClickHouse/ClickHouse/pull/98242; this entry retroactively documents it so `compatibility = '26.2'` restores the pre-regression behavior (0 = prune before FINAL, fast; 1 = defer pruning, correctness-safe)."}]}]}/>
+
+When enabled (default), partition pruning is skipped for `FINAL` queries on tables whose
+partition-key columns are not part of the sorting key. This is the correctness-safe behavior
+introduced in 26.3: `FINAL` may need to deduplicate rows that share a primary key but live
+in different partitions, and partition pruning would silently exclude such rows from the
+deduplication input.
+
+When disabled, partition pruning is applied even with `FINAL`, restoring the pre-26.3
+behavior. This can be substantially faster for queries with `WHERE` predicates on the
+partition column, but is only correct when rows with the same primary key cannot exist
+in different partitions — e.g. event-log tables whose partition column is set at insert
+time and never changes.
+
+This setting only affects partitioned tables whose partition-key columns are not contained
+in the sorting key; for other tables partition pruning is always applied.
+
+Possible values:
+
+- 0 — Apply partition pruning before `FINAL` (pre-26.3 behavior, faster but unsafe in the general case).
+- 1 — Defer partition pruning to after `FINAL` (default, correctness-safe).
+
 ## delta_lake_enable_engine_predicate {#delta_lake_enable_engine_predicate} 
 
 <SettingsInfoBlock type="Bool" default_value="1" />
@@ -3524,6 +3560,33 @@ Improve FINAL queries by avoiding merges across different partitions.
 
 When enabled, during SELECT FINAL queries, parts from different partitions will not be merged together. Instead, merging will only occur within each partition separately. This can significantly improve query performance when working with partitioned tables.
 
+## dynamic_disk_allow_from_env {#dynamic_disk_allow_from_env} 
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting to allow `from_env` substitutions in dynamic disk configuration (the `disk()` function). Disabled by default for security."}]}]}/>
+
+Allow using `from_env` substitutions in the dynamic disk configuration (i.e. in the `disk()` function arguments).
+Disabled by default to prevent users from reading arbitrary environment variables when defining table storage.
+
+## dynamic_disk_allow_from_zk {#dynamic_disk_allow_from_zk} 
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting to allow `from_zk` substitutions in dynamic disk configuration (the `disk()` function). Disabled by default."}]}]}/>
+
+Allow using `from_zk` substitutions in the dynamic disk configuration (i.e. in the `disk()` function arguments).
+Disabled by default.
+
+## dynamic_disk_allow_include {#dynamic_disk_allow_include} 
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting to allow `include` in dynamic disk configuration (the `disk()` function). Disabled by default."}]}]}/>
+
+Allow using `include` in the dynamic disk configuration (i.e. in the `disk()` function arguments).
+Disabled by default.
+
 ## dynamic_throw_on_type_mismatch {#dynamic_throw_on_type_mismatch} 
 
 <SettingsInfoBlock type="Bool" default_value="1" />
@@ -4021,6 +4084,14 @@ Allow sharing set objects build for IN subqueries between different tasks of the
 <SettingsInfoBlock type="Bool" default_value="1" />
 
 Enable use of software prefetch in aggregatio
+
+## enable_software_prefetch_in_join {#enable_software_prefetch_in_join} 
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "Enable use of software prefetch in hash join probe phase."}]}]}/>
+
+Enable use of software prefetch in hash join probe phase to hide memory access latency for large hash tables.
 
 ## enable_time_time64_type {#enable_time_time64_type} 
 
@@ -5147,6 +5218,38 @@ Sets the level of data compression in the response to an HTTP request if [enable
 
 Possible values: Numbers from 1 to 9.
 
+## iceberg_compaction_data_cleanup {#iceberg_compaction_data_cleanup} 
+
+<SettingsInfoBlock type="Seconds" default_value="10800" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "10800"},{"label": "New setting"}]}]}/>
+
+The time after which the data will be deleted.
+
+## iceberg_compaction_delay_bias {#iceberg_compaction_delay_bias} 
+
+<SettingsInfoBlock type="Seconds" default_value="10800" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "10800"},{"label": "New setting"}]}]}/>
+
+Minimum time of delay between 2 background compaction operations.
+
+## iceberg_data_file_size_lower_threshold_compaction {#iceberg_data_file_size_lower_threshold_compaction} 
+
+<SettingsInfoBlock type="UInt64" default_value="10485760" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "10485760"},{"label": "New setting"}]}]}/>
+
+Threshold for compaction data files in iceberg.
+
+## iceberg_data_file_size_upper_threshold_compaction {#iceberg_data_file_size_upper_threshold_compaction} 
+
+<SettingsInfoBlock type="UInt64" default_value="10737418240" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "10737418240"},{"label": "New setting"}]}]}/>
+
+Threshold for compaction data files in iceberg.
+
 ## iceberg_delete_data_on_drop {#iceberg_delete_data_on_drop} 
 
 <SettingsInfoBlock type="Bool" default_value="0" />
@@ -5202,6 +5305,14 @@ Max allowed partitions count per one insert operation for Iceberg table engine.
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.9"},{"label": "1000000"},{"label": "New setting."}]}]}/>
 
 Max rows of iceberg parquet data file on insert operation.
+
+## iceberg_max_number_datafiles_to_compact {#iceberg_max_number_datafiles_to_compact} 
+
+<SettingsInfoBlock type="UInt64" default_value="1000" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1000"},{"label": "New setting"}]}]}/>
+
+Threshold for compaction data files in iceberg.
 
 ## iceberg_metadata_compression_method {#iceberg_metadata_compression_method} 
 
@@ -9266,6 +9377,21 @@ See also:
 
 - [optimize_functions_to_subcolumns](#optimize_functions_to_subcolumns)
 
+## optimize_trivial_group_by_limit_query {#optimize_trivial_group_by_limit_query} 
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "New setting that limits aggregation to at most LIMIT distinct keys for `SELECT key_expr FROM t GROUP BY key_expr LIMIT n` queries."}]}]}/>
+
+Enables or disables the optimization of a trivial query `SELECT key_expr FROM table GROUP BY key_expr LIMIT n` (with no aggregate functions in the projection, no `HAVING`/`ORDER BY`/`LIMIT BY`/window clauses, and no `GROUP BY` modifiers) by setting `max_rows_to_group_by = n + offset` with `group_by_overflow_mode = 'any'`. The aggregation stops once `n + offset` distinct keys are produced.
+
+The optimization is suppressed when the user has explicitly set `group_by_overflow_mode` to a non-`any` value (to preserve their explicit `throw`/`break` contract), and when the user has already set a tighter `max_rows_to_group_by` (the optimization would be a no-op).
+
+Possible values:
+
+   - 0 — Optimization disabled.
+   - 1 — Optimization enabled.
+
 ## optimize_trivial_insert_select {#optimize_trivial_insert_select} 
 
 <SettingsInfoBlock type="Bool" default_value="0" />
@@ -9421,7 +9547,9 @@ Possible values:
 - `1` — `SELECT` will be executed on each shard from the underlying table of the distributed engine.
 - `2` — `SELECT` and `INSERT` will be executed on each shard from/to the underlying table of the distributed engine.
 
-Setting `enable_parallel_replicas = 1` is needed when using this setting.
+Since v25.4, `INSERT ... SELECT` from a `ReplicatedMergeTree` or `SharedMergeTree` source can also be parallelized across replicas. To enable it:
+- `parallel_distributed_insert_select = 2`
+- `enable_parallel_replicas = 1`
 
 ## parallel_hash_join_threshold {#parallel_hash_join_threshold} 
 
@@ -10550,6 +10678,20 @@ Possible values:
 
 Allow to add hint (additional predicate) for filtering built from the inverted text index in query plan.
 
+## query_plan_top_k_through_join {#query_plan_top_k_through_join} 
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "New setting to enable a query-plan-level optimization that pushes ORDER BY ... LIMIT n through a LEFT/RIGHT join when the sort key only references the preserved side."}]}]}/>
+
+Toggles a query-plan-level optimization which pushes `ORDER BY ... LIMIT n` down through a join when the sort key only references columns from the side preserved by the join (LEFT/RIGHT). Restricts how many rows the preserved-side input must produce before joining.
+Only takes effect if setting [query_plan_enable_optimizations](#query_plan_enable_optimizations) is 1.
+
+Possible values:
+
+- 0 - Disable
+- 1 - Enable
+
 ## query_plan_try_use_vector_search {#query_plan_try_use_vector_search} 
 
 <SettingsInfoBlock type="Bool" default_value="1" />
@@ -10567,17 +10709,6 @@ Possible values:
 
 - 0 - Disable
 - 1 - Enable
-
-## query_plan_use_new_logical_join_step {#query_plan_use_new_logical_join_step} 
-
-**Aliases**: `query_plan_use_logical_join_step`
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.2"},{"label": "1"},{"label": "Enable new step"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "New join step, internal change"}]}]}/>
-
-Use logical join step in query plan.
-Note: setting `query_plan_use_new_logical_join_step` is deprecated, use `query_plan_use_logical_join_step` instead.
 
 ## query_profiler_cpu_time_period_ns {#query_profiler_cpu_time_period_ns} 
 
@@ -11814,6 +11945,21 @@ Result
 │ QueryMemoryLimitExceeded │     0 │ Number of times when memory limit exceeded for query. │
 └──────────────────────────┴───────┴───────────────────────────────────────────────────────┘
 ```
+
+## system_metric_log_show_zero_values_in_histograms {#system_metric_log_show_zero_values_in_histograms} 
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting controlling whether zero-valued histogram data is written to the histograms nested column of system.metric_log."}]}]}/>
+
+Controls whether zero-valued histogram data is written to the `histograms` nested column of `system.metric_log`.
+
+By default, histograms whose total observation `count` is zero are skipped, and within each emitted histogram, bucket entries with no observations are also omitted from the `histogram` map. Enable this to write every histogram and every bucket regardless of count — useful for monitoring systems that require every metric to appear at every checkpoint.
+
+Possible values:
+
+- 0 — Disabled. Histograms with `count = 0` are not emitted; emitted histograms include only buckets that received at least one observation.
+- 1 — Enabled. All histograms are written, and every bucket boundary appears in `histogram`.
 
 ## table_engine_read_through_distributed_cache {#table_engine_read_through_distributed_cache} 
 

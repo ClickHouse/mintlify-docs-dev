@@ -1793,6 +1793,10 @@ SKIP_FILES = {
     # would replace the body with the wrapper page's content and break the
     # render.
     "snippets/truncate.mdx",
+    # Hand-authored Mintlify CardGroup landing page using brand SVG logos.
+    # The upstream Docusaurus page is a markdown table; we deliberately
+    # diverge here for a richer landing layout.
+    "integrations/language-clients/index.mdx",
 }
 # Path prefixes (relative to THIS_REPO) whose pages are tracked outside the
 # Docusaurus pipeline. The migrator must never overwrite them: their canonical

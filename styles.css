@@ -1,3 +1,15 @@
+/* Reserve the scrollbar gutter at all times so nothing shifts when a modal
+   locks body scroll and the scrollbar disappears. react-remove-scroll
+   compensates with margin-right on body, but that double-compensates when
+   the gutter is already reserved — zero it out. */
+html {
+    scrollbar-gutter: stable;
+}
+
+body[data-scroll-locked] {
+    margin-right: 0 !important;
+}
+
 /* The secondary navbar (`#navbar-transition-maple`) and the fixed sidebar
    (`#sidebar`) both reserve 40px above themselves for the announcement
    banner (Tailwind `lg:mt-10` / `top-10`). The banner is `position: fixed`
@@ -633,16 +645,14 @@ html:not(.dark) .nav-dropdown-products-selector-item .flex.flex-col p:last-child
    ============================================ */
 
 /* Light mode - remove green, use neutral colors */
-html:not(.dark) a.bg-primary\/10.text-primary,
-html:not(.dark) a[class*="bg-primary/10"][class*="text-primary"] {
+html:not(.dark) a.bg-primary\/10.text-primary {
     text-shadow: -0.2px 0 0 #E6E7E9, 0.2px 0 0 #E6E7E9 !important;
     color: #1f1f1c !important;
     background-color: rgba(31, 31, 28, 0.08) !important;
 }
 
 /* Dark mode - remove green, use neutral colors */
-html.dark a.dark\:bg-primary-light\/10.dark\:text-primary-light,
-html.dark a[class*="dark:bg-primary-light/10"][class*="dark:text-primary-light"] {
+html.dark a.dark\:bg-primary-light\/10.dark\:text-primary-light {
     text-shadow: -0.2px 0 0 #414141, 0.2px 0 0 #414141 !important;
     color: #E6E7E9 !important;
     background-color: rgba(230, 231, 233, 0.1) !important;
@@ -677,6 +687,18 @@ html.dark .dark\:text-primary-light {
     color: #E6E7E9 !important;
 }
 
+/* Dark mode hover variants: the CSS var --primary-light resolves to a near-black
+   in our theme, so the unpatched `dark:hover:text-primary-light` /
+   `dark:hover:bg-primary-light/10` hover styles (used in dropdown items and
+   anywhere else) make text invisible on hover. Override both with the
+   ClickHouse yellow so hovered items stand out. */
+html.dark .dark\:hover\:text-primary-light:hover {
+    color: #FDFF75 !important;
+}
+html.dark .dark\:hover\:bg-primary-light\/10:hover {
+    background-color: rgba(253, 255, 117, 0.1) !important;
+}
+
 /* ============================================
    Card Icon Color Override
    ============================================ */
@@ -690,9 +712,12 @@ html.dark [data-component-part="card-icon"] {
    Background Primary Light Override
    ============================================ */
 
-/* Light mode - subtle gray background like sidebar menu items */
-html:not(.dark) .bg-primary\/10,
-html:not(.dark) [class*="bg-primary/10"] {
+/* Light mode - subtle gray background like sidebar menu items.
+   Match only the exact `bg-primary/10` token: a substring matcher like
+   [class*="bg-primary/10"] also matches `hover:bg-primary/10`,
+   `focus:bg-primary/10`, etc — applying the background unconditionally
+   to every dropdown-menu item, not just the hovered/active one. */
+html:not(.dark) .bg-primary\/10 {
     background-color: rgba(31, 31, 28, 0.08) !important;
 }
 
@@ -745,6 +770,23 @@ html.dark .dark\:bg-primary-light,
 /* Search bar styling */
 #search-bar-entry {
     border-radius: 4px !important;
+}
+
+/* Hide the dropdown chevron on sidebar nav groups whose docs.json entry
+   has no children (`pages: []` + `root`).
+
+   Mintlify removes the child <ul> entirely both when a group is configured
+   with no pages AND when a populated group is collapsed by the user — so
+   purely-structural CSS can't tell those two cases apart. List the empty
+   groups by their stable id (the root path Mintlify writes onto the <li>)
+   instead. Add new entries here when a `pages: []` + `root` group is
+   added to docs.json. */
+li[data-title][id="/integrations/language-clients"] > button svg.transition-transform,
+li[data-title][id="/integrations/language-clients/js"] > button svg.transition-transform,
+li[data-title][id="/integrations/language-clients/csharp/overview"] > button svg.transition-transform,
+li[data-title][id="/integrations/language-clients/rust"] > button svg.transition-transform,
+li[data-title][id="/integrations/language-clients/cpp"] > button svg.transition-transform {
+    display: none !important;
 }
 
 /* Light mode: the Ask AI button ships with a blue ring (rgba(147,197,253,0.5),
@@ -1658,6 +1700,25 @@ h5#sidebar-title {
     }
 }
 
+/* On wide viewports, doc pages spread their content out: content-area centers
+   via mx-auto while content-side-layout (TOC / API request+response panels) sticks
+   to the right edge, leaving a big gap between them. Cap #content-container at
+   the exact width of content (768) + gap (32) + side-layout (448) + 32px x 2
+   padding = 1312px, and center it. The footer mirrors the same horizontal range
+   so its left and right edges line up with the content block. */
+@media (min-width: 1616px) {
+    html:not([data-page-mode="custom"]) #content-container {
+        max-width: 1312px !important;
+        margin-left: max(19rem, calc((100vw - 1312px) / 2)) !important;
+        margin-right: auto !important;
+    }
+
+    html:not([data-page-mode="custom"]) #ch-custom-footer {
+        padding-left: max(calc(19rem + 2rem), calc((100vw - 1312px) / 2 + 2rem)) !important;
+        padding-right: min(calc(100vw - 19rem - 1312px + 2rem), calc((100vw - 1312px) / 2 + 2rem)) !important;
+    }
+}
+
 /* Reduce inner flex gap and left padding */
 #content-container>.flex.flex-row-reverse {
     gap: 2rem !important;
@@ -1667,11 +1728,6 @@ h5#sidebar-title {
 .dark #content-container {
     border-top: 1px solid !important;
     border-image: linear-gradient(to right, transparent, rgba(250, 255, 105, 0.5) 50%, transparent) 1 0 0 0 !important;
-    background-image:
-        linear-gradient(to bottom, transparent 0%, rgba(250, 255, 105, 0.5) 50%, transparent 100%);
-    background-size: 1px 100%;
-    background-position: top right;
-    background-repeat: no-repeat;
 }
 
 @media (max-width: 640px) {

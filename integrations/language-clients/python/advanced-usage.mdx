@@ -18,11 +18,11 @@ The `Client.raw_query` method allows direct usage of the ClickHouse HTTP query i
 | Parameter     | Type             | Default    | Description                                                                                                                                             |
 |---------------|------------------|------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
 | query         | str              | *Required* | Any valid ClickHouse query                                                                                                                              |
-| parameters    | dict or iterable | *None*     | See [parameters description](/integrations/language-clients/python/reference/driver-api#parameters-argument).                                                                                        |
-| settings      | dict             | *None*     | See [settings description](/integrations/language-clients/python/reference/driver-api#settings-argument).                                                                                            |
+| parameters    | dict or iterable | *None*     | See [parameters description](/integrations/language-clients/python/driver-api#parameters-argument).                                                                                        |
+| settings      | dict             | *None*     | See [settings description](/integrations/language-clients/python/driver-api#settings-argument).                                                                                            |
 | fmt           | str              | *None*     | ClickHouse Output Format for the resulting bytes. (ClickHouse uses TSV if not specified)                                                                |
 | use_database  | bool             | True       | Use the ClickHouse Connect client-assigned database for the query context                                                                               |
-| external_data | ExternalData     | *None*     | An ExternalData object containing file or binary data to use with the query. See [Advanced Queries (External Data)](/integrations/language-clients/python/reference/advanced-querying#external-data) |
+| external_data | ExternalData     | *None*     | An ExternalData object containing file or binary data to use with the query. See [Advanced Queries (External Data)](/integrations/language-clients/python/advanced-querying#external-data) |
 
 It is the caller's responsibility to handle the resulting `bytes` object. Note that the `Client.query_arrow` is just a thin wrapper around this method using the ClickHouse `Arrow` output format.
 
@@ -38,7 +38,7 @@ The `Client.raw_insert` method allows direct inserts of `bytes` objects or `byte
 | table        | str                                    | *Required* | Either the simple or database qualified table name                                          |
 | column_names | Sequence[str]                          | *None*     | Column names for the insert block. Required if the `fmt` parameter doesn't include names   |
 | insert_block | str, bytes, Generator[bytes], BinaryIO | *Required* | Data to insert. Strings will be encoded with the client encoding.                           |
-| settings     | dict                                   | *None*     | See [settings description](/integrations/language-clients/python/reference/driver-api#settings-argument).                                |
+| settings     | dict                                   | *None*     | See [settings description](/integrations/language-clients/python/driver-api#settings-argument).                                |
 | fmt          | str                                    | *None*     | ClickHouse Input Format of the `insert_block` bytes. (ClickHouse uses TSV if not specified) |
 
 It is the caller's responsibility to ensure that the `insert_block` is in the specified format and uses the specified compression method. ClickHouse Connect uses these raw inserts for file uploads and PyArrow Tables, delegating parsing to the ClickHouse server.
@@ -77,7 +77,7 @@ Similarly, you could save data in [TabSeparated](/reference/formats/TabSeparated
 
 ClickHouse Connect works well in multithreaded, multiprocess, and event-loop-driven/asynchronous applications. All query and insert processing occurs within a single thread, so operations are generally thread-safe. (Parallel processing of some operations at a low level is a possible future enhancement to overcome the performance penalty of a single thread, but even in that case thread safety will be maintained.)
 
-Because each query or insert executed maintains state in its own `QueryContext` or `InsertContext` object, respectively, these helper objects aren't thread-safe, and they shouldn't be shared between multiple processing streams. See the additional discussion about context objects in the [QueryContexts](/integrations/language-clients/python/reference/advanced-querying#querycontexts) and [InsertContexts](/integrations/language-clients/python/reference/advanced-inserting#insertcontexts) sections.
+Because each query or insert executed maintains state in its own `QueryContext` or `InsertContext` object, respectively, these helper objects aren't thread-safe, and they shouldn't be shared between multiple processing streams. See the additional discussion about context objects in the [QueryContexts](/integrations/language-clients/python/advanced-querying#querycontexts) and [InsertContexts](/integrations/language-clients/python/advanced-inserting#insertcontexts) sections.
 
 Additionally, in an application that has two or more queries and/or inserts "in flight" at the same time, there are two further considerations to keep in mind. The first is the ClickHouse "session" associated with the query/insert, and the second is the HTTP connection pool used by ClickHouse Connect Client instances.
 
