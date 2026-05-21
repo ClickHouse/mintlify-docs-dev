@@ -11,47 +11,34 @@
  *     ...
  *   ]} />
  */
-const StatusIndicator = ({ status }) => {
-  const color =
-    status === "green" ? "#22c55e" :
-    status === "orange" ? "#f59e0b" :
-    "#ef4444";
-  return (
-    <span style={{
-      display: "inline-block",
-      width: 8,
-      height: 8,
-      borderRadius: "50%",
-      background: color,
-      marginRight: 6,
-    }} />
-  );
-};
 
-const DateCell = ({ date, note, status }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-    <StatusIndicator status={status} />
-    <span>{date}</span>
-    {note && (
-      <span title={note} style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 14,
-        height: 14,
+const ReleaseSchedule = ({ releases = [] }) => {
+  const StatusIndicator = ({ status }) => {
+    const color =
+      status === "green" ? "#22c55e" :
+      status === "orange" ? "#f59e0b" :
+      "#ef4444";
+    return (
+      <span style={{
+        display: "inline-block",
+        width: 8,
+        height: 8,
         borderRadius: "50%",
-        background: "#e5e7eb",
-        color: "#374151",
-        fontSize: 10,
-        cursor: "help",
-        marginLeft: 4,
-      }}>i</span>
-    )}
-  </div>
-);
+        background: color,
+        marginRight: 6,
+      }} />
+    );
+  };
 
-const ReleaseSchedule = ({ releases = [] }) => (
-  <div style={{ overflow: "auto", maxWidth: "100%" }}>
+  const DateCell = ({ date, note, status }) => (
+    <span>
+      <StatusIndicator status={status} />
+      {date}
+      {note && <Tooltip tip={note}><Icon icon="circle-info" size={12} /></Tooltip>}
+    </span>
+  );
+
+  return (
     <table>
       <thead>
         <tr>
@@ -97,7 +84,7 @@ const ReleaseSchedule = ({ releases = [] }) => (
         ))}
       </tbody>
     </table>
-  </div>
-);
+  );
+};
 
 export default ReleaseSchedule;
