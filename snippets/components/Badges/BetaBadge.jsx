@@ -1,4 +1,6 @@
 
+import { galaxyOnClick } from '/snippets/lib/galaxy.jsx';
+
 const Icon = () => {
     return (
         <div className="betaIcon">
@@ -12,7 +14,22 @@ const Icon = () => {
     )
 }
 
-export const BetaBadge = () => {
+export const BetaBadge = ({ link, galaxyTrack, galaxyEvent }) => {
+    if (link) {
+        return (
+            <a
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="betaBadge"
+                onClick={galaxyTrack && galaxyEvent ? galaxyOnClick(galaxyEvent) : undefined}
+            >
+                <Icon />
+                <span>Beta</span>
+            </a>
+        )
+    }
+
     return (
         <div className="betaBadge">
             <Icon />
