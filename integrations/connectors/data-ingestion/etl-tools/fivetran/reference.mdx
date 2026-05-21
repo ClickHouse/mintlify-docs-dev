@@ -81,24 +81,24 @@ The Fivetran ClickHouse destination maps [Fivetran data types](https://fivetran.
 
 | Fivetran type | ClickHouse type                                              |
 |---------------|--------------------------------------------------------------|
-| BOOLEAN       | [Bool](/reference/data-types/boolean)                    |
-| SHORT         | [Int16](/reference/data-types/int-uint)                  |
-| INT           | [Int32](/reference/data-types/int-uint)                  |
-| LONG          | [Int64](/reference/data-types/int-uint)                  |
-| BIGDECIMAL    | [Decimal(P, S)](/reference/data-types/decimal)           |
-| FLOAT         | [Float32](/reference/data-types/float)                   |
-| DOUBLE        | [Float64](/reference/data-types/float)                   |
-| LOCALDATE     | [Date32](/reference/data-types/date32)                   |
-| LOCALDATETIME | [DateTime64(0, 'UTC')](/reference/data-types/datetime64) |
-| INSTANT       | [DateTime64(9, 'UTC')](/reference/data-types/datetime64) |
-| STRING        | [String](/reference/data-types/string)                   |
-| LOCALTIME     | [String](/reference/data-types/string) \* \*\*           |
-| BINARY        | [String](/reference/data-types/string) \*                |
-| XML           | [String](/reference/data-types/string) \*                |
-| JSON          | [String](/reference/data-types/string) \*                |
+| BOOLEAN       | [Bool](/core/reference/data-types/boolean)                    |
+| SHORT         | [Int16](/core/reference/data-types/int-uint)                  |
+| INT           | [Int32](/core/reference/data-types/int-uint)                  |
+| LONG          | [Int64](/core/reference/data-types/int-uint)                  |
+| BIGDECIMAL    | [Decimal(P, S)](/core/reference/data-types/decimal)           |
+| FLOAT         | [Float32](/core/reference/data-types/float)                   |
+| DOUBLE        | [Float64](/core/reference/data-types/float)                   |
+| LOCALDATE     | [Date32](/core/reference/data-types/date32)                   |
+| LOCALDATETIME | [DateTime64(0, 'UTC')](/core/reference/data-types/datetime64) |
+| INSTANT       | [DateTime64(9, 'UTC')](/core/reference/data-types/datetime64) |
+| STRING        | [String](/core/reference/data-types/string)                   |
+| LOCALTIME     | [String](/core/reference/data-types/string) \* \*\*           |
+| BINARY        | [String](/core/reference/data-types/string) \*                |
+| XML           | [String](/core/reference/data-types/string) \*                |
+| JSON          | [String](/core/reference/data-types/string) \*                |
 
 <Note>
-\* BINARY, XML, LOCALTIME, and JSON are stored as [String](/reference/data-types/string) because ClickHouse's `String` type can represent an arbitrary set of bytes. The destination adds a column comment to indicate the original data type. The ClickHouse [JSON](/reference/data-types/newjson) data type is not used as it was marked as obsolete and never recommended for production usage.
+\* BINARY, XML, LOCALTIME, and JSON are stored as [String](/core/reference/data-types/string) because ClickHouse's `String` type can represent an arbitrary set of bytes. The destination adds a column comment to indicate the original data type. The ClickHouse [JSON](/core/reference/data-types/newjson) data type is not used as it was marked as obsolete and never recommended for production usage.
 \*\* NOTE: Issue to track the support for LOCALTIME type: [clickhouse-fivetran-destination #15](https://github.com/ClickHouse/clickhouse-fivetran-destination/issues/15).
 </Note>
 
@@ -120,12 +120,12 @@ ClickHouse itself supports DateTime64 with precision \<= 9 up to 2299-12-31 23:5
 ## Destination tables {#table-structure}
 
 The ClickHouse Cloud destination uses
-[Replacing](/reference/engines/table-engines/mergetree-family/replacingmergetree) engine type of
+[Replacing](/core/reference/engines/table-engines/mergetree-family/replacingmergetree) engine type of
 [SharedMergeTree](/products/cloud/features/infrastructure/shared-merge-tree) family
 (specifically, `SharedReplacingMergeTree`), versioned by the `_fivetran_synced` column.
 
 Every column except primary (ordering) keys and Fivetran metadata columns is created
-as [Nullable(T)](/reference/data-types/nullable), where `T` is a
+as [Nullable(T)](/core/reference/data-types/nullable), where `T` is a
 ClickHouse Cloud type based on the [data types mapping](#type-mapping).
 
 The table structure varies depending on the Fivetran
@@ -313,7 +313,7 @@ Since `_fivetran_id` and `_fivetran_start` form the compound sorting key.
 ### Selecting the latest version of the data without duplicates {#selecting-latest-version}
 
 `SharedReplacingMergeTree` performs background data deduplication
-[only during merges at an unknown time](/reference/engines/table-engines/mergetree-family/replacingmergetree).
+[only during merges at an unknown time](/core/reference/engines/table-engines/mergetree-family/replacingmergetree).
 However, selecting the latest version of the data without duplicates ad-hoc is possible with the `FINAL` keyword:
 
 ```sql

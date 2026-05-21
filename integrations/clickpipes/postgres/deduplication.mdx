@@ -22,7 +22,7 @@ ClickPipes uses [Postgres Logical Decoding](https://www.pgedge.com/blog/logical-
 
 ### ReplacingMergeTree {#replacingmergetree}
 
-ClickPipes maps Postgres tables to ClickHouse using the [ReplacingMergeTree](/reference/engines/table-engines/mergetree-family/replacingmergetree) engine. ClickHouse performs best with append-only workloads and doesn't recommend frequent UPDATEs. This is where ReplacingMergeTree is particularly powerful.
+ClickPipes maps Postgres tables to ClickHouse using the [ReplacingMergeTree](/core/reference/engines/table-engines/mergetree-family/replacingmergetree) engine. ClickHouse performs best with append-only workloads and doesn't recommend frequent UPDATEs. This is where ReplacingMergeTree is particularly powerful.
 
 With ReplacingMergeTree, updates are modeled as inserts with a newer version (`_peerdb_version`) of the row, while deletes are inserts with a newer version and `_peerdb_is_deleted` marked as true. The ReplacingMergeTree engine deduplicates/merges data in the background, and retains the latest version of the row for a given primary key (id), enabling efficient handling of UPDATEs and DELETEs as versioned inserts.
 
@@ -64,13 +64,13 @@ The illustration below walks through a basic example of synchronization of a tab
 
 **Step 3** shows how ClickPipes replicates the INSERT, UPDATE, and DELETE operations to ClickHouse as versioned inserts. The UPDATE appears as a new version of the row with ID 2, while the DELETE appears as a new version of ID 1 which is marked as true using `_is_deleted`. Because of this, ClickHouse has three additional rows compared to PostgreSQL.
 
-As a result, running a simple query like `SELECT count(*) FROM users;` may produce different results in ClickHouse and PostgreSQL. According to the [ClickHouse merge documentation](/concepts/core-concepts/merges#replacing-merges), outdated row versions are eventually discarded during the merge process. However, the timing of this merge is unpredictable, meaning queries in ClickHouse may return inconsistent results until it occurs.
+As a result, running a simple query like `SELECT count(*) FROM users;` may produce different results in ClickHouse and PostgreSQL. According to the [ClickHouse merge documentation](/core/concepts/core-concepts/merges#replacing-merges), outdated row versions are eventually discarded during the merge process. However, the timing of this merge is unpredictable, meaning queries in ClickHouse may return inconsistent results until it occurs.
 
 How can we ensure identical query results in both ClickHouse and PostgreSQL?
 
 ###  Deduplicate using FINAL Keyword {#deduplicate-using-final-keyword}
 
-The recommended way to deduplicate data in ClickHouse queries is to use the [FINAL modifier.](/reference/statements/select/from#final-modifier) This ensures only the deduplicated rows are returned.
+The recommended way to deduplicate data in ClickHouse queries is to use the [FINAL modifier.](/core/reference/statements/select/from#final-modifier) This ensures only the deduplicated rows are returned.
 
 Let's look at how to apply it to three different queries.
 
@@ -124,7 +124,7 @@ LIMIT 10
 
 #### FINAL setting {#final-setting}
 
-Rather than adding the FINAL modifier to each table name in the query, you can use the [FINAL setting](/reference/settings/session-settings#final) to apply it automatically to all tables in the query.
+Rather than adding the FINAL modifier to each table name in the query, you can use the [FINAL setting](/core/reference/settings/session-settings#final) to apply it automatically to all tables in the query.
 
 This setting can be applied either per query or for an entire session.
 
@@ -139,7 +139,7 @@ SELECT count(*) FROM posts;
 
 #### ROW policy {#row-policy}
 
-An easy way to hide the redundant `_peerdb_is_deleted = 0` filter is to use [ROW policy.](/concepts/features/security/access-rights#row-policy-management) Below is an example that creates a row policy to exclude the deleted rows from all queries on the table votes.
+An easy way to hide the redundant `_peerdb_is_deleted = 0` filter is to use [ROW policy.](/core/concepts/features/security/access-rights#row-policy-management) Below is an example that creates a row policy to exclude the deleted rows from all queries on the table votes.
 
 ```sql
 -- Apply row policy to all users
@@ -156,7 +156,7 @@ This section will explore techniques for deduplicating data while keeping the or
 
 #### Views {#views}
 
-[Views](/reference/statements/create/view#normal-view) are a great way to hide the FINAL keyword from the query, as they don't store any data and simply perform a read from another table on each access.
+[Views](/core/reference/statements/create/view#normal-view) are a great way to hide the FINAL keyword from the query, as they don't store any data and simply perform a read from another table on each access.
 
 Below is an example of creating views for each table of our database in ClickHouse with the FINAL keyword and filter for the deleted rows.
 
@@ -183,7 +183,7 @@ LIMIT 10
 
 #### Refreshable materialized view {#refreshable-material-view}
 
-Another approach is to use a [refreshable materialized view](/concepts/features/materialized-views/refreshable-materialized-view), which enables you to schedule query execution for deduplicating rows and storing the results in a destination table. With each scheduled refresh, the destination table is replaced with the latest query results.
+Another approach is to use a [refreshable materialized view](/core/concepts/features/materialized-views/refreshable-materialized-view), which enables you to schedule query execution for deduplicating rows and storing the results in a destination table. With each scheduled refresh, the destination table is replaced with the latest query results.
 
 The key advantage of this method is that the query using the FINAL keyword runs only once during the refresh, eliminating the need for subsequent queries on the destination table to use FINAL.
 
