@@ -23,7 +23,7 @@ This guide shows you how you can mask data in ClickHouse using several approache
 Masking policies are available in ClickHouse Cloud starting from version 25.12.
 </Note>
 
-The [`CREATE MASKING POLICY`](/reference/statements/create/masking-policy) statement provides a native way to dynamically mask column values for specific users or roles at query time. Unlike other approaches, masking policies don't require creating separate views or storing masked data - the transformation happens transparently when users query the table.
+The [`CREATE MASKING POLICY`](/core/reference/statements/create/masking-policy) statement provides a native way to dynamically mask column values for specific users or roles at query time. Unlike other approaches, masking policies don't require creating separate views or storing masked data - the transformation happens transparently when users query the table.
 
 ### Basic masking policy {#basic-maasking-policy}
 
@@ -157,7 +157,7 @@ CREATE OR REPLACE MASKING POLICY mask_pii_data ON orders
     TO masked_data_viewer;
 ```
 
-For more details, see the [CREATE MASKING POLICY](/reference/statements/create/masking-policy) documentation.
+For more details, see the [CREATE MASKING POLICY](/core/reference/statements/create/masking-policy) documentation.
 
 ## Use string replacement functions {#using-string-functions}
 
@@ -165,10 +165,10 @@ For basic data masking use cases, the `replace` family of functions offers a con
 
 | Function                                                                                 | Description                                                                                                                                            |
 |------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`replaceOne`](/reference/functions/regular-functions/string-replace-functions#replaceOne)             | Replaces the first occurrence of a pattern in a haystack string with the provided replacement string.                                                  |
-| [`replaceAll`](/reference/functions/regular-functions/string-replace-functions#replaceAll)             | Replaces all occurrences of a pattern in a haystack string with the provided replacement string.                                                       |
-| [`replaceRegexpOne`](/reference/functions/regular-functions/string-replace-functions#replaceRegexpOne) | Replaces the first occurrence of a substring matching a regular expression pattern (in re2 syntax) in a haystack with the provided replacement string. |
-| [`replaceRegexpAll`](/reference/functions/regular-functions/string-replace-functions#replaceRegexpAll) | Replaces all occurrences of a substring matching a regular expression pattern (in re2 syntax) in a haystack with the provided replacement string.      |
+| [`replaceOne`](/core/reference/functions/regular-functions/string-replace-functions#replaceOne)             | Replaces the first occurrence of a pattern in a haystack string with the provided replacement string.                                                  |
+| [`replaceAll`](/core/reference/functions/regular-functions/string-replace-functions#replaceAll)             | Replaces all occurrences of a pattern in a haystack string with the provided replacement string.                                                       |
+| [`replaceRegexpOne`](/core/reference/functions/regular-functions/string-replace-functions#replaceRegexpOne) | Replaces the first occurrence of a substring matching a regular expression pattern (in re2 syntax) in a haystack with the provided replacement string. |
+| [`replaceRegexpAll`](/core/reference/functions/regular-functions/string-replace-functions#replaceRegexpAll) | Replaces all occurrences of a substring matching a regular expression pattern (in re2 syntax) in a haystack with the provided replacement string.      |
 
 For example, you can replace the name "John Smith" with a placeholder `[CUSTOMER_NAME]` using the `replaceOne` function:
 
@@ -223,7 +223,7 @@ In the query above `\3` is used to substitute the third capture group into the r
 
 ## Create masked `VIEW`s {#masked-views}
 
-A [`VIEW`](/reference/statements/create/view) can be used in conjunction with the aforementioned string functions to apply transformations to columns containing sensitive data, before they're presented to the user. 
+A [`VIEW`](/core/reference/statements/create/view) can be used in conjunction with the aforementioned string functions to apply transformations to columns containing sensitive data, before they're presented to the user. 
 In this way, the original data remains unchanged, and users querying the view see only the masked data.
 
 To demonstrate, let's imagine that we have a table which stores records of customer orders.
@@ -322,7 +322,7 @@ the masked data from the view and not the original unmasked data from the table.
 ## Use `MATERIALIZED` columns and column-level access restrictions {#materialized-ephemeral-column-restrictions}
 
 In cases where you don't want to create a separate view, you can store masked versions of your data alongside the original data.
-To do so, you can use [materialized columns](/reference/statements/create/table#materialized).
+To do so, you can use [materialized columns](/core/reference/statements/create/table#materialized).
 Values of such columns are automatically calculated according to the specified materialized expression when rows are inserted,
 and we can use them to create new columns with masked versions of the data.
 
@@ -409,7 +409,7 @@ GRANT masked_orders_viewer TO your_user;
 ```
 
 In the case where you want to store only the masked data in the `orders` table,
-you can mark the sensitive unmasked columns as [`EPHEMERAL`](/reference/statements/create/table#ephemeral),
+you can mark the sensitive unmasked columns as [`EPHEMERAL`](/core/reference/statements/create/table#ephemeral),
 which will ensure that columns of this type aren't stored in the table.
 
 ```sql
@@ -463,7 +463,7 @@ ORDER BY user_id ASC
 
 ## Use query masking rules for log data {#use-query-masking-rules}
 
-For users of ClickHouse OSS wishing to mask log data specifically, you can make use of [query masking rules](/reference/settings/server-settings/settings#query_masking_rules) (log masking) to mask data.
+For users of ClickHouse OSS wishing to mask log data specifically, you can make use of [query masking rules](/core/reference/settings/server-settings/settings#query_masking_rules) (log masking) to mask data.
 
 To do so, you can define regular expression-based masking rules in the server configuration.
 These rules are applied to queries and all log messages before they're stored in server logs or system tables (such as `system.query_log`, `system.text_log`, and `system.processes`).
@@ -471,7 +471,7 @@ These rules are applied to queries and all log messages before they're stored in
 This helps prevent sensitive data from leaking into **logs** only.
 Note that it doesn't mask data in query results.
 
-For example, to mask a social security number, you could add the following rule to your [server configuration](/concepts/features/configuration/server-config/configuration-files):
+For example, to mask a social security number, you could add the following rule to your [server configuration](/core/concepts/features/configuration/server-config/configuration-files):
 
 ```yaml
 <query_masking_rules>

@@ -1,0 +1,112 @@
+---
+description: 'Documentation for Table Engines'
+slug: /engines/table-engines/
+toc_folder_title: 'Table Engines'
+toc_priority: 26
+toc_title: 'Introduction'
+title: 'Table Engines'
+doc_type: 'reference'
+---
+
+The table engine (type of table) determines:
+
+- How and where data is stored, where to write it to, and where to read it from.
+- Which queries are supported, and how.
+- Concurrent data access.
+- Use of indexes, if present.
+- Whether multithread request execution is possible.
+- Data replication parameters.
+
+## Engine families {#engine-families}
+
+### MergeTree {#mergetree}
+
+The most universal and functional table engines for high-load tasks. The property shared by these engines is quick data insertion with subsequent background data processing. `MergeTree` family engines support data replication (with [Replicated\*](/core/reference/engines/table-engines/mergetree-family/replication) versions of engines), partitioning, secondary data-skipping indexes, and other features not supported in other engines.
+
+Engines in the family:
+
+| MergeTree Engines                                                                                                                         |
+|-------------------------------------------------------------------------------------------------------------------------------------------|
+| [MergeTree](/core/reference/engines/table-engines/mergetree-family/mergetree)                                                          |
+| [ReplacingMergeTree](/core/reference/engines/table-engines/mergetree-family/replacingmergetree)                               |
+| [SummingMergeTree](/core/reference/engines/table-engines/mergetree-family/summingmergetree)                                     |
+| [AggregatingMergeTree](/core/reference/engines/table-engines/mergetree-family/aggregatingmergetree)                         |
+| [CollapsingMergeTree](/core/reference/engines/table-engines/mergetree-family/collapsingmergetree)               |
+| [VersionedCollapsingMergeTree](/core/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree) |
+| [GraphiteMergeTree](/core/reference/engines/table-engines/mergetree-family/graphitemergetree)                                  |
+| [CoalescingMergeTree](/core/reference/engines/table-engines/mergetree-family/coalescingmergetree)                                     |
+
+### Log {#log}
+
+Lightweight [engines](/core/reference/engines/table-engines/log-family) with minimum functionality. They're the most effective when you need to quickly write many small tables (up to approximately 1 million rows) and read them later as a whole.
+
+Engines in the family:
+
+| Log Engines                                                                |
+|----------------------------------------------------------------------------|
+| [TinyLog](/core/reference/engines/table-engines/log-family/tinylog)       |
+| [StripeLog](/core/reference/engines/table-engines/log-family/stripelog) |
+| [Log](/core/reference/engines/table-engines/log-family/log)                   |
+
+### Integration engines {#integration-engines}
+
+Engines for communicating with other data storage and processing systems.
+
+Engines in the family:
+
+| Integration Engines                                                             |
+|---------------------------------------------------------------------------------|
+| [ODBC](/core/reference/engines/table-engines/integrations/odbc)                        |
+| [JDBC](/core/reference/engines/table-engines/integrations/jdbc)                        |
+| [MySQL](/core/reference/engines/table-engines/integrations/mysql)                      |
+| [MongoDB](/core/reference/engines/table-engines/integrations/mongodb)                  |
+| [Redis](/core/reference/engines/table-engines/integrations/redis)                      |
+| [HDFS](/core/reference/engines/table-engines/integrations/hdfs)                        |
+| [S3](/core/reference/engines/table-engines/integrations/s3)                            |
+| [Kafka](/core/reference/engines/table-engines/integrations/kafka)                      |
+| [EmbeddedRocksDB](/core/reference/engines/table-engines/integrations/embedded-rocksdb) |
+| [RabbitMQ](/core/reference/engines/table-engines/integrations/rabbitmq)                |
+| [PostgreSQL](/core/reference/engines/table-engines/integrations/postgresql)            |
+| [S3Queue](/core/reference/engines/table-engines/integrations/s3queue)                  |
+| [TimeSeries](/core/reference/engines/table-engines/integrations/time-series)           |
+
+### Special engines {#special-engines}
+
+Engines in the family:
+
+| Special Engines                                               |
+|---------------------------------------------------------------|
+| [Distributed](/core/reference/engines/table-engines/special/distributed)     |
+| [Dictionary](/core/reference/engines/table-engines/special/dictionary)       |
+| [Merge](/core/reference/engines/table-engines/special/merge)                 |
+| [Executable](/core/reference/engines/table-engines/special/executable)       |
+| [File](/core/reference/engines/table-engines/special/file)                   |
+| [Null](/core/reference/engines/table-engines/special/null)                   |
+| [Set](/core/reference/engines/table-engines/special/set)                     |
+| [Join](/core/reference/engines/table-engines/special/join)                   |
+| [URL](/core/reference/engines/table-engines/special/url)                     |
+| [View](/core/reference/engines/table-engines/special/view)                   |
+| [Memory](/core/reference/engines/table-engines/special/memory)               |
+| [Buffer](/core/reference/engines/table-engines/special/buffer)               |
+| [External Data](/core/reference/engines/table-engines/special/external-data) |
+| [GenerateRandom](/core/reference/engines/table-engines/special/generate)     |
+| [KeeperMap](/core/reference/engines/table-engines/special/keepermap)        |
+| [FileLog](/core/reference/engines/table-engines/special/filelog)                                                   |
+
+## Virtual columns {#table_engines-virtual_columns}
+
+A virtual column is an integral table engine attribute that is defined in the engine source code.
+
+You shouldn't specify virtual columns in the `CREATE TABLE` query, and you can't see them in `SHOW CREATE TABLE` and `DESCRIBE TABLE` query results. Virtual columns are also read-only, so you can't insert data into virtual columns.
+
+To select data from a virtual column, you must specify its name in the `SELECT` query. `SELECT *` does not return values from virtual columns.
+
+If you create a table with a column that has the same name as one of the table virtual columns, the virtual column becomes inaccessible. We do not recommend doing this. To help avoid conflicts, virtual column names are usually prefixed with an underscore.
+
+- `_table` — Contains the name of the table from which data was read. Type: [String](/core/reference/data-types/string).
+
+    Regardless of the table engine being used, each table includes a universal virtual column named `_table`.
+
+    When querying a table with the merge table engine, you can set the constant conditions on `_table` in the `WHERE/PREWHERE` clause (for example, `WHERE _table='xyz'`). In this case the read operation is performed only for that tables where the condition on `_table` is satisfied, so the `_table` column acts as an index.
+
+    When using queries formatted like `SELECT ... FROM (... UNION ALL ...)`, we can determine which actual table the returned rows originate from by specifying the `_table` column.

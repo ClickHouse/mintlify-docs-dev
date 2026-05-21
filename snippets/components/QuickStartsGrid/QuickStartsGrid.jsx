@@ -238,7 +238,7 @@ export const QuickStartsGrid = ({ quickStartsData, featuredIds = [] }) => {
 
   return (
     <>
-      <div style={{ paddingLeft: '1.75rem', paddingRight: '1.75rem' }}>
+      <div style={{ maxWidth: '1312px', marginLeft: 'max(0px, calc((100vw - 1312px) / 2 - 19rem))', marginRight: 'auto', paddingLeft: '1.75rem', paddingRight: '1.75rem' }}>
         <div className="my-8">
           {/* Featured quickstarts section - full width */}
           {featuredQuickStarts.length > 0 && (

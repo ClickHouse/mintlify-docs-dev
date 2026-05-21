@@ -16,8 +16,8 @@ The official Rust client for connecting to ClickHouse, originally developed by [
 
 * Uses `serde` for encoding/decoding rows.
 * Supports `serde` attributes: `skip_serializing`, `skip_deserializing`, `rename`.
-* Uses [`RowBinary`](/reference/formats/RowBinary/RowBinary) format over the HTTP transport.
-  * There are plans to switch to [`Native`](/reference/formats/Native) over TCP.
+* Uses [`RowBinary`](/core/reference/formats/RowBinary/RowBinary) format over the HTTP transport.
+  * There are plans to switch to [`Native`](/core/reference/formats/Native) over TCP.
 * Supports TLS (via `native-tls` and `rustls-tls` features).
 * Supports compression and decompression (LZ4).
 * Provides APIs for selecting or inserting data, executing DDLs, and client-side batching.
@@ -142,7 +142,7 @@ while let Some(row) = cursor.next().await? { .. }
 * Convenient `fetch_one::<Row>()` and `fetch_all::<Row>()` methods can be used to get a first row or all rows, correspondingly.
 * `sql::Identifier` can be used to bind table names.
 
-NB: as the entire response is streamed, cursors can return an error even after producing some rows. If this happens in your use case, you could try `query(...).with_option("wait_end_of_query", "1")` in order to enable response buffering on the server-side. [More details](/integrations/connectors/data-integrations/drivers-and-interfaces/http#response-buffering). The `buffer_size` option can be useful, too.
+NB: as the entire response is streamed, cursors can return an error even after producing some rows. If this happens in your use case, you could try `query(...).with_option("wait_end_of_query", "1")` in order to enable response buffering on the server-side. [More details](/core/concepts/features/interfaces/http#response-buffering). The `buffer_size` option can be useful, too.
 
 <Warning>
 Use `wait_end_of_query` with caution when selecting rows, as it can will to higher memory consumption on the server side and will likely decrease the overall performance.
@@ -172,7 +172,7 @@ insert.end().await?;
 
 ### Async insert (server-side batching) {#async-insert-server-side-batching}
 
-You could use [ClickHouse asynchronous inserts](/concepts/operations/insert/asyncinserts) to avoid client-side batching of the incoming data. This can be done by simply providing the `async_insert` option to the `insert` method (or even to the `Client` instance itself, so that it will affect all the `insert` calls).
+You could use [ClickHouse asynchronous inserts](/core/concepts/features/operations/insert/asyncinserts) to avoid client-side batching of the incoming data. This can be done by simply providing the `async_insert` option to the `insert` method (or even to the `Client` instance itself, so that it will affect all the `insert` calls).
 
 ```rust
 let client = Client::default()
@@ -243,7 +243,7 @@ client
 
 ### ClickHouse settings {#clickhouse-settings}
 
-You can apply various [ClickHouse settings](/reference/settings/session-settings) using the `with_option` method. For example:
+You can apply various [ClickHouse settings](/core/reference/settings/session-settings) using the `with_option` method. For example:
 
 ```rust
 let numbers = client

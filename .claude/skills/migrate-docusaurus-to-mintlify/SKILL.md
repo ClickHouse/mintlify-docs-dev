@@ -7,7 +7,7 @@ description: Use when migrating ClickHouse docs pages from Docusaurus (clickhous
 
 This skill describes the deterministic rules for converting a Docusaurus `.md`/`.mdx` page (source: `~/Desktop/clickhouse-docs/docs/**`) into a Mintlify page in this repo. The reference implementation lives at `~/Desktop/clickhouse-main` (a Mintlify-mapped snapshot Mintlify produced) — when in doubt, diff against it.
 
-The migration is driven by a script at `scripts/migrate.py` (see the "Script" section). When the script can't decide, it leaves the original content with a `<!-- MIGRATE: ... -->` marker; resolve those by hand using the rules below.
+The migration is driven by a script at `_migration/migrate.py` (see the "Script" section). When the script can't decide, it leaves the original content with a `<!-- MIGRATE: ... -->` marker; resolve those by hand using the rules below.
 
 ## Hard rules
 
@@ -176,7 +176,7 @@ Snippet partials live at `docs/**/_snippets/*.md` in Docusaurus and migrate to `
 
 ## 9. Slug map CSV (QA aid)
 
-`scripts/generate-slug-map.py` writes `slug-map.csv` at the repo root. It pairs every Docusaurus slug with its Mintlify URL so a reviewer can open both pages side-by-side.
+`_migration/generate-slug-map.py` writes `_migration/slug-map.csv`. It pairs every Docusaurus slug with its Mintlify URL so a reviewer can open both pages side-by-side.
 
 How it builds rows:
 1. Walk the Docusaurus repo (`--docusaurus`, default `~/Desktop/clickhouse-docs`) and collect every `slug:`.
@@ -197,14 +197,14 @@ Tracking columns:
 - `migrated_at` — UTC ISO timestamp of the last migration. Diagnostic only.
 - `manually_checked` (default `false`) — flip to `true` once a human has opened `old_url` and `new_url` side-by-side and confirmed parity. Never written by tools.
 
-**Staleness rule:** a page is up-to-date iff `migrated == true` AND `migrated_hash == source_hash`. Any drift means the Docusaurus source has changed since the last migration → the page should be re-migrated. `scripts/migrate.py` enforces this by default; pass `--force` to override.
+**Staleness rule:** a page is up-to-date iff `migrated == true` AND `migrated_hash == source_hash`. Any drift means the Docusaurus source has changed since the last migration → the page should be re-migrated. `_migration/migrate.py` enforces this by default; pass `--force` to override.
 
 The generator preserves all tracking columns (`migrated`, `migrated_hash`, `migrated_at`, `manually_checked`) when re-run, so it's safe to regenerate at any time without losing progress.
 
 Regenerate any time pages move or slugs change:
 ```
-python scripts/generate-slug-map.py
-python scripts/generate-slug-map.py --docusaurus ~/Desktop/clickhouse-docs \
+python _migration/generate-slug-map.py
+python _migration/generate-slug-map.py --docusaurus ~/Desktop/clickhouse-docs \
     --mintlify-base https://private-7c7dfe99.mintlify.app
 ```
 
@@ -220,19 +220,19 @@ Do not change these inside the migration pass:
 
 ## Script
 
-The migration script is `scripts/migrate.py`. Invocation:
+The migration script is `_migration/migrate.py`. Invocation:
 
 ```
-python scripts/migrate.py <path>          # one file or dir
-python scripts/migrate.py --all           # whole repo
-python scripts/migrate.py <path> --dry-run
-python scripts/migrate.py --all --force   # re-migrate even up-to-date pages
+python _migration/migrate.py <path>          # one file or dir
+python _migration/migrate.py --all           # whole repo
+python _migration/migrate.py <path> --dry-run
+python _migration/migrate.py --all --force   # re-migrate even up-to-date pages
 ```
 
 **Standard workflow (incremental):**
 ```
-python scripts/generate-slug-map.py       # refresh source_hash for all pages
-python scripts/migrate.py --all           # process only pages whose source changed
+python _migration/generate-slug-map.py       # refresh source_hash for all pages
+python _migration/migrate.py --all           # process only pages whose source changed
 ```
 
 `generate-slug-map.py` recomputes every page's `source_hash`; `migrate.py` skips any page where `migrated=true` AND `migrated_hash == source_hash`. After a Docusaurus repo pull, run both in sequence and only the changed pages are re-touched.
