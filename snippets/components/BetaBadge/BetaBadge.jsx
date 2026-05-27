@@ -1,7 +1,8 @@
-export const BetaBadge = () => {
+import { galaxyOnClick } from '/snippets/lib/galaxy.jsx';
+
+const Icon = () => {
     return (
-        <div className="betaBadge">
-            <div className="betaIcon">
+        <div className="betaIcon">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                     strokeWidth="1.25"
@@ -9,6 +10,28 @@ export const BetaBadge = () => {
                 />
             </svg>
         </div>
+    )
+}
+
+export const BetaBadge = ({ link, galaxyTrack, galaxyEvent }) => {
+    if (link) {
+        return (
+            <a
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="betaBadge"
+                onClick={galaxyTrack && galaxyEvent ? galaxyOnClick(galaxyEvent) : undefined}
+            >
+                <Icon />
+                <span>Beta</span>
+            </a>
+        )
+    }
+
+    return (
+        <div className="betaBadge">
+            <Icon />
             <span>
                 Beta feature.&nbsp;
                 <u>
