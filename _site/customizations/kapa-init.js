@@ -51,7 +51,7 @@
     script.defer = true;
 
     var attrs = {
-      'data-website-id': 'c0b5f156-1e92-49df-8252-adacc9feb21b',
+      'data-website-id': '5df6cc2b-732e-44e4-b789-aec81b70fe46',
       'data-project-name': 'ClickHouse',
       'data-project-color': '#151515',
       'data-project-logo': 'https://avatars.githubusercontent.com/u/54801242?s=200&v=4',

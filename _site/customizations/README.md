@@ -10,6 +10,7 @@ See Mintlify's docs on [custom scripts](https://www.mintlify.com/docs/customize/
 - `ask-ai-button.js` — tweaks the Ask-AI button styling/behavior.
 - `cookie-banner.js` — injects and manages the cookie consent banner.
 - `custom-footer.js` — renders the custom site footer (`#ch-custom-footer`).
+- `inkeep-init.js` — replaces Mintlify's native search (⌘K / navbar search bar) with the Inkeep search modal. Search-only; AI chat stays on Kapa.
 - `kapa-init.js` — bootstraps the Kapa.ai RAG widget.
 - `navbar-cta.js` — adds the "Get started" CTA to the navbar.
 
