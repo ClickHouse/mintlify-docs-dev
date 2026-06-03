@@ -215,16 +215,16 @@ export const IntegrationGrid = () => {
   };
 
   return cmsData.map(item => {
-    const integrationTypes = item.attributes.category ? [categoryMapping[item.attributes.category] || item.attributes.category] : [];
-    const integrationTier = item.attributes.supportLevel?.toLowerCase() || '';
+    const integrationTypes = item.category ? [categoryMapping[item.category] || item.category] : [];
+    const integrationTier = item.supportLevel?.toLowerCase() || '';
 
     return {
-      slug: item.attributes.slug.startsWith('/') ? item.attributes.slug : `/${item.attributes.slug}`,
-      docsLink: item.attributes.docsLink,
-      integration_logo: item.attributes.logo?.data?.attributes.url ? `https://cms.clickhouse-dev.com:1337${item.attributes.logo.data.attributes.url}` : '',
-      integration_logo_dark: item.attributes.logo_dark?.data?.attributes.url ? `https://cms.clickhouse-dev.com:1337${item.attributes.logo_dark.data.attributes.url}` : undefined,
+      slug: item.slug.startsWith('/') ? item.slug : `/${item.slug}`,
+      docsLink: item.docsLink,
+      integration_logo: item.logo?.url ? `https://staging-cms.clickhouse.com${item.logo.url}` : '',
+      integration_logo_dark: item.logo_dark?.url ? `https://staging-cms.clickhouse.com${item.logo_dark.url}` : undefined,
       integration_type: integrationTypes,
-      integration_title: item.attributes.name,
+      integration_title: item.name,
       integration_tier: integrationTier
     };
   });
@@ -238,7 +238,7 @@ function useCMSIntegrations() {
   useEffect(() => {
     const fetchIntegrations = async () => {
       try {
-        const fallbackResponse = await fetch('/integrations-fallback.json', {
+        const fallbackResponse = await fetch('/assets/integrations-fallback.json', {
           cache: 'force-cache'
         });
 
@@ -264,7 +264,7 @@ function useCMSIntegrations() {
         }, 8000);
 
         const response = await fetch(
-          'https://cms.clickhouse-dev.com:1337/api/integrations?populate[]=logo&populate[]=logo_dark',
+          'https://staging-cms.clickhouse.com/api/integrations?fields[0]=name&fields[1]=slug&fields[2]=category&fields[3]=supportLevel&fields[4]=docsLink&populate[logo][fields][0]=url&populate[logo_dark][fields][0]=url&pagination[pageSize]=500',
           {
             signal: controller.signal,
             headers: {

@@ -614,6 +614,20 @@ doc_type: 'landing-page'
 """
 
 
+def _override_third_party_libraries_sidebar(text: str) -> str:
+    """Force the sidebar label to "Third-party libraries". Upstream's
+    `sidebar_label: 'Integrations'` is too generic for this page's spot under
+    the Connectors > Tools group, so we relabel it. Rewrites the migrated
+    `sidebarTitle:` line; idempotent on re-migration."""
+    return re.sub(
+        r"^sidebarTitle:.*$",
+        "sidebarTitle: 'Third-party libraries'",
+        text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+
+
 POST_TRANSFORM_OVERRIDES: dict[str, callable] = {
     "docs/sql-reference/data-types/newjson.md": _override_newjson,
     "docs/use-cases/AI_ML/MCP/03_librechat.md": _override_librechat,
@@ -630,6 +644,7 @@ POST_TRANSFORM_OVERRIDES: dict[str, callable] = {
     # Contributor template — its placeholder example links (../data-types/float.md
     # etc.) are intentionally illustrative and not meant to resolve.
     "docs/development/developer-instruction.md": _override_strip_markers,
+    "docs/interfaces/third-party/integrations.md": _override_third_party_libraries_sidebar,
 }
 
 

@@ -62,7 +62,7 @@
     ctaLink.href = 'https://clickhouse.cloud/signUp';
     ctaLink.target = '_blank';
     ctaLink.rel = 'noopener noreferrer';
-    ctaLink.textContent = 'Get started';
+    ctaLink.textContent = 'Cloud console';
     container.appendChild(ctaLink);
 
     mapleNav.appendChild(container);
