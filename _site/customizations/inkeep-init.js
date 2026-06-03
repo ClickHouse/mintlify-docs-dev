@@ -38,6 +38,22 @@
     document.head.appendChild(script);
   }
 
+  // When the Inkeep modal opens, its scroll lock (react-remove-scroll) marks
+  // the body with [data-scroll-locked] and adds `padding-right` equal to the
+  // scrollbar width to "compensate" for hiding the scrollbar. On systems with
+  // classic (non-overlay) scrollbars that padding shrinks the body and shifts
+  // centered page content sideways. We neutralize it — the selector is more
+  // specific than react-remove-scroll's own rule so it wins regardless of
+  // injection order.
+  function injectNoShiftStyle() {
+    if (document.getElementById('inkeep-no-shift-style')) return;
+    var style = document.createElement('style');
+    style.id = 'inkeep-no-shift-style';
+    style.textContent =
+      'html body[data-scroll-locked] { padding-right: 0 !important; margin-right: 0 !important; }';
+    document.head.appendChild(style);
+  }
+
   function initInkeep() {
     if (typeof Inkeep === 'undefined' || !Inkeep || typeof Inkeep.ModalSearchAndChat !== 'function') {
       console.log('Inkeep: cxkit-mintlify did not expose ModalSearchAndChat.');
@@ -91,6 +107,7 @@
 
   function boot() {
     try {
+      injectNoShiftStyle();
       loadScript(INKEEP_SCRIPT_URL, initInkeep);
     } catch (e) {
       console.log('Inkeep: failed to load widget:', e);
