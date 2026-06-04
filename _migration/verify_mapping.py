@@ -174,23 +174,26 @@ def interactive_menu(docusaurus: dict, mintlify: dict, mapped: list, unmapped: l
 
 
 def load_redirects(mintlify_root: Path) -> set:
-    """Load redirects from docs.json and return normalized source slugs."""
+    """Load redirects and return normalized source slugs.
+
+    Redirects are composable: docs.json references them via
+    `"redirects": {"$ref": "_site/redirects.json"}`. The canonical
+    definitions live in _site/redirects.json as a flat list of
+    {source, destination} objects, which we read directly.
+    """
     redirects = set()
-    docs_json = mintlify_root.parent / "docs.json"
-    if not docs_json.is_file():
-        # Also check in the mintlify root itself
-        docs_json = mintlify_root / "docs.json"
-    if not docs_json.is_file():
+    redirects_json = mintlify_root / "_site" / "redirects.json"
+    if not redirects_json.is_file():
         return redirects
     try:
-        data = json.loads(docs_json.read_text(encoding="utf-8"))
-        for r in data.get("redirects", []):
+        entries = json.loads(redirects_json.read_text(encoding="utf-8"))
+        for r in entries:
             source = r.get("source", "")
             # Strip leading /docs/ prefix to match slug format
             slug = re.sub(r"^/?docs/", "", source.strip("/"))
             redirects.add(normalize_slug(slug))
     except Exception as e:
-        print(f"{YELLOW}Warning: Could not parse redirects from {docs_json}: {e}{RESET}")
+        print(f"{YELLOW}Warning: Could not parse redirects from {redirects_json}: {e}{RESET}")
     return redirects
 
 
@@ -245,10 +248,10 @@ def main():
     mintlify = scan_docs(mintlify_root)
     print(f"  Found {len(mintlify)} pages with slugs")
 
-    # Load redirects from docs.json to treat redirect sources as mapped
+    # Load redirects from _site/redirects.json to treat redirect sources as mapped
     redirect_slugs = load_redirects(mintlify_root)
     if redirect_slugs:
-        print(f"  Found {len(redirect_slugs)} redirects in docs.json")
+        print(f"  Found {len(redirect_slugs)} redirects in _site/redirects.json")
 
     # Scan for unlisted pages (e.g. quickstarts) that exist but aren't in the nav
     unlisted_slugs = scan_unlisted_pages(mintlify_root)
