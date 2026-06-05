@@ -6,20 +6,54 @@ doc_type: 'guide'
 keywords: ['agentic data stack', 'LibreChat', 'chat', 'front-end', 'MCP']
 ---
 
-{/* STUB — DOC-735. Thin stack-context page. Links out to the canonical LibreChat guide; does not duplicate it. */}
+{/* DOC-735. Thin stack-context page; links to canonical LibreChat docs rather than duplicating them. */}
 
 <Note>
-**Draft stub.** Scaffolded for navigation. Stack-context content is pending (DOC-735).
+**Draft.** Not yet editorially reviewed.
 </Note>
 
-LibreChat is the **chat and agent front-end** of the stack — the interface where users talk to their data. This page covers LibreChat's role within the bundle and points to the integrated [Docker setup](/products/agentic-data-stack/docker-setup).
+LibreChat is the **chat and agent front-end** of the [Agentic Data Stack](/products/agentic-data-stack/overview). Instead of writing SQL, a user asks a question in plain language and an agent answers it.
 
-For the standalone "LibreChat + ClickHouse MCP" integration guide (outside the bundle), see the canonical guide: [Using ClickHouse MCP server with LibreChat](/core/guides/use-cases/ai-ml/MCP/librechat). For LibreChat's own feature documentation (agents, code interpreter, model selection, and more), see [librechat.ai](https://www.librechat.ai/docs).
+The agent works through the ClickHouse MCP server to inspect your databases and tables, run read-only queries, and build an answer from the results. The bundle wires this up for you, so LibreChat queries your data from the first sign-in. Stand up the full stack with the [Docker setup guide](/products/agentic-data-stack/docker-setup).
 
-In the bundle, LibreChat is configured through `librechat.yaml`, with the ClickHouse MCP server preconfigured. The stack also ships the [Admin Panel](https://github.com/ClickHouse/librechat-admin-panel), a browser-based UI (port 3081) for changing that configuration (endpoints, MCP servers, and agent settings) without editing YAML by hand.
+## Build an agent over your data {#build-an-agent}
+
+Build a reusable agent for a recurring question about your data. Two choices make it ClickHouse-aware: give it **Instructions** that describe your schema and preferred tables, and add the **ClickHouse-Local** MCP server so it can list databases and tables and run read-only queries. For building, reusing, and sharing agents, see [LibreChat's Agent Builder](https://www.librechat.ai/docs/features/agents).
+
+## Connect more MCP servers {#connect-more-mcp-servers}
+
+The agent isn't limited to ClickHouse. Add any MCP server through [LibreChat's MCP settings](https://www.librechat.ai/docs/features/mcp) so one chat can reach other databases, internal APIs, or SaaS tools.
+
+## Generate charts and visualizations {#generate-charts}
+
+Ask the agent to visualize your results, for example "Chart the top 10 products by revenue," and it returns an interactive chart you can explore and share. Visualizations use [LibreChat Artifacts](https://www.librechat.ai/docs/features/artifacts), enabled per agent.
+
+## Run code with the code interpreter {#code-interpreter}
+
+Beyond SQL, the agent can run code in a secure sandbox to transform or analyze your results, such as turning a query into a file or a computed metric. This uses [LibreChat's Code Interpreter](https://www.librechat.ai/docs/features/code_interpreter).
+
+## Run long queries in the background {#run-in-background}
+
+A query can take a while, and you don't have to wait. With [LibreChat's resumable streams](https://www.librechat.ai/docs/features/resumable_streams), start a generation, switch to another conversation, and come back to the finished response.
+
+## Share an analysis as a read-only link {#share-an-analysis}
+
+Share a conversation as a read-only [shareable link](https://www.librechat.ai/docs/features/shareable_links) so others can review an analysis without rerunning it. The shared view includes the tool calls and the SQL behind each answer, giving a clear chain of custody for how a result was produced.
+
+## Control access to MCP servers {#control-access}
+
+In a team deployment, [role-based access control](https://www.librechat.ai/docs/features/access_control) governs who can use, create, and share MCP servers and agents, and at what level (Viewer, Editor, or Owner).
+
+## In the bundle {#in-the-bundle}
+
+LibreChat is preconfigured through `librechat.yaml`, so it works out of the box:
+
+- The [ClickHouse MCP server](/products/agentic-data-stack/components/mcp-server) is registered as a tool source, so the agent can explore and query ClickHouse with no extra setup.
+- Every conversation is traced to [Langfuse](/products/agentic-data-stack/components/langfuse) for observability, capturing prompts, tool calls, responses, cost, and latency.
+- The [Admin Panel](https://github.com/ClickHouse/librechat-admin-panel) (port 3081) is a browser-based UI for changing this configuration (endpoints, MCP servers, and agent settings) without editing `librechat.yaml` by hand.
+
+To connect the ClickHouse MCP server to a standalone LibreChat instance, see the canonical guide: [Using ClickHouse MCP server with LibreChat](/core/guides/use-cases/ai-ml/MCP/librechat). For LibreChat's full feature documentation, see the [LibreChat documentation](https://www.librechat.ai/docs).
 
 <Info>
 **Prefer a managed experience?** ClickHouse Cloud offers [ClickHouse Agents](/cloud/features/ai-ml/agents) (Beta) — a hosted, no-setup agent experience built on the same foundation, with the agent-building features available through the Cloud console.
 </Info>
-
-{/* TODO: role in the bundle, how it's wired to the MCP server + Langfuse, what's preconfigured in the compose setup vs the generic guide. Cross-link both directions. */}
