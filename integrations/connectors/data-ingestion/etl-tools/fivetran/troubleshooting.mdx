@@ -159,7 +159,7 @@ cause: can't map type UInt64 to Fivetran types
 
 1. **Do not manually modify column types** in Fivetran-managed tables.
 2. **To recover**: Alter the column back to the expected type (e.g., `Int64`) or delete and re-sync the table.
-3. **For custom types**: Create a [materialized view](/core/reference/statements/create/view#materialized-view) on top of the Fivetran-managed table.
+3. **For custom types**: Create a [materialized view](/reference/statements/create/view#materialized-view) on top of the Fivetran-managed table.
 
 ---
 
@@ -218,7 +218,7 @@ For example, the following architecture can be used:
 
 ### Optimizing reading queries {#optimizing-reading-queries}
 
-ClickHouse uses `SharedReplacingMergeTree` for Fivetran destination tables, which is the version of the [`ReplacingMergeTree` table engine](/core/concepts/features/operations/update/replacing-merge-tree) in ClickHouse Cloud. Duplicate rows with the same primary key are normal — deduplication happens asynchronously during background merges. At read time, you need to be careful to avoid returning duplicate rows, as some rows may not have been deduplicated yet.
+ClickHouse uses `SharedReplacingMergeTree` for Fivetran destination tables, which is the version of the [`ReplacingMergeTree` table engine](/concepts/features/operations/update/replacing-merge-tree) in ClickHouse Cloud. Duplicate rows with the same primary key are normal — deduplication happens asynchronously during background merges. At read time, you need to be careful to avoid returning duplicate rows, as some rows may not have been deduplicated yet.
 
 Using the `FINAL` keyword is the simplest way to avoid duplicate rows, as it forces a merge of any not-yet-deduplicated rows at read time:
 
@@ -226,20 +226,20 @@ Using the `FINAL` keyword is the simplest way to avoid duplicate rows, as it for
 SELECT * FROM schema.table FINAL WHERE ...
 ```
 
-There are ways to optimize this `FINAL` operation — for example, by filtering on key columns using a `WHERE` condition. For more details, see the [FINAL performance](/core/concepts/features/operations/update/replacing-merge-tree#final-performance) section of the ReplacingMergeTree guide.
+There are ways to optimize this `FINAL` operation — for example, by filtering on key columns using a `WHERE` condition. For more details, see the [FINAL performance](/concepts/features/operations/update/replacing-merge-tree#final-performance) section of the ReplacingMergeTree guide.
 
 If those optimizations are not sufficient, you have additional options that avoid using `FINAL` while still handling duplicates correctly:
-- If you want to query a numeric column that is always incrementing, [you can use `max(the_column)`](/core/concepts/features/operations/insert/deduplication#avoiding-final).
+- If you want to query a numeric column that is always incrementing, [you can use `max(the_column)`](/concepts/features/operations/insert/deduplication#avoiding-final).
 - If you need to retrieve the latest value for some columns for a particular key, you can use [`argMax(the_column, _fivetran_id)`](https://clickhouse.com/blog/10-best-practice-tips#perfecting_replacingmergetree).
 
 ### Primary key and ORDER BY optimization {#primary-key-optimization}
 
-Fivetran replicates the source table's primary key as the ClickHouse `ORDER BY` clause. When the source has no PK, `_fivetran_id` (a UUID) becomes the sorting key, which can lead to poor query performance because ClickHouse builds its [sparse primary index](/core/guides/clickhouse/data-modelling/sparse-primary-indexes) from the `ORDER BY` columns.
+Fivetran replicates the source table's primary key as the ClickHouse `ORDER BY` clause. When the source has no PK, `_fivetran_id` (a UUID) becomes the sorting key, which can lead to poor query performance because ClickHouse builds its [sparse primary index](/guides/clickhouse/data-modelling/sparse-primary-indexes) from the `ORDER BY` columns.
 
 **Recommendations in this case if any other optimization is not sufficient:**
 
 1. **Treat Fivetran tables as raw staging tables.** Do not query them directly for analytics.
-2. **If queries are still not performant enough**, use a [Refreshable Materialized View](/core/concepts/features/materialized-views/refreshable-materialized-view) to create a copy of the table with an `ORDER BY` optimized for your query patterns. Unlike incremental materialized views, refreshable materialized views re-run the full query on a schedule, which correctly handles the `UPDATE` and `DELETE` operations that Fivetran issues during syncs:
+2. **If queries are still not performant enough**, use a [Refreshable Materialized View](/concepts/features/materialized-views/refreshable-materialized-view) to create a copy of the table with an `ORDER BY` optimized for your query patterns. Unlike incremental materialized views, refreshable materialized views re-run the full query on a schedule, which correctly handles the `UPDATE` and `DELETE` operations that Fivetran issues during syncs:
    ```sql
    CREATE MATERIALIZED VIEW schema.table_optimized
    REFRESH EVERY 1 HOUR

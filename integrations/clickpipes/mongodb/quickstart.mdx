@@ -75,7 +75,7 @@ The replicated tables use this standard schema:
 
 ClickPipes maps MongoDB collections into ClickHouse using the `ReplacingMergeTree` table engine family. With this engine, updates are modeled as inserts with a newer version (`_peerdb_version`) of the document for a given primary key (`_id`), enabling efficient handling of updates, replaces, and deletes as versioned inserts. 
 
-`ReplacingMergeTree` clears out duplicates asynchronously in the background. To guarantee the absence of duplicates for the same row, use the [`FINAL` modifier](/core/reference/statements/select/from#final-modifier). For example:
+`ReplacingMergeTree` clears out duplicates asynchronously in the background. To guarantee the absence of duplicates for the same row, use the [`FINAL` modifier](/reference/statements/select/from#final-modifier). For example:
 
 ```sql
 SELECT * FROM t1 FINAL;
@@ -113,7 +113,7 @@ FROM t1;
 └───────────────┴─────────────────────┘
 ```
 
-When querying _nested object fields_ using dot syntax, make sure to add the [`^`](/core/reference/data-types/newjson#reading-json-sub-objects-as-sub-columns) operator:
+When querying _nested object fields_ using dot syntax, make sure to add the [`^`](/reference/data-types/newjson#reading-json-sub-objects-as-sub-columns) operator:
 
 ```sql title="Query"
 SELECT doc.^shipping as shipping_info FROM t1;
@@ -151,7 +151,7 @@ SELECT dynamicType(doc.customer_id) AS type FROM t1;
 └───────┘
 ```
 
-[Regular functions](/core/reference/functions/regular-functions/regular-functions-index) work for dynamic type just like they do for regular columns:
+[Regular functions](/reference/functions/regular-functions/regular-functions-index) work for dynamic type just like they do for regular columns:
 
 **Example 1: Date parsing**
 
@@ -195,7 +195,7 @@ SELECT length(doc.items) AS item_count FROM t1;
 
 ### Field casting {#field-casting}
 
-[Aggregation functions](/core/reference/functions/aggregate-functions/combinators) in ClickHouse don't work with dynamic type directly. For example, if you attempt to directly use the `sum` function on a dynamic type, you get the following error:
+[Aggregation functions](/reference/functions/aggregate-functions/combinators) in ClickHouse don't work with dynamic type directly. For example, if you attempt to directly use the `sum` function on a dynamic type, you get the following error:
 
 ```sql
 SELECT sum(doc.shipping.cost) AS shipping_cost FROM t1;
@@ -269,7 +269,7 @@ LIMIT 10;
 
 ### Refreshable materialized view {#refreshable-materialized-view}
 
-You can create [Refreshable Materialized Views](/core/concepts/features/materialized-views/refreshable-materialized-view), which enable you to schedule query execution for deduplicating rows and storing the results in a flattened destination table. With each scheduled refresh, the destination table is replaced with the latest query results.
+You can create [Refreshable Materialized Views](/concepts/features/materialized-views/refreshable-materialized-view), which enable you to schedule query execution for deduplicating rows and storing the results in a flattened destination table. With each scheduled refresh, the destination table is replaced with the latest query results.
 
 The key advantage of this method is that the query using the `FINAL` keyword runs only once during the refresh, eliminating the need for subsequent queries on the destination table to use `FINAL`.
 
@@ -319,7 +319,7 @@ LIMIT 10;
 
 ### Incremental materialized view {#incremental-materialized-view}
 
-If you want to access flattened columns in real-time, you can create [Incremental Materialized Views](/core/concepts/features/materialized-views/incremental-materialized-view). If your table has frequent updates, it's not recommended to use the `FINAL` modifier in your materialized view as every update will trigger a merge. Instead, you can deduplicate the data at query time by building a normal view on top of the materialized view.
+If you want to access flattened columns in real-time, you can create [Incremental Materialized Views](/concepts/features/materialized-views/incremental-materialized-view). If your table has frequent updates, it's not recommended to use the `FINAL` modifier in your materialized view as every update will trigger a merge. Instead, you can deduplicate the data at query time by building a normal view on top of the materialized view.
 
 ```sql
 CREATE TABLE flattened_t1 (

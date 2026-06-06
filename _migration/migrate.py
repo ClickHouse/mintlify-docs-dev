@@ -86,6 +86,14 @@ def build_lookups(slug_map_csv: Path) -> tuple[Lookups, list[dict]]:
             lk.slug_to_url[slug] = url
             lk.slug_to_url.setdefault(slug.rstrip("/"), url)
             lk.slug_to_url.setdefault(slug + "/", url)
+        elif r["status"] == "deleted":
+            # Deleted pages have no Mintlify file; rewrite links to new_url
+            # (which may be an internal Mintlify path or an external URL).
+            dest = r.get("new_url", "").strip()
+            if dest:
+                lk.slug_to_url[slug] = dest
+                lk.slug_to_url.setdefault(slug.rstrip("/"), dest)
+                lk.slug_to_url.setdefault(slug + "/", dest)
         for p in all_paths:
             lk.by_mintlify_file.setdefault(p, r)
         if r["docusaurus_file"]:
@@ -365,7 +373,7 @@ def _override_newjson(text: str) -> str:
     )
     replacement = (
         '<Card title="Looking for a guide?" '
-        'href="/core/concepts/best-practices/json-type" icon="book">\n'
+        'href="/concepts/best-practices/json-type" icon="book">\n'
         '  Check out our JSON best practice guide for examples, advanced features '
         'and considerations for using the JSON type.\n'
         '</Card>\n\n'
@@ -586,28 +594,28 @@ doc_type: 'landing-page'
 ---
 
 <CardGroup cols={{2}}>
-  <Card title="SQL Reference" icon="code" href="/core/reference/syntax">
+  <Card title="SQL Reference" icon="code" href="/reference/syntax">
     SQL statements, clauses, operators, and syntax reference.
   </Card>
-  <Card title="Data Types" icon="database" href="/core/reference/data-types">
+  <Card title="Data Types" icon="database" href="/reference/data-types">
     All supported data types including numeric, string, date/time, arrays, maps, and more.
   </Card>
-  <Card title="Engines" icon="gear" href="/core/reference/engines">
+  <Card title="Engines" icon="gear" href="/reference/engines">
     Table and database engine reference — MergeTree family, Log, Integration, and Special engines.
   </Card>
-  <Card title="Functions" icon="function" href="/core/reference/functions">
+  <Card title="Functions" icon="function" href="/reference/functions">
     Regular, aggregate, table, and window functions.
   </Card>
-  <Card title="Formats" icon="file-code" href="/core/reference/formats">
+  <Card title="Formats" icon="file-code" href="/reference/formats">
     Input and output format reference for all supported data formats.
   </Card>
-  <Card title="Settings" icon="sliders" href="/core/reference/settings">
+  <Card title="Settings" icon="sliders" href="/reference/settings">
     Server, session, and MergeTree settings reference.
   </Card>
-  <Card title="System Tables" icon="table" href="/core/reference/system-tables">
+  <Card title="System Tables" icon="table" href="/reference/system-tables">
     System tables for monitoring, diagnostics, and introspection.
   </Card>
-  <Card title="Data Lakes" icon="water" href="/core/reference/datalakes">
+  <Card title="Data Lakes" icon="water" href="/reference/datalakes">
     Data lake integration reference — Iceberg, Delta Lake, and Hudi.
   </Card>
 </CardGroup>

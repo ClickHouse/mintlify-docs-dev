@@ -13,7 +13,7 @@ Depending on the requirements, there are different ways to implement multi-tenan
 
 ## Shared table {#shared-table}
 
-In this approach, data from all tenants is stored in a single shared table, with a field (or set of fields) used to identify each tenant's data. To maximize performance, this field should be included in the [primary key](/core/reference/statements/create/table#primary-key). To ensure that you can only access data belonging to your respective tenants we use [role-based access control](/core/concepts/features/security/access-rights), implemented through [row policies](/core/concepts/features/security/access-rights#row-policy-management).
+In this approach, data from all tenants is stored in a single shared table, with a field (or set of fields) used to identify each tenant's data. To maximize performance, this field should be included in the [primary key](/reference/statements/create/table#primary-key). To ensure that you can only access data belonging to your respective tenants we use [role-based access control](/concepts/features/security/access-rights), implemented through [row policies](/concepts/features/security/access-rights#row-policy-management).
 
 > **We recommend this approach as this is the simplest to manage, particularly when all tenants share the same data schema and data volumes are moderate (< TBs)**
 
@@ -71,7 +71,7 @@ CREATE USER user_1 IDENTIFIED BY '<password>'
 CREATE USER user_2 IDENTIFIED BY '<password>'
 ```
 
-We [create row policies](/core/reference/statements/create/row-policy) that restricts `user_1` and `user_2` to access only their tenants' data. 
+We [create row policies](/reference/statements/create/row-policy) that restricts `user_1` and `user_2` to access only their tenants' data. 
 
 ```sql
 -- Create row policies
@@ -79,7 +79,7 @@ CREATE ROW POLICY user_filter_1 ON default.events USING tenant_id=1 TO user_1
 CREATE ROW POLICY user_filter_2 ON default.events USING tenant_id=2 TO user_2
 ```
 
-Then [`GRANT SELECT`](/core/reference/statements/grant#usage) privileges on the shared table using a common role. 
+Then [`GRANT SELECT`](/reference/statements/grant#usage) privileges on the shared table using a common role. 
 
 ```sql
 -- Create role
@@ -111,7 +111,7 @@ FROM events
 
 ## Separate tables {#separate-tables}
 
-In this approach, each tenant's data is stored in a separate table within the same database, eliminating the need for a specific field to identify tenants. User access is enforced using a [GRANT statement](/core/reference/statements/grant), ensuring that each user can access only tables containing their tenants' data.
+In this approach, each tenant's data is stored in a separate table within the same database, eliminating the need for a specific field to identify tenants. User access is enforced using a [GRANT statement](/reference/statements/grant), ensuring that each user can access only tables containing their tenants' data.
 
 > **Using separate tables is a good choice when tenants have different data schemas.**
 
