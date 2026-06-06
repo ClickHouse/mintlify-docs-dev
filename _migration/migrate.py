@@ -86,6 +86,14 @@ def build_lookups(slug_map_csv: Path) -> tuple[Lookups, list[dict]]:
             lk.slug_to_url[slug] = url
             lk.slug_to_url.setdefault(slug.rstrip("/"), url)
             lk.slug_to_url.setdefault(slug + "/", url)
+        elif r["status"] == "deleted":
+            # Deleted pages have no Mintlify file; rewrite links to new_url
+            # (which may be an internal Mintlify path or an external URL).
+            dest = r.get("new_url", "").strip()
+            if dest:
+                lk.slug_to_url[slug] = dest
+                lk.slug_to_url.setdefault(slug.rstrip("/"), dest)
+                lk.slug_to_url.setdefault(slug + "/", dest)
         for p in all_paths:
             lk.by_mintlify_file.setdefault(p, r)
         if r["docusaurus_file"]:
