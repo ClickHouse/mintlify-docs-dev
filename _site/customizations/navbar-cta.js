@@ -17,6 +17,8 @@
     var style = document.createElement('style');
     style.id = 'ch-navbar-cta-styles';
     style.textContent = ''
+      // Hide mobile AI assistant button
+      + '#assistant-entry-mobile { display: none !important; }'
       // CTA container
       + '#' + CTA_ID + ' { display: flex; align-items: center; gap: 16px; flex-shrink: 0; margin-left: 32px; }'
       // GitHub stars link
