@@ -19,6 +19,8 @@
     style.textContent = ''
       // Hide mobile AI assistant button
       + '#assistant-entry-mobile { display: none !important; }'
+      // Invert dark SVG logos so they're visible on dark backgrounds
+      + '.dark img[src*="windsurf"], :is(.dark) img[src*="windsurf"] { filter: invert(1) !important; }'
       // CTA container
       + '#' + CTA_ID + ' { display: flex; align-items: center; gap: 16px; flex-shrink: 0; margin-left: 32px; }'
       // GitHub stars link
