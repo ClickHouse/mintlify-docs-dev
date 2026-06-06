@@ -122,7 +122,7 @@ SELECT * FROM nginxdb.access_logs
 ## Parse the Logs {#4-parse-the-logs}
 
 Having the logs in ClickHouse is great, but storing each event as a single string doesn't allow for much data analysis.
-We'll next look at how to parse the log events using a [materialized view](/core/concepts/features/materialized-views/incremental-materialized-view).
+We'll next look at how to parse the log events using a [materialized view](/concepts/features/materialized-views/incremental-materialized-view).
 
 A **materialized view** functions similarly to an insert trigger in SQL. When rows of data are inserted into a source table, the materialized view makes some transformation of these rows and inserts the results into a target table.
 The materialized view can be configured to configure a parsed representation of the log events in **access_logs**.
@@ -132,7 +132,7 @@ An example of one such log event is shown below:
 192.168.208.1 - - [12/Oct/2021:15:32:43 +0000] "GET / HTTP/1.1" 304 0 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36"
 ```
 
-There are various functions in ClickHouse to parse the above string. The [`splitByWhitespace`](/core/reference/functions/regular-functions/splitting-merging-functions#splitByWhitespace) function parses a string by whitespace and returns each token in an array.
+There are various functions in ClickHouse to parse the above string. The [`splitByWhitespace`](/reference/functions/regular-functions/splitting-merging-functions#splitByWhitespace) function parses a string by whitespace and returns each token in an array.
 To demonstrate, run the following command:
 
 ```sql title="Query"
@@ -146,7 +146,7 @@ SELECT splitByWhitespace('192.168.208.1 - - [12/Oct/2021:15:32:43 +0000] "GET / 
 A few of the strings have some extra characters, and the user agent (the browser details) didn't need to be parsed, but
 the resulting array is close to what is needed.
 
-Similar to `splitByWhitespace`, the [`splitByRegexp`](/core/reference/functions/regular-functions/splitting-merging-functions#splitByRegexp) function splits a string into an array based on a regular expression.
+Similar to `splitByWhitespace`, the [`splitByRegexp`](/reference/functions/regular-functions/splitting-merging-functions#splitByRegexp) function splits a string into an array based on a regular expression.
 Run the following command, which returns two strings.
 
 ```sql
@@ -161,7 +161,7 @@ Notice that the second string returned is the user agent successfully parsed fro
 
 Before looking at the final `CREATE MATERIALIZED VIEW` command, let's view a couple more functions used to clean up the data.
 For example, the value of `RequestMethod` is `"GET` containing an unwanted double-quote.
-You can use the [`trimBoth` (alias `trim`)](/core/reference/functions/regular-functions/string-functions#trimBoth) function to remove the double quote:
+You can use the [`trimBoth` (alias `trim`)](/reference/functions/regular-functions/string-functions#trimBoth) function to remove the double quote:
 
 ```sql
 SELECT trim(LEADING '"' FROM '"GET')
@@ -223,7 +223,7 @@ SELECT * FROM nginxdb.access_logs_view
 <Image img="/images/integrations/data-ingestion/etl-tools/vector_02.png" size="lg" border alt="View parsed ClickHouse logs in table format" />
 
 <Note>
-The lesson above stored the data in two tables, but you could change the initial `nginxdb.access_logs` table to use the [`Null`](/core/reference/engines/table-engines/special/null) table engine.
+The lesson above stored the data in two tables, but you could change the initial `nginxdb.access_logs` table to use the [`Null`](/reference/engines/table-engines/special/null) table engine.
 The parsed data will still end up in the `nginxdb.access_logs_view` table, but the raw data won't be stored in a table.
 </Note>
 </Step>

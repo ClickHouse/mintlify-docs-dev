@@ -192,14 +192,14 @@ For more detailed instructions, see the [Example Guide](https://github.com/Click
 | `table`                     | ClickHouse table name                                                                                                                              | N/A           | Yes      |
 | `options`                   | Map of Java client configuration options                                                                                                           | Empty map     | No       |
 | `serverSettings`            | Map of ClickHouse server session settings                                                                                                          | Empty map     | No       |
-| `enableJsonSupportAsString` | ClickHouse server setting to expect a JSON formatted String for the [JSON data type](/core/reference/data-types/newjson) | true          | No       |
+| `enableJsonSupportAsString` | ClickHouse server setting to expect a JSON formatted String for the [JSON data type](/reference/data-types/newjson) | true          | No       |
 
 `options` and `serverSettings` should be passed to the client as `Map<String, String>`. An empty map for either will use client or server defaults, respectively.
 
 <Note>
 All available Java client options are listed in [ClientConfigProperties.java](https://github.com/ClickHouse/clickhouse-java/blob/main/client-v2/src/main/java/com/clickhouse/client/api/ClientConfigProperties.java) and [this documentation page](/integrations/language-clients/java/client#configuration).
 
-All available server session settings are listed in [this documentation page](/core/reference/settings/session-settings).
+All available server session settings are listed in [this documentation page](/reference/settings/session-settings).
 </Note>
 
 For example:
@@ -299,13 +299,13 @@ The table below provides a quick reference for converting data types when insert
 
 Notes:
 * A `ZoneId` must be provided when performing date operations.
-* [Precision and scale](/core/reference/data-types/decimal#decimal-value-ranges) must be provided when performing decimal operations.
+* [Precision and scale](/reference/data-types/decimal#decimal-value-ranges) must be provided when performing decimal operations.
 * In order for ClickHouse to parse a Java String as JSON, you need to enable `enableJsonSupportAsString` in `ClickHouseClientConfig`.
 * The connector requires an `ElementConvertor` to map elements in the input DataStream to ClickHouse payloads. To this end, the connector provides `ClickHouseConvertor` and `POJOConvertor`, which you can use to implement this mapping using the `DataWriter` serialization methods above.
 
 ## Supported input formats {#supported-input-formats}
 
-You can find the list of available ClickHouse input formats in [this documentation page](/core/reference/formats#formats-overview) and [ClickHouseFormat.java](https://github.com/ClickHouse/clickhouse-java/blob/main/clickhouse-data/src/main/java/com/clickhouse/data/ClickHouseFormat.java).
+You can find the list of available ClickHouse input formats in [this documentation page](/reference/formats#formats-overview) and [ClickHouseFormat.java](https://github.com/ClickHouse/clickhouse-java/blob/main/clickhouse-data/src/main/java/com/clickhouse/data/ClickHouseFormat.java).
 
 To specify the format the connector should use to serialize your DataStream to ClickHouse payloads, use the `setClickHouseFormat` function. For example:
 
@@ -324,7 +324,7 @@ csvSink.setClickHouseFormat(ClickHouseFormat.CSV);
 ```
 
 <Note>
-By default, the connector will use either [RowBinaryWithDefaults](/core/reference/formats/RowBinary/RowBinaryWithDefaults) or [RowBinary](/core/reference/formats/RowBinary/RowBinary) if `setSupportDefault` in `ClickHouseClientConfig` is explicitly set to true or false, respectively.
+By default, the connector will use either [RowBinaryWithDefaults](/reference/formats/RowBinary/RowBinaryWithDefaults) or [RowBinary](/reference/formats/RowBinary/RowBinary) if `setSupportDefault` in `ClickHouseClientConfig` is explicitly set to true or false, respectively.
 </Note>
 
 ## Metrics {#metrics}
@@ -365,8 +365,8 @@ The connector exposes the following additional metrics on top of Flink's existin
 ## Advanced and recommended usage {#advanced-and-recommended-usage}
 
 - For optimal performance, ensure your DataStream element type is **not** a Generic type - see [here for Flink's type distinction](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/datastream/fault-tolerance/serialization/types_serialization/#flinks-typeinformation-class). Non-generic elements will avoid the serialization overhead incurred by Kryo and improve throughput to ClickHouse.
-- We recommend setting `maxBatchSize` to at least 1000 and ideally between 10,000 to 100,000. See [this guide on bulk inserts](/core/concepts/features/operations/insert/bulkinserts) for more information.
-- To do OLTP-style deduplication or upsert to ClickHouse, refer to [this documentation page](/core/concepts/features/operations/insert/deduplication#options-for-deduplication). _Note: this is not to be confused with batch deduplication that happens on retries._
+- We recommend setting `maxBatchSize` to at least 1000 and ideally between 10,000 to 100,000. See [this guide on bulk inserts](/concepts/features/operations/insert/bulkinserts) for more information.
+- To do OLTP-style deduplication or upsert to ClickHouse, refer to [this documentation page](/concepts/features/operations/insert/deduplication#options-for-deduplication). _Note: this is not to be confused with batch deduplication that happens on retries._
 
 ## Troubleshooting {#troubleshooting}
 
@@ -386,7 +386,7 @@ com.clickhouse.client.api.ServerException: Code: 33. DB::Exception: Cannot read 
 
 You may experience that the connector's throughput does not scale with the job's parallelism (Flink task count) when writing to ClickHouse.
 
-**Cause**: ClickHouse's background [part merging process](/core/concepts/core-concepts/merges) may be slowing down inserts. This can happen when the configured batch size is too small, the connector is flushing too frequently, or a combination of the two.
+**Cause**: ClickHouse's background [part merging process](/concepts/core-concepts/merges) may be slowing down inserts. This can happen when the configured batch size is too small, the connector is flushing too frequently, or a combination of the two.
 
 **Solution**: Monitor the `numRequestSubmitted` and `actualRecordsPerBatch` metrics to help determine how to tune your batch size (`maxBatchSize`) and how frequently to flush. Also, see [Advanced and recommended usage](#advanced-and-recommended-usage) for batch sizing recommendations.
 

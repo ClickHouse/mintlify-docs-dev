@@ -203,7 +203,7 @@ export const IntegrationGrid = () => {
               src={getLogoSrc()}
               alt={`${integration.integration_title || integration.slug} logo`}
               className="object-contain"
-              style={{ width: '64px', height: '64px' }}
+              style={{ width: '64px', height: '64px', pointerEvents: 'none' }}
             />
           </div>
           <div className="w-full text-center text-sm font-semibold" style={{ color: '#000' }}>
