@@ -2,6 +2,21 @@ export const QuickStartsGrid = ({ quickStartsData = [], featured = [] }) => {
   const featuredIds = featured.map(f => f.id);
   const data = quickStartsData || [];
 
+  // Safely read a persisted string array from localStorage. A corrupted or
+  // hand-edited value must never throw out of a useState initializer, which
+  // would crash the whole page render — fall back to the default instead.
+  const readStoredList = (key, fallback) => {
+    if (typeof window === 'undefined') return fallback;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   // State management with localStorage
   const [searchTerm, setSearchTerm] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -10,21 +25,9 @@ export const QuickStartsGrid = ({ quickStartsData = [], featured = [] }) => {
     return '';
   });
 
-  const [selectedUseCases, setSelectedUseCases] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('quickstarts-usecases');
-      return saved ? JSON.parse(saved) : ['All'];
-    }
-    return ['All'];
-  });
+  const [selectedUseCases, setSelectedUseCases] = useState(() => readStoredList('quickstarts-usecases', ['All']));
 
-  const [selectedProducts, setSelectedProducts] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('quickstarts-products');
-      return saved ? JSON.parse(saved) : ['All'];
-    }
-    return ['All'];
-  });
+  const [selectedProducts, setSelectedProducts] = useState(() => readStoredList('quickstarts-products', ['All']));
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
