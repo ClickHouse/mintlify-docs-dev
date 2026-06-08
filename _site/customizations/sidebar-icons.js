@@ -38,23 +38,6 @@
     });
   }
 
-  // ── Homepage sidebar hiding ───────────────────────────────────────────────
-  // Mintlify can't match the root URL to the "Get started" navigation item,
-  // so it falls back to showing the Concepts sidebar on the homepage.
-  // The homepage is a custom landing page with its own navigation cards, so
-  // we hide the sidebar there to avoid showing unrelated nav content.
-  function updateHomepageClass() {
-    document.documentElement.classList.toggle('ch-is-homepage', window.location.pathname === '/');
-  }
-
-  updateHomepageClass();
-
-  var origPush = history.pushState.bind(history);
-  history.pushState = function () { origPush.apply(this, arguments); updateHomepageClass(); };
-  var origReplace = history.replaceState.bind(history);
-  history.replaceState = function () { origReplace.apply(this, arguments); updateHomepageClass(); };
-  window.addEventListener('popstate', updateHomepageClass);
-
   // ── Init ─────────────────────────────────────────────────────────────────
   var observer = new MutationObserver(injectIcons);
   observer.observe(document.documentElement, { childList: true, subtree: true });
