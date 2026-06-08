@@ -9,6 +9,15 @@ doc_type: 'guide'
 
 import { Image } from "/snippets/components/Image.jsx";
 
+export const ExclusiveGroup = ({ name, children }) => {
+  useEffect(() => {
+    document.querySelectorAll(`[data-eg="${name}"] details`).forEach(d =>
+      d.setAttribute('name', name)
+    );
+  });
+  return <div data-eg={name}>{children}</div>;
+};
+
 In analytics, "real-time" usually means the user experience itself feels live.
 A customer refreshes a dashboard, opens a leaderboard, or investigates an issue and expects the data to reflect what just happened.
 Technically, this means not just delivering low-latency analytical queries but achieving this while data is being continuously inserted at high volume.
@@ -27,4 +36,30 @@ Data availability requires thinking about end-to-end time-to-insight, which has 
 
 <Image img="/images/use-cases/rta-considerations.png" alt="Real-time analytics: time to ingest, transform, and query"/>
 
+## How ClickHouse powers real-time analytics {#clickhouse-rta}
+
+<Columns cols={2}>
+  <div>
+    <Image img="/images/use-cases/real-time-analytics-architecture.png" alt="How ClickHouse powers real-time analytics"/>
+  </div>
+  <ExclusiveGroup name="rta-arch">
+    <AccordionGroup>
+      <Accordion title="Data ingestion" defaultOpen>
+        With [ClickPipes](/integrations/clickpipes/home), available exclusively in ClickHouse Cloud, you get a turn-key integration engine that makes ingesting large volumes of data effortless. Select an incoming data source and format, tune your schema, and let your pipeline run.
+
+        ClickHouse's extensive library of [table engines](/reference/engines/table-engines) supports ingesting data from Kafka topics, S3 buckets, OLTP databases, and more. Unlike other OLAP databases that require you to batch inserts for high throughput, ClickHouse handles smaller payloads equally well — [asynchronous inserts](/concepts/features/inserting-data/async-inserts) automatically batch them for optimal write performance.
+      </Accordion>
+      <Accordion title="Data transformations and queries">
+        [Materialized views](/concepts/features/materialized-views) make transformations seamless — automatically triggered when new data is inserted, they extract, aggregate, and modify data as it arrives without bespoke pipelines. Chaining them together adds modular flexibility.
+
+        Queries on materialized views are exceptionally fast since results are stored in dedicated tables. ClickHouse Cloud includes the [query cache](/concepts/features/performance/caches/query-cache), [sparse indexes](/concepts/features/performance/skip-indexes/skipping-indexes), and [projections](/concepts/features/projections/projections) at no extra tier.
+      </Accordion>
+      <Accordion title="Applications and dashboards">
+        ClickHouse powers user-facing analytics across financial services, gaming, e-commerce, and more. It supports a REST interface so web developers can build lightweight applications without complex binary protocols.
+
+        Native connectors exist for BI tools like [Grafana](/integrations/connectors/data-visualization/grafana/grafana-and-clickhouse), [Tableau](/integrations/connectors/data-visualization/tableau/tableau-and-clickhouse), and [Looker](/integrations/connectors/data-visualization/looker-and-clickhouse), plus language clients, SQL clients, and the [MySQL wire protocol](/concepts/features/interfaces/mysql) for tools without a native connector.
+      </Accordion>
+    </AccordionGroup>
+  </ExclusiveGroup>
+</Columns>
 

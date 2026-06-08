@@ -1949,6 +1949,11 @@ SKIP_FILES = {
 SKIP_PATH_PREFIXES = (
     # Synced manually from https://github.com/ClickHouse/clickhouse-operator/tree/main/docs
     "products/kubernetes-operator/",
+    # Hand-authored use-case landing pages with custom React components
+    # (ExclusiveGroup, PrimaryButton) and ClickStack-specific narrative that
+    # deliberately diverges from the upstream Docusaurus source. Some pages
+    # (agentic-analytics.mdx) have no upstream counterpart at all.
+    "get-started/use-cases/",
 )
 
 
