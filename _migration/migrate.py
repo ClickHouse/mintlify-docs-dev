@@ -942,11 +942,12 @@ ADMON_RE = re.compile(
 def transform_admonitions(text: str) -> str:
     def repl(m: re.Match) -> str:
         atype = m.group("type")
-        title = m.group("btitle") or m.group("stitle")
+        raw_title = m.group("btitle") or m.group("stitle")
+        title = raw_title.strip() if raw_title else None
         body = m.group("body").rstrip("\n")
         if title:
             tag = "Info" if atype == "note" else ADMON_TAG[atype]
-            return f"<{tag}>\n**{title.strip()}**\n\n{body}\n</{tag}>"
+            return f"<{tag}>\n**{title}**\n\n{body}\n</{tag}>"
         tag = ADMON_TAG[atype]
         return f"<{tag}>\n{body}\n</{tag}>"
     return ADMON_RE.sub(repl, text)
@@ -1920,6 +1921,26 @@ SKIP_FILES = {
     # The upstream Docusaurus page is a markdown table; we deliberately
     # diverge here for a richer landing layout.
     "integrations/language-clients/index.mdx",
+    # Heavily post-processed from the VLDB 2024 paper migration: figures
+    # converted to <Frame caption="...">, inline citations wrapped in <sup>,
+    # reference list styled with smaller font and superscript numbers, and
+    # scroll-margin-top anchors added throughout. A force-migrate would
+    # overwrite all of these Mintlify-specific transforms.
+    "concepts/core-concepts/academic-overview.mdx",
+    # Upstream SVG diagram was migrated with width="32" (icon-sized). Fixed to
+    # use <Image size="lg"> for full-width display.
+    "products/bring-your-own-cloud/overview/architecture.mdx",
+    # Hand-authored card-grid landing page with custom React components (CsCard,
+    # useDark) and icon grid for Applications, Infrastructure, and Databases &
+    # Services. The upstream Docusaurus page is a plain markdown table; migrating
+    # would destroy the grid layout.
+    "clickstack/index.mdx",
+    # MP4 import removed (Mintlify has no file-loader for video assets); src
+    # changed to a plain string path. Video wrapped in <Frame>.
+    "clickstack/service-maps.mdx",
+    # GIF imported as a JS module variable (clickpy_trace) which Mintlify
+    # can't resolve. Replaced with a plain string path inside a <Frame>.
+    "clickstack/features/session-replay.mdx",
 }
 # Path prefixes (relative to THIS_REPO) whose pages are tracked outside the
 # Docusaurus pipeline. The migrator must never overwrite them: their canonical
@@ -1928,6 +1949,11 @@ SKIP_FILES = {
 SKIP_PATH_PREFIXES = (
     # Synced manually from https://github.com/ClickHouse/clickhouse-operator/tree/main/docs
     "products/kubernetes-operator/",
+    # Hand-authored use-case landing pages with custom React components
+    # (ExclusiveGroup, PrimaryButton) and ClickStack-specific narrative that
+    # deliberately diverges from the upstream Docusaurus source. Some pages
+    # (agentic-analytics.mdx) have no upstream counterpart at all.
+    "get-started/use-cases/",
 )
 
 
