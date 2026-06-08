@@ -102,44 +102,21 @@ export const SampleDatasetExplorer = ({ categories }) => {
 
   const cats = categories || CATEGORIES;
 
-  // Detect dark mode (mirrors the IntegrationGrid approach) so we can pick the
-  // right banner image. Note: light mode shows the *dark* banner art and vice
-  // versa — this matches the reversed-colour scheme chosen for the static grid.
-  const useDarkMode = () => {
-    const [isDark, setIsDark] = useState(false);
-    useEffect(() => {
-      const check = () => {
-        const theme =
-          document.documentElement.getAttribute('data-theme') ||
-          document.body.getAttribute('data-theme');
-        if (theme === 'dark') return setIsDark(true);
-        if (theme === 'light') return setIsDark(false);
-        if (
-          document.documentElement.classList.contains('dark') ||
-          document.body.classList.contains('dark')
-        )
-          return setIsDark(true);
-        setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
-      };
-      check();
-      const observer = new MutationObserver(check);
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
-      observer.observe(document.body, { attributes: true, attributeFilter: ['data-theme', 'class'] });
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      mq.addEventListener('change', check);
-      return () => {
-        observer.disconnect();
-        mq.removeEventListener('change', check);
-      };
-    }, []);
-    return isDark;
-  };
-
-  const isDark = useDarkMode();
   const [selectedId, setSelectedId] = useState(null);
   const selected = cats.find((c) => c.id === selectedId) || null;
 
-  const bannerFor = (cat) => (isDark ? cat.imgLight : cat.imgDark);
+  // Theme visibility is handled by explicit `.dark` descendant selectors in the
+  // <style> block below (Mintlify's class strategy — same approach as
+  // IntegrationGrid). Tailwind `dark:` utilities are NOT reliable here: they
+  // compile against the OS media query, so they'd ignore the in-app light/dark
+  // toggle. Note the reversed-colour scheme: light mode shows the *dark* (black)
+  // banner art, dark mode shows the *light* (yellow) art.
+  const Banner = ({ cat, className }) => (
+    <>
+      <img className={`sde-img-dark ${className || ''}`} src={cat.imgDark} alt={cat.title} />
+      <img className={`sde-img-light ${className || ''}`} src={cat.imgLight} alt={cat.title} />
+    </>
+  );
 
   return (
     <div className="sde-root my-8">
@@ -153,6 +130,12 @@ export const SampleDatasetExplorer = ({ categories }) => {
           to   { opacity: 1; }
         }
         .sde-view { animation: sde-fade 0.25s ease both; }
+        /* Reversed scheme: dark (black) art in light mode, light (yellow) art in dark mode.
+           Use explicit .dark selectors — Tailwind dark: utilities follow the OS here. */
+        .sde-root .sde-img-dark { display: block; }
+        .sde-root .sde-img-light { display: none; }
+        .dark .sde-root .sde-img-dark { display: none; }
+        .dark .sde-root .sde-img-light { display: block; }
         .sde-tile {
           position: relative;
           display: block;
@@ -173,7 +156,6 @@ export const SampleDatasetExplorer = ({ categories }) => {
         }
         .sde-tile:active { transform: translateY(-1px) scale(0.995); }
         .sde-tile img {
-          display: block;
           width: 100%;
           height: 100%;
           object-fit: cover;
@@ -248,7 +230,7 @@ export const SampleDatasetExplorer = ({ categories }) => {
                 onClick={() => setSelectedId(cat.id)}
                 aria-label={`Explore ${cat.title} datasets`}
               >
-                <img src={bannerFor(cat)} alt={cat.title} />
+                <Banner cat={cat} />
                 <span className="sde-tile-hint">
                   <span className="sde-count">
                     {cat.datasets.length} dataset{cat.datasets.length === 1 ? '' : 's'}
@@ -275,7 +257,7 @@ export const SampleDatasetExplorer = ({ categories }) => {
             </button>
           </div>
 
-          <img className="sde-detail-banner" src={bannerFor(selected)} alt={selected.title} />
+          <Banner cat={selected} className="sde-detail-banner" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {selected.datasets.map((ds, i) => (
