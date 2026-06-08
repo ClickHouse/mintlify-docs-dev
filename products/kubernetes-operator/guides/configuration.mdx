@@ -121,6 +121,98 @@ spec:
 
 ### See [API Reference](/products/kubernetes-operator/reference/api-reference#podtemplatespec) for all supported Pod template options.
 
+## Pod disruption budgets {#pod-disruption-budgets}
+
+The operator creates a [PodDisruptionBudget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/) (PDB) for each cluster so that voluntary disruptions — node drains, rolling upgrades, autoscaler evictions — cannot take down enough pods to lose quorum or break availability.
+
+For ClickHouse clusters with more than one shard, **one PDB is created per shard** so a disruption in one shard cannot count against another.
+
+### Defaults {#pdb-defaults}
+
+The operator picks safe defaults based on the cluster size so that a fresh `apply` already protects against accidental quorum loss.
+
+| Resource | Topology | Default PDB |
+|---|---|---|
+| `ClickHouseCluster` | `replicas: 1` (single-replica shard) | `maxUnavailable: 1` — disruption is allowed for a single-node cluster so that node drains are not blocked |
+| `ClickHouseCluster` | `replicas: 2+` (multi-replica shard) | `minAvailable: 1` — at least one replica per shard must stay up |
+| `KeeperCluster` | `replicas: 1` | `maxUnavailable: 1` — disruption is allowed for a single-node cluster so that node drains are not blocked |
+| `KeeperCluster` | `replicas: 3+` | `maxUnavailable: replicas/2` — preserves the RAFT quorum for a `2F+1` cluster (3 replicas tolerate 1 down, 5 replicas tolerate 2 down) |
+
+For a 3-shard ClickHouseCluster with `replicas: 3`, the operator creates three PDBs, one per shard, each with `minAvailable: 1`.
+
+### Overriding the defaults {#pdb-overrides}
+
+Use `spec.podDisruptionBudget` to override either `minAvailable` **or** `maxUnavailable` (exactly one):
+
+```yaml
+spec:
+  replicas: 3
+  shards: 2
+  podDisruptionBudget:
+    minAvailable: 2   # keep at least 2 of 3 replicas in every shard up during a disruption
+```
+
+Or the `maxUnavailable` form, with a percentage:
+
+```yaml
+spec:
+  replicas: 5
+  podDisruptionBudget:
+    maxUnavailable: 40%
+```
+
+<Warning>
+Setting both `minAvailable` and `maxUnavailable` is rejected by the validating webhook. Pick one — Kubernetes itself does not allow both either.
+</Warning>
+
+You can also pass the [`unhealthyPodEvictionPolicy`](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#unhealthy-pod-eviction-policy) field through to the generated PDB — useful when you need to allow eviction of pods that are still in `NotReady`:
+
+```yaml
+spec:
+  podDisruptionBudget:
+    minAvailable: 2
+    unhealthyPodEvictionPolicy: AlwaysAllow
+```
+
+### Policies {#pdb-policies}
+
+`spec.podDisruptionBudget.policy` lets you choose **how aggressively** the operator manages PDBs:
+
+| Policy | Behavior |
+|---|---|
+| `Enabled` (default) | The operator creates and updates the PDB on every reconcile. This is the safe production default. |
+| `Disabled` | The operator does **not** create PDBs and **deletes** any existing ones with matching labels. Useful for development clusters where every voluntary disruption should be allowed. |
+| `Ignored` | The operator neither creates nor deletes PDBs. Existing PDBs are left alone. Use this when another system (e.g. policy admission, GitOps tool) owns PDB management for you. |
+
+Example — disable PDB management completely on a development cluster:
+
+```yaml
+spec:
+  podDisruptionBudget:
+    policy: Disabled
+```
+
+Example — keep your hand-crafted PDB next to the cluster and stop the operator from touching it:
+
+```yaml
+spec:
+  podDisruptionBudget:
+    policy: Ignored
+```
+
+### Cluster-wide opt-out {#pdb-cluster-wide-disable}
+
+PDB management can also be disabled cluster-wide via the operator's `ENABLE_PDB` environment variable. With `ENABLE_PDB=false`, the operator skips the PDB reconcile step for **every** ClickHouseCluster and KeeperCluster regardless of their `spec.podDisruptionBudget.policy`, and **does not watch** `PodDisruptionBudget` resources at all. The operator's ServiceAccount therefore does not need RBAC permissions on `poddisruptionbudgets.policy/v1`, which is useful when running the operator under a restricted ServiceAccount that intentionally omits those permissions.
+
+```yaml
+# in the operator Deployment spec
+env:
+- name: ENABLE_PDB
+  value: "false"
+```
+
+This is intended for environments that ship their own disruption policies (e.g. through Gatekeeper / Kyverno) and want the operator out of the loop entirely.
+
 ## Container configuration {#container-configuration}
 
 ### Custom image {#custom-image}
