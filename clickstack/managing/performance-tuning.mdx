@@ -34,7 +34,7 @@ In ClickStack, each **data source maps directly to one or more ClickHouse tables
 | Metrics (summary)                | [otel_metrics_summary](/clickstack/ingesting-data/schemas#summary-table)                       |
 | Sessions                         | [hyperdx_sessions](/clickstack/ingesting-data/schemas#sessions)                                |
 
-Tables are assigned to [databases](/core/reference/statements/create/database) in ClickHouse. By default, the `default` database is used -  this can be [modified in the OpenTelemetry collector](/clickstack/managing/config#otel-collector).
+Tables are assigned to [databases](/reference/statements/create/database) in ClickHouse. By default, the `default` database is used -  this can be [modified in the OpenTelemetry collector](/clickstack/managing/config#otel-collector).
 
 <Warning>
 **Focus on logs and traces**
@@ -46,7 +46,7 @@ At a minimum, you should understand the following ClickHouse fundamentals:
 
 | Concept | Description |
 |---------|-------------|
-| **Tables** | How data sources in ClickStack correspond to underlying ClickHouse tables. Tables in ClickHouse mainly use the [MergeTree](/core/reference/engines/table-engines/mergetree-family/mergetree) engine. |
+| **Tables** | How data sources in ClickStack correspond to underlying ClickHouse tables. Tables in ClickHouse mainly use the [MergeTree](/reference/engines/table-engines/mergetree-family/mergetree) engine. |
 | **Parts** | How data is written in immutable parts and merged over time. |
 | **Partitions** | Partitions group the data parts of a table into organised logical units. These units are easier to manage, query, and optimize. |
 | **Merges** | The internal process that merges parts together to ensure that there are a lower number of parts to query. Essential for maintaining query performance. |
@@ -57,15 +57,15 @@ These concepts are central to ClickHouse performance. They determine how data is
 
 You're recommended to review the following ClickHouse documentation before undertaking any tuning:
 
-- [Creating tables in ClickHouse](/core/get-started/quickstarts/creating-tables) - A simple introduction to tables.
-- [Parts](/core/concepts/core-concepts/parts)
-- [Partitions](/core/concepts/core-concepts/partitions)
-- [Merges](/core/concepts/core-concepts/merges)
-- [Primary keys/indexes](/core/concepts/core-concepts/primary-indexes)
-- [How ClickHouse stores data: parts and granules](/core/guides/clickhouse/data-modelling/sparse-primary-indexes) - More advanced guide on how data is structured and queried in ClickHouse, covering granules and primary keys in detail.
-- [MergeTree](/core/reference/engines/table-engines/mergetree-family/mergetree)- Advanced MergeTree reference guide useful for commands and for internal specifics.
+- [Creating tables in ClickHouse](/get-started/quickstarts/creating-tables) - A simple introduction to tables.
+- [Parts](/concepts/core-concepts/parts)
+- [Partitions](/concepts/core-concepts/partitions)
+- [Merges](/concepts/core-concepts/merges)
+- [Primary keys/indexes](/concepts/core-concepts/primary-indexes)
+- [How ClickHouse stores data: parts and granules](/guides/clickhouse/data-modelling/sparse-primary-indexes) - More advanced guide on how data is structured and queried in ClickHouse, covering granules and primary keys in detail.
+- [MergeTree](/reference/engines/table-engines/mergetree-family/mergetree)- Advanced MergeTree reference guide useful for commands and for internal specifics.
 
-All optimizations described below can be applied directly to the underlying tables using standard ClickHouse SQL, either through the [ClickHouse Cloud SQL console](/integrations/connectors/sql-clients/sql-console) or via the [ClickHouse client](/core/concepts/features/interfaces/cli).
+All optimizations described below can be applied directly to the underlying tables using standard ClickHouse SQL, either through the [ClickHouse Cloud SQL console](/integrations/connectors/sql-clients/sql-console) or via the [ClickHouse client](/concepts/features/interfaces/cli).
 
 ## Optimization 1. Materialize frequently queried attributes {#materialize-frequently-queried-attributes}
 
@@ -193,7 +193,7 @@ ALTER TABLE otel_v2.otel_traces
 MATERIALIZE COLUMN PodName
 ```
 
-This rewrites existing [parts](/core/concepts/core-concepts/parts) to populate the column. Mutations are single-threaded per part and can take time on large datasets. To limit impact, mutations can be scoped to a specific partition:
+This rewrites existing [parts](/concepts/core-concepts/parts) to populate the column. Mutations are single-threaded per part and can take time on large datasets. To limit impact, mutations can be scoped to a specific partition:
 
 ```sql
 ALTER TABLE otel_v2.otel_traces
@@ -396,11 +396,11 @@ Bloom filter size can be reduced by increasing the allowed false-positive rate. 
 
 Tuning Bloom filter parameters is therefore a workload-dependent optimization and should be validated using real query patterns and production-like data volumes.
 
-For further details on skip indices, see the guide ["Understanding ClickHouse data skipping indexes."](/core/concepts/features/performance/skip-indexes/skipping-indexes-examples)
+For further details on skip indices, see the guide ["Understanding ClickHouse data skipping indexes."](/concepts/features/performance/skip-indexes/skipping-indexes-examples)
 
 ### Evaluating skip index effectiveness {#evaluating-skip-index-effectiveness}
 
-The most reliable way to evaluate skip index pruning is to use `EXPLAIN indexes = 1`, which shows how many [parts](/core/concepts/core-concepts/parts) and [granules](/core/guides/clickhouse/data-modelling/sparse-primary-indexes#data-is-organized-into-granules-for-parallel-data-processing) are eliminated at each stage of query planning. In most cases, you want to see a large reduction in granules at the Skip stage, ideally after the primary key has already reduced the search space. Skip indexes are evaluated after partition pruning and primary key pruning, so their impact is best measured relative to the remaining parts and granules.
+The most reliable way to evaluate skip index pruning is to use `EXPLAIN indexes = 1`, which shows how many [parts](/concepts/core-concepts/parts) and [granules](/guides/clickhouse/data-modelling/sparse-primary-indexes#data-is-organized-into-granules-for-parallel-data-processing) are eliminated at each stage of query planning. In most cases, you want to see a large reduction in granules at the Skip stage, ideally after the primary key has already reduced the search space. Skip indexes are evaluated after partition pruning and primary key pruning, so their impact is best measured relative to the remaining parts and granules.
 
 `EXPLAIN` confirms whether pruning occurs, but it doesn't guarantee a net speedup. Skip indexes have a cost to evaluate, especially if the index is large. Always benchmark queries before and after adding and materializing an index to confirm real performance improvements.
 
@@ -491,10 +491,10 @@ Filtering on columns that appear earlier in the primary key is more efficient th
 <Info>
 **A note on terminology**
 
-Throughout this document, the term "ordering key" is used interchangeably with "primary key." Strictly speaking, these differ in ClickHouse, but for ClickStack, they typically refer to the same columns specified in the table `ORDER BY` clause. For details, see the [ClickHouse documentation](/core/reference/engines/table-engines/mergetree-family/mergetree#choosing-a-primary-key-that-differs-from-the-sorting-key) on choosing a primary key that differs from the sorting key.
+Throughout this document, the term "ordering key" is used interchangeably with "primary key." Strictly speaking, these differ in ClickHouse, but for ClickStack, they typically refer to the same columns specified in the table `ORDER BY` clause. For details, see the [ClickHouse documentation](/reference/engines/table-engines/mergetree-family/mergetree#choosing-a-primary-key-that-differs-from-the-sorting-key) on choosing a primary key that differs from the sorting key.
 </Info>
 
-Before modifying any primary key, reading through our [guide to understand how primary indexes work](/core/concepts/core-concepts/primary-indexes) in ClickHouse is strongly recommended:
+Before modifying any primary key, reading through our [guide to understand how primary indexes work](/concepts/core-concepts/primary-indexes) in ClickHouse is strongly recommended:
 
 Primary key tuning is table and data-type-specific. A change that benefits one table and data type may not apply to others. The goal is always to optimize for a particular data type e.g. logs.
 
@@ -505,7 +505,7 @@ Below are the default primary keys for the ClickStack tables for logs and metric
 - Logs ([`otel_logs`](/clickstack/ingesting-data/schemas#logs)) - `(ServiceName, TimestampTime, Timestamp)`
 - Traces (['otel_traces](/clickstack/ingesting-data/schemas#traces)) - `(ServiceName, SpanName, toDateTime(Timestamp))`
 
-See ["Tables and schemas used by ClickStack"](/clickstack/ingesting-data/schemas) for the primary keys used by the tables for other data types. For example, trace tables are optimized for filtering by service name and span name, followed by timestamp and, trace ID. Log tables, conversely, are optimized for filtering by service name, then by date, and then by timestamp. Although the optimal order would be for the user to apply the filters in the order of the primary key, queries will still heavily benefit if filtering by any of these columns in any order, with ClickHouse [pruning data prior to reading](/core/concepts/features/performance/skip-indexes/skipping-indexes).
+See ["Tables and schemas used by ClickStack"](/clickstack/ingesting-data/schemas) for the primary keys used by the tables for other data types. For example, trace tables are optimized for filtering by service name and span name, followed by timestamp and, trace ID. Log tables, conversely, are optimized for filtering by service name, then by date, and then by timestamp. Although the optimal order would be for the user to apply the filters in the order of the primary key, queries will still heavily benefit if filtering by any of these columns in any order, with ClickHouse [pruning data prior to reading](/concepts/features/performance/skip-indexes/skipping-indexes).
 
 When choosing a primary key, there are also other considerations for choosing an optimal ordering of the columns. See ["Choosing a primary key."](#choosing-a-primary-key)
 
@@ -530,7 +530,7 @@ Some simple rules can be applied to help choose an ordering key. The following c
 3. Prefer columns that are likely to be highly correlated with other columns in the table. This will help ensure these values are also stored contiguously, improving compression.
 4. `GROUP BY` (aggregations for charts) and `ORDER BY` (sorting) operations for columns in the ordering key can be made more memory efficient.
 
-On identifying the subset of columns for the ordering key, they must be declared in a specific order. This order can significantly influence both the efficiency of the filtering on secondary key columns in queries and the compression ratio for the table's data files. In general, it's best to order the keys in ascending order of cardinality. This should be balanced against the fact that filtering on columns that appear later in the ordering key will be less efficient than filtering on those that appear earlier in the tuple. Balance these behaviors and consider your access patterns. Most importantly, test variants. For further understanding of ordering keys and how to optimize them, reading ["Choosing a Primary Key."](/core/concepts/best-practices/choosing-a-primary-key) is recommended for even deeper insights into primary key tuning and the internal data structures, see ["A practical introduction to primary indexes in ClickHouse."](/core/guides/clickhouse/data-modelling/sparse-primary-indexes)
+On identifying the subset of columns for the ordering key, they must be declared in a specific order. This order can significantly influence both the efficiency of the filtering on secondary key columns in queries and the compression ratio for the table's data files. In general, it's best to order the keys in ascending order of cardinality. This should be balanced against the fact that filtering on columns that appear later in the ordering key will be less efficient than filtering on those that appear earlier in the tuple. Balance these behaviors and consider your access patterns. Most importantly, test variants. For further understanding of ordering keys and how to optimize them, reading ["Choosing a Primary Key."](/concepts/best-practices/choosing-a-primary-key) is recommended for even deeper insights into primary key tuning and the internal data structures, see ["A practical introduction to primary indexes in ClickHouse."](/guides/clickhouse/data-modelling/sparse-primary-indexes)
 
 ### Changing the primary key {#changing-the-primary-key}
 
@@ -560,7 +560,7 @@ In rare, very large workloads, these may differ, but most users should keep them
 <Step>
 #### Exchange and drop table {#exhange-and-drop-table}
 
-The `EXCHANGE` statement is used to swap the names of the tables [atomically](/core/concepts/core-concepts/glossary#atomicity). The temporary table (now the old default table), can be dropped.
+The `EXCHANGE` statement is used to swap the names of the tables [atomically](/concepts/core-concepts/glossary#atomicity). The temporary table (now the old default table), can be dropped.
 
 ```sql
 EXCHANGE TABLES otel_logs_temp AND otel_logs
@@ -594,7 +594,7 @@ ORDER BY (SeverityText, ServiceName, TimestampTime)
 <Step>
 #### Create a Merge table {#create-merge-table}
 
-The [Merge engine](/core/reference/engines/table-engines/special/merge) (not to be confused with MergeTree) doesn't store data itself, but allows reading from any number of other tables simultaneously.
+The [Merge engine](/reference/engines/table-engines/special/merge) (not to be confused with MergeTree) doesn't store data itself, but allows reading from any number of other tables simultaneously.
 
 ```sql
 CREATE TABLE otel_logs_merge
@@ -670,7 +670,7 @@ If TTL policies are in place, which is recommended, tables with older primary ke
 
 <BetaBadge/>
 
-ClickStack can exploit [Incremental Materialized Views](/core/concepts/features/materialized-views/incremental-materialized-view) to accelerate visualizations that rely on aggregation-heavy queries, such as computing average request duration per minute over time. This feature can dramatically improve query performance and is typically most beneficial for larger deployments, around 10 TB per day and above, while enabling scaling into the petabytes-per-day range. Incremental Materialized Views are in Beta and should be used with care.
+ClickStack can exploit [Incremental Materialized Views](/concepts/features/materialized-views/incremental-materialized-view) to accelerate visualizations that rely on aggregation-heavy queries, such as computing average request duration per minute over time. This feature can dramatically improve query performance and is typically most beneficial for larger deployments, around 10 TB per day and above, while enabling scaling into the petabytes-per-day range. Incremental Materialized Views are in Beta and should be used with care.
 
 For details on using this feature in ClickStack, see our dedicated guide ["ClickStack - Materialized Views."](/clickstack/managing/materialized-views)
 
@@ -698,9 +698,9 @@ For pre-aggregation and metric acceleration, ClickStack strongly prefers **expli
 
 For additional background, see:
 
-- [Guide on projections](/core/concepts/features/projections/projections)
-- [When to use projections](/core/concepts/features/projections/projections#when-to-use-projections)
-- [Materialized views versus projections](/core/concepts/features/projections/materialized-views-versus-projections)
+- [Guide on projections](/concepts/features/projections/projections)
+- [When to use projections](/concepts/features/projections/projections#when-to-use-projections)
+- [Materialized views versus projections](/concepts/features/projections/materialized-views-versus-projections)
 
 ### Example projections {#example-projections}
 
@@ -777,8 +777,8 @@ In practice, projections are best suited for workflows where you frequently pivo
 
 For a deeper background, see:
 
-- [ClickHouse projections guide](/core/concepts/features/projections/projections#when-to-use-projections)
-- [Materialized views vs projections](/core/concepts/features/projections/materialized-views-versus-projections)
+- [ClickHouse projections guide](/concepts/features/projections/projections#when-to-use-projections)
+- [Materialized views vs projections](/concepts/features/projections/materialized-views-versus-projections)
 
 ### Lightweight projections with `_part_offset` {#lightweight-projections}
 
@@ -792,7 +792,7 @@ For a deeper background, see:
 
 Newer ClickHouse versions also support more lightweight projections that store only the projection sorting key plus a `_part_offset` pointer into the base table, rather than duplicating full rows. This can greatly reduce storage overhead, and recent improvements enable granule-level pruning, making them behave more like true secondary indexes. See:
 
-- [Smarter storage with _part_offset](/core/concepts/features/projections/projections#smarter_storage_with_part_offset)
+- [Smarter storage with _part_offset](/concepts/features/projections/projections#smarter_storage_with_part_offset)
 - [Blog explanation and examples](https://clickhouse.com/blog/projections-secondary-indices#example-combining-multiple-projection-indexes)
 
 ### Alternatives {#projection-alternatives}
@@ -800,4 +800,4 @@ Newer ClickHouse versions also support more lightweight projections that store o
 If you need multiple ordering keys, projections aren't the only option. Depending on operational constraints and how you want ClickStack to route queries, consider:
 
 - Configuring your OpenTelemetry collector to write to two tables with different `ORDER BY` keys, and create separate ClickStack sources for each table.
-- Create a materialized view as a copy pipeline i.e. attach a materialized view to the main table that selects raw rows into a secondary table with a different ordering key (a denormalization or routing pattern). Create a source for this target table. Examples can be found [here](/core/concepts/features/materialized-views/incremental-materialized-view#filtering-and-transformation).
+- Create a materialized view as a copy pipeline i.e. attach a materialized view to the main table that selects raw rows into a secondary table with a different ordering key (a denormalization or routing pattern). Create a source for this target table. Examples can be found [here](/concepts/features/materialized-views/incremental-materialized-view#filtering-and-transformation).
