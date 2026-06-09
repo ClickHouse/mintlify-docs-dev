@@ -41,7 +41,7 @@ EXTS = (".md", ".mdx")
 RUNNABLE_IMPORT = 'import { RunnableCode } from "/snippets/components/RunnableCode/RunnableCode.jsx";'
 IMAGE_IMPORT = 'import { Image } from "/snippets/components/Image.jsx";'
 ADMON_TAG = {"note": "Note", "tip": "Tip", "info": "Info", "warning": "Warning",
-             "caution": "Warning", "danger": "Warning", "important": "Warning"}
+             "caution": "Warning", "danger": "Warning", "important": "Important"}
 
 
 # ----- lookups ---------------------------------------------------------------
