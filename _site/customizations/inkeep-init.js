@@ -95,6 +95,11 @@
               type: 'style',
               value: '.ikp-view_toggle, .ikp-ai-ask-ai-trigger { display: none !important; }',
             },
+            {
+              key: 'dark-search-overlay',
+              type: 'style',
+              value: '.dark\\:bg-overlay-dark { background-color: rgba(0, 0, 0, 0.75) !important; }',
+            },
           ],
         },
       },
