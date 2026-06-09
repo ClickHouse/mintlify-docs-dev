@@ -44,7 +44,34 @@ export const ButtonGroup = ({options = [], selected, onClick, fillWidth = false,
     );
 }
 
-export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, href, links, icon }) => {
+export const FullWidthDivider = ({ style }) => {
+    const ref = useRef(null);
+    useEffect(() => {
+        if (!ref.current) return;
+        const el = ref.current;
+        const update = () => {
+            requestAnimationFrame(() => {
+                el.style.marginLeft = '';
+                el.style.width = '';
+                const elRect = el.getBoundingClientRect();
+                const sidebar = document.getElementById('sidebar');
+                const sidebarRect = sidebar?.getBoundingClientRect();
+                const leftEdge = (sidebarRect && sidebarRect.width > 0) ? sidebarRect.right : 0;
+                const rightEdge = document.documentElement.clientWidth;
+                const ml = Math.max(0, elRect.left - leftEdge);
+                const mr = Math.max(0, rightEdge - elRect.right);
+                el.style.marginLeft = `-${ml}px`;
+                el.style.width = `calc(100% + ${ml + mr}px)`;
+            });
+        };
+        update();
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+    }, []);
+    return <hr ref={ref} className="ch-usecase-divider" style={{ border: 'none', ...style }} />;
+};
+
+export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, body, href, links, icon, showArrow, arrowBottom, extraStyle }) => {
     const [isDark, setIsDark] = useState(false);
 
     useEffect(() => {
@@ -68,7 +95,10 @@ export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, desc
         border: isDark ? '1px solid #3c3c3c' : '1px solid #e5e7eb',
         display: 'block',
         textDecoration: 'none',
-        color: 'inherit'
+        color: 'inherit',
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'background-color 0.12s ease, border-color 0.12s ease'
     };
 
     const content = (
@@ -107,7 +137,7 @@ export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, desc
                 </>
             )}
             <h3 style={{
-                marginTop: icon ? '0' : '20px',
+                marginTop: (icon || !filename) ? '0' : '20px',
                 color: isDark ? '#FFFFFF' : '#111827',
                 fontSize: '20px',
                 fontWeight: '600',
@@ -115,14 +145,16 @@ export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, desc
             }}>
                 {title}
             </h3>
-            <span style={{
-                display: 'block',
-                marginTop: '16px',
-                fontSize: '14px',
-                fontWeight: '400',
-                color: isDark ? '#a1a1aa' : '#6b7280',
-                minHeight: '3rem'
-            }}>{description}</span>
+            {body ? body : (
+                <span style={{
+                    display: 'block',
+                    marginTop: '16px',
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    color: isDark ? '#a1a1aa' : '#6b7280',
+                    minHeight: '3rem'
+                }}>{description}</span>
+            )}
             {links && links.length > 0 && (
                 <ul style={{ marginTop: '24px', listStyle: 'none', padding: 0 }}>
                     {links.map((link, index) => (
@@ -145,14 +177,21 @@ export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, desc
                     ))}
                 </ul>
             )}
+            {showArrow && (
+                <div className="ch-usecase-arrow" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </div>
+            )}
         </>
     );
 
     if (links && links.length > 0) {
-        return <div style={cardStyle}>{content}</div>;
+        return <div style={{ ...cardStyle, ...extraStyle }}>{content}</div>;
     }
 
-    return <a style={cardStyle} href={href}>{content}</a>;
+    return <a style={{ ...cardStyle, ...extraStyle }} href={href} onClick={(e) => { e.preventDefault(); window.location.href = href; }}>{content}</a>;
 };
 
 {/*
@@ -186,8 +225,7 @@ export const ContentSwitcher = () => {
                 <div className="flex flex-col items-center lg:flex-row lg:justify-between lg:items-center mt-8 gap-4">
                     <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50">
                         {selected === 'goal' && 'Explore by goal'}
-                        {selected === 'usecase' && 'Explore by use case'}
-                        {selected === 'product' && 'Explore by product area'}
+                                                {selected === 'product' && 'Explore by product area'}
                     </h2>
                     <ButtonGroup
                         options={[
@@ -263,12 +301,10 @@ export const ContentSwitcher = () => {
 
             {showUsecase && (
                 <>
-                    {CONTENT_MODE === 'stacked' && (
-                        <div className="flex flex-col items-center lg:flex-row lg:justify-between lg:items-center mt-8 gap-4">
-                            <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50">Explore by use case</h2>
-                        </div>
-                    )}
-                    <div className="mt-6 grid sm:grid-cols-2 min-[1300px]:grid-cols-4 gap-x-6 gap-y-4">
+                    <FullWidthDivider style={{ margin: '40px 0 40px' }} />
+                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50 mb-0">Explore by use case</h2>
+                    <p className="text-sm text-gray-500 dark:text-zinc-500" style={{ marginBottom: "24px" }}>Discover how ClickHouse powers real-time analytics, observability, data warehousing, and agentic AI at any scale.</p>
+                    <div className="grid sm:grid-cols-2 min-[1300px]:grid-cols-4 gap-x-6 gap-y-4" style={{ marginTop: "24px" }}>
                         <HeroCard
                             filename="use-cases/rt-analytics-light.png"
                             darkFilename="use-cases/rt-analytics.png"
@@ -277,11 +313,10 @@ export const ContentSwitcher = () => {
                             href="/get-started/use_cases/real-time-analytics"
                         />
                         <HeroCard
-                            filename="use-cases/observability-light.png"
-                            darkFilename="use-cases/observability.png"
                             title="Observability"
                             description="Store and query logs, metrics and traces at scale using ClickStack, the open source observability stack powered by ClickHouse."
                             href="/clickstack/overview"
+                            showArrow
                         />
                         <HeroCard
                             filename="use-cases/data-warehousing-light.png"
@@ -303,23 +338,20 @@ export const ContentSwitcher = () => {
 
             {showProduct && (
                 <>
-                    {CONTENT_MODE === 'stacked' && (
-                        <div className="flex flex-col items-center lg:flex-row lg:justify-between lg:items-center mt-8 gap-4">
-                            <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50">Explore by product area</h2>
-                        </div>
-                    )}
                     <div className="mt-6 grid sm:grid-cols-2 min-[1300px]:grid-cols-4 gap-x-6 gap-y-4">
                         <HeroCard
                             filename="product-cloud-light.png"
                             title="ClickHouse Cloud"
                             description="Explore product docs for ClickHouse Cloud, a serverless offering that takes care of the details so you can spend more time getting insight from your data."
                             href="/products/cloud/getting-started/intro"
+                        showArrow
                         />
                         <HeroCard
                             filename="product-clickstack-light.png"
                             title="ClickStack"
                             description="Explore product docs for ClickStack, the all in one observability stack powered by ClickHouse, which gives you lightning-fast queries and powerful aggregations on logs, metrics, traces, session replays and errors with unmatched resource efficiency for even your highest-cardinality OTel data."
                             href="/clickstack/overview"
+                        showArrow
                         />
                         <HeroCard
                             filename="product-chdb-light.png"
@@ -344,6 +376,7 @@ export const ContentSwitcher = () => {
                             title="Agentic Data Stack"
                             description="The open-source stack for agentic analytics. Your chat, your models, your data. Powered by ClickHouse, LibreChat and Langfuse."
                             href="/products/agentic-data-stack/overview"
+                        showArrow
                         />
                     </div>
                 </>

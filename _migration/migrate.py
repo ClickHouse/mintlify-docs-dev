@@ -636,6 +636,26 @@ def _override_third_party_libraries_sidebar(text: str) -> str:
     )
 
 
+def _override_kapalink_ask_ai(text: str) -> str:
+    """Upstream embeds Docusaurus's globally-registered <KapaLink> component to
+    open the Kapa "Ask AI" widget. Mintlify has no such component, so the bare
+    tag is an undefined component that fails the page build. Rewrite it to a
+    button that opens Kapa's Ask AI via the global window.Kapa API, matching the
+    homepage's Ask AI entry point. Idempotent: the source always carries the
+    <KapaLink> tag, so each migration regenerates the same button."""
+    def repl(m: "re.Match") -> str:
+        label = (m.group(1) or "").strip() or "Ask AI"
+        return (
+            '<button type="button" onClick={() => { '
+            "if (typeof window !== 'undefined' && window.Kapa && "
+            "typeof window.Kapa.open === 'function') window.Kapa.open({ mode: 'ai' }); }} "
+            "style={{ background: 'none', border: 'none', padding: 0, "
+            "color: 'var(--primary)', cursor: 'pointer', font: 'inherit', "
+            "textDecoration: 'underline' }}>" + label + "</button>"
+        )
+    return re.sub(r"<KapaLink>(.*?)</KapaLink>", repl, text, flags=re.DOTALL)
+
+
 POST_TRANSFORM_OVERRIDES: dict[str, callable] = {
     "docs/sql-reference/data-types/newjson.md": _override_newjson,
     "docs/use-cases/AI_ML/MCP/03_librechat.md": _override_librechat,
@@ -653,6 +673,8 @@ POST_TRANSFORM_OVERRIDES: dict[str, callable] = {
     # etc.) are intentionally illustrative and not meant to resolve.
     "docs/development/developer-instruction.md": _override_strip_markers,
     "docs/interfaces/third-party/integrations.md": _override_third_party_libraries_sidebar,
+    # <KapaLink> is a Docusaurus-only component; rewrite to a Mintlify Ask AI button.
+    "docs/troubleshooting/index.md": _override_kapalink_ask_ai,
 }
 
 
