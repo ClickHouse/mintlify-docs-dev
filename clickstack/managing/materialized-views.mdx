@@ -14,7 +14,7 @@ import { Image } from "/snippets/components/Image.jsx";
 
 ## Introduction {#introduction}
 
-ClickStack can exploit [Incremental Materialized Views (IMV)](/core/concepts/features/materialized-views/incremental-materialized-view) to accelerate visualizations that rely on aggregation-heavy queries, such as computing average request duration per minute over time. This feature can dramatically improve query performance and is typically most beneficial for larger deployments, around 10 TB per day and above, while enabling scaling into the petabytes-per-day range. Incremental materialized views are in Beta and should be used with care.
+ClickStack can exploit [Incremental Materialized Views (IMV)](/concepts/features/materialized-views/incremental-materialized-view) to accelerate visualizations that rely on aggregation-heavy queries, such as computing average request duration per minute over time. This feature can dramatically improve query performance and is typically most beneficial for larger deployments, around 10 TB per day and above, while enabling scaling into the petabytes-per-day range. Incremental materialized views are in Beta and should be used with care.
 
 <Note>
 Alerts can also benefit from materialized views, and will exploit them automatically.
@@ -30,7 +30,7 @@ Unlike transactional databases such as Postgres, a ClickHouse materialized view 
 
 The primary motivation for using materialized views is that the data written to the target table represents the result of an aggregation, filtering, or transformation. In ClickStack, they're used exclusively for aggregations. These results are typically much smaller than the raw input data, often representing partial aggregation states. Combined with the simplicity of querying the pre-aggregated target table, this leads to substantially lower query latency compared to performing the same computation on raw data at query time.
 
-Materialized views in ClickHouse are updated continuously as data flows into the source table, behaving more like always-up-to-date indexes. This differs from many other databases, where materialized views are static snapshots that must be periodically refreshed, similar to ClickHouse [Refreshable Materialized Views](/core/concepts/features/materialized-views/refreshable-materialized-view).
+Materialized views in ClickHouse are updated continuously as data flows into the source table, behaving more like always-up-to-date indexes. This differs from many other databases, where materialized views are static snapshots that must be periodically refreshed, similar to ClickHouse [Refreshable Materialized Views](/concepts/features/materialized-views/refreshable-materialized-view).
 
 <Image img="/images/materialized-view/materialized-view-diagram.png" size="md" alt="Materialized view diagram"/>
 
@@ -51,7 +51,7 @@ A single materialized view can compute multiple metrics for different groupings,
 </Note>
 
 Before proceeding further, you're recommended to familiarize yourself with materialized views in ClickHouse in more depth.
-See our guide on [Incremental materialized views](/core/concepts/features/materialized-views/incremental-materialized-view) for additional details.
+See our guide on [Incremental materialized views](/concepts/features/materialized-views/incremental-materialized-view) for additional details.
 
 ## Selecting visualizations for acceleration {#selecting-visualizatons-for-acceleration}
 
@@ -78,14 +78,14 @@ These visualizations are often executed repeatedly across users and time ranges,
 Materialized views introduce additional work at insert time, so they should be created selectively and deliberately. Not every visualization benefits from pre-aggregation, and accelerating rarely used charts is usually not worth the overhead. You should keep the total number of materialized views below a maximum of 20.
 
 <Note>
-Prior to moving to production, always validate the resource overhead introduced by materialized views, particularly CPU usage, disk I/O, and [merge activity](/resources/support-center/tips-and-tricks/too-many-parts). Each materialized view increases insert-time work and contributes additional parts, so it's important to ensure merges can keep up and part counts remain stable. This can be monitored via [system tables](/core/reference/system-tables/tables) and the [built-in observability dashboard](/core/guides/oss/deployment-and-scaling/monitoring/monitoring#built-in-advanced-observability-dashboard) in open-source ClickHouse or using the built-in metrics and [monitoring dashboards in ClickHouse Cloud](/products/cloud/features/monitoring/advanced-dashboard). See [Too many parts](/resources/support-center/knowledge-base/troubleshooting/exception-too-many-parts) for guidance on diagnosing and mitigating excessive part counts.
+Prior to moving to production, always validate the resource overhead introduced by materialized views, particularly CPU usage, disk I/O, and [merge activity](/resources/support-center/tips-and-tricks/too-many-parts). Each materialized view increases insert-time work and contributes additional parts, so it's important to ensure merges can keep up and part counts remain stable. This can be monitored via [system tables](/reference/system-tables/tables) and the [built-in observability dashboard](/guides/oss/deployment-and-scaling/monitoring/monitoring#built-in-advanced-observability-dashboard) in open-source ClickHouse or using the built-in metrics and [monitoring dashboards in ClickHouse Cloud](/products/cloud/features/monitoring/advanced-dashboard). See [Too many parts](/resources/support-center/knowledge-base/troubleshooting/exception-too-many-parts) for guidance on diagnosing and mitigating excessive part counts.
 </Note>
 
 Once you have identified the visualizations that matter most, the next step is consolidation.
 
 ### Consolidate visualizations into shared views {#consolidate-visualizations-into-shared-views}
 
-All materialized views in ClickStack should group data by a time interval using functions such as [`toStartOfMinute`](/core/reference/functions/regular-functions/date-time-functions#toStartOfMinute). However, many visualizations also share additional grouping keys such as service name, span name, or status code. When multiple visualizations use the same grouping dimensions, they can often be served by a single materialized view.
+All materialized views in ClickStack should group data by a time interval using functions such as [`toStartOfMinute`](/reference/functions/regular-functions/date-time-functions#toStartOfMinute). However, many visualizations also share additional grouping keys such as service name, span name, or status code. When multiple visualizations use the same grouping dimensions, they can often be served by a single materialized view.
 
 For example (for traces):
 
@@ -116,12 +116,12 @@ Once you have identified a visualization, or set of visualizations, that you wan
 In cases where a debug panel isn't available inside HyperDX for a component, users can inspect the browser console, where all queries are logged.
 </Note>
 
-After consolidating the required queries, you should familiarize yourself with [**aggregate state functions**](/core/reference/data-types/aggregatefunction) in ClickHouse. Materialized views rely on these functions to shift computation from query time to insert time. Instead of storing final aggregated values, a materialized view computes and stores **intermediate aggregation states**, which are later merged and finalized at query time. These will typically be much smaller than the original table. These states have dedicated data types and must be explicitly represented in the schema of the target table.
+After consolidating the required queries, you should familiarize yourself with [**aggregate state functions**](/reference/data-types/aggregatefunction) in ClickHouse. Materialized views rely on these functions to shift computation from query time to insert time. Instead of storing final aggregated values, a materialized view computes and stores **intermediate aggregation states**, which are later merged and finalized at query time. These will typically be much smaller than the original table. These states have dedicated data types and must be explicitly represented in the schema of the target table.
 
 For reference, ClickHouse provides a detailed overview and examples of aggregate state functions, and the table engine used to store them - `AggregatingMergeTree` - in the documentation:
 
-- [Aggregate functions and states](/core/reference/functions/aggregate-functions)
-- [AggregatingMergeTree engine](/core/reference/engines/table-engines/mergetree-family/aggregatingmergetree)
+- [Aggregate functions and states](/reference/functions/aggregate-functions)
+- [AggregatingMergeTree engine](/reference/engines/table-engines/mergetree-family/aggregatingmergetree)
 
 You can see an example of how to use the AggregatingMergeTree and Aggregate functions in the video below:
 
@@ -192,7 +192,7 @@ GROUP BY
 
 This materialized view consists of two parts:
 
-1. The target table, which defines the schema and aggregate state types used to store intermediate results. The [AggregatingMergeTree](/core/reference/engines/table-engines/mergetree-family/aggregatingmergetree) engine is required to ensure these states are merged correctly in the background.
+1. The target table, which defines the schema and aggregate state types used to store intermediate results. The [AggregatingMergeTree](/reference/engines/table-engines/mergetree-family/aggregatingmergetree) engine is required to ensure these states are merged correctly in the background.
 2. The materialized view query is executed automatically on insert. Compared to the original query, it uses state functions such as `avgState` and `quantilesState` instead of final aggregation functions.
 
 The result is a compact table that stores per-minute aggregation states for each service name and status code. Its size grows predictably with time and cardinality, and after background merges, it represents the same result as running the original aggregation over the raw data. Querying this table is significantly cheaper than aggregating directly from the source traces table, enabling fast, consistent visualization performance at scale.
@@ -247,7 +247,7 @@ Specify the minimum date for which the materialized view contains data. This rep
 
 <Note>
 Materialized views are **not automatically backfilled** when they're created, so they will only contain rows generated from data inserted after creation.
-A full guide on backfilling materialized views can be found under ["Backfilling Data."](/core/guides/clickhouse/data-modelling/backfilling#scenario-2-adding-materialized-views-to-existing-tables)
+A full guide on backfilling materialized views can be found under ["Backfilling Data."](/guides/clickhouse/data-modelling/backfilling#scenario-2-adding-materialized-views-to-existing-tables)
 </Note>
 
 <Image img="/images/clickstack/materialized_views/select_min_time.png" size="lg" alt="Select Min Time"/>
@@ -300,7 +300,7 @@ These indicators make it easy to confirm whether a visualization is accelerated,
 
 ### How materialized views are selected for visualizations {#how-views-are-selected}
 
-When a visualization is executed, ClickStack may have multiple candidates available, including the base table, and multiple materialized views. To ensure optimal performance, ClickStack automatically evaluates and selects the most efficient option using ClickHouse's [`EXPLAIN ESTIMATE`](/core/reference/statements/explain#explain-estimate) mechanism.
+When a visualization is executed, ClickStack may have multiple candidates available, including the base table, and multiple materialized views. To ensure optimal performance, ClickStack automatically evaluates and selects the most efficient option using ClickHouse's [`EXPLAIN ESTIMATE`](/reference/statements/explain#explain-estimate) mechanism.
 
 The selection process follows a well-defined sequence:
 
@@ -317,7 +317,7 @@ The selection process follows a well-defined sequence:
    - Time bucketing is adjusted to align with the view's  granularity.
 
 3. **Select the best candidate**
-   If multiple compatible materialized views are available, ClickStack runs an [`EXPLAIN ESTIMATE`](/core/reference/statements/explain#explain-estimate) query for each candidate and compares the estimated number of rows and granules scanned. The view with the lowest estimated scan cost is selected.
+   If multiple compatible materialized views are available, ClickStack runs an [`EXPLAIN ESTIMATE`](/reference/statements/explain#explain-estimate) query for each candidate and compares the estimated number of rows and granules scanned. The view with the lowest estimated scan cost is selected.
 
 4. **Graceful fallback**
    If no materialized view is compatible, ClickStack automatically falls back to querying the source table.
@@ -335,7 +335,7 @@ Consider two materialized views created on the same trace source:
 
 The second view contains additional grouping keys and therefore produces more rows and scans more data.
 
-If a visualization requests **average duration per service over time**, both views are technically valid. ClickStack issues an [`EXPLAIN ESTIMATE`](/core/reference/statements/explain#explain-estimate) query for each candidate and compares the estimated granule counts i.e.:
+If a visualization requests **average duration per service over time**, both views are technically valid. ClickStack issues an [`EXPLAIN ESTIMATE`](/reference/statements/explain#explain-estimate) query for each candidate and compares the estimated granule counts i.e.:
 
 ```sql
 EXPLAIN ESTIMATE
@@ -410,7 +410,7 @@ In summary, backfilling is often not worth the cost and operational risk. It sho
 <Info>
 **Avoid POPULATE**
 
-Using the [POPULATE](/core/reference/statements/create/view#materialized-view) command isn't recommended for backfilling materialized views for anything other than small datasets where ingest is paused. This operator can miss rows inserted into its source table, with the materialized view created after the populate hash is finished. Furthermore, this populate runs against all data and is vulnerable to interruptions or memory limits on large datasets.
+Using the [POPULATE](/reference/statements/create/view#materialized-view) command isn't recommended for backfilling materialized views for anything other than small datasets where ingest is paused. This operator can miss rows inserted into its source table, with the materialized view created after the populate hash is finished. Furthermore, this populate runs against all data and is vulnerable to interruptions or memory limits on large datasets.
 </Info>
 
 Suppose you want to backfill a materialized view corresponding to the following aggregation, which computes per-minute metrics grouped by service name and status code:
@@ -507,7 +507,7 @@ This approach is appropriate when:
 - You want to tightly control CPU and memory consumption during backfill.
 - You need a more resilient process that can be restarted safely if interrupted.
 
-The key idea is to use a [**Null table**](/core/reference/engines/table-engines/special/null) as an ingestion buffer. While the Null table doesn't store data, any materialized views attached to it will still execute, allowing aggregation states to be computed incrementally as data flows through.
+The key idea is to use a [**Null table**](/reference/engines/table-engines/special/null) as an ingestion buffer. While the Null table doesn't store data, any materialized views attached to it will still execute, allowing aggregation states to be computed incrementally as data flows through.
 
 <Steps>
 <Step>
@@ -573,10 +573,10 @@ WHERE Timestamp < (
 Because the data is processed incrementally, memory usage remains bounded and predictable, closely resembling normal ingestion behavior.
 
 <Note>
-For additional safety, consider directing the backfill materialized view to a temporary target table (for example, `otel_traces_1m_v2`). Once the backfill completes successfully, [partitions can be moved](/core/reference/statements/alter/partition#move-partition-to-table) to the primary target table e.g. `ALTER TABLE otel_traces_1m_v2 MOVE PARTITION '2026-01-02' TO otel_traces_1m`. This allows for easy recovery if the backfill is interrupted or fails due to resource limits.
+For additional safety, consider directing the backfill materialized view to a temporary target table (for example, `otel_traces_1m_v2`). Once the backfill completes successfully, [partitions can be moved](/reference/statements/alter/partition#move-partition-to-table) to the primary target table e.g. `ALTER TABLE otel_traces_1m_v2 MOVE PARTITION '2026-01-02' TO otel_traces_1m`. This allows for easy recovery if the backfill is interrupted or fails due to resource limits.
 </Note>
 
-For further details on tuning this process, including improving insert performance and reducing and controlling resources, see ["Backfilling."](/core/guides/clickhouse/data-modelling/backfilling#tuning-performance--resources)
+For further details on tuning this process, including improving insert performance and reducing and controlling resources, see ["Backfilling."](/guides/clickhouse/data-modelling/backfilling#tuning-performance--resources)
 </Step>
 </Steps>
 

@@ -16,10 +16,15 @@
   // hides the chat toggle and the "Ask AI" card, so Inkeep does search only;
   // "Ask AI" is handled by Kapa (see kapa-init.js).
 
-  // TODO: Replace with your Inkeep integration API key (Inkeep dashboard →
-  // Projects → Integrations → API key). Until set, the modal opens but
-  // returns no results.
-  var INKEEP_API_KEY = 'INKEEP_API_KEY';
+  // Inkeep integration API keys. These are client-side/public keys (they ship
+  // in the browser bundle), so committing them is expected. Staging covers any
+  // *.mintlify.app host (preview/staging deploys); every other host (localhost,
+  // mint dev, a future prod domain) uses the local-dev key.
+  var INKEEP_API_KEY_STAGING = 'd3e2792740610240ff7bcf2c2a78a33012812eb4f3e34d54';
+  var INKEEP_API_KEY_LOCAL = 'b25e5cf856ec9da60d250578b59dace8417359feeedcbc6b';
+  var INKEEP_API_KEY = /\.mintlify\.app$/.test(window.location.hostname)
+    ? INKEEP_API_KEY_STAGING
+    : INKEEP_API_KEY_LOCAL;
 
   // cxkit-mintlify CDN bundle. @0.5 resolves to the latest 0.5.x; pin a full
   // version (e.g. @0.5.119) when deploying for reproducible builds.
@@ -89,6 +94,11 @@
               key: 'hide-inkeep-ai-chat',
               type: 'style',
               value: '.ikp-view_toggle, .ikp-ai-ask-ai-trigger { display: none !important; }',
+            },
+            {
+              key: 'dark-search-overlay',
+              type: 'style',
+              value: '.dark\\:bg-overlay-dark { background-color: rgba(0, 0, 0, 0.75) !important; }',
             },
           ],
         },

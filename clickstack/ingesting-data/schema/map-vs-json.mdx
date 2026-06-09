@@ -9,7 +9,7 @@ keywords: ['clickstack', 'json', 'map', 'attributes', 'schema', 'observability']
 
 import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
 
-ClickStack's [default schema](/clickstack/ingesting-data/schemas) stores resource, scope, log, and span attributes as `Map(LowCardinality(String), String)` columns. ClickHouse also supports a strongly typed [`JSON` type](/core/reference/formats/JSON/JSON), and ClickStack has beta support for using it in place of `Map`.
+ClickStack's [default schema](/clickstack/ingesting-data/schemas) stores resource, scope, log, and span attributes as `Map(LowCardinality(String), String)` columns. ClickHouse also supports a strongly typed [`JSON` type](/reference/formats/JSON/JSON), and ClickStack has beta support for using it in place of `Map`.
 
 **For typical observability workloads we recommend keeping the [default `Map`-based schema](/clickstack/ingesting-data/schemas).** The JSON type is available for users who want to evaluate it on workloads with a small, stable set of attribute keys, but it isn't the recommended schema for general use.
 
@@ -17,7 +17,7 @@ ClickStack's [default schema](/clickstack/ingesting-data/schemas) stores resourc
 
 Observability data is dominated by attributes such as resource attributes, scope attributes, and span and log attributes. These sets are typically large, high-cardinality, and ingested at high throughput. The schema you pick for those attributes is the dominant factor in ingest cost and storage layout.
 
-`Map(LowCardinality(String), String)` stores keys and values as a single structure. The historical disadvantage of `Map` was that reading a single key required reading the entire map column. That's no longer true: ClickHouse now supports [bucketed map serialization](/core/reference/data-types/map#bucketed-map-serialization), which splits the map into buckets so queries only read the buckets they need. Combined with [text indexes](/core/reference/engines/table-engines/mergetree-family/textindexes) on map keys and values, which is how [ClickStack's default schema](/clickstack/ingesting-data/schemas) is configured, this makes `Map` selective and fast at read time without paying any ingest penalty for new keys.
+`Map(LowCardinality(String), String)` stores keys and values as a single structure. The historical disadvantage of `Map` was that reading a single key required reading the entire map column. That's no longer true: ClickHouse now supports [bucketed map serialization](/reference/data-types/map#bucketed-map-serialization), which splits the map into buckets so queries only read the buckets they need. Combined with [text indexes](/reference/engines/table-engines/mergetree-family/textindexes) on map keys and values, which is how [ClickStack's default schema](/clickstack/ingesting-data/schemas) is configured, this makes `Map` selective and fast at read time without paying any ingest penalty for new keys.
 
 In practice this means:
 
@@ -30,7 +30,7 @@ In practice this means:
 
 The `JSON` type takes a different approach: at insert time, ClickHouse dynamically creates a dedicated, strongly typed subcolumn for each path it sees. At read time this is attractive, since only the requested subcolumns are read, types are preserved, and no query-time casting is needed.
 
-The tradeoff lands at ingest time. Creating and managing many dynamic subcolumns introduces write-time overhead and metadata complexity. On observability workloads, which routinely have very large or highly dynamic attribute sets and high ingest throughput, that overhead is significant. The [`max_dynamic_paths`](/core/reference/data-types/newjson#reading-json-paths-as-sub-columns) limit can cap the damage by spilling extra paths into a shared column, but accessing the shared column is slower than dedicated subcolumns, which erodes the read-time advantage that motivated using JSON in the first place.
+The tradeoff lands at ingest time. Creating and managing many dynamic subcolumns introduces write-time overhead and metadata complexity. On observability workloads, which routinely have very large or highly dynamic attribute sets and high ingest throughput, that overhead is significant. The [`max_dynamic_paths`](/reference/data-types/newjson#reading-json-paths-as-sub-columns) limit can cap the damage by spilling extra paths into a shared column, but accessing the shared column is slower than dedicated subcolumns, which erodes the read-time advantage that motivated using JSON in the first place.
 
 With bucketed map serialization removing most of the historical read-time overhead of `Map`, the read-time advantage of `JSON` no longer outweighs its ingest-time cost for typical observability workloads.
 
@@ -91,7 +91,7 @@ docker run -e OTEL_AGENT_FEATURE_GATE_ARG='--feature-gates=clickhouse.json' -e O
 <Warning>
 **Backwards compatibility**
 
-The [JSON type](/core/reference/formats/JSON/JSON) is **not backwards compatible** with existing map-based schemas. Enabling this feature creates new tables using the `JSON` type and requires manual data migration.
+The [JSON type](/reference/formats/JSON/JSON) is **not backwards compatible** with existing map-based schemas. Enabling this feature creates new tables using the `JSON` type and requires manual data migration.
 </Warning>
 
 To migrate from the [default Map-based schemas](/clickstack/ingesting-data/schemas), follow these steps:
