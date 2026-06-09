@@ -43,36 +43,10 @@ export const ButtonGroup = ({options = [], selected, onClick, fillWidth = false,
     );
 }
 
-export const FullWidthDivider = ({ style }) => {
-    const ref = useRef(null);
-    useEffect(() => {
-        if (!ref.current) return;
-        const el = ref.current;
-        const update = () => {
-            requestAnimationFrame(() => {
-                el.style.marginLeft = '';
-                el.style.width = '';
-                const elRect = el.getBoundingClientRect();
-                const sidebar = document.getElementById('sidebar');
-                const sidebarRect = sidebar?.getBoundingClientRect();
-                const leftEdge = (sidebarRect && sidebarRect.width > 0) ? sidebarRect.right : 0;
-                const rightEdge = document.documentElement.clientWidth;
-                const ml = Math.max(0, elRect.left - leftEdge);
-                const mr = Math.max(0, rightEdge - elRect.right);
-                el.style.marginLeft = `-${ml}px`;
-                el.style.width = `calc(100% + ${ml + mr}px)`;
-            });
-        };
-        update();
-        window.addEventListener('resize', update);
-        return () => window.removeEventListener('resize', update);
-    }, []);
-    return <hr ref={ref} className="ch-usecase-divider" style={{ border: 'none', ...style }} />;
-};
-
-export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, body, href, links, icon, showArrow, arrowBottom, extraStyle }) => {
+export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, href, links, icon }) => {
     const darkFilename = darkFilenameProp || (filename ? filename.replace('-light.', '-dark.') : null);
-    const cardClassName = `ch-hero-card ${arrowBottom ? 'flex flex-col' : 'block'} p-4 rounded-lg no-underline bg-[#f9f9f9] border border-[#e5e7eb]`;
+
+    const cardClassName = "ch-hero-card block p-4 rounded-lg no-underline bg-[#f9f9f9] border border-[#e5e7eb]";
 
     const content = (
         <>
@@ -80,7 +54,7 @@ export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, desc
                 <div style={{ marginBottom: '24px' }}>
                     {icon}
                 </div>
-            ) : filename ? (
+            ) : (
                 <>
                     <img
                         src={`/images/${filename}`}
@@ -108,28 +82,26 @@ export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, desc
                         }}
                     />
                 </>
-            ) : null}
+            )}
             <h3 className="text-[#111827] dark:text-white" style={{
-                marginTop: (icon || !filename) ? '0' : '20px',
+                marginTop: icon ? '0' : '20px',
                 fontSize: '18px',
                 fontWeight: '600',
                 lineHeight: '1.3'
             }}>
                 {title}
             </h3>
-            {body ? body : (
-                <span className="text-[#6b7280] dark:text-[#a1a1aa]" style={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    marginTop: '8px',
-                    fontSize: '14px',
-                    fontWeight: '400',
-                    lineHeight: '1.5',
-                    height: '42px'
-                }}>{description}</span>
-            )}
+            <span className="text-[#6b7280] dark:text-[#a1a1aa]" style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                marginTop: '8px',
+                fontSize: '14px',
+                fontWeight: '400',
+                lineHeight: '1.5',
+                height: '42px'
+            }}>{description}</span>
             {links && links.length > 0 && (
                 <ul style={{ marginTop: '24px', listStyle: 'none', padding: 0 }}>
                     {links.map((link, index) => (
@@ -149,24 +121,14 @@ export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, desc
                     ))}
                 </ul>
             )}
-            {showArrow && (
-                <>
-                    {arrowBottom && <div style={{ flex: 1 }} />}
-                    <div className="ch-usecase-arrow" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </div>
-                </>
-            )}
         </>
     );
 
     if (links && links.length > 0) {
-        return <div className={cardClassName} style={{ color: 'inherit', ...extraStyle }}>{content}</div>;
+        return <div className={cardClassName} style={{ color: 'inherit' }}>{content}</div>;
     }
 
-    return <a className={cardClassName} href={href} style={{ color: 'inherit', ...extraStyle }} onClick={(e) => { e.preventDefault(); window.location.href = href; }}>{content}</a>;
+    return <a className={cardClassName} href={href} style={{ color: 'inherit' }} onClick={(e) => { e.preventDefault(); window.location.href = href; }}>{content}</a>;
 };
 
 
@@ -271,7 +233,7 @@ export const ContentSwitcher = () => {
                 <div className="flex flex-col items-center lg:flex-row lg:justify-between lg:items-center mt-8 gap-4">
                     <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50">
                         {selected === 'goal' && 'Explore by goal'}
-
+                        {selected === 'usecase' && 'Explore by use case'}
                         {selected === 'product' && 'Explore by product area'}
                     </h2>
                     <ButtonGroup
@@ -365,126 +327,103 @@ export const ContentSwitcher = () => {
 
             {showUsecase && (
                 <>
-                    <FullWidthDivider style={{ margin: '40px 0 40px' }} />
-                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50 mb-0">Explore by use case</h2>
-                    <p className="text-sm text-gray-500 dark:text-zinc-500" style={{ marginBottom: '24px' }}>Discover how ClickHouse powers real-time analytics, observability, data warehousing, and agentic AI at any scale.</p>
-                    <div className="grid sm:grid-cols-2 min-[1300px]:grid-cols-4 gap-x-6 gap-y-4" style={{ marginTop: '24px' }}>
+                    {CONTENT_MODE === 'stacked' && (
+                        <div className="flex flex-col items-center lg:flex-row lg:justify-between lg:items-center mt-8 gap-4">
+                            <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50">Explore by use case</h2>
+                        </div>
+                    )}
+                    <div className="mt-6 grid sm:grid-cols-2 min-[1300px]:grid-cols-4 gap-x-6 gap-y-4">
                         <HeroCard
+                            filename="use-cases/rt-analytics-light.png"
+                            darkFilename="use-cases/rt-analytics.png"
                             title="Real-time analytics"
                             description="Deliver instant insights and dashboards at scale. Analyze billions of rows in real time with millisecond results."
                             href="/get-started/use-cases/real-time-analytics"
-                            showArrow
                         />
                         <HeroCard
+                            filename="use-cases/observability-light.png"
+                            darkFilename="use-cases/observability.png"
                             title="Observability"
                             description="Store and query logs, metrics and traces at scale using ClickStack, the open source observability stack powered by ClickHouse."
                             href="/clickstack/overview"
-                            showArrow
                         />
                         <HeroCard
+                            filename="use-cases/data-warehousing-light.png"
+                            darkFilename="use-cases/data-warehousing.png"
                             title="Data warehousing"
                             description="Analyze and explore data instantly for insights and apps. Scale faster by offloading heavy workloads."
                             href="/get-started/use-cases/data-warehousing"
-                            showArrow
                         />
                         <HeroCard
+                            filename="use-cases/machine-learning-light.png"
+                            darkFilename="use-cases/machine-learning.png"
                             title="Agentic analytics"
                             description="Let AI agents query your real-time data directly to deliver instant, conversational insights and visualizations"
                             href="/get-started/use-cases/agentic-analytics"
-                            showArrow
                         />
                     </div>
-                    <FullWidthDivider style={{ margin: '40px 0 40px' }} />
                 </>
             )}
 
             {showProduct && (
                 <>
-                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50 mb-0">Explore by product</h2>
-                    <p className="text-sm text-gray-500 dark:text-zinc-500" style={{ marginBottom: '24px' }}>Browse ClickHouse products and integrations, from the managed cloud service to open source projects.</p>
-                    <div className="space-y-4" style={{ marginTop: '24px' }}>
-                        {/* Row 1: ClickHouse Cloud (col-span-2) + 3 stacked cards (col-span-1) */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ alignItems: 'stretch' }}>
-                            <div style={{ gridColumn: 'span 2' }}>
-                                <HeroCard
-                                    filename="product-cloud-light.png"
-                                    title="ClickHouse Cloud"
-                                    href="/products/cloud/getting-started/intro"
-                                    extraStyle={{ height: '100%' }}
-                                    body={<>
-                                        <p className="text-[#6b7280] dark:text-[#a1a1aa]" style={{ marginTop: '8px', fontSize: '14px', lineHeight: '1.6' }}>
-                                            This section shows how ClickHouse makes data warehousing fast, simple, and predictable. Instead of wrestling with fragile pipelines and slow query engines, you centralize data from your apps, services, and tools in minutes, not weeks. From there, you can power real-time dashboards, trigger alerts, analyze historical trends, and build event-driven products on top of the same platform.
-                                        </p>
-                                    </>}
-                                    links={[
-                                        { label: "How to ingest data from common sources with minimal work", href: "/integrations" },
-                                        { label: "Best practices for organizing data for analytics and growth", href: "/data-modeling/schema-design" },
-                                        { label: "Ways to query large datasets in real time", href: "/get-started/use-cases/real-time-analytics" },
-                                        { label: "How to build dashboards, alerts, and event-driven features on top", href: "/get-started/use-cases/data-warehousing" },
-                                        { label: "Tips to keep costs low while performance stays high", href: "/operations/best-practices" },
-                                    ]}
-                                />
-                            </div>
-                            <div className="flex flex-col gap-4">
-                                <HeroCard
-                                    title="ClickStack"
-                                    description="The all in one observability stack powered by ClickHouse, which gives you lightning-fast queries and powerful aggregations on logs, metrics, traces, session replays and errors."
-                                    href="/clickstack/overview"
-                                    extraStyle={{ flex: 1 }}
-                                    showArrow
-                                    arrowBottom
-                                />
-                                <HeroCard
-                                    title="Managed Postgres"
-                                    description="Fast, scalable, enterprise-grade Postgres service, natively integrated with ClickHouse. Easily combine Postgres for transactions and ClickHouse for analytics."
-                                    href="/products/managed-postgres/overview"
-                                    extraStyle={{ flex: 1 }}
-                                    showArrow
-                                    arrowBottom
-                                />
-                                <HeroCard
-                                    title="chDB"
-                                    description="A fast, reliable, and scalable in-process database. Experience the power of ClickHouse, in-process."
-                                    href="/products/chdb"
-                                    extraStyle={{ flex: 1 }}
-                                    showArrow
-                                    arrowBottom
-                                />
-                            </div>
+                    {CONTENT_MODE === 'stacked' && (
+                        <div className="flex flex-col items-center lg:flex-row lg:justify-between lg:items-center mt-8 gap-4">
+                            <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50">Explore by product area</h2>
                         </div>
-                        {/* Row 2: 3 equal cards */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                            <HeroCard
-                                filename="product-langfuse-light.png"
-                                title="LangFuse"
-                                description="Open-source LLM engineering platform for observability, metrics, evaluations, and prompt management."
-                                href="https://langfuse.com/docs"
-                                showArrow
-                            />
-                            <HeroCard
-                                filename="product-cloud-light.png"
-                                title="Kubernetes Operator"
-                                description="Automates deploying, configuring, and managing ClickHouse and ClickHouse Keeper clusters on Kubernetes."
-                                href="/products/kubernetes-operator/overview"
-                                showArrow
-                            />
-                            <HeroCard
-                                filename="product-chdb-light.png"
-                                title="chDB"
-                                description="A fast, reliable, and scalable in-process database. Experience the power of ClickHouse, in-process."
-                                href="/products/chdb"
-                                showArrow
-                            />
-                        </div>
+                    )}
+                    <div className="mt-6 grid sm:grid-cols-2 min-[1300px]:grid-cols-3 gap-x-6 gap-y-4">
+                        <HeroCard
+                            filename="product-cloud-light.png"
+                            title="ClickHouse Cloud"
+                            description="A serverless offering that takes care of the details so you can spend more time getting insight from your data."
+                            href="/products/cloud/getting-started/intro"
+                        />
+                        <HeroCard
+                            filename="product-clickstack-light.png"
+                            title="ClickStack"
+                            description="The all in one observability stack powered by ClickHouse, which gives you lightning-fast queries and powerful aggregations on logs, metrics, traces, session replays and errors."
+                            href="/clickstack/overview"
+                        />
+                        <HeroCard
+                            filename="product-postgres-light.png"
+                            darkFilename="product-postgres-dark.png"
+                            title="Managed Postgres"
+                            description="Fast, scalable, enterprise-grade Postgres service, natively integrated with ClickHouse. Easily combine Postgres for transactions and ClickHouse for analytics."
+                            href="/products/managed-postgres/overview"
+                        />
+                        <HeroCard
+                            filename="product-agentic-analytics-light.png"
+                            title="Agentic Data Stack"
+                            description="The open-source stack for agentic analytics. Your chat, your models, your data. Powered by ClickHouse, LibreChat and Langfuse."
+                            href="/products/agentic-data-stack/overview"
+                        />
+                        <HeroCard
+                            filename="product-langfuse-light.png"
+                            title="LangFuse"
+                            description="Open-source LLM engineering platform for observability, metrics, evaluations, and prompt management."
+                            href="https://langfuse.com/docs"
+                        />
+                        <HeroCard
+                            filename="product-chdb-light.png"
+                            title="chDB"
+                            description="A fast, reliable, and scalable in-process database. Experience the power of ClickHouse, in-process."
+                            href="/products/chdb"
+                        />
+                        <HeroCard
+                            filename="product-cloud-light.png"
+                            title="Kubernetes Operator"
+                            description="Automates deploying, configuring, and managing ClickHouse and ClickHouse Keeper clusters on Kubernetes."
+                            href="/products/kubernetes-operator/overview"
+                        />
                     </div>
-                    <FullWidthDivider style={{ margin: '40px 0 0' }} />
                 </>
             )}
 
-            <div id="mcp-setup" style={{ marginTop: '64px', scrollMarginTop: '80px' }}>
-                <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50 mb-0">Set up docs MCP server</h2>
-                <p className="text-sm text-gray-500 dark:text-zinc-500" style={{ marginBottom: '24px' }}>Query the ClickHouse documentation directly from your AI tools using the Model Context Protocol.</p>
-                <div style={{ marginTop: '24px' }}><McpSetup /></div>
+            <div id="mcp-setup" style={{ marginTop: '64px', paddingTop: '40px', borderTop: '1px solid rgba(255,255,255,0.08)', scrollMarginTop: '80px' }}>
+                <h2 className="text-2xl font-semibold text-gray-900 dark:text-zinc-50 mb-2">Set up docs MCP server</h2>
+                <p className="text-sm text-gray-500 dark:text-zinc-500 mb-6">Query the ClickHouse documentation directly from your AI tools using the Model Context Protocol.</p>
+                <McpSetup />
             </div>
         </>
     );
