@@ -1,6 +1,6 @@
 ---
-title: 'Diseño de esquemas'
-description: 'Diseño de un esquema para la observabilidad'
+title: Diseño de un esquema para observabilidad
+description: 'Diseño de un esquema para observabilidad'
 keywords: ['observabilidad', 'logs', 'trazas', 'métricas', 'OpenTelemetry', 'Grafana', 'OTel']
 slug: /use-cases/observability/schema-design
 show_related_blogs: true
@@ -9,15 +9,11 @@ doc_type: 'guide'
 
 import { Image } from "/snippets/components/Image.jsx";
 
-<div id="designing-a-schema-for-observability">
-  # Diseño de un esquema para observabilidad
-</div>
-
 Recomendamos que los usuarios creen siempre su propio esquema para logs y trazas por las siguientes razones:
 
 * **Elegir una clave primaria** - Los esquemas predeterminados usan un `ORDER BY` optimizado para patrones de acceso específicos. Es poco probable que tus patrones de acceso coincidan con ellos.
 * **Extraer estructura** - Puede que quieras extraer columnas nuevas a partir de columnas existentes, por ejemplo, la columna `Body`. Esto puede hacerse con columnas materializadas (y vistas materializadas en casos más complejos). Esto requiere cambios en el esquema.
-* **Optimizar mapas** - Los esquemas predeterminados usan el tipo Map para almacenar atributos. Estas columnas permiten almacenar metadatos arbitrarios. Aunque es una capacidad esencial, ya que los metadatos de los eventos a menudo no se definen de antemano y, por lo tanto, no pueden almacenarse de otro modo en una base de datos de tipado fuerte como ClickHouse, acceder a las claves de mapa y a sus valores no es tan eficiente como acceder a una columna normal. Esto se soluciona modificando el esquema y asegurando que las claves de mapa a las que se accede con más frecuencia sean columnas de nivel superior; consulta [&quot;Extraer estructura con SQL&quot;](#extracting-structure-with-sql). Esto requiere un cambio en el esquema.
+* **Optimizar mapas** - Los esquemas predeterminados usan el tipo Map para almacenar atributos. Estas columnas permiten almacenar metadatos arbitrarios. Aunque es una capacidad esencial, ya que los metadatos de los eventos a menudo no se definen de antemano y, por lo tanto, no pueden almacenarse de otro modo en una base de datos de tipado fuerte como ClickHouse, acceder a las claves de mapa y a sus valores no es tan eficiente como acceder a una columna normal. Esto se soluciona modificando el esquema y asegurando que las claves de mapa a las que se accede con más frecuencia sean columnas de nivel superior; consulta [&quot;extracción de estructura con SQL&quot;](#extracting-structure-with-sql). Esto requiere un cambio en el esquema.
 * **Simplificar el acceso a las claves de mapa** - Acceder a claves en mapas requiere una sintaxis más verbosa. Esto puede mitigarse con alias. Consulta [&quot;Usar alias&quot;](#using-aliases) para simplificar las consultas.
 * **Índices secundarios** - El esquema predeterminado usa índices secundarios para acelerar el acceso a Map y las consultas de texto. Normalmente no son necesarios y ocupan espacio adicional en disco. Pueden usarse, pero conviene probarlos para confirmar que realmente son necesarios. Consulta [&quot;Índices secundarios / de omisión de datos&quot;](#secondarydata-skipping-indices).
 * **Usar códecs** - Puede que quieras personalizar los códecs de las columnas si se ajustan a los datos previstos y tienes pruebas de que mejoran la compresión.
