@@ -1,0 +1,48 @@
+---
+title: 'Privilegio BYOC'
+slug: /cloud/reference/byoc/reference/privilege
+sidebarTitle: 'Privilegio'
+keywords: ['BYOC', 'nube', 'bring your own cloud', 'privilegio']
+description: 'Despliegue ClickHouse en su propia infraestructura en la nube'
+doc_type: 'referencia'
+---
+
+<div id="aws-iam-roles">
+  ## Roles de IAM de AWS
+</div>
+
+<div id="bootstrap-iam-role">
+  ### Rol de IAM Bootstrap
+</div>
+
+El rol de IAM Bootstrap tiene los siguientes permisos:
+
+* **Operaciones de EC2 y VPC**: Necesarias para configurar la VPC y los clústeres de EKS.
+* **Operaciones de S3 (por ejemplo, `s3:CreateBucket`)**: Necesarias para crear buckets para el almacenamiento BYOC de ClickHouse.
+* **Operaciones de IAM (por ejemplo, `iam:CreatePolicy`)**: Necesarias para que los controladores puedan crear roles adicionales (consulta la siguiente sección para obtener más detalles).
+* **Operaciones de EKS**: Limitadas a recursos con nombres que comienzan con el prefijo `clickhouse-cloud`.
+
+<div id="additional-iam-roles-created-by-the-controller">
+  ### Roles de IAM adicionales creados por el controlador
+</div>
+
+Además de `ClickHouseManagementRole`, creado mediante CloudFormation, el controlador creará varios roles adicionales.
+
+Estos roles los asumen aplicaciones que se ejecutan dentro del clúster de EKS del cliente:
+
+* **Rol de State Exporter**
+  * Componente de ClickHouse que informa sobre el estado de salud del servicio a ClickHouse Cloud.
+  * Requiere permiso para escribir en una cola de SQS propiedad de ClickHouse Cloud.
+* **Load-Balancer Controller**
+  * Controlador estándar de balanceador de carga de AWS.
+  * Controlador EBS CSI para gestionar volúmenes de los servicios de ClickHouse.
+* **External-DNS**
+  * Propaga configuraciones de DNS a Route 53.
+* **cert-manager**
+  * Aprovisiona certificados TLS para dominios de servicio de BYOC.
+* **Cluster Autoscaler**
+  * Ajusta el tamaño del grupo de nodos según sea necesario.
+
+Los roles **K8s-control-plane** y **k8s-worker** están pensados para que los asuman los servicios de AWS EKS.
+
+Por último, **`data-plane-mgmt`** permite que un componente del control plane de ClickHouse Cloud reconcilie los Custom resources necesarios, como `ClickHouseCluster` y el Istio Virtual Service/Gateway.

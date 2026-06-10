@@ -1,0 +1,433 @@
+---
+hidden: true
+title: "ClickHouse Government"
+slug: "docs/products/clickhouse-private/government"
+sidebarTitle: "Government"
+---
+
+<div id="prerequisites">
+  ### 前置条件
+</div>
+
+* 必须已按照 [ClickHouse Private AWS Technical Setup Guide](/zh/products/clickhouse-private/deployment/aws) 完成 AWS 资源设置 (不要执行 Kubernetes Resources 部分) ，并注意以下 FIPS 相关事项：
+  * 使用 FIPS 时，**此处创建的 S3 bucket 名称不能包含任何句点** (`.`) ，因为 S3 FIPS 端点要求使用 virtual-host-style，而 bucket 名称包含句点时将无法正常工作。
+* 使用以下版本标签：
+  * clickhouse-server
+    * `<<SERVER_TAG>>-fips`
+  * clickhouse-keeper
+    * `<<KEEPER_TAG>>`
+  * clickhouse-operator
+    * `main-<<OPERATOR_TAG>>`
+  * helm/clickhouse-operator-helm
+    * `<<OPERATOR_TAG>>`
+  * helm/onprem-clickhouse-cluster
+    * `<<CR_HELM_TAG>>`
+
+<div id="setup-tasks">
+  ### 设置任务
+</div>
+
+* [创建证书](#creating-certificates-with-openssl)，用于以下项目：
+  * 证书颁发机构 (如适用，例如使用自签名时)
+    * 名称：`ca.crt`
+  * 证书：
+    * 证书要求：
+      * 证书必须由上面创建的证书颁发机构或您现有的证书颁发机构签名。如果使用现有证书颁发机构，您必须能够访问该证书以进行安装。
+      * 如果需要满足 FIPS 合规要求，则必须使用符合 FIPS 要求的算法和环境来创建证书
+      * 您需要能够访问公钥 (证书) 和私钥
+      * 主题备用名称 (SAN) 必须包含以下条目：
+        * `*.c-${CLUSTER_NAME}-{server|keeper}-headless.ns-${CLUSTER_NAME}.svc.cluster.local` - 集群中的组件将使用此 DNS 域名彼此通信。如果您的 Kubernetes 使用不同的域名 (`.cluster.local`) ，请将其替换为您的 Kubernetes 域名
+          * `${CLUSTER_NAME}` 是您要创建的集群名称
+          * `{server|keeper}` 表示此处应根据证书安装在 `clickhouse-server` 还是 `clickhouse-keeper` 中，分别使用 `server` 或 `keeper`
+          * 集群名称为 `default-xx-01` 的示例：
+            * Server：`*.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local`
+            * Keeper：`*.c-default-xx-01-keeper-headless.ns-default-xx-01.svc.cluster.local`
+    * 要创建的证书：
+      * 一个用于连接到 clickhouse-server
+        * 私钥名称：`server.key`
+        * 公钥名称：`server.crt`
+      * 一个用于从 clickhouse-server 发起连接 (例如连接到 clickhouse-keeper 和其他 HTTPS 源，如字典)
+        * 私钥名称：`client.key`
+        * 公钥名称：`client.crt`
+      * 一个用于连接到 clickhouse-keeper
+        * 私钥名称：`keeper.key`
+        * 公钥名称：`keeper.crt`
+* [安装 VolumeSnapshot CRD](/zh/products/clickhouse-private/deployment/aws#install-volumesnapshot-crds)
+* 如果您不想使用自定义或现有的 StorageClass，请[通过 Helm 图表安装 StorageClass](/zh/products/clickhouse-private/deployment/aws#install-storageclass-via-helm)
+* [通过 Helm 图表安装 operator](#install-operator-via-helm)
+* [根据生成的证书创建 Kubernetes secrets](#create-kubernetes-certificate-secrets)
+* [创建 clickhousecluster 自定义资源](#clickhousecluster-cr)
+  * [访问集群并验证安装](#install-validation)
+
+<div id="technical-details">
+  ### 技术细节
+</div>
+
+<div id="creating-certificates-with-openssl">
+  #### 使用 OpenSSL 创建证书
+</div>
+
+以下说明如何使用 OpenSSL 创建自签名证书。在生产环境中使用此方法之前，请务必确认这种证书创建和签名方式符合您的安全策略。继续之前，您必须先[选择一个集群名称](/zh/products/clickhouse-private/deployment/aws#naming-your-clickhouse-cluster)，并且后续在[创建集群](#clickhousecluster-cr)时必须使用该名称。**为每个正在预配的 ClickHouse 集群都必须创建一组唯一的证书 (CA 证书除外)&#x20;**。
+
+这里假设您需要符合 FIPS 标准的证书，并且已安装 docker，且能够访问 redhat 的 Docker 镜像仓库。成功后，这将生成一个可用于签名和证书验证的证书颁发机构，以及三组证书 (分别用于 clickhouse-keeper、clickhouse-server 和 clickhouse-server 客户端) 。您需要保留每个目录 (`ca/`、`server/`、`keeper/` 和 `client/`) 中的 `*.crt` (证书/公钥) 文件和 `*.key` (私钥) 文件。
+
+如果您有自己的证书颁发机构用于签名，可以从脚本中去掉 CA 证书的生成步骤，并将您自己的 CA 证书挂载到 Docker 镜像中以供签名使用。在本设置指南后续提到 `ca.crt` 的步骤中 (例如创建 Kubernetes secrets 时) ，请使用该 CA 证书的副本。
+
+请注意，下面生成的证书会在 365 天后过期。请根据您的安全要求进行调整，并务必设置提醒，以便在证书过期前重新生成。
+
+```
+# 根据需要更新以下变量：
+
+CLUSTER_NAME=default-xx-01
+KUBERNETES_DOMAIN=cluster.local
+COUNTRY=US
+STATE=YourState
+CITY=YourCity
+ORG=YourOrganization
+ORG_UNIT=YourOrganizationalUnit
+CN=YourRootCA
+
+docker run -it --rm \
+  -v $(pwd):/certs \
+  registry.access.redhat.com/ubi8/ubi \
+  /bin/bash -c "
+    set -e
+
+    # 安装所需软件包
+    dnf -y install openssl crypto-policies-scripts
+
+    # 启用 FIPS 模式
+    fips-mode-setup --enable
+
+    # 在挂载卷中创建目录结构
+    mkdir -p /certs/{ca,server,keeper,client}
+
+    # 生成 CA 证书
+    cd /certs/ca
+    openssl genrsa -out ca.key 3072
+
+    cat > ca.cnf << EOF
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = v3_ca
+prompt             = no
+
+[ req_distinguished_name ]
+C  = ${COUNTRY}
+ST = ${STATE}
+L  = ${CITY}
+O  = ${ORG}
+OU = ${ORG_UNIT}
+CN = ${CN}
+
+[ v3_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+EOF
+
+    openssl req -new -x509 -days 3650 -key ca.key -out ca.crt -config ca.cnf
+
+    # 生成服务器证书
+    cd /certs/server
+
+    cat > server.cnf << EOF
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+prompt             = no
+
+[ req_distinguished_name ]
+C  = ${COUNTRY}
+ST = ${STATE}
+L  = ${CITY}
+O  = ${ORG}
+OU = ${ORG_UNIT}
+CN = clickhouse-server
+
+[ v3_req ]
+subjectKeyIdentifier = hash
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = *.c-${CLUSTER_NAME}-server-headless.ns-${CLUSTER_NAME}.svc.${KUBERNETES_DOMAIN}
+EOF
+
+    openssl genrsa -out server.key 3072
+    openssl req -new -key server.key -out server.csr -config server.cnf
+    openssl x509 -req -days 365 -in server.csr -CA /certs/ca/ca.crt -CAkey /certs/ca/ca.key \
+      -CAcreateserial -out server.crt -extensions v3_req -extfile server.cnf
+
+    # 生成 Keeper 证书
+    cd /certs/keeper
+
+    cat > keeper.cnf << EOF
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+prompt             = no
+
+[ req_distinguished_name ]
+C  = ${COUNTRY}
+ST = ${STATE}
+L  = ${CITY}
+O  = ${ORG}
+OU = ${ORG_UNIT}
+CN = clickhouse-keeper
+
+[ v3_req ]
+subjectKeyIdentifier = hash
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = *.c-${CLUSTER_NAME}-keeper-headless.ns-${CLUSTER_NAME}.svc.${KUBERNETES_DOMAIN}
+EOF
+
+    openssl genrsa -out keeper.key 3072
+    openssl req -new -key keeper.key -out keeper.csr -config keeper.cnf
+    openssl x509 -req -days 365 -in keeper.csr -CA /certs/ca/ca.crt -CAkey /certs/ca/ca.key \
+      -CAcreateserial -out keeper.crt -extensions v3_req -extfile keeper.cnf
+
+    # 生成客户端证书
+    cd /certs/client
+
+    cat > client.cnf << EOF
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+prompt             = no
+
+[ req_distinguished_name ]
+C  = ${COUNTRY}
+ST = ${STATE}
+L  = ${CITY}
+O  = ${ORG}
+OU = ${ORG_UNIT}
+CN = clickhouse-client
+
+[ v3_req ]
+subjectKeyIdentifier = hash
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth
+EOF
+
+    openssl genrsa -out client.key 3072
+    openssl req -new -key client.key -out client.csr -config client.cnf
+    openssl x509 -req -days 365 -in client.csr -CA /certs/ca/ca.crt -CAkey /certs/ca/ca.key \
+      -CAcreateserial -out client.crt -extensions v3_req -extfile client.cnf
+
+    # 修复权限
+    chmod -R 755 /certs
+
+    # 验证 FIPS 合规性
+    echo 'Verifying FIPS compliance of generated certificates:'
+    openssl version
+    openssl rsa -in /certs/server/server.key -text -noout | grep 'Private-Key'
+    openssl x509 -in /certs/server/server.crt -text -noout | grep 'Signature Algorithm'
+
+    # 显示成功消息
+    echo 'FIPS-compliant certificates have been generated successfully!'
+  "
+```
+
+<div id="install-operator-via-helm">
+  #### 通过 Helm 安装 Operator
+</div>
+
+根据需要更新版本、ECR 地址和可用区 (以已创建的 VPC 所确定的可用区为准) 。
+
+```
+# 根据需要更新 ECR_HOST
+ECR_HOST=0000000000.dkr-ecr-fips.us-west-2.on.aws
+
+# 应使用 operator 的 Helm 图表版本，而非 operator 本身的版本（例如 <<OPERATOR_TAG>>，而非 main-<<OPERATOR_TAG>>）
+OPERATOR_VERSION=<<OPERATOR_TAG>>
+
+# 根据 VPC 子网设置可用区
+AZ_LIST='["us-west-2a","us-west-2b","us-west-2c"]'
+
+helm install clickhouse-operator \
+   oci://$ECR_HOST/helm/clickhouse-operator-helm \
+   --version=$OPERATOR_VERSION \
+   --create-namespace \
+   -n clickhouse-operator-system \
+   --set-json="image.repository=\"$ECR_HOST/clickhouse-operator\"" \
+   --set-json='cilium.enabled=false' \
+   --set-json='idleScalerEnabled=false' \
+   --set-json='webhooks.enabled=false' \
+   --set-json='operator.debug=true' \
+   --set-json='operator.metricsScraper.enabled=false' \
+   --set-json="operator.availabilityZones=$AZ_LIST" \
+   --set-json='operator.featureFlags.backupOnASeparatePod=true' \
+   --set-json='operator.featureFlags.serverCMEKEnabled=true'
+```
+
+<div id="create-kubernetes-certificate-secrets">
+  #### 创建 Kubernetes 证书 Secret
+</div>
+
+Secret 必须安装在 ClickHouse 集群所在的同一个 Kubernetes 命名空间中。如果你的集群名称是 `default-xx-01`，那么其运行所在的命名空间将是 `ns-default-xx-01`。请确保该命名空间已存在，并在执行命令前更新下面的 `CERT_DIR` 和 `CLUSTER_NAME` 变量。
+
+这些 Secret 的名称必须与下方生成的名称一致，并使用指定的键名，**不要更改 Secret 名称或键名**。
+
+```
+CERT_DIR=.
+CLUSTER_NAME=default-xx-01
+
+# 服务器
+kubectl create secret generic -n ns-${CLUSTER_NAME} ${CLUSTER_NAME}-server-cert-secret \
+  --from-file=ca.crt="$CERT_DIR/ca/ca.crt" \
+  --from-file=server.crt="$CERT_DIR/server/server.crt" \
+  --from-file=server.key="$CERT_DIR/server/server.key" \
+  --from-file=client.crt="$CERT_DIR/client/client.crt" \
+  --from-file=client.key="$CERT_DIR/client/client.key"
+
+# keeper
+kubectl create secret generic -n ns-${CLUSTER_NAME} ${CLUSTER_NAME}-keeper-cert-secret \
+  --from-file=ca.crt="$CERT_DIR/ca/ca.crt" \
+  --from-file=keeper.crt="$CERT_DIR/keeper/keeper.crt" \
+  --from-file=keeper.key="$CERT_DIR/keeper/keeper.key"
+```
+
+<div id="clickhousecluster-cr">
+  #### Clickhousecluster CR
+</div>
+
+请务必为下方的 ECR 和 S3 端点使用正确的 FIPS 版本，相关信息可在[此处](https://aws.amazon.com/compliance/fips/)查看。
+
+```
+# 这将是 `default` 用户的密码
+PASSWORD='My super secret p@$$w0rd'
+HASHED_PASSWORD=`echo -n $PASSWORD | shasum -a 256 | awk '{printf $1}' | base64`
+
+# 根据需要更新以下值，
+# ecr host 应为您账户中的地址
+# s3 bucket 应为之前创建的存储桶
+CLUSTER_NAME=default-xx-01
+ECR_HOST=0000000000.dkr-ecr-fips.us-west-2.on.aws
+SA_IAM_ROLE_ARN=arn:aws:iam::0000000000:role/CH-S3-${CLUSTER_NAME}-uw2-00-Role
+
+S3_BUCKET_REGION=us-gov-west-1
+S3_BUCKET_URL=https://my-clickhouse-data.us-gov-west-1.amazonaws.com
+S3_BUCKET_NAME=my-clickhouse-data
+
+# s3 key prefix 可使用任意 UUID 值，但对于所有在上述存储桶中存储数据的集群，该值必须唯一
+S3_KEY_PREFIX=ch-s3-$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+# 这些值应与添加到节点组的 clickhouseGroup 标签值匹配
+SERVER_NG_GROUP=server-arm64
+KEEPER_NG_GROUP=keeper-arm64
+
+# 这些值应根据所选实例规格进行调整
+# 设置 CPU 和 MEMORY 值时，请务必将 daemon set 的资源需求纳入考量
+SERVER_CPU=64
+SERVER_MEMORY=256Gi
+KEEPER_CPU=4
+KEEPER_MEMORY=16Gi
+
+# 请根据您的证书是否为自签名证书进行相应更新：
+SERVER_SELF_SIGNED=true
+KEEPER_SELF_SIGNED=true
+
+CHART_VERSION=<<CR_HELM_TAG>>
+
+# 一般原则：将缓存大小设置为可用 SSD 缓存磁盘大小的 80-90%。
+# 例如，对于配备 1x474 NVMe 的 m6id.2xlarge 实例类型，建议设置为 379Gi（约 80%）
+CACHE_DISK_SIZE_GI=379Gi
+
+helm install $CLUSTER_NAME \    oci://$ECR_HOST/helm/onprem-clickhouse-cluster \
+    --version=$CHART_VERSION \
+    -n ns-$CLUSTER_NAME \
+    --create-namespace \
+    --set-json="account.hashedPassword=\"$HASHED_PASSWORD\"" \
+    --set-json="server.image.repository=\"$ECR_HOST/clickhouse-server\"" \
+    --set-json="server.storage.s3.endpoint=\"$S3_BUCKET_URL\"" \
+    --set-json="server.storage.s3.region=\"$S3_BUCKET_REGION\"" \
+    --set-json="server.storage.s3.bucketName=\"$S3_BUCKET_NAME\"" \
+    --set-json="server.storage.s3.keyPrefix=\"$S3_KEY_PREFIX\"" \
+    --set-json='server.arm64=true \
+    --set-json="server.image.tag=\"<<SERVER_TAG>>-fips\"" \
+    --set-json="server.podPolicy.nodeSelector.clickhouseGroup=\"$SERVER_NG_GROUP\"" \
+    --set-json="server.openSSL.enabled=true" \
+    --set-json="server.openSSL.required=true" \
+    --set-json="server.openSSL.selfSigned=$SERVER_SELF_SIGNED" \
+    --set-json="keeper.image.repository=\"$ECR_HOST/clickhouse-keeper\"" \
+    --set-json='keeper.arm64=true \
+    --set-json="keeper.image.tag=\"<<KEEPER_TAG>>\"" \
+    --set-json="keeper.podPolicy.nodeSelector.clickhouseGroup=\"$KEEPER_NG_GROUP\"" \
+    --set-json="keeper.openSSL.enabled=true" \
+    --set-json="keeper.openSSL.required=true" \
+    --set-json="keeper.openSSL.selfSigned=$KEEPER_SELF_SIGNED" \
+    --set-json="serviceAccount.annotations={\"eks.amazonaws.com/role-arn\":\"$SA_IAM_ROLE_ARN\"}" \
+    --set-json='server.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]' \
+    --set-json='keeper.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]' \
+    --set-json="server.ssdCacheConfiguration.cacheDiskSize=\"$CACHE_DISK_SIZE_GI\"" \
+    --set-json="server.podPolicy.resources.limits.cpu=\"$SERVER_CPU\"" \
+    --set-json="server.podPolicy.resources.limits.memory=\"$SERVER_MEMORY\"" \
+    --set-json="server.podPolicy.resources.requests.cpu=\"$SERVER_CPU\"" \
+    --set-json="server.podPolicy.resources.requests.memory=\"$SERVER_MEMORY\"" \
+    --set-json="keeper.podPolicy.resources.limits.cpu=\"$KEEPER_CPU\"" \
+    --set-json="keeper.podPolicy.resources.limits.memory=\"$KEEPER_MEMORY\"" \
+    --set-json="keeper.podPolicy.resources.requests.cpu=\"$KEEPER_CPU\"" \
+    --set-json="keeper.podPolicy.resources.requests.memory=\"$KEEPER_MEMORY\""
+```
+
+<div id="install-validation">
+  ### 验证安装
+</div>
+
+<div id="port-forward-the-clickhouse-service-to-your-local-machine">
+  #### 将 ClickHouse 服务端口转发到本地计算机
+</div>
+
+如需将流量从本地计算机转发到 c-default-xx-01-server-any 服务，请运行：
+
+```
+kubectl port-forward svc/c-default-xx-01-server-any 9440:9440 -n ns-default-xx-01
+```
+
+这会将 service 上的 `9440` 端口转发到你本地机器上的 `9440` 端口。现在，你可以通过 `https://localhost:9440` 访问 ClickHouse HTTP 接口。
+
+<div id="access-clickhouse-and-run-query">
+  #### 访问 ClickHouse 并运行查询
+</div>
+
+端口转发完成后，您可以使用 clickhouse-client 等工具，借助以下配置文件在本地连接到 ClickHouse。请务必将 `ca.crt` 文件的路径更新为实际路径。
+
+```
+# client-config.xml
+<config>
+    <openSSL>
+        <client>
+            <caConfig>/path/to/certs/ca.crt</caConfig>
+        </client>
+    </openSSL>
+</config>
+
+clickhouse client --host localhost --port 9440 --password $PASSWORD --secure --config=client-config.xml
+```
+
+并运行一个简单查询：
+
+```
+clickhouse-cloud :) select 1;
+```
+
+你应该会看到类似下面这样的输出：
+
+```
+SELECT 1
+Query id: 825591bf-a8e5-4995-ac9f-afb864854ba2
+   ┌─1─┐
+1. │ 1  │
+   └───┘
+1 row in set. Elapsed: 0.001 sec.
+```

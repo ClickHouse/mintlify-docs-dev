@@ -1,0 +1,131 @@
+---
+description: 'Documentação dos tipos de dados de ponto flutuante no ClickHouse: Float32,
+  Float64 e BFloat16'
+sidebarTitle: 'Float32 | Float64 | BFloat16'
+slug: /sql-reference/data-types/float
+title: 'Tipos Float32 | Float64 | BFloat16'
+doc_type: 'reference'
+---
+
+<Note>
+  Se você precisa de cálculos precisos, especialmente se trabalha com dados financeiros ou de negócios que exigem alta precisão, considere usar [Decimal](/pt-BR/reference/data-types/decimal).
+
+  [Números de ponto flutuante](https://en.wikipedia.org/wiki/IEEE_754) podem levar a resultados imprecisos, como ilustrado abaixo:
+
+  ```sql
+  CREATE TABLE IF NOT EXISTS float_vs_decimal
+  (
+     my_float Float64,
+     my_decimal Decimal64(3)
+  )
+  ENGINE=MergeTree
+  ORDER BY tuple();
+
+  # Gere 1 000 000 números aleatórios com 2 casas decimais e armazene-os como float e como decimal
+  INSERT INTO float_vs_decimal SELECT round(randCanonical(), 3) AS res, res FROM system.numbers LIMIT 1000000;
+  ```
+
+  ```sql
+  SELECT sum(my_float), sum(my_decimal) FROM float_vs_decimal;
+
+  ┌──────sum(my_float)─┬─sum(my_decimal)─┐
+  │ 499693.60500000004 │      499693.605 │
+  └────────────────────┴─────────────────┘
+
+  SELECT sumKahan(my_float), sumKahan(my_decimal) FROM float_vs_decimal;
+
+  ┌─sumKahan(my_float)─┬─sumKahan(my_decimal)─┐
+  │         499693.605 │           499693.605 │
+  └────────────────────┴──────────────────────┘
+  ```
+</Note>
+
+Os tipos equivalentes no ClickHouse e em C são os seguintes:
+
+* `Float32` — `float`.
+* `Float64` — `double`.
+
+Os tipos Float no ClickHouse têm os seguintes aliases:
+
+* `Float32` — `FLOAT`, `REAL`, `SINGLE`.
+* `Float64` — `DOUBLE`, `DOUBLE PRECISION`.
+
+Ao criar tabelas, é possível definir parâmetros numéricos para números de ponto flutuante (por exemplo, `FLOAT(12)`, `FLOAT(15, 22)`, `DOUBLE(12)`, `DOUBLE(4, 18)`), mas o ClickHouse os ignora.
+
+<div id="using-floating-point-numbers">
+  ## Uso de números de ponto flutuante
+</div>
+
+* Cálculos com números de ponto flutuante podem produzir erro de arredondamento.
+
+{/* */}
+
+```sql
+SELECT 1 - 0.9
+
+┌───────minus(1, 0.9)─┐
+│ 0.09999999999999998 │
+└─────────────────────┘
+```
+
+* O resultado do cálculo depende do método de cálculo (do tipo de processador e da arquitetura do sistema computacional).
+* Cálculos de ponto flutuante podem resultar em números como infinito (`Inf`) e &quot;não é um número&quot; (`NaN`). Isso deve ser levado em conta ao processar os resultados dos cálculos.
+* Ao interpretar números de ponto flutuante a partir de texto, o resultado pode não ser o número representável pela máquina mais próximo.
+
+<div id="nan-and-inf">
+  ## NaN e Inf
+</div>
+
+Ao contrário do SQL padrão, o ClickHouse oferece suporte às seguintes categorias de números de ponto flutuante:
+
+* `Inf` – infinito.
+
+{/* */}
+
+```sql
+SELECT 0.5 / 0
+
+┌─divide(0.5, 0)─┐
+│            inf │
+└────────────────┘
+```
+
+* `-Inf` — Infinito negativo.
+
+{/* */}
+
+```sql
+SELECT -0.5 / 0
+
+┌─divide(-0.5, 0)─┐
+│            -inf │
+└─────────────────┘
+```
+
+* `NaN` — Não é um número.
+
+{/* */}
+
+```sql
+SELECT 0 / 0
+
+┌─divide(0, 0)─┐
+│          nan │
+└──────────────┘
+```
+
+Consulte as regras de ordenação de `NaN` na seção [cláusula ORDER BY](/pt-BR/reference/statements/select/order-by).
+
+<div id="bfloat16">
+  ## BFloat16
+</div>
+
+`BFloat16` é um tipo de dado de ponto flutuante de 16 bits, com expoente de 8 bits, sinal e mantissa de 7 bits.
+Ele é útil para aplicações de aprendizado de máquina e IA.
+
+O ClickHouse oferece suporte a conversões entre `Float32` e `BFloat16`, que
+podem ser realizadas com as funções [`toFloat32()`](/pt-BR/reference/functions/regular-functions/type-conversion-functions#toFloat32) ou [`toBFloat16`](/pt-BR/reference/functions/regular-functions/type-conversion-functions#toBFloat16).
+
+<Note>
+  A maioria das outras operações não tem suporte.
+</Note>

@@ -1,0 +1,48 @@
+---
+title: 'Привилегия BYOC'
+slug: /cloud/reference/byoc/reference/privilege
+sidebarTitle: 'Привилегия'
+keywords: ['BYOC', 'облако', 'собственное облако', 'привилегия']
+description: 'Развертывание ClickHouse в собственной облачной инфраструктуре'
+doc_type: 'reference'
+---
+
+<div id="aws-iam-roles">
+  ## Роли IAM в AWS
+</div>
+
+<div id="bootstrap-iam-role">
+  ### Bootstrap IAM role
+</div>
+
+Роль IAM для начальной настройки имеет следующие разрешения:
+
+* **Операции EC2 и VPC**: требуются для настройки VPC и кластеров EKS.
+* **Операции S3 (например, `s3:CreateBucket`)**: нужны для создания бакетов для хранилища ClickHouse BYOC.
+* **Операции IAM (например, `iam:CreatePolicy`)**: нужны, чтобы контроллеры могли создавать дополнительные роли (подробности см. в следующем разделе).
+* **Операции EKS**: ограничены ресурсами, имена которых начинаются с префикса `clickhouse-cloud`.
+
+<div id="additional-iam-roles-created-by-the-controller">
+  ### Дополнительные роли IAM, создаваемые контроллером
+</div>
+
+Помимо `ClickHouseManagementRole`, создаваемой через CloudFormation, контроллер создаст ещё несколько ролей.
+
+Эти роли принимают на себя приложения, работающие в EKS-кластере клиента:
+
+* **Роль State Exporter**
+  * Компонент ClickHouse, который передаёт информацию о состоянии сервиса в ClickHouse Cloud.
+  * Требует разрешения на запись в очередь SQS, принадлежащую ClickHouse Cloud.
+* **Load-Balancer Controller**
+  * Стандартный контроллер AWS для балансировщика нагрузки.
+  * Контроллер EBS CSI для управления томами сервисов ClickHouse.
+* **External-DNS**
+  * Распространяет конфигурацию DNS в Route 53.
+* **Cert-Manager**
+  * Выпускает TLS-сертификаты для доменов сервиса BYOC.
+* **Cluster Autoscaler**
+  * При необходимости изменяет размер группы узлов.
+
+Роли **K8s-control-plane** и **k8s-worker** предназначены для использования сервисами AWS EKS.
+
+Наконец, **`data-plane-mgmt`** позволяет компоненту Control Plane ClickHouse Cloud приводить к желаемому состоянию необходимые пользовательские ресурсы, такие как `ClickHouseCluster` и Istio Virtual Service/Gateway.

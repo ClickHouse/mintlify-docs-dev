@@ -1,0 +1,47 @@
+---
+title: 'Roteamento com reconhecimento de réplica'
+slug: /manage/replica-aware-routing
+description: 'Como usar o roteamento com reconhecimento de réplica para aumentar a reutilização do cache'
+keywords: ['cloud', 'sticky endpoints', 'sticky', 'endpoints', 'sticky routing', 'routing', 'replica-aware routing']
+doc_type: 'guide'
+---
+
+import PrivatePreviewBadge from "/snippets/components/PrivatePreviewBadge/PrivatePreviewBadge.jsx";
+
+<PrivatePreviewBadge />
+
+O roteamento com reconhecimento de réplica (também conhecido como sticky sessions, sticky routing ou afinidade de sessão) utiliza o [balanceamento de carga ring hash do proxy Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#ring-hash). O principal objetivo do roteamento com reconhecimento de réplica é aumentar a chance de reutilização de cache. Isso não garante isolamento.
+
+Ao habilitar o roteamento com reconhecimento de réplica para um serviço, permitimos um subdomínio curinga sobre o hostname do serviço. Para um serviço com o hostname `abcxyz123.us-west-2.aws.clickhouse.cloud`, você pode usar qualquer hostname que corresponda a `*.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` para acessar o serviço:
+
+| Hostnames de exemplo                                                     |
+| ------------------------------------------------------------------------ |
+| `aaa.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
+| `000.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
+| `clickhouse-is-the-best.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` |
+
+Quando o Envoy recebe um hostname que corresponde a esse padrão, ele calcula o hash de roteamento com base no hostname e encontra o servidor ClickHouse correspondente no anel de hash com base nesse valor. Supondo que não haja nenhuma alteração em andamento no serviço (por exemplo, reinicializações do servidor, scale out/in), o Envoy sempre escolherá o mesmo servidor ClickHouse para se conectar.
+
+Observe que o hostname original continuará usando o balanceamento de carga `LEAST_CONNECTION`, que é o algoritmo de roteamento padrão.
+
+<div id="limitations-of-replica-aware-routing">
+  ## Limitações do roteamento com reconhecimento de réplicas
+</div>
+
+<div id="replica-aware-routing-does-not-guarantee-isolation">
+  ### Replica-aware routing não garante isolamento
+</div>
+
+Qualquer interrupção no serviço, por exemplo, reinicializações de pods do Kubernetes do servidor (por qualquer motivo, como upgrade de versão, falha, aumento de escala vertical etc.) ou aumento/redução de escala do servidor, causará uma interrupção no anel de hash usado no roteamento. Isso fará com que conexões com o mesmo hostname sejam direcionadas para um pod do Kubernetes do servidor diferente.
+
+<div id="replica-aware-routing-does-not-work-out-of-the-box-with-private-link">
+  ### O roteamento com reconhecimento de réplicas não funciona por padrão com Private Link
+</div>
+
+Os clientes precisam adicionar manualmente uma entrada DNS para que a resolução de nomes funcione com o novo padrão de hostname. Se usado incorretamente, isso pode causar desequilíbrio na carga entre os servidores.
+
+<div id="configuring-replica-aware-routing">
+  ## Configurando o roteamento com reconhecimento de réplicas
+</div>
+
+Para ativar o roteamento com reconhecimento de réplicas, entre em contato com [nossa equipe de suporte](https://clickhouse.com/support/program).

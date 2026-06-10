@@ -1,0 +1,846 @@
+---
+hidden: true
+title: "Guía operativa"
+slug: "docs/products/clickhouse-private/operational-guide"
+---
+
+<div id="enabling-feature-flags">
+  ### Habilitación de feature flags
+</div>
+
+Para habilitar feature flags en el clúster, puede editar el recurso `clickhousecluster` directamente y actualizar o agregar los valores en `spec.featureFlags`. Tenga en cuenta que cambiar algunos feature flags puede iniciar un reinicio gradual del clúster.
+
+<div id="backups-on-clickhouse-private">
+  ### Copias de seguridad en ClickHouse Private
+</div>
+
+<div id="prerequisites">
+  #### Requisitos previos
+</div>
+
+* Un bucket de S3 creado en la misma región que tu clúster
+* El rol de IAM asociado a la cuenta de servicio de Kubernetes debe tener acceso de lectura, escritura y listado a este bucket
+* Deben estar habilitadas dos [feature flags](#enabling-feature-flags) (establecidas en `true`) en tu clúster: `userInitiatedBackupsEnabled` y `enableUseEnvironmentalCredentialsByDefault`
+
+<div id="performing-a-backup">
+  #### Realizar una copia de seguridad
+</div>
+
+Desde uno de los pods del servidor, puede ejecutar el siguiente comando para iniciar una tarea de copia de seguridad en segundo plano:
+
+```
+BACKUP TABLE system.users, TABLE system.roles, TABLE system.settings_profiles, TABLE system.row_policies, TABLE system.quotas, TABLE system.functions, ALL EXCEPT DATABASES INFORMATION_SCHEMA,information_schema, system TO S3('https://s3.$REGION.amazonaws.com/$S3_BUCKET/$CLUSTER_S3_PREFIX/$BACKUP_ID') SETTINGS id='$BACKUP_ID' ASYNC;
+```
+
+* `$REGION` es la región de S3, por ejemplo, `us-west-2`
+* `$S3_BUCKET` es el nombre del bucket de S3 creado para almacenar las copias de seguridad
+* `$CLUSTER_S3_PREFIX` es el prefijo de clave de S3 del clúster (debe ser distinto para cada clúster) establecido al crear el clúster. Puede obtenerlo del recurso `clickhousecluster` de su clúster, en `spec.s3.keyPrefix`. Debe ser algo como `ch-s3-{uuid}`
+* `$BACKUP_ID` es un identificador único de la copia de seguridad que se va a realizar. Puede usar cualquier UUID para este valor.
+
+<div id="backup-status">
+  ##### Estado de la copia de seguridad
+</div>
+
+Una vez emitido el comando de copia de seguridad anterior, se ejecutará en segundo plano de forma asíncrona. Puede comprobar el estado consultando la tabla `system.backups` para el ID que proporcionó. **Es importante verificar que el campo `status` no esté en un estado de error**. Si lo está, la copia de seguridad ha fallado y deberá volver a ejecutarse una vez que se resuelva el error subyacente. Consultar esta tabla también le permitirá saber cuándo la copia de seguridad se ha completado correctamente.
+
+<div id="incremental-backups">
+  ##### Copias de seguridad incrementales
+</div>
+
+También se pueden realizar copias de seguridad incrementales, en las que se utiliza una copia de seguridad previa como punto de partida para evitar tener que volver a copiar los mismos datos en cada copia de seguridad. Puedes leer más al respecto aquí: [https://clickhouse.com/docs/operations/backup#take-an-incremental-backup](/es/reference/engines/database-engines/backup#take-an-incremental-backup).
+
+<div id="restoring-from-a-backup">
+  #### Restaurar desde una copia de seguridad
+</div>
+
+Para restaurar desde una copia de seguridad, ejecute el siguiente comando en el clúster donde desea realizar la restauración:
+
+```
+RESTORE ALL FROM S3('https://s3.$REGION.amazonaws.com/$S3_BUCKET/$CLUSTER_S3_PREFIX/$BACKUP_ID') SETTINGS id='$RESTORE_ID', allow_different_database_def=true;
+```
+
+Las variables anteriores son las mismas que se utilizaron al crear la copia de seguridad. `$RESTORE_ID` puede ser cualquier identificador único que quieras asignar a esta operación de restauración.
+
+### Operador
+
+<div id="overview">
+  #### Descripción general
+</div>
+
+El clickhouse-operator es responsable del aprovisionamiento y la reconciliación de los recursos personalizados clickhousecluster registrados y del ciclo de vida del clúster, lo que incluye:
+
+* desplegar y eliminar componentes de servidor y Keeper
+* controlar el estado del clúster (en ejecución/detenido/etc.)
+* procesar solicitudes de copia de seguridad
+* limpiar los PVC
+* escalar el clúster horizontalmente
+
+<div id="architecture">
+  #### Arquitectura
+</div>
+
+<div id="instance-lifecycle">
+  ##### Ciclo de vida de la instancia
+</div>
+
+![ciclo\_de\_vida\_de\_la\_instancia](/products/clickhouse-private/images/instance_lifecycle.png)
+
+<div id="multistatefulset-aka-multists">
+  ##### MultiStatefulSet (también conocido como MultiSTS)
+</div>
+
+MultiStatefulSet es una funcionalidad de clickhouse-operator que permite que los pods del servidor ClickHouse se ejecuten con 1 StatefulSet como propietario de solo 1 pod del servidor ClickHouse (es decir, una réplica). Esto se diferencia de SingleSTS en que, en SingleSTS, 1 StatefulSet es propietario de todas las réplicas.
+
+**SingleSTS**
+
+Así es como se ve un único StatefulSet:
+
+![](/products/clickhouse-private/images/sts.png)
+
+**MultiSTS**
+
+En cambio, los pods que se ejecutan en MultiSTS tienen el siguiente aspecto:
+
+![](/products/clickhouse-private/images/msts.png)
+
+<div id="replicastatemap-how-multiple-statefulsets-are-tracked">
+  ###### ReplicaStateMap - Cómo se rastrean varios StatefulSets
+</div>
+
+Las réplicas de MultiSTS no pueden basarse en los ordinales como una forma determinista de entender la antigüedad o el ciclo de vida de un pod de Kubernetes. Como necesitamos una forma de rastrear el estado de cada StatefulSet, lo almacenamos en un mapa como parte del estado del CR.
+
+Un ejemplo de `replicaStateMap` puede verse así:
+
+```
+❯ kubectl get clickhousecluster c-navy-wl-64 -o yaml | yq .status
+replicaStateMap:
+  c-navy-wl-64-server-5hvvzxe:
+    createdAt: "2023-08-03T13:25:40Z"
+    isBackupPod: true
+    state: Pending
+    updatedAt: "2023-08-03T13:25:40Z"
+  c-navy-wl-64-server-fvnytjb:
+    createdAt: "2023-08-03T13:25:40Z"
+    state: Pending
+    updatedAt: "2023-08-03T13:25:40Z"
+  c-navy-wl-64-server-un85gpo:
+    createdAt: "2023-08-03T13:25:40Z"
+    state: Pending
+    updatedAt: "2023-08-03T13:25:40Z"
+
+```
+
+* El estado puede ser **Pending**, **Ready**, **Stopped** o **Condemned**.
+* ReplicaStateMap también marca, en un momento dado, 1 pod de Kubernetes como el pod de Kubernetes para el que **IsBackupPod** será true. Como es de esperar, este es el pod de Kubernetes donde se ejecutará la copia de seguridad.
+* Una réplica de **copia de seguridad** nunca se marca como **Condemned**
+* Una vez que el nombre de una réplica se añade al mapa, el operador se asegurará de que pase del estado **Pending** al estado **Ready**.
+
+*ADVERTENCIA: Además, el seguimiento del estado integrado en el mapa se usa únicamente para la gestión interna del estado del operador y no debe ser utilizado por componentes externos.*
+
+<div id="parallel-vs-rolling-reconciliation">
+  ###### Reconciliación en paralelo vs. progresiva
+</div>
+
+El operador realizará una gestión paralela de pods si el único cambio en la especificación de StatefulSet está relacionado con el número de réplicas.
+
+Si las especificaciones de StatefulSet requieren algo distinto a cambiar el número de réplicas, dejaremos de depender de la gestión paralela de pods. Entonces se activará un segundo bucle de actualización.
+
+El bucle de actualización examinará el PDB (`maxUnavailable`) y comenzará a reconciliar los StatefulSet uno por uno. Se asegurará de no superar nunca el presupuesto de interrupción.
+
+<div id="horizontal-scaling-in-multists-mode">
+  ###### Escalado horizontal en modo MultiSTS
+</div>
+
+Escalar horizontalmente en modo MultiSTS es sencillo. En cuanto se añade un nuevo nombre de réplica a ReplicaStateMap, el operador se asegura de que se cree y reconcilie ese StatefulSet. Los siguientes bucles de reconciliación garantizarán que la nueva réplica esté actualizada.
+
+La reducción de escala es bastante más laboriosa y compleja. Como una réplica que se está retirando puede seguir recibiendo tráfico, seguimos varios pasos para asegurarnos de que la reducción se haga correctamente.
+
+**Réplicas condenadas**
+
+Introducimos el concepto de réplica condenada. Cuando el número real de réplicas supera el número deseado, significa que tenemos que reducir la escala. Las réplicas marcadas para su eliminación son las réplicas **condenadas**. Cambiamos su estado de **Ready** a **Condemned** dentro de **ReplicaStateMap**. Esto garantiza que, más adelante, recordemos qué réplicas debemos eliminar de forma segura y quitar del mapa.
+
+**Reducción de escala**
+
+Ahora que entendemos qué son las réplicas condenadas, este es el flujo de la reducción de escala:
+
+1. Elimine la Topology Key (para que esta réplica deje de formar parte de los cálculos de skew de nuestro TopologySpreadConstraint).
+2. Asegúrese de que todos los StatefulSet estén en **Ready**. Si no es así, no se reducirá la escala (y se seguirá reencolando).
+3. Ejecute **SYSTEM SYNC REPLICA** $database.$table LIGHTWEIGHT para cada DB replicada y cada tabla. *Nota: Este comando se ejecuta en la réplica marcada para backups (ya que esa réplica nunca se condena).*
+4. **Elimine** los **StatefulSet condenados** y quítelos de ReplicaStateMap.
+5. Ejecute **SYSTEM DROP REPLICA** $replicaName en las réplicas en estado Ready para eliminar su información de Keeper.
+
+*Nota: Como hemos eliminado réplicas de ReplicaStateMap, consultamos ClickHouse para obtener el conjunto de todas las réplicas conocidas y solo entonces eliminamos las que corresponda.*
+*Etiquete los PVC de los StatefulSet eliminados con clickhouse.com/delete-pvc. Esto provoca una fuga de PVC.*
+*Aquí termina la responsabilidad del operador y entra en acción el PersistentVolumeClaimCleaner.*
+
+<div id="key-metrics">
+  #### Métricas clave
+</div>
+
+* `last_cluster_reconcile`
+  * Métrica de tipo Gauge del último momento en que se reconcilió la `app` (nombre del CR, p. ej., `c-default-xx-01`)
+  * Usa esta métrica para determinar si las reconciliaciones se están produciendo regularmente
+  * [Ejemplo de definición de alerta de alertmanager](#operator-not-reconciling-alert)
+* `controller_runtime_reconcile_errors_total`
+  * Métrica de tipo Counter del número total de errores de reconciliación por controlador
+  * Usa esta métrica junto con `controller_runtime_reconcile_total` para determinar la tasa de errores de reconciliación
+  * [Ejemplo de definición de alerta de alertmanager](#operator-reconciliation-error-alert)
+
+<div id="common-issues">
+  #### Problemas comunes
+</div>
+
+<div id="changes-were-made-to-the-cr-but-they-arent-being-applied">
+  ##### Se realizaron cambios en el CR, pero no se están aplicando
+</div>
+
+Si el CR de ClickHouseCluster no se reconcilia desde hace mucho tiempo.
+Esto probablemente significa una de estas cosas:
+
+1. El operador está en **bucle de reinicio**. Revisa el log del operador.
+2. Los pods de ClickHouse están en **bucle de reinicio.** Revisa los **pods de Keeper y del servidor** para encontrar la causa de lo que está ocurriendo.
+3. La anotación **clickhouse.com/skip-reconcile** está en el CR.
+
+<div id="drop-a-server-replica">
+  ##### Eliminar una réplica del servidor
+</div>
+
+Usa esta opción si quieres eliminar una réplica del clúster sin reducir el tamaño del clúster.
+
+<div id="add-skip-reconcile">
+  ###### Añadir skip-reconcile
+</div>
+
+```
+kubectl annotate clickhousecluster c-default-xx-01 -n ns-default-xx-01 clickhouse.com/skip-reconcile=remove-replica
+```
+
+Puedes usar cualquier valor aquí. Usamos remove-replica como ejemplo. Confirma que el operador haya detectado esta anotación. Deberías ver esto en los logs del operador.
+
+```
+kubectl logs -f -n clickhouse-operator-system operator-clickhouse-operator-helm-5576dd598b-sqhxh
+```
+
+`Omitir la solicitud de reconciliación de ClickhouseCluster ... porque tiene la anotación clickhouse.com/skip-reconcile`
+
+<div id="remove-from-replica-state-map">
+  ###### Eliminar del mapa de estado de réplicas
+</div>
+
+Vamos a eliminar la réplica del replica-state-map. Puedes ver su seguimiento aquí;
+
+```
+kubectl get clickhousecluster c-default-xx-01 -n ns-default-xx-01 -o json |jq .status.replicaStateMap
+```
+
+Ahora, edite el estado para eliminar la réplica del mapa de estado de las réplicas.
+
+```
+EDITOR=vim kubectl edit clickhousecluster c-default-xx-01 -n ns-default-xx-01 --subresource=status
+```
+
+<div id="delete-statefulset">
+  ###### Eliminar el StatefulSet
+</div>
+
+```
+kubectl delete sts c-default-xx-01-server-082s2da -n ns-default-xx-01
+```
+
+Espere a que el pod de Kubernetes se termine después de eliminar el StatefulSet.
+
+<div id="remove-skip-reconcile">
+  ###### Quitar skip-reconcile
+</div>
+
+```
+kubectl annotate clickhousecluster c-default-xx-01 -n ns-default-xx-01 clickhouse.com/skip-reconcile-
+```
+
+El operador iniciará una nueva réplica y eliminará de ClickHouse la réplica retirada.
+
+<div id="verify">
+  ###### Verificar
+</div>
+
+Inicie sesión en su clúster de ClickHouse y asegúrese de que se haya eliminado la réplica.
+
+Si alguno de los leases que mantiene esta réplica aún no ha vencido, el operador volverá a intentar eliminarla. Debería limpiarse en 5 minutos.
+
+<div id="server-pod-is-hanging-from-the-termination">
+  ##### El pod de Kubernetes del servidor se queda atascado al terminar
+</div>
+
+```
+NAME                            READY   STATUS        RESTARTS   AGE
+c-navy-wl-64-keeper-0           1/1     Running       0          3m40s
+c-navy-wl-64-keeper-1           1/1     Running       0          3m40s
+c-navy-wl-64-keeper-2           1/1     Running       0          3m40s
+c-navy-wl-64-server-gbwmanx-0   1/2     Terminating   0          3m25s
+c-navy-wl-64-server-pxb9mde-0   1/2     Terminating   0          3m25s
+```
+
+Así que, antes de finalizar los pods del servidor, intentamos drenar las conexiones y esperamos a que se completen las solicitudes en curso. Para ello, usamos un hook de PreStop que ejecuta cierta lógica.
+
+En ese caso, puedes:
+
+Consultar **prestop.log**
+
+```
+kubectl exec c-navy-wl-64-server-gbwmanx-0 -- cat /var/log/clickhouse-server/prestop.log
+```
+
+Revisa los logs del servidor para ver si hay mensajes de registro sobre señales recibidas
+
+<div id="why-is-the-cr-not-in-a-healthy-running-state">
+  ##### ¿Por qué el CR no está en estado &quot;Running&quot; y en buen estado?
+</div>
+
+Usa kubectl para comprobar el estado de las instancias
+
+```
+kubectl get clickhouseclusters -A
+```
+
+Comprueba qué está ocurriendo con el reinicio del servidor Describe el pod de Kubernetes:
+
+```
+kubectl describe pod c-navy-wl-64-server-2 -n ns-navy-wl-64
+```
+
+Consulta los logs del pod de Kubernetes que finalizó anteriormente:
+
+```
+kubectl logs -p c-navy-wl-64-server-2 -n ns-navy-wl-64
+```
+
+Verificar eventos
+
+```
+kubectl get events -n ns-navy-wl-64
+```
+
+### Servidor de ClickHouse
+
+<div id="overview">
+  #### Descripción general
+</div>
+
+El componente clickhouse-server es el proceso principal de ClickHouse que ingiere, consulta, almacena y procesa datos.
+
+<div id="key-metrics">
+  #### Métricas clave
+</div>
+
+El [mixin de Grafana para ClickHouse](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/integrations/integration-reference/integration-clickhouse/) proporciona acceso a muchas métricas de ClickHouse en un dashboard preconfigurado. Ten en cuenta que ya existe un conjunto de anotaciones `prometheus.io/*` en los pods del servidor de ClickHouse. Estas expondrán algunas métricas, pero no te darán las `ClickHouse_CustomMetrics_*` definidas a continuación. Debes planificar la configuración del Prometheus endpoint `:8123/metrics` como objetivo de scrapeo en cada uno de los pods del servidor mediante un PodMonitor o equivalente. Este endpoint requiere autenticación y debe protegerse con un usuario dedicado con privilegios de solo lectura.
+
+* `ClickHouse_CustomMetric_NumberOfBrokenDetachedParts`
+  * Métrica de tipo Gauge que indica el número de partes detached dañadas.
+  * [Ejemplo de definición de alerta de Alertmanager](#broken-detached-parts)
+* `ClickHouse_CustomMetric_LostPartCount`
+  * Métrica de tipo Gauge que indica el número de partes perdidas, lo que señala una pérdida de datos. **Es posible que haya falsos positivos.**
+  * [Ejemplo de definición de alerta de Alertmanager](#data-loss)
+* `ClickHouseErrorMetric_*`
+  * Métrica de tipo Counter que indica la cantidad de errores del tipo especificado.
+  * [Ejemplo de definición de alerta de Alertmanager para `ClickHouseErrorMetric_CANNOT_WRITE_TO_FILE_DESCRIPTOR`](#cannot-write-to-file-descriptor)
+  * [Ejemplo de definición de alerta de Alertmanager para `ClickHouseErrorMetric_CHECKSUM_DOESNT_MATCH`](#checksum-doesn't-match)
+  * [Ejemplo de definición de alerta de Alertmanager para `ClickHouseErrorMetric_CORRUPTED_DATA`](#corrupted-data)
+  * [Ejemplo de definición de alerta de Alertmanager para `ClickHouseErrorMetric_LOGICAL_ERROR`](#logical-errors)
+  * [Ejemplo de definición de alerta de Alertmanager para `ClickHouseErrorMetric_NOT_ENOUGH_DISK_SPACE`](#not-enough-space)
+  * [Ejemplo de definición de alerta de Alertmanager para `ClickHouseErrorMetric_POTENTIALLY_BROKEN_DATA_PART`](#broken-parts-detected-on-select)
+  * [Ejemplo de definición de alerta de Alertmanager para `ClickHouseErrorMetric_REPLICA_ALREADY_EXISTS`](#replica-already-exists)
+* `ClickHouseMetrics_IsServerShuttingDown`
+  * Métrica de tipo Gauge que indica si el servidor de ClickHouse se está apagando.
+  * [Ejemplo de definición de alerta de Alertmanager](#clickhouse-server-stuck-shutting-down)
+* `ClickHouse_CustomMetric_TableReadOnlyDurationSeconds`
+  * Gauge temporal que indica cuánto tiempo ha estado una tabla en modo READONLY.
+  * [Ejemplo de definición de alerta de Alertmanager](#table-replicas-read-only)
+
+<div id="common-issues">
+  #### Problemas comunes
+</div>
+
+<div id="crashlooping-server-pods">
+  ##### Pods del servidor en bucle de reinicio
+</div>
+
+Revisa los logs del pod de Kubernetes del servidor ClickHouse. Deberían explicar por qué el proceso falla. Si se debe a algo como presión de memoria y Kubernetes está finalizando el pod, revisa los eventos de Kubernetes para obtener más información.
+
+<div id="check-ch-metrics-with-sql">
+  ##### Consultar las métricas de CH con SQL
+</div>
+
+<div id="replication-queue-size-per-table">
+  ###### Tamaño de la cola de replicación por tabla.
+</div>
+
+Condición de activación: si este número es superior a 100 en cualquier tabla, debemos recibir una alerta.
+
+```
+SELECT
+    concat(database, '.', table),
+    count()
+FROM system.replication_queue
+GROUP BY
+    database,
+    table
+```
+
+Otra forma de hacerlo:
+
+```
+SELECT
+    concat(database, '.', table),
+    queue_size
+FROM system.replicas
+```
+
+<div id="replication-queue-oldest-entry-per-table">
+  ###### Entrada más antigua de la cola de replicación por tabla.
+</div>
+
+Condición de activación: Si este valor tiene más de 1 día de antigüedad, debemos recibir una alerta.
+
+```
+SELECT
+    concat(database, '.', table),
+    min(create_time)
+FROM system.replication_queue
+GROUP BY
+    database,
+    table
+```
+
+<div id="clickhouse-keeper">
+  ### ClickHouse Keeper
+</div>
+
+<div id="overview">
+  #### Descripción general
+</div>
+
+El componente [clickhouse-keeper](https://clickhouse.com/blog/clickhouse-keeper-a-zookeeper-alternative-written-in-cpp#usage-in-clickhouse) es un servicio distribuido compatible con ZooKeeper que gestiona la coordinación distribuida entre las réplicas de clickhouse-server y se encarga de almacenar los metadatos de los datos de ClickHouse. Si desea capturar métricas de los pods de Keeper, debe crear un PodMonitor para `:8001/metrics`.
+
+<div id="key-metrics">
+  #### Métricas clave
+</div>
+
+TODO
+
+<div id="common-issues">
+  #### Problemas comunes
+</div>
+
+<div id="high-znode-count">
+  ##### Número elevado de ZNode
+</div>
+
+TODO
+
+<div id="alerting">
+  ### Alertas
+</div>
+
+En general, deben configurarse alertas estándar para casos como pods en bucle de reinicio, pods que no se pueden programar y otros problemas relacionados con la infraestructura que puedan ser específicos de su entorno. A continuación se muestran ejemplos de alertas recomendadas para los distintos componentes mencionados anteriormente.
+
+<div id="operator">
+  #### Operator
+</div>
+
+<div id="operator-not-reconciling-alert">
+  ##### Alerta por falta de reconciliación del Operator
+</div>
+
+```
+alert: ClickhouseOperatorNotReconciling
+expr: avg(increase(last_cluster_reconcile[90m])) by (app) == 0
+for: 120m
+```
+
+**Propósito:** Alerta cuando el operador no ha completado la reconciliación en el tiempo especificado
+**Acción:** Compruebe que el operador esté en ejecución y en buen estado. Revise los logs del operador para ver qué está impidiendo la reconciliación. Verifique también que no haya una anotación `clickhouse.com/skip-reconcile` en sus CR, como se describe [aquí](#changes-were-made-to-the-cr-but-they-aren't-being-applied).
+
+<div id="operator-reconciliation-error-alert">
+  ##### Alerta de error en la reconciliación del operador
+</div>
+
+```
+alert: ClickhouseOperatorReconcileErrors
+expr: |
+  (
+    sum(rate(controller_runtime_reconcile_errors_total{namespace="clickhouse-operator-system"}[5m])) by (controller, namespace)
+    /
+    sum(rate(controller_runtime_reconcile_total{namespace="clickhouse-operator-system"}[5m])) by (controller, namespace)
+  ) > 0.05
+for: 15m
+```
+
+**Propósito:** Alerta cuando los errores de reconciliación superan el 5 % de los intentos de reconciliación.
+**Acción:** Revise los logs del operador para identificar mensajes de error y encontrar la causa subyacente.
+
+<div id="clickhouse-server">
+  #### Servidor de ClickHouse
+</div>
+
+<div id="broken-detached-parts">
+  ##### Partes detached dañadas
+</div>
+
+```
+alert: ClickHouseBrokenDetachedParts
+expr: ClickHouse_CustomMetric_NumberOfBrokenDetachedParts > 100
+for: 60m
+```
+
+**Propósito:** Se activa cuando el número de partes detached dañadas ha superado las 100 durante al menos 60 minutos.
+**Acción:**
+Si las data parts de shared merge tree/replicated merge tree están realmente dañadas, también debería activarse [ClickHouseDataLoss](#data-loss).
+En tablas con el tipo de metadatos Local (es decir, `s3disk` o `s3diskWithCache`), tener una pequeña cantidad de partes detached dañadas **no siempre indica un incidente**, ya que podemos crear archivos para las partes sin llegar a tener tiempo de escribir en ellos durante reinicios forzados. De ahí el umbral de 100.
+
+**Mitigación:**
+Primero, espere un tiempo para ver si se ha activado [ClickHouseDataLoss](#data-loss). Si ClickHouseDataLoss se ha activado, investigue y mitigue ese problema primero y, una vez resuelto, verifique que ya no haya más partes detached dañadas. De lo contrario, póngase en contacto con el soporte de ClickHouse.
+
+<div id="data-loss">
+  ##### Pérdida de datos
+</div>
+
+```
+alert: ClickHouseDataLoss
+expr: ClickHouse_CustomMetric_LostPartCount > 0
+for: 30m -- se prefiere una ventana más amplia para reducir los falsos positivos
+```
+
+**Propósito:** Indica una posible pérdida de datos y requiere una investigación para confirmarlo.
+**Acción:** Póngase en contacto con el soporte de ClickHouse. Puede realizar una investigación inicial siguiendo estos pasos.
+
+<div id="understanding-what-data-parts-are-lost">
+  ###### Comprender qué partes de datos se perdieron
+</div>
+
+La alerta de pérdida de datos utiliza lost&#95;part&#95;count en la tabla system.replicas. Para saber cuántas partes se perdieron y en qué tablas, puede usar la siguiente consulta:
+
+```
+SELECT
+    database,
+    table,
+    lost_part_count AS value
+FROM system.replicas
+WHERE value > 0
+
+```
+
+Ahora necesitamos identificar qué partes de datos ClickHouse considera perdidas para siempre. Para ello, debes buscar logs como `Part * is lost forever`.
+Si estás investigando una posible pérdida de datos ocurrida hace mucho tiempo, también deberías buscar logs como Dropping table with non-zero lost&#95;part&#95;count equal to {}.
+
+<div id="finding-logs-related-to-lost-parts">
+  ###### Buscar logs relacionados con partes perdidas
+</div>
+
+Hay varias opciones donde puede consultar los logs:
+
+1. El directorio `/var/log/clickhouse-server/` del pod de Kubernetes contiene archivos con los logs más recientes. Puede usar zgrep para buscar mensajes de log. Si hay mucha actividad en el servidor de ClickHouse, los archivos de log pueden rotar muy rápido.
+2. La tabla system.text&#95;log. El TTL de esta tabla en la nube es de 30 días.
+   Puede usar la siguiente consulta SQL:
+
+```
+SELECT
+    hostName(),
+    event_time,
+    logger_name,
+    message
+FROM clusterAllReplicas(default, system.text_log)
+WHERE message_format_string = 'Part {} is lost forever.'
+ORDER BY hostName(), event_time
+```
+
+Puede añadir un predicado para el rango de event&#95;time a fin de acelerar la consulta.
+
+<div id="understanding-the-history-of-the-lost-parts">
+  ###### Comprender el historial de las partes perdidas
+</div>
+
+Después de recopilar la lista de partes perdidas, el siguiente paso es entender qué les ocurrió.
+Elija cualquier parte de datos de la lista. Busque todos los logs relacionados con ella:
+
+```
+SELECT
+    event_time,
+    message
+FROM system.text_log
+WHERE message LIKE '%<part name>%' AND hostName() = '<host where lost forver log was created>'
+ORDER BY event_time ASC
+```
+
+Comprueba qué ocurrió antes del mensaje de log `Part * is lost forever`. Nota: todos los mensajes de log posteriores a `part is lost forever` son irrelevantes (así que, si ves que la parte finalmente se encontró en alguna réplica, en realidad se trata de una parte vacía que se creó para reemplazar la perdida).
+
+Comprueba si la parte debería haberse eliminado de todos modos (en ese caso, hay una alta probabilidad de que sea un falso positivo):
+
+1. Comprueba si la tabla tiene TTL y si la parte perdida debería haberse eliminado de todos modos debido al TTL.
+2. Comprueba system.query&#95;log para ver si hubo consultas TRUNCATE o DROP PARTITION que deberían haber eliminado las partes perdidas.
+
+Otras cosas que investigar:
+
+1. Si la parte se marcó como detached por estar dañada, intenta averiguar por qué estaba dañada.
+2. Si ves `The specified key does not exist`, debes buscar en todos los logs el nombre del blob y averiguar cuándo se eliminó y por qué. Además, comprueba los mensajes de log sobre los bloqueos zero-copy.
+
+Si todos los errores `part is lost forever` de la instancia ocurrieron en la misma tabla aproximadamente al mismo tiempo, es muy probable que tengan la misma causa. Si no, elige una parte de otro grupo y repite el proceso (podría haberse perdido por un motivo distinto).
+
+<div id="cannot-write-to-file-descriptor">
+  ##### No se puede escribir en el descriptor de archivo
+</div>
+
+```
+alert: ClickHouseCannotWriteToFileDescriptor
+expr: |
+    increase(ClickHouseErrorMetric_CANNOT_READ_FROM_FILE_DESCRIPTOR[30s]) > 0
+
+    or (
+        ClickHouseErrorMetric_CANNOT_READ_FROM_FILE_DESCRIPTOR > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**Propósito:** Esta alerta suele indicar que el disco de caché está lleno (y, en consecuencia, errores como &quot;no space left on device&quot; o &quot;CANNOT&#95;WRITE&#95;TO&#95;FILE&#95;DESCRIPTOR&quot;).
+**Acción:** Las causas pueden ser una configuración incorrecta o errores en ClickHouse. Si el tamaño o el tipo de su nodo ha cambiado recientemente, puede estar relacionado con una configuración incorrecta. Póngase en contacto con el soporte de ClickHouse en cualquiera de los dos casos.
+
+<div id="checksum-doesnt-match">
+  ##### El checksum no coincide
+</div>
+
+```
+alert: ClickHouseChecksumsMismatch
+expr: |
+    increase(ClickHouseErrorMetric_CHECKSUM_DOESNT_MATCH[30s]) > 0
+    or (
+        ClickHouseErrorMetric_CHECKSUM_DOESNT_MATCH > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**Propósito**
+**:** Las sumas de comprobación de algunas partes no coinciden. Si esto ocurre después de la actualización, puede indicar un fallo en el código.
+**Acción**: Póngase en contacto con el soporte de ClickHouse.
+
+<div id="corrupted-data">
+  ##### Datos corruptos
+</div>
+
+```
+alert: ClickHouseCorruptedData
+expr: |
+    increase(ClickHouseErrorMetric_CORRUPTED_DATA[30s]) > 0
+    or (
+        ClickHouseErrorMetric_CORRUPTED_DATA > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**Propósito:** Algunas partes de datos están dañadas. Si esto ocurre después de la actualización, podría indicar un error en el código.
+**Acción:** Póngase en contacto con el soporte de ClickHouse.
+
+<div id="logical-errors">
+  ##### Errores lógicos
+</div>
+
+```
+alert: ClickHouseLogicalErrors
+expr: |
+    increase(ClickHouseErrorMetric_LOGICAL_ERROR[30s]) > 0
+    or (
+        ClickHouseErrorMetric_LOGICAL_ERROR > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**Propósito:** Se produjeron errores lógicos en ClickHouse. Esto suele indicar un error en el código.
+**Acción:** Ponte en contacto con el soporte de ClickHouse
+
+<div id="not-enough-space">
+  ##### Espacio insuficiente
+</div>
+
+```
+alert: ClickHouseNotEnoughSpaceErrors
+expr: |
+    increase(ClickHouseErrorMetric_NOT_ENOUGH_SPACE[30s]) > 0
+    or (
+        ClickHouseErrorMetric_NOT_ENOUGH_SPACE > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**Propósito:** El servidor emitió errores NOT&#95;ENOUGH&#95;SPACE. Esto podría indicar que un PVC está lleno, que hay una configuración incorrecta, que ClickHouse intentó reservar un bloque grande para datos temporales y se rechazó la solicitud, o alguna otra causa.
+**Acción:** Ponte en contacto con el equipo de soporte de ClickHouse.
+
+<div id="broken-parts-detected-on-select">
+  ##### Partes dañadas detectadas en una consulta SELECT
+</div>
+
+```
+alert: ClickHouseBrokenPartDetectedOnSelect
+expr: |
+    increase(ClickHouseErrorMetric_POTENTIALLY_BROKEN_DATA_PART[30s]) > 0
+    or (
+        ClickHouseErrorMetric_POTENTIALLY_BROKEN_DATA_PART > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**Propósito:** La consulta SELECT falló debido al error POTENTIALLY&#95;BROKEN&#95;DATA&#95;PART. Esto indica una pérdida de datos.
+**Acción:** Consulta la acción [Pérdida de datos](#data-loss) y ponte en contacto con el soporte de ClickHouse.
+
+<div id="replica-already-exists">
+  ##### La réplica ya existe
+</div>
+
+```
+alert: ClickHouseReplicaAlreadyExists
+expr: |
+    increase(ClickHouseErrorMetric_REPLICA_ALREADY_EXISTS[30s]) > 0
+    or (
+        ClickHouseErrorMetric_REPLICA_ALREADY_EXISTS > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**Propósito:** La creación de la réplica falló porque ya existe una réplica. Esto suele ser un error en el motor de base de datos Replicated.
+**Acción:** Póngase en contacto con el soporte de ClickHouse.
+
+<div id="clickhouse-server-stuck-shutting-down">
+  ##### servidor de ClickHouse atascado al apagarse
+</div>
+
+```
+alert: ClickHouseServerShutdownStuck
+expr: ClickHouseMetrics_IsServerShuttingDown == 1
+for: 70m
+```
+
+**Propósito:** servidor de ClickHouse lleva más de una hora apagándose.
+**Acción:** Compruebe los hilos mediante system.stack&#95;trace o GDB.
+
+<div id="table-replicas-read-only">
+  ##### Réplicas de tabla en solo lectura
+</div>
+
+```
+alert: ClickHouseTableReplicasReadOnly
+expr: ClickHouse_CustomMetric_TableReadOnlyDurationSeconds > 3600
+```
+
+**Propósito:** La tabla lleva más de una hora en modo de solo lectura.
+**Acción**: Revise los logs del servidor filtrándolos por los nombres de las tablas afectadas para ver por qué está en modo de solo lectura. Esto también podría indicar un problema de Keeper. Revise los logs de Keeper para identificar posibles problemas.
+
+<div id="incident-runbooks">
+  ### Guías operativas para incidentes
+</div>
+
+<div id="data-losscorruption-clickhousebrokenpartdetectedonselect">
+  #### Pérdida/corrupción de datos. ClickHouseBrokenPartDetectedOnSelect
+</div>
+
+<div id="reason">
+  ##### Motivo
+</div>
+
+`ClickHouseBrokenPartDetectedOnSelect` se activa cuando falla la lectura de una parte de datos de SMT debido a un error (probablemente) no reintentable.
+
+La alerta se activa cuando se lanza la excepción `POTENTIALLY_BROKEN_DATA_PART`.
+
+<div id="mitigation">
+  ##### Mitigación
+</div>
+
+Revise los logs en busca de la excepción `POTENTIALLY_BROKEN_DATA_PART`. Si la alerta se ha activado, debería aparecer allí. Si por alguna razón no aparece, también puede consultar `system.errors`.
+
+Entonces debería quedar claro qué salió exactamente mal a partir del mensaje de excepción y la traza de pila.
+
+<div id="smt-clickhousetablereplicasreadonly">
+  #### SMT. ClickHouseTableReplicasReadOnly
+</div>
+
+<div id="reason">
+  ##### Motivo
+</div>
+
+`ClickHouseTableReplicasReadOnly` se activa si una tabla ha estado en modo de solo lectura durante al menos una hora.
+
+Ahora se excluyen las tablas de las bases de datos `*_broken_replicated_tables` y `*_broken_tables`.
+
+Podría deberse a un `DROP` fallido.
+
+<div id="mitigation">
+  ##### Mitigación
+</div>
+
+Comprueba si todavía hay tablas en modo de solo lectura en algún lugar del clúster:
+
+```sql
+SELECT
+  readonly_duration,
+  database,
+  table,
+  hostname()
+FROM clusterAllReplicas(default, system.replicas)
+WHERE readonly_start_time IS NOT NULL
+```
+
+Normalmente, la presencia de este tipo de tablas indica que ejecutamos `StorageSharedMergeTree::shutdown`, pero por alguna razón decidimos conservar el objeto de almacenamiento en lugar de destruirlo. Para confirmar o investigar la causa, puedes buscar en los logs de texto usando el nombre de la tabla como nombre del logger.
+
+A veces el problema es trivial y puede solucionarse con un simple reinicio de la réplica.
+Primero, intenta ejecutar [SYSTEM RESTART REPLICA](/es/reference/statements/system#restart-replica) en las tablas afectadas. Puedes obtener los nombres de las tablas de la consulta mencionada anteriormente.
+
+<div id="smt-clickhousereplicaalreadyexists">
+  #### SMT. ClickHouseReplicaAlreadyExists
+</div>
+
+<div id="reason">
+  ##### Motivo
+</div>
+
+`ClickHouseReplicaAlreadyExists` se activa cada vez que se produce una excepción con el error `REPLICA_ALREADY_EXISTS` en la instancia.
+
+Estas excepciones se producen cuando no se puede crear una réplica de una tabla replicada (SMT o RMT) porque ya hay una réplica existente asociada a la ruta.
+
+<div id="mitigation">
+  ##### Mitigación
+</div>
+
+Es poco probable que esto se deba a un error del usuario. En el pasado, el usuario podía intentar crear dos tablas con la misma ruta de ZooKeeper. Pero ahora prohibimos ese comportamiento mediante `database_replicated_allow_explicit_uuid`
+
+Es probable que se trate de un error en la base de datos Replicated o en Shared Catalog.
+
+<div id="misc-clickhousecannotwritetofiledescriptor">
+  #### Varios. ClickHouseCannotWriteToFileDescriptor
+</div>
+
+<div id="reason">
+  ##### Motivo
+</div>
+
+`ClickHouseCannotWriteToFileDescriptor` se activa cuando se produce una excepción con el error `CANNOT_WRITE_TO_FILE_DESCRIPTOR` en la instancia.
+
+La excepción se lanza cuando no hay suficiente espacio en el disco de caché para una nueva entrada de caché o para el procesamiento de datos externos (p. ej., agregación externa, JOIN externos).
+
+Se trata de un problema de configuración: se creó un disco con menos espacio del solicitado en la configuración del CR.
+
+<div id="mitigation">
+  ##### Mitigación
+</div>
+
+**Importante:** Hay un problema conocido con el seguimiento del uso del disco de la caché si se especifica el ajuste de la consulta `join_algorithm = 'partial_merge'`. Así que comprueba esto primero.
+
+Para confirmar si el problema se debe a una configuración incorrecta o al seguimiento del uso del disco, haz lo siguiente:
+
+1. Ejecuta `kubectl exec -n <namespace> -it <pod> -- /bin/bash` para conectarte al pod de Kubernetes.
+2. Ejecuta `df -h` para ver el tamaño del disco de la caché.
+3. Ejecuta `select path, max_size from system.filesystem_cache_settings` para ver el tamaño requerido del disco de la caché. Ten en cuenta que normalmente hay distintas cachés (por ejemplo, `s3diskWithCache`, `diskPlainRewritableForSystemTablesWithCache`) que comparten la misma ruta (es decir, `/mnt/clickhouse-cache/sharedS3DiskCache`).
+4. Si el tamaño real del disco es menor, el problema se debe a una configuración incorrecta. Ponte en contacto con el equipo de Data Plane Operator.
+5. De lo contrario, probablemente se trate de un error en el seguimiento del uso del disco de la caché. Para investigarlo, puedes intentar buscar en `system.filesystem_cache`.

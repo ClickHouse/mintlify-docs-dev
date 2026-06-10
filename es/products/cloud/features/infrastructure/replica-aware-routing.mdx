@@ -1,0 +1,47 @@
+---
+title: 'Enrutamiento con reconocimiento de réplicas'
+slug: /manage/replica-aware-routing
+description: 'Cómo usar el enrutamiento con reconocimiento de réplicas para aumentar la reutilización de caché'
+keywords: ['nube', 'endpoints con afinidad', 'afinidad', 'endpoints', 'enrutamiento con afinidad', 'enrutamiento', 'enrutamiento con reconocimiento de réplicas']
+doc_type: 'guide'
+---
+
+import PrivatePreviewBadge from "/snippets/components/PrivatePreviewBadge/PrivatePreviewBadge.jsx";
+
+<PrivatePreviewBadge />
+
+El enrutamiento con reconocimiento de réplicas (también conocido como sticky sessions, sticky routing o afinidad de sesión) utiliza el [balanceo de carga ring hash del proxy Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#ring-hash). El objetivo principal del enrutamiento con reconocimiento de réplicas es aumentar la probabilidad de reutilizar la caché. No garantiza el aislamiento.
+
+Al habilitar el enrutamiento con reconocimiento de réplicas para un servicio, se permite un subdominio comodín sobre el hostname del servicio. Para un servicio con el hostname `abcxyz123.us-west-2.aws.clickhouse.cloud`, se puede usar cualquier hostname que coincida con `*.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` para acceder al servicio:
+
+| Hostnames de ejemplo                                                     |
+| ------------------------------------------------------------------------ |
+| `aaa.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
+| `000.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
+| `clickhouse-is-the-best.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` |
+
+Cuando Envoy recibe un hostname que coincide con este patrón, calcula el hash de enrutamiento a partir del hostname y encuentra el servidor de ClickHouse correspondiente en el anillo hash según el hash calculado. Siempre que no haya cambios en curso en el servicio (por ejemplo, reinicios del servidor o scale out/in), Envoy elegirá siempre el mismo servidor de ClickHouse para establecer la conexión.
+
+Tenga en cuenta que el hostname original seguirá usando el balanceo de carga `LEAST_CONNECTION`, que es el algoritmo de enrutamiento predeterminado.
+
+<div id="limitations-of-replica-aware-routing">
+  ## Limitaciones del enrutamiento con reconocimiento de réplicas
+</div>
+
+<div id="replica-aware-routing-does-not-guarantee-isolation">
+  ### enrutamiento con reconocimiento de réplicas no garantiza el aislamiento
+</div>
+
+Cualquier interrupción del servicio, p. ej., reinicios del pod de Kubernetes del servidor (por cualquier motivo, como una actualización de versión, un fallo, un aumento del escalado vertical, etc.) o el escalado horizontal del servidor (de salida o de entrada), provocará una alteración en el anillo hash de enrutamiento. Esto hará que las conexiones con el mismo hostname terminen en un pod de Kubernetes del servidor distinto.
+
+<div id="replica-aware-routing-does-not-work-out-of-the-box-with-private-link">
+  ### El enrutamiento con reconocimiento de réplicas no funciona de forma predeterminada con Private Link
+</div>
+
+Los clientes deben agregar manualmente una entrada DNS para que la resolución de nombres funcione con el nuevo patrón de hostname. Si se usa incorrectamente, esto puede provocar un desequilibrio en la carga de los servidores.
+
+<div id="configuring-replica-aware-routing">
+  ## Configuración del enrutamiento con reconocimiento de réplicas
+</div>
+
+Para habilitar el enrutamiento con reconocimiento de réplicas, ponte en contacto con [nuestro equipo de soporte](https://clickhouse.com/support/program).

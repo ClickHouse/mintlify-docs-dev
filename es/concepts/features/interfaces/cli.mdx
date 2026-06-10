@@ -1,0 +1,473 @@
+---
+description: 'Documentación de clickhousectl, la CLI de ClickHouse para entornos locales y en la nube'
+sidebarTitle: 'clickhousectl'
+slug: /interfaces/cli
+title: 'clickhousectl'
+doc_type: 'referencia'
+---
+
+import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
+
+<BetaBadge />
+
+`clickhousectl` es la CLI de ClickHouse para entornos locales y en la nube.
+
+Con `clickhousectl` puedes:
+
+* Instalar y gestionar versiones locales de ClickHouse
+* Iniciar y gestionar servidores locales de ClickHouse
+* Ejecutar consultas en servidores de ClickHouse
+* Configurar ClickHouse Cloud y crear clústeres de ClickHouse gestionados en la nube
+* Gestionar recursos de ClickHouse Cloud
+* Instalar las Skills oficiales para agentes de ClickHouse en agentes de codificación compatibles
+* Llevar tu desarrollo local de ClickHouse a la nube
+
+`clickhousectl` ayuda a personas y agentes de IA a desarrollar con ClickHouse.
+
+<div id="installation">
+  ## Instalación
+</div>
+
+<div id="quick-install">
+  ### Instalación rápida
+</div>
+
+```bash
+curl https://clickhouse.com/cli | sh
+```
+
+El script de instalación descarga la versión adecuada para tu sistema operativo y la instala en `~/.local/bin/clickhousectl`. También se crea automáticamente un alias `chctl` para mayor comodidad.
+
+<div id="requirements">
+  ## Requisitos
+</div>
+
+* macOS (aarch64, x86&#95;64) o Linux (aarch64, x86&#95;64)
+* Los comandos de Cloud requieren una [clave de API de ClickHouse Cloud](/es/products/cloud/features/admin-features/api/api-overview)
+
+<div id="local">
+  ## Local
+</div>
+
+<div id="installing-versions">
+  ### Instalación y gestión de versiones de ClickHouse
+</div>
+
+`clickhousectl` descarga los binarios de ClickHouse desde las [releases de GitHub](https://github.com/ClickHouse/ClickHouse/releases).
+
+```bash
+# Instalar una versión
+clickhousectl local install stable          # Última versión estable
+clickhousectl local install lts             # Última versión LTS
+clickhousectl local install 26.3            # Última 26.3.x.x
+clickhousectl local install 26.3.4.3        # Versión exacta
+
+# Listar versiones
+clickhousectl local list                    # Versiones instaladas
+clickhousectl local list --remote           # Disponibles para descargar
+
+# Gestionar la versión predeterminada
+clickhousectl local use stable              # Última estable (instala si es necesario)
+clickhousectl local use lts                 # Última LTS (instala si es necesario)
+clickhousectl local use 26.3                # Última 26.3.x.x (instala si es necesario)
+clickhousectl local use 26.3.4.3            # Versión exacta
+clickhousectl local which                   # Mostrar la versión predeterminada actual
+
+# Eliminar una versión
+clickhousectl local remove 26.3.4.3
+```
+
+<div id="binary-storage">
+  #### Almacenamiento de los binarios de ClickHouse
+</div>
+
+Los binarios de ClickHouse se almacenan en un repositorio global, de modo que varios proyectos puedan usarlos sin duplicar el almacenamiento. Los binarios se almacenan en `~/.clickhousectl/`:
+
+```bash
+~/.clickhousectl/
+├── versions/
+│   └── 26.3.4.3/
+│       └── clickhouse
+└── default              # registra la versión activa
+```
+
+<div id="initializing-project">
+  ### Inicialización de un proyecto
+</div>
+
+```bash
+clickhousectl local init
+```
+
+`init` inicializa tu directorio de trabajo actual con una estructura de carpetas estándar para los archivos de tu proyecto de ClickHouse. Es opcional; si lo prefieres, puedes usar tu propia estructura de carpetas.
+
+Crea la siguiente estructura:
+
+```bash
+clickhouse/
+├── tables/                 # Definiciones de tablas (CREATE TABLE ...)
+├── materialized_views/     # Definiciones de vistas materializadas
+├── queries/                # Consultas guardadas
+└── seed/                   # Datos semilla / sentencias INSERT
+```
+
+<div id="running-queries">
+  ### Ejecutar consultas
+</div>
+
+```bash
+# Conectar a un servidor en ejecución con clickhouse-client
+clickhousectl local client                           # Se conecta al servidor "default"
+clickhousectl local client --name dev                # Se conecta al servidor "dev"
+clickhousectl local client --query "SHOW DATABASES"  # Ejecutar una consulta
+clickhousectl local client --queries-file schema.sql # Ejecutar consultas desde un archivo
+clickhousectl local client --host remote-host --port 9000  # Conectar a un host/puerto específico
+```
+
+<div id="managing-servers">
+  ### Crear y gestionar servidores de ClickHouse
+</div>
+
+Inicie y administre instancias de servidores de ClickHouse. Cada servidor tiene su propio directorio de datos aislado en `.clickhousectl/servers/<name>/data/`.
+
+```bash
+# Iniciar un servidor (se ejecuta en segundo plano por defecto)
+clickhousectl local server start                          # Llamado "default"
+clickhousectl local server start --name dev               # Llamado "dev"
+clickhousectl local server start --foreground             # Ejecutar en primer plano (-F / --fg)
+clickhousectl local server start --http-port 8124 --tcp-port 9001  # Puertos explícitos
+clickhousectl local server start -- --config-file=/path/to/config.xml
+
+# Listar todos los servidores (en ejecución y detenidos)
+clickhousectl local server list
+
+# Detener servidores
+clickhousectl local server stop default                   # Detener por nombre
+clickhousectl local server stop-all                       # Detener todos los servidores en ejecución
+
+# Eliminar un servidor detenido y sus datos
+clickhousectl local server remove test
+```
+
+**Nombres de los servidores:** Sin `--name`, el primer servidor se llama &quot;default&quot;. Si &quot;default&quot; ya está en ejecución, se genera un nombre aleatorio (por ejemplo, &quot;bold-crane&quot;). Use `--name` para asignar identidades estables que pueda iniciar y detener repetidamente.
+
+**Puertos:** Los puertos predeterminados son HTTP 8123 y TCP 9000. Si ya están en uso, se asignan automáticamente puertos libres y se muestran en la salida. Use `--http-port` y `--tcp-port` para establecer puertos específicos.
+
+<div id="project-local-data">
+  #### Directorio local de datos del proyecto
+</div>
+
+Todos los datos del servidor se almacenan en `.clickhousectl/`, dentro del directorio del proyecto:
+
+```bash
+.clickhousectl/
+├── .gitignore              # creado automáticamente, ignora todo
+├── credentials.json        # credenciales de la API de Cloud (si está configurado)
+└── servers/
+    ├── default/
+    │   └── data/           # archivos de datos de ClickHouse para el servidor "default"
+    └── dev/
+        └── data/           # archivos de datos de ClickHouse para el servidor "dev"
+```
+
+Cada servidor con nombre tiene su propio directorio de datos, por lo que los servidores están completamente aislados entre sí. Los datos persisten entre reinicios: detén e inicia un servidor por nombre para retomar donde lo dejaste. Usa `clickhousectl local server remove <name>` para eliminar permanentemente los datos de un servidor.
+
+<div id="authentication">
+  ## Autenticación
+</div>
+
+Autentíquese en ClickHouse Cloud mediante OAuth (en el navegador) o claves de API.
+
+<div id="oauth-login">
+  ### Inicio de sesión con OAuth (recomendado)
+</div>
+
+```bash
+clickhousectl cloud auth login
+```
+
+Esto abre el navegador para autenticarse mediante el flujo de dispositivos de OAuth. Los tokens se guardan en `.clickhousectl/tokens.json` (local del proyecto).
+
+<div id="api-key">
+  ### Clave/secreto de la API
+</div>
+
+```bash
+# No interactivo (compatible con CI)
+clickhousectl cloud auth login --api-key YOUR_KEY --api-secret YOUR_SECRET
+
+# Solicitud interactiva
+clickhousectl cloud auth login --interactive
+```
+
+Las credenciales se guardan en `.clickhousectl/credentials.json` (en el directorio local del proyecto).
+
+También puedes usar variables de entorno:
+
+```bash
+export CLICKHOUSE_CLOUD_API_KEY=your-key
+export CLICKHOUSE_CLOUD_API_SECRET=your-secret
+```
+
+O bien, pasa las credenciales directamente mediante flags en cualquier comando:
+
+```bash
+clickhousectl cloud --api-key KEY --api-secret SECRET ...
+```
+
+<div id="auth-status">
+  ### Estado de la autenticación y cierre de sesión
+</div>
+
+```bash
+clickhousectl cloud auth status    # Mostrar el estado de autenticación actual
+clickhousectl cloud auth logout    # Borrar todas las credenciales guardadas (credentials.json & tokens.json)
+```
+
+Orden de resolución de credenciales: opciones de la CLI &gt; tokens de OAuth &gt; `.clickhousectl/credentials.json` &gt; variables de entorno.
+
+<div id="cloud">
+  ## Cloud
+</div>
+
+Administre los servicios de ClickHouse Cloud a través de la API.
+
+<div id="organizations">
+  ### Organizaciones
+</div>
+
+```bash
+clickhousectl cloud org list              # Listar organizaciones
+clickhousectl cloud org get <org-id>      # Obtener detalles de la organización
+clickhousectl cloud org update <org-id> --name "Renamed Org"
+clickhousectl cloud org update <org-id> \
+  --remove-private-endpoint pe-1,cloud-provider=aws,region=us-east-1 \
+  --enable-core-dumps false
+clickhousectl cloud org prometheus <org-id> --filtered-metrics true
+clickhousectl cloud org usage <org-id> \
+  --from-date 2024-01-01 \
+  --to-date 2024-01-31
+```
+
+<div id="services">
+  ### Servicios
+</div>
+
+```bash
+# Listar servicios
+clickhousectl cloud service list
+
+# Obtener detalles del servicio
+clickhousectl cloud service get <service-id>
+
+# Crear un servicio (mínimo)
+clickhousectl cloud service create --name my-service
+
+# Crear con opciones de escalado
+clickhousectl cloud service create --name my-service \
+  --provider aws \
+  --region us-east-1 \
+  --min-replica-memory-gb 8 \
+  --max-replica-memory-gb 32 \
+  --num-replicas 2
+
+# Crear con lista de IPs permitidas específica
+clickhousectl cloud service create --name my-service \
+  --ip-allow 10.0.0.0/8 \
+  --ip-allow 192.168.1.0/24
+
+# Crear desde una copia de seguridad
+clickhousectl cloud service create --name restored-service --backup-id <backup-uuid>
+
+# Crear con canal de lanzamiento
+clickhousectl cloud service create --name my-service --release-channel fast
+
+# Iniciar/detener un servicio
+clickhousectl cloud service start <service-id>
+clickhousectl cloud service stop <service-id>
+
+# Conectarse a un servicio Cloud con clickhouse-client
+clickhousectl cloud service client --name my-service --password secret
+clickhousectl cloud service client --id <service-id> -q "SELECT 1" --password secret
+
+# Usar la variable de entorno CLICKHOUSE_PASSWORD (recomendado para scripts/agentes)
+CLICKHOUSE_PASSWORD=secret clickhousectl cloud service client \
+  --name my-service -q "SELECT count() FROM system.tables"
+
+# Actualizar metadatos del servicio y parches
+clickhousectl cloud service update <service-id> \
+  --name my-renamed-service \
+  --add-ip-allow 10.0.0.0/8 \
+  --remove-ip-allow 0.0.0.0/0 \
+  --release-channel fast
+
+# Actualizar el escalado de réplicas
+clickhousectl cloud service scale <service-id> \
+  --min-replica-memory-gb 24 \
+  --max-replica-memory-gb 48 \
+  --num-replicas 3 \
+  --idle-scaling true \
+  --idle-timeout-minutes 10
+
+# Restablecer contraseña con credenciales generadas
+clickhousectl cloud service reset-password <service-id>
+
+# Eliminar un servicio (debe estar detenido primero)
+clickhousectl cloud service delete <service-id>
+
+# Eliminación forzada: detiene el servicio en ejecución y luego lo elimina
+clickhousectl cloud service delete <service-id> --force
+```
+
+<div id="service-create-options">
+  #### Opciones de creación del servicio
+</div>
+
+| Opción                    | Descripción                                                      |
+| ------------------------- | ---------------------------------------------------------------- |
+| `--name`                  | Nombre del servicio (obligatorio)                                |
+| `--provider`              | Proveedor de nube: `aws`, `gcp`, `azure` (predeterminado: `aws`) |
+| `--region`                | Región (predeterminada: `us-east-1`)                             |
+| `--min-replica-memory-gb` | Memoria mínima por réplica en GB (8-356, múltiplo de 4)          |
+| `--max-replica-memory-gb` | Memoria máxima por réplica en GB (8-356, múltiplo de 4)          |
+| `--num-replicas`          | Número de réplicas (1-20)                                        |
+| `--idle-scaling`          | Permitir escalar a cero (predeterminado: `true`)                 |
+| `--idle-timeout-minutes`  | Tiempo mínimo de inactividad en minutos (&gt;= 5)                |
+| `--ip-allow`              | CIDR de IP permitido (repetible, predeterminado: `0.0.0.0/0`)    |
+| `--backup-id`             | ID de la copia de seguridad desde la que restaurar               |
+| `--release-channel`       | Canal de lanzamiento: `slow`, `default`, `fast`                  |
+
+<div id="query-endpoints">
+  #### Gestión de endpoints de consulta
+</div>
+
+```bash
+clickhousectl cloud service query-endpoint get <service-id>
+clickhousectl cloud service query-endpoint create <service-id> \
+  --role admin \
+  --open-api-key key-1 \
+  --allowed-origins https://app.example.com
+clickhousectl cloud service query-endpoint delete <service-id>
+```
+
+<div id="private-endpoints">
+  #### Administración de Private Endpoint
+</div>
+
+```bash
+clickhousectl cloud service private-endpoint create <service-id> --endpoint-id vpce-123
+clickhousectl cloud service private-endpoint get-config <service-id>
+```
+
+<div id="backup-config">
+  #### Configuración de copia de seguridad
+</div>
+
+```bash
+clickhousectl cloud service backup-config get <service-id>
+clickhousectl cloud service backup-config update <service-id> \
+  --backup-period-hours 24 \
+  --backup-retention-period-hours 720 \
+  --backup-start-time 02:00
+```
+
+<div id="backups">
+  ### Copias de seguridad
+</div>
+
+```bash
+clickhousectl cloud backup list <service-id>
+clickhousectl cloud backup get <service-id> <backup-id>
+```
+
+<div id="members">
+  ### Miembros
+</div>
+
+```bash
+clickhousectl cloud member list
+clickhousectl cloud member get <user-id>
+clickhousectl cloud member update <user-id> --role-id <role-id>
+clickhousectl cloud member remove <user-id>
+```
+
+<div id="invitations">
+  ### Invitaciones
+</div>
+
+```bash
+clickhousectl cloud invitation list
+clickhousectl cloud invitation create --email dev@example.com --role-id <role-id>
+clickhousectl cloud invitation get <invitation-id>
+clickhousectl cloud invitation delete <invitation-id>
+```
+
+<div id="keys">
+  ### Claves
+</div>
+
+```bash
+clickhousectl cloud key list
+clickhousectl cloud key get <key-id>
+clickhousectl cloud key create --name ci-key --role-id <role-id> --ip-allow 10.0.0.0/8
+clickhousectl cloud key update <key-id> \
+  --name renamed-key \
+  --expires-at 2025-12-31T00:00:00Z \
+  --state disabled \
+  --ip-allow 0.0.0.0/0
+clickhousectl cloud key delete <key-id>
+```
+
+<div id="activity">
+  ### Actividad
+</div>
+
+```bash
+clickhousectl cloud activity list --from-date 2024-01-01 --to-date 2024-12-31
+clickhousectl cloud activity get <activity-id>
+```
+
+<div id="json-output">
+  ### Salida en JSON
+</div>
+
+Usa la opción `--json` para imprimir respuestas en formato JSON.
+
+```bash
+clickhousectl cloud --json service list
+clickhousectl cloud --json service get <service-id>
+```
+
+<div id="skills">
+  ## Skills
+</div>
+
+Instala el paquete oficial ClickHouse Agent Skills desde [ClickHouse/agent-skills](https://github.com/ClickHouse/agent-skills).
+
+```bash
+# Predeterminado: modo interactivo para humanos, elige el ámbito y luego los agentes
+clickhousectl skills
+
+# No interactivo: instala en todas las carpetas de agentes locales del proyecto compatibles
+clickhousectl skills --all
+
+# No interactivo: instala solo en los agentes detectados
+clickhousectl skills --detected-only
+
+# No interactivo: instala en todas las carpetas de agentes globales compatibles
+clickhousectl skills --global --all
+
+# No interactivo: instala en agentes locales del proyecto específicos
+clickhousectl skills --agent claude --agent codex
+```
+
+<div id="non-interactive-flags">
+  ### Opciones no interactivas
+</div>
+
+| Opción            | Descripción                                                          |
+| ----------------- | -------------------------------------------------------------------- |
+| `--agent <name>`  | Instala Skills para un agente específico (se puede repetir)          |
+| `--global`        | Usa el alcance global; si se omite, se usa el alcance del proyecto   |
+| `--all`           | Instala Skills para todos los agentes compatibles                    |
+| `--detected-only` | Instala Skills para los agentes compatibles detectados en el sistema |

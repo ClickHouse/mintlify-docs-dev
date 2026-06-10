@@ -1,0 +1,96 @@
+---
+hidden: true
+title: "FAQ"
+slug: "docs/products/clickhouse-private/faq"
+---
+
+<div id="zone-details-couldnt-be-found-for-any-pv">
+  ### 어떤 PV에서도 zone 세부 정보를 찾을 수 없나요?
+</div>
+
+이 오류가 ClickHouse Operator 로그에 표시되면, Operator가 ClickHouse Cluster의 reconciliation을 완료하지 못하고 있음을 의미합니다. 이는 Operator가 PersistentVolume에 토폴로지 인식(topology-aware) 노드 affinity가 자동으로 설정되어 있다고 기대하기 때문입니다. 구체적으로는 `topology.kubernetes.io/zone` 레이블을 기반으로 하는 노드 affinity를 찾습니다. 일반적으로는 토폴로지 인식 볼륨 프로비저너(예: AWS EBS 볼륨 프로비저너 사용 시)가 이를 처리합니다.
+
+하지만 일부 클라우드 제공업체(예: IBM)나 온프레미스 환경에서는 이 값이 자동으로 설정되지 않거나 비표준 레이블이 사용될 수 있습니다. 이런 경우에도 Operator가 계속 동작할 수 있도록, 예를 들어 다음과 같이 storage class에 노드 affinity를 추가하는 것을 권장합니다.
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-nvme-sc
+allowVolumeExpansion: true
+parameters:
+  path: /nvme/disk
+provisioner: rancher.io/local-path
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowedTopologies:
+  - matchLabelExpressions:
+      - key: topology.kubernetes.io/zone
+        values:
+          - <your_cluster_name>-keeper
+          - <your_host_1>
+          - <your_host_2>
+          - <your_host_3>
+          - <your_host_4>
+          - <your_host_5>
+          - <your_host_6>
+      - key: directpv.min.io/zone
+        values:
+          - default
+```
+
+이렇게 하면 올바른 노드 어피니티가 적용된 스토리지 볼륨이 생성됩니다. 예를 들어:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  ...
+spec:
+  accessModes:
+    - ReadWriteOnce
+  ...
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: directpv.min.io/zone
+              operator: In
+              values:
+                - default
+  ...
+```
+
+토폴로지를 처리하는 데 비표준 레이블을 사용하는 경우, 오퍼레이터는 `additionalZoneLabelRegexes` 속성을 제공합니다. 예를 들어 오퍼레이터를 설치할 때 Helm 차트를 사용하는 경우, 위의 PersistentVolume에 맞도록 `operator.additionalZoneLabelRegexes` Helm 값을 `directpv.*zone`으로 설정할 수 있습니다.
+
+<div id="what-does-the-loadbalancertype-field-on-the-clickhousecluster-crd-do">
+  ### ClickHouseCluster CRD의 `loadBalancerType` 필드는 어떤 역할을 하나요?
+</div>
+
+`loadBalancerType`은 실제로 ClickHouse 클러스터의 Service에 로드 밸런서 어노테이션을 추가하지 않습니다. 현재 ClickHouse Operator는 ClickHouse 클러스터용 로드 밸런서를 생성하는 기능을 지원하지 않습니다. 이 필드는 ClickHouse Cloud에서만 사용되며, Cloud SQL 콘솔용 사용자를 생성하는 데 활용됩니다.
+
+<div id="do-i-have-to-use-a-nvme-attached-instance-what-purpose-does-the-nvme-disk-serve">
+  ### NVMe가 연결된 인스턴스를 반드시 사용해야 합니까? NVMe 디스크는 어떤 용도로 사용됩니까?
+</div>
+
+NVMe 디스크는 ClickHouse Operator가 ClickHouse 서버 파드에 캐시 볼륨을 마운트하는 데 사용됩니다. 이 캐시 볼륨은 S3(또는 이와 동등한 객체 스토리지)에서 가져오는 데이터의 캐시로 사용됩니다. ClickHouse Operator는 ClickHouse 서버 구성에서 디스크를 자동으로 설정합니다:
+
+```yaml
+s3diskWithCache:
+    type: cache
+    disk: s3disk
+    path: /mnt/ClickHouse-cache/sharedS3DiskCache
+    max_size:
+    '@from_env': CONFIG_DISK_CACHE_SIZE
+    cache_on_write_operations: 1
+```
+
+SharedMergeTree를 사용하는 경우 ClickHouse는 실제로 데이터를 로컬에 저장하지 않습니다. 이 디스크의 유일한 목적은 SharedMergeTree에 대해 실행되는 쿼리 성능을 최적화하는 것입니다.
+
+EC2 인스턴스를 사용하는 경우 AWS EBS와 같은 다른 스토리지 장치도 사용할 수 있습니다. 이 경우 온보딩 가이드의 몇 가지 단계가 달라집니다:
+
+* ClickHouse 서버 Kubernetes 파드를 스케줄링하는 인스턴스에 디스크가 연결되어 있는지 확인해야 합니다.
+* 디스크 아키텍처의 변경 사항을 반영하도록 launch template을 수정해야 합니다. 여전히 RAID 디스크를 생성하고 디스크를 ext4 또는 xfs로 포맷할 수 있지만, 장치 목록은 다른 도구(예: lsblk)로 확인해야 합니다.
+* 디스크가 예시 launch template처럼 `/nvme/disk`에 마운트되지 않은 경우, ClickHouseCluster helm 차트의 `hostPathBaseDirectory`를 실제 마운트 지점으로 설정해야 합니다.
+
+선택한 구성에 따라 쿼리 성능에 영향을 미칠 수 있습니다.

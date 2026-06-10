@@ -1,0 +1,115 @@
+---
+hidden: true
+title: "Практические инструкции"
+slug: "docs/products/clickhouse-private/howto-guides"
+---
+
+В этом разделе собраны инструкции по типовым вариантам настройки ClickHouse в закрытых средах.
+
+<div id="how-to-configure-cert-manager-to-generate-the-certificates-for-clickhouse-server-keeper">
+  ### Практическое руководство: настройка cert-manager для генерации сертификатов для сервера ClickHouse &amp; Keeper
+</div>
+
+В этом руководстве предполагается, что [cert-manager](https://cert-manager.io/) уже установлен в кластере. Кроме того, предполагается, что кластер ClickHouse называется `default-xx-01`.
+
+Сначала нужен центр сертификации (CA), который будет подписывать сертификаты:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+```
+
+Для простоты мы используем самоподписанный `Issuer`, так как он позволяет получить действительный CA. Это подходит для тестирования; для `Issuer` уровня production мы рекомендуем ознакомиться со [списком вариантов](https://cert-manager.io/docs/configuration/issuers/).
+
+После этого мы можем создать сертификат с помощью ресурса `Certificate`:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: clickhouse-server-tls
+  namespace: ns-default-xx-01
+spec:
+  secretName: default-xx-01-server-cert-secret
+  dnsNames:
+    - "*.default-xx-01.ns-default-xx-01.svc.cluster.local"
+  issuerRef:
+    name: selfsigned-issuer
+    kind: Issuer
+```
+
+Это создаст секрет с именем `default-xx-01-server-cert-secret` и ключами `ca.crt`, `tls.crt` и `tls.key`.
+
+Обратите внимание, что `ca.crt` добавляется только в том случае, если он доступен у issuer. Например, при использовании ACME `ca.crt` в секрет не добавляется. В этом случае в значение ключа `ca.crt` следует добавить публичный корневой сертификат (например, с помощью [trust-manager](https://cert-manager.io/docs/trust/trust-manager/) для генерации CA bundle и указания правильного секрета).
+
+По умолчанию Helm-чарт onprem-ClickHouse-cluster ожидает секрет с именем `<cluster_name>-server-cert-secret` с ключами `ca.crt`, `server.crt` и `server.key`.
+
+Чтобы кластер ClickHouse загружал сертификаты из правильных ключей секрета, можно использовать следующие значения:
+
+```yaml
+# Используется имя секрета по умолчанию (default-xx-01-server-cert-secret) — указывать не нужно
+server:
+  openSSL:
+    enabled: true
+    secret:
+      caKey: ca.crt
+      certKey: tls.crt
+      keyKey: tls.key
+```
+
+Сертификаты монтируются в поды по пути `/etc/ClickHouse-server/certs/` для ClickHouse Server или `/etc/clickhouse-keeper/certs/` для ClickHouse Keeper.
+Правильная конфигурация OpenSSL для ClickHouse генерируется Helm-чартом.
+
+<div id="how-to-configure-remote_servers-with-secretkeyref-and-from_env">
+  ### Практическое руководство: настройка remote_servers с secretKeyRef и @from_env
+</div>
+
+> Чтобы настроить параметр `remote_servers` сервера ClickHouse, потребуется Helm-чарт `onprem-clickHouse-cluster` версии не ниже `1.1.151`
+
+В этом руководстве показано, как настроить [`remote_servers`](/ru/reference/settings/server-settings/settings#remote_servers) для использования с distributed таблицами и функцией cluster(). Предполагается, что кластер ClickHouse называется `default-xx-01`, а в пространстве имен кластера есть [secret](https://kubernetes.io/docs/concepts/configuration/secret/) с именем `default-xx-01-password`.
+
+> Примечание: если вы интегрируетесь с внешними хранилищами секретов, можно применить аналогичный подход с [Kubernetes Secrets Store CSI Driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver), чтобы смонтировать секрет и [загрузить его как переменную окружения](https://secrets-store-csi-driver.sigs.k8s.io/topics/set-as-env-var).
+
+Рекомендуется использовать [секреты Kubernetes с `secretKeyRef`](https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#define-container-environment-variables-using-secret-data), чтобы передавать конфиденциальные данные через переменные окружения, а затем ссылаться на эти переменные в конфигурации ClickHouse с помощью [`@from_env`](/ru/concepts/features/configuration/server-config/configuration-files#from_env_zk).
+
+Пример:
+
+```yaml
+server:
+  additionalEnvVars:
+    - name: DEFAULT_XX_01_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: default-xx-01-password
+          key: password
+  config:
+    remote_servers:
+      default-xx-01:
+        shard:
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-0r280c0-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-f9cshqb-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-gsip6lp-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+```
+
+Этот подход гарантирует, что конфиденциальные данные не будут подставляться в манифесты напрямую. Поле `additionalEnvVars` задает переменные окружения из секретов Kubernetes с помощью `secretKeyRef`, а директива `@from_env` в конфигурации ClickHouse загружает эти значения во время выполнения.
+
+Обратите внимание, что формат FQDN для хостов реплик соответствует шаблону Kubernetes: `<pod-name>.<headless-service-name>.<namespace>.svc.cluster.local`.
