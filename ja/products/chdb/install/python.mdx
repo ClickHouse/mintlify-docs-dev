@@ -1,5 +1,5 @@
 ---
-title: 'Python用 chDB のインストール'
+title: 混在する JSON オブジェクトを含む DataFrame
 sidebarTitle: 'Python'
 slug: /chdb/install/python
 description: 'Python用 chDB のインストール方法'
@@ -619,7 +619,7 @@ from typing import List, Tuple, Any
 import json
 
 class DatabaseReader(chdb.PyReader):
-    """データベース類似のデータソース用カスタムリーダー"""
+    """データベースのようなデータソース用のカスタムリーダー"""
     
     def __init__(self, connection_string: str):
         # データベース接続をシミュレート
@@ -646,11 +646,11 @@ class DatabaseReader(chdb.PyReader):
             ("id", "UInt64"),
             ("name", "String"),
             ("score", "Int64"),
-            ("metadata", "String")  # JSON を文字列として保存
+            ("metadata", "String")  # 文字列として保存されたJSON
         ]
     
     def read(self, col_names: List[str], count: int) -> List[List[Any]]:
-        """データをバッチで読み込む"""
+        """バッチでデータを読み込む"""
         if self.cursor >= len(self.data["id"]):
             return []  # データなし
         
@@ -662,21 +662,20 @@ class DatabaseReader(chdb.PyReader):
             if col in self.data:
                 result.append(self.data[col][self.cursor:end_pos])
             else:
-                # 存在しないカラムを処理する
+                # 欠損カラムを処理する
                 result.append([None] * (end_pos - self.cursor))
         
         self.cursor = end_pos
         return result
 
-### JSON Type Inference and Handling                                
+### JSON型推論と処理
 
-chDB automatically handles complex nested data structures:
+chDBは複雑なネストされたデータ構造を自動的に処理します：
 
 ```python
 import pandas as pd
 import chdb
 
-# 混合 JSON オブジェクトを含む DataFrame
 df_with_json = pd.DataFrame({
     "user_id": [1, 2, 3, 4],
     "profile": [
@@ -687,7 +686,7 @@ df_with_json = pd.DataFrame({
     ]
 })
 
-# 設定で JSON 推論を制御する
+# 設定でJSON推論を制御する
 result = chdb.query("""
     SELECT 
         user_id,
@@ -696,11 +695,11 @@ result = chdb.query("""
         length(profile.preferences) as pref_count,
         profile.location.city as city
     FROM Python(df_with_json)
-    SETTINGS pandas_analyze_sample = 1000  -- JSON 検出のためにすべての行を解析する
+    SETTINGS pandas_analyze_sample = 1000  -- JSON検出のためにすべての行を分析する
 """, "Pretty")
 print(result)
 
-# 高度な JSON 操作
+# 高度なJSON操作
 complex_json = chdb.query("""
     SELECT 
         user_id,

@@ -1,6 +1,6 @@
 ---
 slug: /changelogs/24.5
-title: 'Журнал изменений v24.5 для Cloud'
+title: Улучшения
 description: 'Краткий журнал изменений для v24.5'
 keywords: ['журнал изменений', 'cloud']
 sidebarTitle: '24.5'
@@ -119,72 +119,68 @@ doc_type: 'changelog'
 
 * Индексы типа Set немного ускорены (примерно в 1,5 раза) за счет удаления мусора. [#64098](https://github.com/ClickHouse/ClickHouse/pull/64098) (Alexey Milovidov).
 
-<div id="improvements">
-  # Улучшения
-</div>
+* Настройка optimize&#95;monotonous&#95;functions&#95;in&#95;order&#95;by удалена, поскольку фактически стала no-op. [#63004](https://github.com/ClickHouse/ClickHouse/pull/63004) (Raúl Marín).
 
-* Настройка optimize&#95;monotonous&#95;functions&#95;in&#95;order&#95;by удалена: теперь она ничего не делает. [#63004](https://github.com/ClickHouse/ClickHouse/pull/63004) (Raúl Marín).
+* Теперь в Map можно использовать Float32, Float64, Array(T), Map(K,V) и Tuple(T1, T2, ...) в качестве ключей. Закрывает #54537. [#59318](https://github.com/ClickHouse/ClickHouse/pull/59318) (李扬).
 
-* В Map теперь можно использовать в качестве ключей Float32, Float64, Array(T), Map(K,V) и Tuple(T1, T2, ...). Закрывает #54537. [#59318](https://github.com/ClickHouse/ClickHouse/pull/59318) (李扬).
+* Добавлен асинхронный WriteBuffer для AzureBlobStorage по аналогии с S3. [#59929](https://github.com/ClickHouse/ClickHouse/pull/59929) (SmitaRKulkarni).
 
-* Добавлен асинхронный WriteBuffer для AzureBlobStorage, как в S3. [#59929](https://github.com/ClickHouse/ClickHouse/pull/59929) (SmitaRKulkarni).
+* Многострочные строки с сохранением рамок и изменением ширины столбцов. [#59940](https://github.com/ClickHouse/ClickHouse/pull/59940) (Volodyachan).
 
-* Многострочные строки с сохранением рамок и изменением ширины столбца. [#59940](https://github.com/ClickHouse/ClickHouse/pull/59940) (Volodyachan).
+* RabbitMQ теперь отправляет nack для битых сообщений. Это закрывает #45350. [#60312](https://github.com/ClickHouse/ClickHouse/pull/60312) (Kseniia Sumarokova).
 
-* Настроить RabbitMQ на отправку nack для повреждённых сообщений. Закрывает #45350. [#60312](https://github.com/ClickHouse/ClickHouse/pull/60312) (Kseniia Sumarokova).
-
-* Добавлена настройка first&#95;day&#95;of&#95;week, которая влияет на то, какой день недели функции toStartOfInterval(..., INTERVAL ... WEEK) считают первым. Это обеспечивает согласованность с функцией toStartOfWeek, у которой по умолчанию первым днем недели считается воскресенье. [#60598](https://github.com/ClickHouse/ClickHouse/pull/60598) (Jordi Villar).
+* Добавлена настройка first&#95;day&#95;of&#95;week, влияющая на то, какой день недели функции toStartOfInterval(..., INTERVAL ... WEEK) считают первым. Это обеспечивает согласованность с функцией toStartOfWeek, в которой первым днем недели по умолчанию считается воскресенье. [#60598](https://github.com/ClickHouse/ClickHouse/pull/60598) (Jordi Villar).
 
 * Добавлен persistent virtual column &#95;block&#95;offset, который хранит исходный номер строки в блоке, присвоенный при вставке. Постоянное хранение столбца &#95;block&#95;offset можно включить с помощью настройки enable&#95;block&#95;offset&#95;column. Добавлен virtual column &#95;part&#95;data&#95;version, который содержит либо минимальный номер блока, либо версию мутации части. Persistent virtual column &#95;block&#95;number больше не считается экспериментальным. [#60676](https://github.com/ClickHouse/ClickHouse/pull/60676) (Anton Popov).
 
-* Функции date&#95;diff и age теперь вычисляют результат с точностью до наносекунд вместо микросекунд. Теперь они также поддерживают значение nanosecond (или nanoseconds, или ns) для параметра unit. [#61409](https://github.com/ClickHouse/ClickHouse/pull/61409) (Austin Kothig).
+* Функции date&#95;diff и age теперь вычисляют результат с точностью до наносекунд, а не микросекунд. Теперь они также поддерживают значение nanosecond (или nanoseconds, или ns) для параметра unit. [#61409](https://github.com/ClickHouse/ClickHouse/pull/61409) (Austin Kothig).
 
-* Теперь при слияниях для широких частей метки не загружаются. [#61551](https://github.com/ClickHouse/ClickHouse/pull/61551) (Anton Popov).
+* Теперь marks для частей Wide не загружаются во время слияний. [#61551](https://github.com/ClickHouse/ClickHouse/pull/61551) (Anton Popov).
 
-* По умолчанию включён параметр output&#95;format&#95;pretty&#95;row&#95;numbers. Это удобнее для пользователей. [#61791](https://github.com/ClickHouse/ClickHouse/pull/61791) (Alexey Milovidov).
+* Настройка output&#95;format&#95;pretty&#95;row&#95;numbers теперь включена по умолчанию. Это удобнее в использовании. [#61791](https://github.com/ClickHouse/ClickHouse/pull/61791) (Alexey Milovidov).
 
-* Индикатор выполнения будет работать для простых запросов с LIMIT к system.zeros, system.zeros&#95;mt (он уже работает для system.numbers и system.numbers&#95;mt), а также для табличной функции GenerateRandom. В качестве бонуса, если общее число записей превышает ограничение max&#95;rows&#95;to&#95;read, исключение будет сгенерировано раньше. Это закрывает #58183. [#61823](https://github.com/ClickHouse/ClickHouse/pull/61823) (Alexey Milovidov).
+* Индикатор выполнения будет работать для простых запросов с LIMIT к system.zeros, system.zeros&#95;mt (для system.numbers и system.numbers&#95;mt он уже работает), а также для табличной функции generateRandom. В качестве бонуса, если общее количество записей превышает ограничение max&#95;rows&#95;to&#95;read, исключение будет сгенерировано раньше. Это закрывает #58183. [#61823](https://github.com/ClickHouse/ClickHouse/pull/61823) (Alexey Milovidov).
 
 * Добавлена команда TRUNCATE ALL TABLES. [#61862](https://github.com/ClickHouse/ClickHouse/pull/61862) (豪肥肥).
 
-* Добавлена настройка input&#95;format&#95;json&#95;throw&#95;on&#95;bad&#95;escape&#95;sequence; при её отключении можно сохранять некорректные escape-последовательности во входных JSON-форматах. [#61889](https://github.com/ClickHouse/ClickHouse/pull/61889) (Kruglov Pavel).
+* Добавлена настройка input&#95;format&#95;json&#95;throw&#95;on&#95;bad&#95;escape&#95;sequence; ее отключение позволяет сохранять некорректные escape-последовательности во входных JSON-форматах. [#61889](https://github.com/ClickHouse/ClickHouse/pull/61889) (Kruglov Pavel).
 
-* Исправлена грамматика в предупреждающем сообщении: &quot;a&quot; заменено на &quot;the&quot;. Движок Atomic существует только в одном экземпляре, поэтому должно быть &quot;to the new Atomic engine&quot;, а не &quot;to a new Atomic engine&quot;. [#61952](https://github.com/ClickHouse/ClickHouse/pull/61952) (shabroo).
+* Исправлена грамматическая ошибка: в предупреждающем сообщении &quot;a&quot; заменено на &quot;the&quot;. Движок Atomic существует только в одном экземпляре, поэтому должно быть &quot;to the new Atomic engine&quot;, а не &quot;to a new Atomic engine&quot;. [#61952](https://github.com/ClickHouse/ClickHouse/pull/61952) (shabroo).
 
-* Исправлена логическая ошибка при откате транзакции вставки с кворумом. [#61953](https://github.com/ClickHouse/ClickHouse/pull/61953) (Han Fei).
+* Исправлена логическая ошибка при отмене транзакции кворумной вставки. [#61953](https://github.com/ClickHouse/ClickHouse/pull/61953) (Han Fei).
 
-* Автоматическое определение типов столбцов Nullable по схеме Apache Arrow. [#61984](https://github.com/ClickHouse/ClickHouse/pull/61984) (Maksim Kita).
+* Nullable-типы столбцов теперь автоматически выводятся из схемы Apache Arrow. [#61984](https://github.com/ClickHouse/ClickHouse/pull/61984) (Maksim Kita).
 
-* Добавлена возможность отменять параллельное слияние состояний агрегатных функций во время агрегации. Например: uniqExact. [#61992](https://github.com/ClickHouse/ClickHouse/pull/61992) (Maksim Kita).
+* Добавлена возможность отменять параллельное слияние состояний агрегатных функций во время агрегации. Пример: uniqExact. [#61992](https://github.com/ClickHouse/ClickHouse/pull/61992) (Maksim Kita).
 
-* При запуске источник словаря с INVALIDATE&#95;QUERY не перезагружается дважды. [#62050](https://github.com/ClickHouse/ClickHouse/pull/62050) (vdimir).
+* Источник словаря с INVALIDATE&#95;QUERY не перезагружается дважды при запуске. [#62050](https://github.com/ClickHouse/ClickHouse/pull/62050) (vdimir).
 
-* OPTIMIZE FINAL для ReplicatedMergeTree теперь будет ждать завершения текущих активных слияний, а затем повторно попытается запланировать окончательное слияние. Это делает его поведение более похожим на обычное поведение MergeTree. [#62067](https://github.com/ClickHouse/ClickHouse/pull/62067) (Nikita Taranov).
+* OPTIMIZE FINAL для ReplicatedMergeTree теперь будет ждать завершения текущих активных слияний, а затем повторно пытаться запланировать финальное слияние. Это приближает его поведение к обычному поведению MergeTree. [#62067](https://github.com/ClickHouse/ClickHouse/pull/62067) (Nikita Taranov).
 
-* При чтении данных из текстового файла Hive использовалась первая строка файла, чтобы определить количество входных полей, и иногда число полей в первой строке не совпадает с определением таблицы Hive; например, таблица Hive определена с 3 столбцами, как `test&#95;tbl(a Int32, b Int32, c Int32)`, но первая строка текстового файла содержит только 2 поля. В такой ситуации количество входных полей сокращается до 2, и если следующая строка текстового файла содержит 3 поля, то третье поле не считывается, а вместо этого получает значение по умолчанию 0, что неверно. [#62086](https://github.com/ClickHouse/ClickHouse/pull/62086) (KevinyhZou).
+* При чтении данных из текстового файла Hive первая строка использовалась для определения количества входных полей, и иногда число полей в первой строке не совпадало с определением таблицы Hive; например, таблица Hive определена как содержащая 3 столбца, как в `test&#95;tbl(a Int32, b Int32, c Int32)`, но первая строка текстового файла содержит только 2 поля. В такой ситуации количество входных полей уменьшалось до 2, и если следующая строка текстового файла содержала 3 поля, то третье поле не считывалось, а вместо него устанавливалось значение по умолчанию 0, что неверно. [#62086](https://github.com/ClickHouse/ClickHouse/pull/62086) (KevinyhZou).
 
-* Подсветка синтаксиса при вводе в клиенте будет работать на уровне синтаксиса (ранее она работала на уровне лексера). [#62123](https://github.com/ClickHouse/ClickHouse/pull/62123) (Alexey Milovidov).
+* Подсветка синтаксиса при вводе в клиенте теперь будет работать на уровне парсера (ранее она работала на уровне лексера). [#62123](https://github.com/ClickHouse/ClickHouse/pull/62123) (Alexey Milovidov).
 
-* Исправлена проблема, из-за которой при добавлении лишнего `= 1` или `= 0` после логического выражения с участием первичного ключа первичный индекс не использовался. Например, и `SELECT * FROM <table> WHERE <primary-key> IN (<value>) = 1`, и `SELECT * FROM <table> WHERE <primary-key> NOT IN (<value>) = 0` выполняли полное сканирование таблицы, хотя можно было использовать первичный индекс. [#62142](https://github.com/ClickHouse/ClickHouse/pull/62142) (josh-hildred).
+* Исправлена проблема, из-за которой при добавлении лишнего `= 1` или `= 0` после булевого выражения с первичным ключом не используется первичный индекс. Например, и `SELECT * FROM <table> WHERE <primary-key> IN (<value>) = 1`, и `SELECT * FROM <table> WHERE <primary-key> NOT IN (<value>) = 0` выполняют полное сканирование таблицы, хотя можно использовать первичный индекс. [#62142](https://github.com/ClickHouse/ClickHouse/pull/62142) (josh-hildred).
 
-* Добавлена настройка lightweight&#95;deletes&#95;sync (значение по умолчанию: 2 — синхронно ожидать все реплики). Она аналогична настройке mutations&#95;sync, но влияет только на поведение легковесных удалений. [#62195](https://github.com/ClickHouse/ClickHouse/pull/62195) (Anton Popov).
+* Добавлена настройка lightweight&#95;deletes&#95;sync (значение по умолчанию: 2 — синхронно ожидать все реплики). Она похожа на настройку mutations&#95;sync, но влияет только на поведение легковесных удалений. [#62195](https://github.com/ClickHouse/ClickHouse/pull/62195) (Anton Popov).
 
-* При разборе значений для пользовательских настроек логические значения теперь различаются с целыми числами: SET custom&#95;a = true; SET custom&#95;b = 1;. [#62206](https://github.com/ClickHouse/ClickHouse/pull/62206) (Vitaly Baranov).
+* При разборе значений для пользовательских настроек теперь различаются булевы значения и целые числа: SET custom&#95;a = true; SET custom&#95;b = 1;. [#62206](https://github.com/ClickHouse/ClickHouse/pull/62206) (Vitaly Baranov).
 
 * Добавлена поддержка доступа к S3 через интерфейсные конечные точки AWS Private Link. Закрывает #60021, #31074 и #53761. [#62208](https://github.com/ClickHouse/ClickHouse/pull/62208) (Arthur Passos).
 
-* Клиент должен отправлять на server заголовок &#39;Keep-Alive: timeout=X&#39;. Если клиент получает от server ответ с этим заголовком, он должен использовать значение, указанное server. Кроме того, клиенту лучше не использовать connection, у которого вот-вот истечёт срок действия, чтобы избежать состояния гонки при connection close. [#62249](https://github.com/ClickHouse/ClickHouse/pull/62249) (Sema Checherinda).
+* Client должен отправлять серверу заголовок &#39;Keep-Alive: timeout=X&#39;. Если client получает от сервера ответ с этим заголовком, client должен использовать значение, полученное от сервера. Также client лучше не использовать соединение, у которого скоро истечет срок действия, чтобы избежать состояния гонки при закрытии соединения. [#62249](https://github.com/ClickHouse/ClickHouse/pull/62249) (Sema Checherinda).
 
-* Добавлена поддержка единиц нано-, микро- и миллисекунд для date&#95;trunc. [#62335](https://github.com/ClickHouse/ClickHouse/pull/62335) (Misz606).
+* Добавлены единицы nano-, micro- и milliseconds для date&#95;trunc. [#62335](https://github.com/ClickHouse/ClickHouse/pull/62335) (Misz606).
 
-* Кэш запросов больше не сохраняет результаты запросов к системным таблицам (system.*, information&#95;schema.*, INFORMATION&#95;SCHEMA.*). [#62376](https://github.com/ClickHouse/ClickHouse/pull/62376) (Robert Schulze).
+* Кэш запросов теперь не кэширует результаты запросов к системным таблицам (system.*, information&#95;schema.*, INFORMATION&#95;SCHEMA.*). [#62376](https://github.com/ClickHouse/ClickHouse/pull/62376) (Robert Schulze).
 
-* Запрос MOVE PARTITION TO TABLE может быть отложен или может сгенерировать исключение TOO&#95;MANY&#95;PARTS, чтобы избежать превышения ограничений на количество частей. Применяются те же настройки и ограничения, что и для запроса вставки INSERT (см. max&#95;parts&#95;in&#95;total, parts&#95;to&#95;delay&#95;insert, parts&#95;to&#95;throw&#95;insert, inactive&#95;parts&#95;to&#95;throw&#95;insert, inactive&#95;parts&#95;to&#95;delay&#95;insert, max&#95;avg&#95;part&#95;size&#95;for&#95;too&#95;many&#95;parts, min&#95;delay&#95;to&#95;insert&#95;ms и настройку max&#95;delay&#95;to&#95;insert). [#62420](https://github.com/ClickHouse/ClickHouse/pull/62420) (Sergei Trifonov).
+* Запрос MOVE PARTITION TO TABLE может быть отложен или может сгенерировать исключение TOO&#95;MANY&#95;PARTS, чтобы не превысить лимиты на количество частей. К нему применяются те же настройки и ограничения, что и к запросу INSERT (см. max&#95;parts&#95;in&#95;total, parts&#95;to&#95;delay&#95;insert, parts&#95;to&#95;throw&#95;insert, inactive&#95;parts&#95;to&#95;throw&#95;insert, inactive&#95;parts&#95;to&#95;delay&#95;insert, max&#95;avg&#95;part&#95;size&#95;for&#95;too&#95;many&#95;parts, min&#95;delay&#95;to&#95;insert&#95;ms и настройку max&#95;delay&#95;to&#95;insert). [#62420](https://github.com/ClickHouse/ClickHouse/pull/62420) (Sergei Trifonov).
 
-* Теперь transform всегда возвращает первое совпадение. [#62518](https://github.com/ClickHouse/ClickHouse/pull/62518) (Raúl Marín).
+* Функция transform теперь всегда возвращает первое совпадение. [#62518](https://github.com/ClickHouse/ClickHouse/pull/62518) (Raúl Marín).
 
-* Не вычислять DEFAULT-выражения таблицы при выполнении RESTORE. [#62601](https://github.com/ClickHouse/ClickHouse/pull/62601) (Vitaly Baranov).
+* Предотвращено вычисление DEFAULT-выражений таблицы при выполнении RESTORE. [#62601](https://github.com/ClickHouse/ClickHouse/pull/62601) (Vitaly Baranov).
 
-* Разрешено использовать ключ квоты с другой схемой аутентификации в HTTP-запросах. [#62842](https://github.com/ClickHouse/ClickHouse/pull/62842) (Kseniia Sumarokova).
+* Разрешено использовать quota key с другой схемой аутентификации в HTTP-запросах. [#62842](https://github.com/ClickHouse/ClickHouse/pull/62842) (Kseniia Sumarokova).
 
-* Закрывать сеанс по достижении user&#39;s valid&#95;until. [#63046](https://github.com/ClickHouse/ClickHouse/pull/63046) (Konstantin Bogdanov).
+* Сеанс закрывается по достижении значения valid&#95;until пользователя. [#63046](https://github.com/ClickHouse/ClickHouse/pull/63046) (Konstantin Bogdanov).
