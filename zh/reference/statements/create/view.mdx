@@ -1,0 +1,698 @@
+---
+description: 'CREATE VIEW 相关文档'
+sidebarTitle: 'VIEW'
+slug: /sql-reference/statements/create/view
+title: 'CREATE VIEW'
+doc_type: 'reference'
+---
+
+import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import DeprecatedBadge from "/snippets/components/DeprecatedBadge/DeprecatedBadge.jsx";
+import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
+
+创建一个新视图。视图可以是[普通](#normal-view)、[materialized](#materialized-view)、[可刷新的 materialized](#refreshable-materialized-view)和[窗口](/zh/reference/statements/create/view#window-view)。
+
+<div id="normal-view">
+  ## 普通视图
+</div>
+
+语法：
+
+```sql
+CREATE [OR REPLACE] VIEW [IF NOT EXISTS] [db.]table_name [(alias1 [, alias2 ...])] [ON CLUSTER cluster_name]
+[DEFINER = { user | CURRENT_USER }] [SQL SECURITY { DEFINER | INVOKER | NONE }]
+AS SELECT ...
+[COMMENT 'comment']
+```
+
+普通视图不存储任何数据。每次访问时，它们只是从另一张表中读取数据。换句话说，普通视图无非就是一个已保存的查询。从视图读取时，这个已保存的查询会作为子查询用于 [FROM](/zh/reference/statements/select/from) 子句中。
+
+例如，假设你已经创建了一个视图：
+
+```sql
+CREATE VIEW view AS SELECT ...
+```
+
+并编写了一个查询：
+
+```sql
+SELECT a, b, c FROM view
+```
+
+此查询与使用该子查询完全等同：
+
+```sql
+SELECT a, b, c FROM (SELECT ...)
+```
+
+<div id="parameterized-view">
+  ## 参数化视图
+</div>
+
+参数化视图与普通视图类似，但可以在创建时定义不会立即解析的参数。这类视图可与表函数配合使用：将视图名称作为函数名，将参数值作为其参数传入。
+
+```sql
+CREATE VIEW view AS SELECT * FROM TABLE WHERE Column1={column1:datatype1} and Column2={column2:datatype2} ...
+```
+
+上述内容会为该表创建一个视图，通过替换参数，可按如下方式将其用作表函数。
+
+```sql
+SELECT * FROM view(column1=value1, column2=value2 ...)
+```
+
+<div id="materialized-view">
+  ## Materialized View
+</div>
+
+```sql
+CREATE MATERIALIZED VIEW [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster_name] [TO[db.]name [(columns)]] [ENGINE = engine] [POPULATE]
+[REFRESH ...]
+[DEFINER = { user | CURRENT_USER }] [SQL SECURITY { DEFINER | NONE }]
+AS SELECT ...
+[COMMENT 'comment']
+```
+
+```sql
+CREATE OR REPLACE MATERIALIZED VIEW [db.]table_name [ON CLUSTER cluster_name] [TO[db.]name [(columns)]] [ENGINE = engine] [POPULATE]
+[REFRESH ...]
+[DEFINER = { user | CURRENT_USER }] [SQL SECURITY { DEFINER | NONE }]
+AS SELECT ...
+[COMMENT 'comment']
+```
+
+`OR REPLACE` 和 `IF NOT EXISTS` 互斥：不能同时使用，否则会报语法错误。
+
+<div id="create-or-replace-materialized-view">
+  ### CREATE OR REPLACE MATERIALIZED VIEW
+</div>
+
+`CREATE OR REPLACE MATERIALIZED VIEW` 会以原子方式替换现有的 materialized view 及其内部存储表 (如有) 。此操作要求使用 `Atomic` 或 `Replicated` 数据库引擎。
+
+```sql
+CREATE OR REPLACE MATERIALIZED VIEW [db.]name [ON CLUSTER cluster]
+[TO [db.]target_table]
+[ENGINE = engine]
+[POPULATE]
+[REFRESH ...]
+AS SELECT ...
+```
+
+关键行为：
+
+* **不带 `TO` 子句**：旧的内部表会被删除，并创建一个新的内部表。除非指定了 `POPULATE`，否则内部表中的现有数据将会丢失。
+* **带 `TO` 子句**：仅替换视图定义；目标表及其数据不受影响。
+* 兼容 `REFRESH`、`ON CLUSTER` 和所有引擎选项。`POPULATE` 仅在 `Atomic` 数据库中受支持——在 `Replicated` 数据库中会被拒绝 (请参见下方关于 `POPULATE` 的说明) 。
+* 需要 `CREATE VIEW` 和 `DROP VIEW` 特权。
+
+<Note>
+  `CREATE OR REPLACE MATERIALIZED VIEW` 仅受 `Atomic` 或 `Replicated` 数据库引擎支持。不支持 `Ordinary` 数据库引擎。
+</Note>
+
+**示例：**
+
+```sql
+-- 创建一个带有内部表的 materialized view
+CREATE OR REPLACE MATERIALIZED VIEW mv
+    ENGINE = MergeTree ORDER BY x
+    AS SELECT x, sum(y) AS total FROM src GROUP BY x;
+
+-- 替换为新定义（旧内部表数据将丢失）
+CREATE OR REPLACE MATERIALIZED VIEW mv
+    ENGINE = MergeTree ORDER BY x
+    AS SELECT x, count() AS cnt FROM src GROUP BY x;
+
+-- 使用 POPULATE 从现有源数据进行 backfill
+CREATE OR REPLACE MATERIALIZED VIEW mv
+    ENGINE = MergeTree ORDER BY x
+    POPULATE
+    AS SELECT x FROM src;
+
+-- 将内部表 MV 替换为 TO 表 MV（目标表数据保持不变）
+CREATE OR REPLACE MATERIALIZED VIEW mv TO target
+    AS SELECT x FROM src;
+```
+
+<Tip>
+  以下是使用 [Materialized views](/zh/concepts/features/materialized-views/cascading-materialized-views) 的分步指南。
+</Tip>
+
+Materialized views 用于存储由相应 [SELECT](/zh/reference/statements/select) 查询转换后的数据。
+
+创建不带 `TO [db].[table]` 的 Materialized view 时，必须指定 `ENGINE`，即用于存储数据的表引擎。
+
+创建带有 `TO [db].[table]` 的 Materialized view 时，不能同时使用 `POPULATE`。
+
+Materialized view 的实现方式如下：当向 `SELECT` 中指定的表插入数据时，部分新插入的数据会经过该 `SELECT` 查询转换，结果再插入到该视图中。
+
+<Note>
+  ClickHouse 中的 Materialized views 在插入目标表时依据**列名**而不是列顺序。如果 `SELECT` 查询结果中缺少某些列名，ClickHouse 会使用默认值，即使该列不是 [Nullable](/zh/reference/data-types/nullable)。因此，使用 Materialized views 时，较稳妥的做法是为每一列都添加别名。
+
+  ClickHouse 中的 Materialized views 更像是插入触发器。如果视图查询中包含 aggregation，它只会作用于刚插入的数据批次。对源表现有数据的任何更改 (如 update、delete、drop partition 等) 都不会改变 materialized view。
+
+  ClickHouse 中的 Materialized views 在发生错误时不具备确定性行为。这意味着，已经写入的块会保留在目标表中，但出错后的所有块都不会写入。
+
+  默认情况下，如果推送到某个视图失败，`INSERT` 查询也会失败，并且某些块可能不会写入目标表。可通过 `materialized_views_ignore_errors` 设置更改此行为 (应在 `INSERT` 查询中设置) ；如果将 `materialized_views_ignore_errors=true`，则推送到视图时发生的任何错误都会被忽略，所有块都会写入目标表。
+
+  另请注意，对 `system.*_log` 表而言，`materialized_views_ignore_errors` 默认值为 `true`。
+</Note>
+
+如果指定了 `POPULATE`，则创建视图时会将表中现有数据插入该视图，就像执行一次 `CREATE TABLE ... AS SELECT ...` 一样。否则，查询中只包含在视图创建后插入到表中的数据。我们**不建议**使用 `POPULATE`，因为在视图创建期间插入到表中的数据不会被插入到该视图中。
+
+<Note>
+  鉴于 `POPULATE` 的工作方式类似于 `CREATE TABLE ... AS SELECT ...`，因此它有以下限制：
+
+  * 不支持 Replicated database
+  * 不支持 ClickHouse Cloud
+
+  可改用单独的 `INSERT ... SELECT`。
+</Note>
+
+`SELECT` 查询可以包含 `DISTINCT`、`GROUP BY`、`ORDER BY`、`LIMIT`。请注意，相应的转换会在每个插入数据块上独立执行。例如，如果设置了 `GROUP BY`，数据会在插入期间进行 aggregation，但仅限于单个插入数据包内的数据，之后不会再进一步聚合。例外情况是使用可自行执行数据 aggregation 的 `ENGINE`，例如 `SummingMergeTree`。
+
+如果 materialized view 使用 `TO [db.]name` 这种写法，你可以先 `DETACH` 该视图，对目标表执行 `ALTER`，然后再 `ATTACH` 之前已 `DETACH` 的视图。
+
+请注意，materialized view 会受到 [optimize&#95;on&#95;insert](/zh/reference/settings/session-settings#optimize_on_insert) 设置的影响。数据会先合并，再插入到视图中。
+
+视图看起来与普通表相同。例如，它们会显示在 `SHOW TABLES` 查询结果中。
+
+要删除视图，请使用 [DROP VIEW](/zh/reference/statements/drop#drop-view)。不过，`DROP TABLE` 对 VIEW 也同样适用。
+
+<div id="sql_security">
+  ## SQL 安全
+</div>
+
+`DEFINER` 和 `SQL SECURITY` 允许你指定在执行视图的底层查询时使用哪个 ClickHouse 用户。
+`SQL SECURITY` 有三个合法取值：`DEFINER`、`INVOKER` 或 `NONE`。你可以在 `DEFINER` 子句中指定任何现有用户或 `CURRENT_USER`。
+
+下表说明了从视图中查询时，哪个用户需要具备哪些权限。
+请注意，无论 SQL 安全选项是什么，在所有情况下，仍然需要具备 `GRANT SELECT ON <view>` 才能读取该视图。
+
+| SQL 安全选项        | 视图                              | Materialized View                                     |
+| --------------- | ------------------------------- | ----------------------------------------------------- |
+| `DEFINER alice` | `alice` 必须拥有该视图源表的 `SELECT` 权限。 | `alice` 必须拥有该视图源表的 `SELECT` 权限，以及该视图目标表的 `INSERT` 权限。 |
+| `INVOKER`       | 用户必须拥有该视图源表的 `SELECT` 权限。       | 不能为 materialized view 指定 `SQL SECURITY INVOKER`。      |
+| `NONE`          | -                               | -                                                     |
+
+<Note>
+  `SQL SECURITY NONE` 是一个已弃用选项。任何有权创建带有 `SQL SECURITY NONE` 的视图的用户，都能够执行任意查询。
+  因此，要使用此选项创建视图，必须具备 `GRANT ALLOW SQL SECURITY NONE TO <user>`。
+</Note>
+
+如果未指定 `DEFINER`/`SQL SECURITY`，则使用默认值：
+
+* `SQL SECURITY`：普通视图为 `INVOKER`，materialized view 为 `DEFINER` ([可通过设置配置](/zh/reference/settings/session-settings#default_normal_view_sql_security))
+* `DEFINER`：`CURRENT_USER` ([可通过设置配置](/zh/reference/settings/session-settings#default_view_definer))
+
+如果视图在附加时未指定 `DEFINER`/`SQL SECURITY`，则 materialized view 的默认值为 `SQL SECURITY NONE`，普通视图的默认值为 `SQL SECURITY INVOKER`。
+
+要更改现有视图的 SQL 安全设置，请使用
+
+```sql
+ALTER TABLE MODIFY SQL SECURITY { DEFINER | INVOKER | NONE } [DEFINER = { user | CURRENT_USER }]
+```
+
+<div id="examples">
+  ### 示例
+</div>
+
+```sql
+CREATE VIEW test_view
+DEFINER = alice SQL SECURITY DEFINER
+AS SELECT ...
+```
+
+```sql
+CREATE VIEW test_view
+SQL SECURITY INVOKER
+AS SELECT ...
+```
+
+<div id="live-view">
+  ## Live View
+</div>
+
+<DeprecatedBadge />
+
+该功能已弃用，后续将被移除。
+
+为方便查阅，旧版文档见[此处](https://pastila.nl/?00f32652/fdf07272a7b54bda7e13b919264e449f.md)
+
+<div id="refreshable-materialized-view">
+  ## 可刷新materialized view
+</div>
+
+```sql
+CREATE MATERIALIZED VIEW [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
+REFRESH EVERY|AFTER interval [OFFSET interval]
+[RANDOMIZE FOR interval]
+[DEPENDS ON [db.]name [, [db.]name [, ...]]]
+[SETTINGS name = value [, name = value [, ...]]]
+[APPEND]
+[TO[db.]name] [(columns)] [ENGINE = engine]
+[EMPTY]
+[DEFINER = { user | CURRENT_USER }] [SQL SECURITY { DEFINER | NONE }]
+AS SELECT ...
+[COMMENT 'comment']
+```
+
+其中，`interval` 是由若干简单时间间隔构成的序列：
+
+```sql
+number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
+```
+
+周期性运行相应的查询，并将其结果存储到表中。
+
+* 如果指定了 `APPEND`，每次刷新都会将行插入表中，而不会删除现有行。该 insert 不是原子的，和普通的 `INSERT INTO ... SELECT` 查询一样。
+* 否则，每次刷新都会以原子方式替换表&#39;的现有内容。
+
+与常规不可刷新的 materialized view 的区别：
+
+* 没有插入触发器。当新数据插入到 `SELECT` 中指定的表时，它*不会*自动推送到可刷新materialized view。相反，只有在周期性刷新或手动刷新执行时才会插入数据。
+* 对 `SELECT` 查询没有限制。表函数 (例如 `url()`) 、视图、UNION、JOIN 都允许使用。
+
+<Note>
+  查询中 `REFRESH ... SETTINGS` 部分的 settings 是刷新设置 (例如 `refresh_retries`) ，与常规设置 (例如 `max_threads`) 不同。常规设置可以在查询末尾使用 `SETTINGS` 指定。
+</Note>
+
+<div id="refresh-schedule">
+  ### 刷新调度
+</div>
+
+刷新调度示例：
+
+```sql
+REFRESH EVERY 1 DAY -- 每天午夜（UTC）
+REFRESH EVERY 1 MONTH -- 每月第1天午夜
+REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- 每月第6天凌晨2:00
+REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- 每隔一个周六下午3:10
+REFRESH EVERY 30 MINUTE -- 在 00:00、00:30、01:00、01:30 等时刻执行
+REFRESH AFTER 30 MINUTE -- 上次刷新完成后30分钟执行，不与整点时刻对齐
+-- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- 语法错误，AFTER 不支持 OFFSET
+REFRESH EVERY 1 WEEK 2 DAYS -- 每9天执行一次，不固定在每周或每月的特定日期；
+                            -- 具体而言，当天数编号（自1969-12-29起）能被9整除时触发
+REFRESH EVERY 5 MONTHS -- 每5个月执行一次，每年触发月份不固定（因为12不能被5整除）；
+                       -- 具体而言，当月份编号（自1970-01起）能被5整除时触发
+```
+
+`RANDOMIZE FOR` 会随机调整每次刷新的时间，例如：
+
+```sql
+REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- 每天在 01:30 到 02:30 之间的随机时间执行
+```
+
+对于给定视图，任一时刻最多只能有一个 refresh 在运行。例如，如果一个带有 `REFRESH EVERY 1 MINUTE` 的视图完成一次 refresh 需要 2 分钟，那么它实际上就只会每 2 分钟 refresh 一次。如果之后它变快了，能在 10 秒内完成 refresh，那么它又会恢复为每分钟 refresh 一次。 (特别地，它不会为了补上错过的 refresh 而改为每 10 秒 refresh 一次——因为并不存在这样的积压。)
+
+此外，除非在 `CREATE` 查询中指定了 `EMPTY`，否则 materialized view 创建后会立即启动一次 refresh。如果指定了 `EMPTY`，则第一次 refresh 会按计划时间进行。
+
+<div id="in-replicated-db">
+  ### 在 Replicated DB 中
+</div>
+
+如果可刷新 materialized view 位于 [Replicated database](/zh/reference/engines/database-engines/replicated) 中，各副本会相互协调，从而确保在每个计划的刷新时间点只有一个副本执行刷新。这里要求使用 [ReplicatedMergeTree](/zh/reference/engines/table-engines/mergetree-family/replication) 表引擎，这样所有副本都能看到刷新生成的数据。
+
+在 `APPEND` 模式下，可以通过 `SETTINGS all_replicas = 1` 禁用协调。这样一来，各副本会彼此独立地执行刷新。在这种情况下，不要求使用 ReplicatedMergeTree。
+
+在非 `APPEND` 模式下，仅支持协调刷新。若要使用非协调方式，请使用 `Atomic` database 和 `CREATE ... ON CLUSTER` 查询，在所有副本上创建可刷新 materialized view。
+
+协调通过 Keeper 完成。znode 路径由 [default&#95;replica&#95;path](/zh/reference/settings/server-settings/settings#default_replica_path) 服务器设置决定。
+
+<div id="refresh-dependencies">
+  ### 刷新依赖
+</div>
+
+`DEPENDS ON` 可用于同步不同表的刷新。比如，假设有一条由两个可刷新materialized view 组成的事件链：
+
+```sql
+CREATE MATERIALIZED VIEW source REFRESH EVERY 1 DAY AS SELECT * FROM url(...)
+CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY AS SELECT ... FROM source
+```
+
+如果没有 `DEPENDS ON`，两个视图都会在午夜开始刷新，而 `destination` 通常看到的仍是 `source` 中昨天的数据。如果我们添加依赖关系：
+
+```sql
+CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY DEPENDS ON source AS SELECT ... FROM source
+```
+
+那么，`destination` 的刷新只会在 `source` 当天的刷新完成后才开始，因此 `destination` 将基于最新数据。
+
+或者，也可以通过以下方式达到相同的效果：
+
+```sql
+CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS SELECT ... FROM source
+```
+
+其中，`1 HOUR` 可以是任何小于 `source` 刷新周期的时长。依赖表的刷新频率不会高于其任一依赖项。这是在无需多次指定实际刷新周期的情况下，设置可刷新的视图事件链的一种有效方式。
+
+再举几个示例：
+
+* `REFRESH EVERY 1 DAY OFFSET 10 MINUTE` (`destination`) 依赖于 `REFRESH EVERY 1 DAY` (`source`) <br />
+  如果 `source` 刷新耗时超过 10 分钟，`destination` 就会等待它。
+* `REFRESH EVERY 1 DAY OFFSET 1 HOUR` 依赖于 `REFRESH EVERY 1 DAY OFFSET 23 HOUR`<br />
+  与上面类似，即使对应的刷新发生在不同的自然日也是如此。
+  `destination` 在第 `X+1` 天的刷新会等待 `source` 在第 `X` 天的刷新 (如果其耗时超过 2 小时) 。
+* `REFRESH EVERY 2 HOUR` 依赖于 `REFRESH EVERY 1 HOUR`<br />
+  `2 HOUR` 的刷新会在每隔一小时对应的 `1 HOUR` 刷新完成后发生，例如在午夜刷新之后，
+  然后在凌晨 2 点刷新之后，依此类推。
+* `REFRESH EVERY 1 MINUTE` 依赖于 `REFRESH EVERY 2 HOUR`<br />
+  `destination` 会在每次 `source` 刷新后刷新一次，也就是每 2 小时一次。这里的 `1 MINUTE` 实际上会被忽略。
+* `REFRESH AFTER 1 HOUR` 依赖于 `REFRESH AFTER 1 HOUR`<br />
+  目前不建议这样做。
+
+<Note>
+  `DEPENDS ON` 仅适用于可刷新materialized view 之间。在 `DEPENDS ON` 列表中列出普通表会导致该视图永远不会刷新 (可使用 `ALTER` 移除依赖关系，参见 [更改刷新参数](#changing-refresh-parameters)) 。
+</Note>
+
+<div id="refresh-settings">
+  ### 刷新设置
+</div>
+
+可用的刷新设置：
+
+* `refresh_retries` - 刷新查询因异常失败时的重试次数。如果所有重试都失败，则跳过并等待下一个计划刷新时间。0 表示不重试，-1 表示无限重试。默认值：2。
+* `refresh_retry_initial_backoff_ms` - 如果 `refresh_retries` 不为 0，首次重试前的延迟时间。此后每次重试的延迟都会翻倍，直到达到 `refresh_retry_max_backoff_ms`。默认值：100 毫秒。
+* `refresh_retry_max_backoff_ms` - 刷新尝试之间延迟时间指数增长的上限。默认值：60000 毫秒 (1 分钟) 。
+* `all_replicas` - 在带有 `APPEND` 的 [Replicated database](/zh/reference/engines/database-engines/replicated) 中，控制是让所有副本独立刷新，还是在每个计划时间点仅由一个副本刷新。视图创建后不可更改。默认值：`false`。
+* `prefer_dependency_replica` - 当视图带有 `DEPENDS ON` 时，执行父级刷新的副本会优先执行依赖刷新；其他副本则会将尝试延迟 `prefer_dependency_replica_delay_ms`。与 `SharedMergeTree` 搭配使用时，此设置可避免因复制延迟而导致依赖刷新事件链中出现数据缺失。默认值：`false`。
+* `prefer_dependency_replica_delay_ms` - 启用 `prefer_dependency_replica` 时，非优先副本在尝试执行依赖刷新前的等待时间。默认值：2000 毫秒。
+
+<div id="changing-refresh-parameters">
+  ### 更改刷新参数
+</div>
+
+可使用 [`ALTER TABLE ... MODIFY REFRESH`](/zh/reference/statements/alter/view#alter-table--modify-refresh-statement) 更改现有可刷新materialized view的刷新参数：
+
+```sql
+ALTER TABLE [db.]name MODIFY REFRESH EVERY|AFTER ... [RANDOMIZE FOR ...] [DEPENDS ON ...] [SETTINGS ...]
+```
+
+调度 (`EVERY` 或 `AFTER`) 是必填项：该语句始终会用指定内容替换*所有*刷新参数——包括调度、`RANDOMIZE FOR`、`DEPENDS ON` 和刷新设置。凡是未指定的内容，都会重置为默认值 (设置) 或被移除 (依赖项、随机化) 。
+
+<Note>
+  * 如果只想修改刷新设置 (例如 `refresh_retries`) ，请重复现有调度：
+
+    ```sql
+    ALTER TABLE rmv MODIFY REFRESH EVERY 1 HOUR SETTINGS refresh_retries = 5;
+    ```
+
+  * materialized view 不支持 `ALTER TABLE ... MODIFY SETTING refresh_retries = ...`；必须通过 `MODIFY REFRESH` 进行修改。
+
+  * 不支持添加或移除 `APPEND`。
+
+  * `all_replicas` 设置在创建后无法更改。
+</Note>
+
+示例：
+
+```sql
+-- 更改调度计划，删除现有设置和依赖项。
+ALTER TABLE rmv MODIFY REFRESH EVERY 30 MINUTE;
+
+-- 更改调度计划并调整重试行为。
+ALTER TABLE rmv MODIFY REFRESH EVERY 30 MINUTE
+SETTINGS refresh_retries = 5,
+         refresh_retry_initial_backoff_ms = 500,
+         refresh_retry_max_backoff_ms = 60000;
+
+-- 在更改周期的同时保留依赖项。
+ALTER TABLE rmv MODIFY REFRESH EVERY 6 HOUR DEPENDS ON other_rmv;
+
+-- 通过省略 `DEPENDS ON` 来删除依赖项。
+ALTER TABLE rmv MODIFY REFRESH EVERY 6 HOUR;
+```
+
+<div id="other-operations">
+  ### 其他操作
+</div>
+
+所有可刷新materialized view 的状态都可在表 [`system.view_refreshes`](/zh/reference/system-tables/view_refreshes) 中查看。具体而言，其中包含刷新进度 (如果正在运行) 、上次和下次刷新时间，以及刷新失败时的异常信息。
+
+如需手动停止、启动、触发或取消刷新，请使用 [`SYSTEM STOP|START|REFRESH|WAIT|CANCEL VIEW`](/zh/reference/statements/system#managing-refreshable-materialized-views)。
+
+如需等待刷新完成，请使用 [`SYSTEM WAIT VIEW`](/zh/reference/statements/system#wait-view)。这在创建视图后等待首次刷新时尤其有用。
+
+<Note>
+  顺带一提：刷新查询可以从正在刷新的视图中读取数据，并看到刷新前版本的数据。这意味着你可以实现 Conway&#39;s game of life：https://pastila.nl/?00021a4b/d6156ff819c83d490ad2dcec05676865#O0LGWTO7maUQIA4AcGUtlA==
+</Note>
+
+<div id="window-view">
+  ## Window View
+</div>
+
+<ExperimentalBadge />
+
+<CloudNotSupportedBadge />
+
+<Info>
+  这是一项 Experimental 功能，未来的发行版中可能会发生向后不兼容的变更。使用 [allow&#95;experimental&#95;window&#95;view](/zh/reference/settings/session-settings#allow_experimental_window_view) 设置来启用 window view 和 `WATCH` 查询。输入命令 `set allow_experimental_window_view = 1`。
+</Info>
+
+```sql
+CREATE WINDOW VIEW [IF NOT EXISTS] [db.]table_name [TO [db.]table_name] [INNER ENGINE engine] [ENGINE engine] [WATERMARK strategy] [ALLOWED_LATENESS interval_function] [POPULATE]
+AS SELECT ...
+GROUP BY time_window_function
+[COMMENT 'comment']
+```
+
+窗口视图可以按时间窗口聚合数据，并在窗口满足触发条件时输出结果。它会将部分聚合结果存储在内部 (或指定的) 表中，以降低延迟；还可以将处理结果推送到指定表，或使用 `WATCH` 查询推送通知。
+
+创建窗口视图与创建 `MATERIALIZED VIEW` 类似。窗口视图需要一个内部存储引擎来保存中间数据。可以使用 `INNER ENGINE` 子句指定内部存储引擎；如果未指定，窗口视图默认使用 `AggregatingMergeTree` 作为内部引擎。
+
+创建不带 `TO [db].[table]` 的窗口视图时，必须指定 `ENGINE`——即用于存储数据的表引擎。
+
+<div id="time-window-functions">
+  ### 时间窗口函数
+</div>
+
+[时间窗口函数](/zh/reference/functions/regular-functions/time-window-functions) 用于获取记录的窗口上下界。窗口视图 需要配合时间窗口函数使用。
+
+<div id="time-attributes">
+  ### 时间属性
+</div>
+
+窗口视图 支持按 **处理时间** 和 **事件时间** 进行处理。
+
+**处理时间** 允许 窗口视图 基于本地机器时间生成结果，且默认使用这种方式。它是最直观的时间概念，但不具备确定性。可以通过将时间窗口函数的 `time_attr` 设置为表中的某一列，或使用函数 `now()`，来定义处理时间属性。以下查询创建了一个使用处理时间的 窗口视图。
+
+```sql
+CREATE WINDOW VIEW wv AS SELECT count(number), tumbleStart(w_id) as w_start from date GROUP BY tumble(now(), INTERVAL '5' SECOND) as w_id
+```
+
+**事件时间**是指每个事件在其产生设备上实际发生的时间。这个时间通常会在记录生成时嵌入到记录中。事件时间处理即使在事件乱序或延迟到达的情况下，也能保证结果一致。窗口视图通过 `WATERMARK` 语法支持事件时间处理。
+
+窗口视图提供三种 watermark 策略：
+
+* `STRICTLY_ASCENDING`：发出截至当前已观测到的最大时间戳作为 watermark。时间戳小于该最大时间戳的行不属于迟到数据。
+* `ASCENDING`：发出截至当前已观测到的最大时间戳减 1 作为 watermark。时间戳等于或小于该最大时间戳的行不属于迟到数据。
+* `BOUNDED`：WATERMARK=INTERVAL。发出 watermark，其值为已观测到的最大时间戳减去指定延迟。
+
+以下查询展示了如何使用 `WATERMARK` 创建窗口视图：
+
+```sql
+CREATE WINDOW VIEW wv WATERMARK=STRICTLY_ASCENDING AS SELECT count(number) FROM date GROUP BY tumble(timestamp, INTERVAL '5' SECOND);
+CREATE WINDOW VIEW wv WATERMARK=ASCENDING AS SELECT count(number) FROM date GROUP BY tumble(timestamp, INTERVAL '5' SECOND);
+CREATE WINDOW VIEW wv WATERMARK=INTERVAL '3' SECOND AS SELECT count(number) FROM date GROUP BY tumble(timestamp, INTERVAL '5' SECOND);
+```
+
+默认情况下，当 watermark 到达时会触发窗口，晚于 watermark 到达的元素会被丢弃。窗口视图可通过设置 `ALLOWED_LATENESS=INTERVAL` 来支持处理迟到事件。下面是一个处理迟到事件的示例：
+
+```sql
+CREATE WINDOW VIEW test.wv TO test.dst WATERMARK=ASCENDING ALLOWED_LATENESS=INTERVAL '2' SECOND AS SELECT count(a) AS count, tumbleEnd(wid) AS w_end FROM test.mt GROUP BY tumble(timestamp, INTERVAL '5' SECOND) AS wid;
+```
+
+请注意，由延迟触发产生的元素应视为先前计算结果的更新。窗口视图不会等到窗口结束时才触发，而是在延迟事件到达后立即触发。因此，同一窗口可能会产生多次输出。用户需要将这些重复结果考虑在内，或对其进行去重。
+
+你可以使用 `ALTER TABLE ... MODIFY QUERY` 语句来修改窗口视图中定义的 `SELECT` 查询。新的 `SELECT` 查询产生的数据结构，无论是否包含 `TO [db.]name` 子句，都应与原始 `SELECT` 查询保持一致。请注意，当前窗口中的数据将会丢失，因为中间状态无法复用。
+
+<div id="monitoring-new-windows">
+  ### 监视新窗口
+</div>
+
+窗口视图支持使用 [WATCH](/zh/reference/statements/watch) 查询来监视变更，也可以使用 `TO` 语法将结果输出到表中。
+
+```sql
+WATCH [db.]window_view
+[EVENTS]
+[LIMIT n]
+[FORMAT format]
+```
+
+可以指定 `LIMIT`，以设置在终止查询前接收更新的次数。`EVENTS` 子句可用于获取 `WATCH` 查询的简写形式：此时返回的不再是查询结果，而仅是最新的查询水位线。
+
+<div id="settings-1">
+  ### 设置
+</div>
+
+* `window_view_clean_interval`：窗口视图的清理间隔，单位为秒，用于释放过期数据。系统会根据系统时间或 `WATERMARK` 配置保留尚未被完全触发的窗口，其他数据将被删除。
+* `window_view_heartbeat_interval`：心跳间隔，单位为秒，用于表明 watch 查询仍处于活动状态。
+* `wait_for_window_view_fire_signal_timeout`：在事件时间处理中等待窗口视图触发信号的超时时间。
+
+<div id="examples">
+  ### 示例
+</div>
+
+假设我们需要统计名为 `data` 的日志表中每 10 秒内的点击日志数量，其表结构如下：
+
+```sql
+CREATE TABLE data ( `id` UInt64, `timestamp` DateTime) ENGINE = Memory;
+```
+
+首先，我们创建一个窗口视图，使用 10 秒的滚动窗口：
+
+```sql
+CREATE WINDOW VIEW wv as select count(id), tumbleStart(w_id) as window_start from data group by tumble(timestamp, INTERVAL '10' SECOND) as w_id
+```
+
+然后，使用 `WATCH` 查询获取结果。
+
+```sql
+WATCH wv
+```
+
+当日志插入到表 `data` 时，
+
+```sql
+INSERT INTO data VALUES(1,now())
+```
+
+`WATCH` 查询应输出如下结果：
+
+```text
+┌─count(id)─┬────────window_start─┐
+│         1 │ 2020-01-14 16:56:40 │
+└───────────┴─────────────────────┘
+```
+
+或者，也可以使用 `TO` 语法将输出写入另一张表。
+
+```sql
+CREATE WINDOW VIEW wv TO dst AS SELECT count(id), tumbleStart(w_id) as window_start FROM data GROUP BY tumble(timestamp, INTERVAL '10' SECOND) as w_id
+```
+
+更多示例可在 ClickHouse 的有状态测试中找到 (这些测试在其中命名为 `*window_view*`) 。
+
+<div id="window-view-usage">
+  ### 窗口视图用法
+</div>
+
+窗口视图适用于以下场景：
+
+* **监控**：按时间对指标日志进行聚合和计算，并将结果输出到目标表。仪表板可以将目标表用作源表。
+* **分析**：在时间窗口内自动聚合并预处理数据。这在分析大量日志时非常有用。预处理可消除多个查询中的重复计算，并降低查询延迟。
+
+<div id="related-content">
+  ## 相关内容
+</div>
+
+* 博客：[在 ClickHouse 中使用时间序列数据](https://clickhouse.com/blog/working-with-time-series-data-and-functions-ClickHouse)
+* 博客：[使用 ClickHouse 构建可观测性解决方案 (第 2 部分) ：链路追踪](https://clickhouse.com/blog/storing-traces-and-spans-open-telemetry-in-clickhouse)
+
+<div id="temporary-views">
+  ## 临时视图
+</div>
+
+ClickHouse 支持**临时视图**，其特性如下 (在适用情况下与临时表一致) ：
+
+* **会话生命周期**
+  临时视图仅在当前会话期间存在。会话结束后会自动删除。
+
+* **无数据库**
+  **不能**使用数据库名限定临时视图。它存在于数据库之外 (会话命名空间) 。
+
+* **不复制 / 不支持 ON CLUSTER**
+  临时对象仅在当前会话内有效，**不能**通过 `ON CLUSTER` 创建。
+
+* **名称解析**
+  如果临时对象 (表或视图) 与持久对象同名，且某个查询在**不带**数据库名的情况下引用该名称，则会使用**临时**对象。
+
+* **逻辑对象 (无存储)&#x20;**&#xA;临时视图仅存储其 `SELECT` 文本 (内部使用 `View` 存储) 。它不会持久化数据，也不接受 `INSERT`。
+
+* **Engine 子句**
+  **无需**指定 `ENGINE`；如果写为 `ENGINE = View`，也会被忽略，并视为相同的逻辑视图。
+
+* **安全 / 特权**
+  创建临时视图需要 `CREATE TEMPORARY VIEW` 特权，而 `CREATE VIEW` 会隐式授予该特权。
+
+* **SHOW CREATE**
+  使用 `SHOW CREATE TEMPORARY VIEW view_name;` 可输出临时视图的 DDL。
+
+<div id="temporary-views-syntax">
+  ### 语法
+</div>
+
+```sql
+CREATE TEMPORARY VIEW [IF NOT EXISTS] view_name AS <select_query>
+```
+
+`OR REPLACE` **不**支持用于临时视图 (与临时表一致) 。如果你需要“替换”临时视图，请先将其删除，再重新创建。
+
+<div id="examples">
+  ### 示例
+</div>
+
+创建一个临时源表，并基于它创建一个临时视图：
+
+```sql
+CREATE TEMPORARY TABLE t_src (id UInt32, val String);
+INSERT INTO t_src VALUES (1, 'a'), (2, 'b');
+
+CREATE TEMPORARY VIEW tview AS
+SELECT id, upper(val) AS u
+FROM t_src
+WHERE id <= 2;
+
+SELECT * FROM tview ORDER BY id;
+```
+
+查看其 DDL：
+
+```sql
+SHOW CREATE TEMPORARY VIEW tview;
+```
+
+将其删除：
+
+```sql
+DROP TEMPORARY VIEW IF EXISTS tview;  -- 临时视图使用 TEMPORARY TABLE 语法进行删除
+```
+
+<div id="temporary-views-limitations">
+  ### 不允许的用法 / 限制
+</div>
+
+* `CREATE OR REPLACE TEMPORARY VIEW ...` → **不允许** (请使用 `DROP` + `CREATE`) 。
+* `CREATE TEMPORARY MATERIALIZED VIEW ...` / `WINDOW VIEW` → **不允许**。
+* `CREATE TEMPORARY VIEW db.view AS ...` → **不允许** (不支持数据库限定) 。
+* `CREATE TEMPORARY VIEW view ON CLUSTER 'name' AS ...` → **不允许** (临时对象仅在当前会话内有效) 。
+* `POPULATE`、`REFRESH`、`TO [db.table]`、内部引擎以及所有 MV 专用子句 → **不适用于**临时视图。
+
+<div id="temporary-views-distributed-notes">
+  ### 关于分布式查询的说明
+</div>
+
+临时**视图**只是一个定义，本身不包含可传递的数据。如果临时视图引用了临时**表** (例如 `Memory`) ，其数据在分布式查询执行期间也可以像临时表一样传送到远程服务器。
+
+<div id="temporary-views-distributed-example">
+  #### 示例
+</div>
+
+```sql
+-- 会话范围内的内存表
+CREATE TEMPORARY TABLE temp_ids (id UInt64) ENGINE = Memory;
+
+INSERT INTO temp_ids VALUES (1), (5), (42);
+
+-- 基于临时表的会话范围视图（纯逻辑视图）
+CREATE TEMPORARY VIEW v_ids AS
+SELECT id FROM temp_ids;
+
+-- 将 'test' 替换为您的集群名称。
+-- GLOBAL JOIN 强制 ClickHouse 将较小的 join 端（通过 v_ids 引用的 temp_ids）
+-- 分发到执行左侧查询的每台远程服务器。
+SELECT count()
+FROM cluster('test', system.numbers) AS n
+GLOBAL ANY INNER JOIN v_ids USING (id)
+WHERE n.number < 100;
+
+```

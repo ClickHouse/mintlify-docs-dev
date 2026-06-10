@@ -1,0 +1,473 @@
+---
+description: 'clickhousectl 文档：用于本地和云端 ClickHouse 的 CLI'
+sidebarTitle: 'clickhousectl'
+slug: /interfaces/cli
+title: 'clickhousectl'
+doc_type: 'reference'
+---
+
+import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
+
+<BetaBadge />
+
+`clickhousectl` 是 ClickHouse 的 CLI，适用于本地和云端。
+
+使用 `clickhousectl`，你可以：
+
+* 安装和管理本地 ClickHouse 版本
+* 启动和管理本地 ClickHouse 服务器
+* 在 ClickHouse 服务器上执行查询
+* 设置 ClickHouse Cloud 并创建由云端托管的 ClickHouse 集群
+* 管理 ClickHouse Cloud 资源
+* 将官方 ClickHouse agent 技能安装到受支持的代码智能体中
+* 将本地 ClickHouse 开发推送到云端
+
+`clickhousectl` 可帮助开发者和 AI 智能体使用 ClickHouse 进行开发。
+
+<div id="installation">
+  ## 安装
+</div>
+
+<div id="quick-install">
+  ### 快速安装
+</div>
+
+```bash
+curl https://clickhouse.com/cli | sh
+```
+
+安装脚本会下载适用于你所用操作系统的正确版本，并将其安装到 `~/.local/bin/clickhousectl`。为方便使用，还会自动创建一个 `chctl` 别名。
+
+<div id="requirements">
+  ## 要求
+</div>
+
+* macOS (aarch64、x86&#95;64) 或 Linux (aarch64、x86&#95;64)
+* Cloud 命令需要 [ClickHouse Cloud API 密钥](/zh/products/cloud/features/admin-features/api/api-overview)
+
+<div id="local">
+  ## 本地
+</div>
+
+<div id="installing-versions">
+  ### 安装和管理 ClickHouse 版本
+</div>
+
+`clickhousectl` 从 [GitHub Releases](https://github.com/ClickHouse/ClickHouse/releases) 下载 ClickHouse 二进制文件。
+
+```bash
+# 安装版本
+clickhousectl local install stable          # 最新稳定版本
+clickhousectl local install lts             # 最新 LTS 版本
+clickhousectl local install 26.3            # 最新 26.3.x.x
+clickhousectl local install 26.3.4.3        # 指定版本
+
+# 列出版本
+clickhousectl local list                    # 已安装的版本
+clickhousectl local list --remote           # 可供下载的版本
+
+# 管理默认版本
+clickhousectl local use stable              # 最新稳定版本（如未安装则自动安装）
+clickhousectl local use lts                 # 最新 LTS（如未安装则自动安装）
+clickhousectl local use 26.3                # 最新 26.3.x.x（如未安装则自动安装）
+clickhousectl local use 26.3.4.3            # 指定版本
+clickhousectl local which                   # 显示当前默认版本
+
+# 移除版本
+clickhousectl local remove 26.3.4.3
+```
+
+<div id="binary-storage">
+  #### ClickHouse 二进制文件存储
+</div>
+
+ClickHouse 二进制文件存放在全局存储库中，因此可供多个项目共享使用，无需重复占用存储空间。二进制文件存放在 `~/.clickhousectl/` 中：
+
+```bash
+~/.clickhousectl/
+├── versions/
+│   └── 26.3.4.3/
+│       └── clickhouse
+└── default              # 记录当前活跃版本
+```
+
+<div id="initializing-project">
+  ### 初始化项目
+</div>
+
+```bash
+clickhousectl local init
+```
+
+`init` 会在你当前的工作目录中初始化适用于 ClickHouse 项目文件的标准文件夹结构。此步骤是可选的；如果你愿意，也可以使用自己的文件夹结构。
+
+它会创建以下结构：
+
+```bash
+clickhouse/
+├── tables/                 # 表定义 (CREATE TABLE ...)
+├── materialized_views/     # Materialized view 定义
+├── queries/                # 已保存的查询
+└── seed/                   # Seed 数据 / INSERT 语句
+```
+
+<div id="running-queries">
+  ### 执行查询
+</div>
+
+```bash
+# 使用 clickhouse-client 连接到正在运行的服务器
+clickhousectl local client                           # 连接到 "default" 服务器
+clickhousectl local client --name dev                # 连接到 "dev" 服务器
+clickhousectl local client --query "SHOW DATABASES"  # 执行查询
+clickhousectl local client --queries-file schema.sql # 从文件执行查询
+clickhousectl local client --host remote-host --port 9000  # 连接到指定主机/端口
+```
+
+<div id="managing-servers">
+  ### 创建和管理 ClickHouse 服务器
+</div>
+
+启动并管理 ClickHouse 服务器实例。每个服务器都会在 `.clickhousectl/servers/<name>/data/` 下拥有各自独立的数据目录。
+
+```bash
+# 启动服务器（默认在后台运行）
+clickhousectl local server start                          # 命名为 "default"
+clickhousectl local server start --name dev               # 命名为 "dev"
+clickhousectl local server start --foreground             # 在前台运行（-F / --fg）
+clickhousectl local server start --http-port 8124 --tcp-port 9001  # 显式指定端口
+clickhousectl local server start -- --config-file=/path/to/config.xml
+
+# 列出所有服务器（运行中和已停止的）
+clickhousectl local server list
+
+# 停止服务器
+clickhousectl local server stop default                   # 按名称停止
+clickhousectl local server stop-all                       # 停止所有运行中的服务器
+
+# 删除已停止的服务器及其数据
+clickhousectl local server remove test
+```
+
+**服务器命名：**如果不使用 `--name`，第一个服务器的名称为 &quot;default&quot;。如果 &quot;default&quot; 已在运行，则会生成一个随机名称 (例如 &quot;bold-crane&quot;) 。如果需要可反复启动/停止的固定标识，请使用 `--name`。
+
+**端口：**默认端口为 HTTP 8123 和 TCP 9000。如果这些端口已被占用，系统会自动分配空闲端口并在输出中显示。使用 `--http-port` 和 `--tcp-port` 可显式指定端口。
+
+<div id="project-local-data">
+  #### 项目本地数据目录
+</div>
+
+所有服务器数据都存放在项目目录中的 `.clickhousectl/` 内：
+
+```bash
+.clickhousectl/
+├── .gitignore              # 自动创建，忽略所有内容
+├── credentials.json        # Cloud API 凭据（如已配置）
+└── servers/
+    ├── default/
+    │   └── data/           # "default" 服务器的 ClickHouse 数据文件
+    └── dev/
+        └── data/           # "dev" 服务器的 ClickHouse 数据文件
+```
+
+每个具名服务器都有各自的数据目录，因此服务器之间完全隔离。数据会在重启后保留——按名称停止并重新启动服务器，即可从上次离开的地方继续。使用 `clickhousectl local server remove <name>` 可永久删除某个服务器的数据。
+
+<div id="authentication">
+  ## 身份验证
+</div>
+
+使用 OAuth (基于浏览器) 或 API 密钥对 ClickHouse Cloud 进行身份验证。
+
+<div id="oauth-login">
+  ### OAuth 登录 (推荐)
+</div>
+
+```bash
+clickhousectl cloud auth login
+```
+
+这会打开浏览器，通过 OAuth device flow 进行身份验证。令牌会保存到 `.clickhousectl/tokens.json` (仅限当前项目目录) 。
+
+<div id="api-key">
+  ### API 密钥/Secret
+</div>
+
+```bash
+# 非交互式（适用于 CI）
+clickhousectl cloud auth login --api-key YOUR_KEY --api-secret YOUR_SECRET
+
+# 交互式提示
+clickhousectl cloud auth login --interactive
+```
+
+凭据会保存在 `.clickhousectl/credentials.json` 中 (仅当前项目) 。
+
+你也可以使用环境变量：
+
+```bash
+export CLICKHOUSE_CLOUD_API_KEY=your-key
+export CLICKHOUSE_CLOUD_API_SECRET=your-secret
+```
+
+或者也可以通过任意命令的标志直接传入凭据：
+
+```bash
+clickhousectl cloud --api-key KEY --api-secret SECRET ...
+```
+
+<div id="auth-status">
+  ### 认证状态与退出登录
+</div>
+
+```bash
+clickhousectl cloud auth status    # 显示当前认证状态
+clickhousectl cloud auth logout    # 清除所有已保存的凭据（credentials.json 和 tokens.json）
+```
+
+凭据解析顺序：CLI 参数 &gt; OAuth 令牌 &gt; `.clickhousectl/credentials.json` &gt; 环境变量。
+
+<div id="cloud">
+  ## Cloud
+</div>
+
+通过 API 管理 ClickHouse Cloud 服务。
+
+<div id="organizations">
+  ### 组织
+</div>
+
+```bash
+clickhousectl cloud org list              # 列出组织
+clickhousectl cloud org get <org-id>      # 获取组织详情
+clickhousectl cloud org update <org-id> --name "Renamed Org"
+clickhousectl cloud org update <org-id> \
+  --remove-private-endpoint pe-1,cloud-provider=aws,region=us-east-1 \
+  --enable-core-dumps false
+clickhousectl cloud org prometheus <org-id> --filtered-metrics true
+clickhousectl cloud org usage <org-id> \
+  --from-date 2024-01-01 \
+  --to-date 2024-01-31
+```
+
+<div id="services">
+  ### 服务
+</div>
+
+```bash
+# 列出服务
+clickhousectl cloud service list
+
+# 获取服务详情
+clickhousectl cloud service get <service-id>
+
+# 创建服务（最简配置）
+clickhousectl cloud service create --name my-service
+
+# 创建时指定扩缩容选项
+clickhousectl cloud service create --name my-service \
+  --provider aws \
+  --region us-east-1 \
+  --min-replica-memory-gb 8 \
+  --max-replica-memory-gb 32 \
+  --num-replicas 2
+
+# 创建时指定 IP 允许列表
+clickhousectl cloud service create --name my-service \
+  --ip-allow 10.0.0.0/8 \
+  --ip-allow 192.168.1.0/24
+
+# 从 Backup 创建
+clickhousectl cloud service create --name restored-service --backup-id <backup-uuid>
+
+# 创建时指定发布渠道
+clickhousectl cloud service create --name my-service --release-channel fast
+
+# 启动/停止服务
+clickhousectl cloud service start <service-id>
+clickhousectl cloud service stop <service-id>
+
+# 使用 clickhouse-client 连接到 Cloud 服务
+clickhousectl cloud service client --name my-service --password secret
+clickhousectl cloud service client --id <service-id> -q "SELECT 1" --password secret
+
+# 使用 CLICKHOUSE_PASSWORD 环境变量（推荐用于脚本/智能体）
+CLICKHOUSE_PASSWORD=secret clickhousectl cloud service client \
+  --name my-service -q "SELECT count() FROM system.tables"
+
+# 更新服务元数据和 Patches
+clickhousectl cloud service update <service-id> \
+  --name my-renamed-service \
+  --add-ip-allow 10.0.0.0/8 \
+  --remove-ip-allow 0.0.0.0/0 \
+  --release-channel fast
+
+# 更新副本扩缩容配置
+clickhousectl cloud service scale <service-id> \
+  --min-replica-memory-gb 24 \
+  --max-replica-memory-gb 48 \
+  --num-replicas 3 \
+  --idle-scaling true \
+  --idle-timeout-minutes 10
+
+# 重置密码并生成新凭据
+clickhousectl cloud service reset-password <service-id>
+
+# 删除服务（必须先停止）
+clickhousectl cloud service delete <service-id>
+
+# 强制删除：先停止运行中的服务，再执行删除
+clickhousectl cloud service delete <service-id> --force
+```
+
+<div id="service-create-options">
+  #### 服务创建选项
+</div>
+
+| 选项                        | 描述                                   |
+| ------------------------- | ------------------------------------ |
+| `--name`                  | 服务名称 (必填)                            |
+| `--provider`              | 云提供商：`aws`、`gcp`、`azure` (默认：`aws`)  |
+| `--region`                | 区域 (默认：`us-east-1`)                  |
+| `--min-replica-memory-gb` | 每个副本的最小内存 (GB)  (8-356，且为 4 的倍数)     |
+| `--max-replica-memory-gb` | 每个副本的最大内存 (GB)  (8-356，且为 4 的倍数)     |
+| `--num-replicas`          | 副本数量 (1-20)                          |
+| `--idle-scaling`          | 允许缩容为零 (默认：`true`)                   |
+| `--idle-timeout-minutes`  | 最小空闲超时时长 (分钟)  (&gt;= 5)             |
+| `--ip-allow`              | 允许的 IP CIDR (可重复指定，默认：`0.0.0.0/0`)   |
+| `--backup-id`             | 用于恢复的 Backup ID                           |
+| `--release-channel`       | 发布渠道：`slow`、`default`、`fast`         |
+
+<div id="query-endpoints">
+  #### 查询端点管理
+</div>
+
+```bash
+clickhousectl cloud service query-endpoint get <service-id>
+clickhousectl cloud service query-endpoint create <service-id> \
+  --role admin \
+  --open-api-key key-1 \
+  --allowed-origins https://app.example.com
+clickhousectl cloud service query-endpoint delete <service-id>
+```
+
+<div id="private-endpoints">
+  #### 专用终结点管理
+</div>
+
+```bash
+clickhousectl cloud service private-endpoint create <service-id> --endpoint-id vpce-123
+clickhousectl cloud service private-endpoint get-config <service-id>
+```
+
+<div id="backup-config">
+  #### Backup 配置
+</div>
+
+```bash
+clickhousectl cloud service backup-config get <service-id>
+clickhousectl cloud service backup-config update <service-id> \
+  --backup-period-hours 24 \
+  --backup-retention-period-hours 720 \
+  --backup-start-time 02:00
+```
+
+<div id="backups">
+  ### Backup
+</div>
+
+```bash
+clickhousectl cloud backup list <service-id>
+clickhousectl cloud backup get <service-id> <backup-id>
+```
+
+<div id="members">
+  ### 成员
+</div>
+
+```bash
+clickhousectl cloud member list
+clickhousectl cloud member get <user-id>
+clickhousectl cloud member update <user-id> --role-id <role-id>
+clickhousectl cloud member remove <user-id>
+```
+
+<div id="invitations">
+  ### 邀请
+</div>
+
+```bash
+clickhousectl cloud invitation list
+clickhousectl cloud invitation create --email dev@example.com --role-id <role-id>
+clickhousectl cloud invitation get <invitation-id>
+clickhousectl cloud invitation delete <invitation-id>
+```
+
+<div id="keys">
+  ### 键
+</div>
+
+```bash
+clickhousectl cloud key list
+clickhousectl cloud key get <key-id>
+clickhousectl cloud key create --name ci-key --role-id <role-id> --ip-allow 10.0.0.0/8
+clickhousectl cloud key update <key-id> \
+  --name renamed-key \
+  --expires-at 2025-12-31T00:00:00Z \
+  --state disabled \
+  --ip-allow 0.0.0.0/0
+clickhousectl cloud key delete <key-id>
+```
+
+<div id="activity">
+  ### 活动
+</div>
+
+```bash
+clickhousectl cloud activity list --from-date 2024-01-01 --to-date 2024-12-31
+clickhousectl cloud activity get <activity-id>
+```
+
+<div id="json-output">
+  ### JSON 输出
+</div>
+
+使用 `--json` 标志输出 JSON 格式的响应。
+
+```bash
+clickhousectl cloud --json service list
+clickhousectl cloud --json service get <service-id>
+```
+
+<div id="skills">
+  ## 技能
+</div>
+
+从 [ClickHouse/agent-skills](https://github.com/ClickHouse/agent-skills) 安装 ClickHouse 官方 Agent Skills。
+
+```bash
+# 默认：面向用户的交互模式，选择作用域，然后选择智能体
+clickhousectl skills
+
+# 非交互式：安装到所有受支持的项目本地智能体文件夹
+clickhousectl skills --all
+
+# 非交互式：仅安装到已检测到的智能体
+clickhousectl skills --detected-only
+
+# 非交互式：安装到所有受支持的全局智能体文件夹
+clickhousectl skills --global --all
+
+# 非交互式：安装到指定的项目本地智能体
+clickhousectl skills --agent claude --agent codex
+```
+
+<div id="non-interactive-flags">
+  ### 非交互式标志
+</div>
+
+| 标志                | 描述                   |
+| ----------------- | -------------------- |
+| `--agent <name>`  | 为指定智能体安装技能 (可重复使用)   |
+| `--global`        | 使用全局作用域；如省略，则使用项目作用域 |
+| `--all`           | 为所有受支持的智能体安装技能       |
+| `--detected-only` | 为系统中已检测到的受支持智能体安装技能  |

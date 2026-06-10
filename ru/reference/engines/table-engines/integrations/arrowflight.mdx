@@ -1,0 +1,71 @@
+---
+description: 'Движок позволяет выполнять запросы к удалённым датасетам через Apache Arrow Flight.'
+sidebarTitle: 'ArrowFlight'
+slug: /engines/table-engines/integrations/arrowflight
+title: 'Движок таблицы ArrowFlight'
+doc_type: 'reference'
+---
+
+Движок таблицы ArrowFlight позволяет ClickHouse выполнять запросы к удалённым датасетам по протоколу [Apache Arrow Flight](https://arrow.apache.org/docs/format/Flight.html).
+Эта интеграция позволяет ClickHouse с высокой производительностью получать данные с внешних серверов с поддержкой Flight в столбцовом формате Apache Arrow.
+
+<div id="creating-a-table">
+  ## Создание таблицы
+</div>
+
+```sql
+CREATE TABLE [IF NOT EXISTS] [db.]table_name (name1 [type1], name2 [type2], ...)
+    ENGINE = ArrowFlight('host:port', 'dataset_name' [, 'username', 'password']);
+```
+
+**Параметры движка**
+
+* `host:port` — Адрес удалённого сервера Arrow Flight.
+* `dataset_name` — Идентификатор датасета на сервере Flight.
+* `username` - Имя пользователя для HTTP-аутентификации Basic.
+* `password` - Пароль для HTTP-аутентификации Basic.
+  Если `username` и `password` не указаны, это означает, что аутентификация не используется
+  (это будет работать, только если сервер Arrow Flight это допускает).
+
+<div id="usage-example">
+  ## Пример использования
+</div>
+
+В этом примере показано, как создать таблицу, которая читает данные с удалённого сервера Arrow Flight:
+
+```sql
+CREATE TABLE remote_flight_data
+(
+    id UInt32,
+    name String,
+    value Float64
+) ENGINE = ArrowFlight('127.0.0.1:9005', 'sample_dataset');
+```
+
+Выполняйте запросы к удалённым данным так, как если бы это была локальная таблица:
+
+```sql
+SELECT * FROM remote_flight_data ORDER BY id;
+```
+
+```text
+┌─id─┬─name────┬─value─┐
+│  1 │ foo     │ 42.1  │
+│  2 │ bar     │ 13.3  │
+│  3 │ baz     │ 77.0  │
+└────┴─────────┴───────┘
+```
+
+<div id="notes">
+  ## Примечания
+</div>
+
+* Схема, определенная в ClickHouse, должна совпадать со схемой, которую возвращает сервер Flight.
+* Этот движок подходит для федеративных запросов, виртуализации данных и разделения хранилища и вычислительных ресурсов.
+
+<div id="see-also">
+  ## См. также
+</div>
+
+* [Apache Arrow Flight SQL](https://arrow.apache.org/docs/format/FlightSql.html)
+* [Интеграция формата Arrow в ClickHouse](/ru/reference/formats/Arrow/Arrow)

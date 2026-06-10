@@ -1,0 +1,709 @@
+---
+hidden: true
+title: "在 AWS 上部署 ClickHouse Private"
+slug: "docs/products/clickhouse-private/aws"
+sidebarTitle: "AWS"
+---
+
+<div id="set-up-tasks">
+  ## 配置任务
+</div>
+
+<div id="aws-resources">
+  ### AWS 资源
+</div>
+
+* [创建 IAM role 以从私有 ClickHouse ECR 拉取镜像](#cloud-formation-to-create-iam-role-to-pull-images)
+* 创建 ECR 仓库，在您自己的 ECR 中托管我们的制品副本；本指南默认您将使用下列名称作为 ECR 仓库名称。请使用每个制品指定的标签。
+* [将我们 ECR 中的制品复制到您的 ECR 仓库](#copy-ecr-artifacts)
+* [创建 VPC](#example-vpc-configuration)
+* [创建 EKS 集群](#creating-eks-cluster)
+  * 需要以下组件：
+    * 可任选一种 CNI (必须使用 ipv4) ，例如 [Amazon VPC CNI](https://github.com/aws/amazon-vpc-cni-k8s)
+      * 如果使用 Amazon VPC CNI，建议使用 IRSA。你可以参考本指南中的 ipv4 说明：[https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html](https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html)
+    * EBS CSI Driver，例如 [aws-ebs-csi-driver](#install-aws-ebs-csi-driver)
+    * DNS，例如 CoreDNS
+    * 推荐：启用自动扩缩容，可能需要 [cluster autoscaler](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/cloudprovider/aws/README.md) 等组件
+  * 关联到之前创建的 VPC
+  * 节点组
+    * **所有节点都需要 [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html) 进行身份验证**
+    * 对于 keeper 和 server 节点组，如果你希望按[这里](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#i-have-a-couple-of-pending-pods-but-there-was-no-scale-up)的建议支持跨 AZ 的 cluster autoscaler，**请为每个 AZ 分别创建一个节点组**；否则，也可以使用相应 AZ 的子网创建单个节点组
+    * Keeper 节点组
+      * AMI 镜像：
+        * x86: AL2023&#95;x86&#95;64
+        * arm64: AL2023&#95;ARM&#95;64
+      * 磁盘大小：20gb
+      * 如果不使用自动扩缩容，每个 ClickHouse 集群的最小节点数和期望节点数都应为 3
+      * 推荐实例类型：`m7g.2xlarge`
+      * Kubernetes 标签
+        * x86: `clickhouseGroup: keeper`
+        * arm64: `clickhouseGroup: keeper-arm64`
+      * Kubernetes 污点
+        * `clickhouse.com/do-not-schedule: true, NoSchedule`
+        * arm64: [`clickhouse.com/arch`](http://clickhouse.com/arch)`: arm64, NoSchedule`
+      * 标签
+        * 如果使用 cluster-autoscaler，可能需要设置
+          * 示例：
+            * `k8s.io/cluster-autoscaler/enabled: true`
+            * `k8s.io/cluster-autoscaler/$CLUSTER_NAME: owned`
+    * Server 节点组
+      * AMI 镜像
+        * x86: AL2023&#95;x86&#95;64
+        * arm64: AL2023&#95;ARM&#95;64
+      * 磁盘大小：20gb
+      * [节点组的 EC2 Launch Template](#ec2-launch-template-for-node-group-server))
+      * 如果不使用自动扩缩容，最小节点数和期望节点数应等于所需的 ClickHouse 副本数
+      * 推荐实例类型：`m7gd.16xlarge`
+        * **强烈建议使用 “d” 系列实例** (例如 `m7gd.*`) ，其自带的 NVME SSD 会被 ClickHouse 用作缓存
+          * 对于带有 NVME SSD 的实例，请使用[自定义 launch template](#ec2-launch-template-for-node-group-server) 以自动挂载 NVME SSD
+      * Kubernetes 标签
+        * x86: `clickhouseGroup: server`
+        * arm64: `clickhouseGroup: server-arm64`
+      * Kubernetes 污点
+        * `clickhouse.com/do-not-schedule: true, NoSchedule`
+        * arm64: [`clickhouse.com/arch`](http://clickhouse.com/arch)`: arm64, NoSchedule`
+      * 标签
+        * 如果使用 cluster-autoscaler，可能需要设置
+          * 示例：
+            * `k8s.io/cluster-autoscaler/enabled: true`
+            * `k8s.io/cluster-autoscaler/$CLUSTER_NAME: owned`
+    * 用于运行其他 x86 进程 (operator, ...) 的 x86 节点组
+      * 如果 EKS 集群已存在，可以使用现有节点组，只要其兼容 x86，且最小节点规格为 xlarge
+      * 对于新节点组
+        * AMI 镜像：AL2023&#95;x86&#95;64
+        * 磁盘大小：20gb
+        * 实例大小：至少为 xlarge
+        * 实例类型：任何兼容 x86 的类型
+* 为 EKS 集群创建 OIDC 提供商
+* 创建启用加密的 S3 存储桶 (S3 标准存储类别)
+  * Bucket 应与 EKS 集群位于同一区域
+  * 你可以为每个已预配的 ClickHouse 集群创建一个 bucket，也可以共用一个 bucket，但需要为每个 ClickHouse 集群指定唯一的前缀 (在 clickhouse CR/Helm 图表中定义)
+* 创建 NLB；如果需要来自 Kubernetes 集群外部的入口流量，则此项为必需
+  * 如果需要 NLB**，则应为每个 ClickHouse 集群** 单独配置一个，除非像 [istio](https://istio.io/) 这样的工具会将请求路由到正确的集群
+  * 创建 Route 53 记录；这可以借助 [external-dns](https://github.com/kubernetes-sigs/external-dns) 等工具，通过 Kubernetes annotations 自动完成 (本文档不包含相关设置说明)
+* 创建 IAM 角色：
+  * **除非另有说明，否则以下 Role 应使用[类似这样的信任策略](#example-trust-policy) (即应使用 IRSA)&#x20;**
+  * clickhouse-server/keeper Role
+    * **每个已预配的 ClickHouse cluster 都需要此 Role**
+    * 命名约定应为 `CH-S3-$NAME-$REGION-$ORDINAL-Role`
+      * `$NAME`：cluster 名称，例如 `default-xx-01`
+      * `$REGION`：用于标识 cluster 所在的区域，以避免在不同区域中使用相同 cluster 名称时发生命名冲突。
+        * 不需要使用完整的区域名称，否则角色名称可能会超出允许的长度限制。可以使用缩写，例如用 `uw2` 表示 `us-west-2`
+      * `$ORDINAL`：保留字段，设为 `00`
+      * 位于 us-west-2、service 名称为 `default-xx-01` 的示例 Role 名称：`CH-S3-default-xx-01-uw2-00-Role`
+    * bucket 权限
+      * 最小权限为：对 bucket 资源授予 `s3:*` 和 `s3:ListBucket`
+
+<div id="kubernetes-resources">
+  ### Kubernetes 资源
+</div>
+
+* [安装 VolumeSnapshot CRD](#install-volumesnapshot-crds)
+* 如果不想使用自定义或现有的 StorageClass，请[通过 Helm 图表安装 StorageClass](#install-storageclass-via-helm)
+* [通过 Helm 图表安装 Operator](#install-operator-via-helm)
+* [创建 clickhousecluster 资源](#clickhousecluster-cr) (为每个要部署的 ClickHouse 集群重复此操作)
+* [访问集群并验证安装](#install-validation)
+* [Hydra 设置 (Compute compute 分离) ](#hydra-setup)
+
+<div id="technical-details">
+  ## 技术细节
+</div>
+
+<div id="example-vpc-configuration">
+  ### 示例 VPC 配置
+</div>
+
+* IPv4 CIDR 块：10.20.0.0/16
+* 无 IPv6 CIDR 块
+* 租用属性：默认
+* 可用区数量：3；为实现跨可用区高可用，至少应为 3 个
+* 公有子网：
+  * us-west-2a：10.20.192.0/20
+  * us-west-2b：10.20.208.0/20
+  * us-west-2c：10.20.224.0/20
+* 私有子网：
+  * us-west-2a：10.20.0.0/18
+  * us-west-2b：10.20.64.0/18
+  * us-west-2c：10.20.128.0/18
+* NAT 网关：每个可用区 1 个
+* VPC 端点：S3 网关
+* DNS 选项：
+  * 启用 DNS 主机名：true
+  * 启用 DNS 解析：true
+
+<div id="copy-ecr-artifacts">
+  ### 复制 ECR 制品
+</div>
+
+**强烈建议使用 [skopeo](https://github.com/containers/skopeo) 复制镜像**，因为这样可以保留 Docker 镜像支持的所有架构。请务必将下面的 `TARGET_REGION` 和 `TARGET_ECR_REPO` 设置为你的 ECR 区域和仓库主机。
+
+```bash
+SOURCE_REGION=us-east-1
+SOURCE_ECR_REPO=349290138304.dkr.ecr.$SOURCE_REGION.amazonaws.com
+
+TARGET_REGION=us-west-2
+TARGET_ECR_REPO=0000000000.dkr.ecr.$TARGET_REGION.amazonaws.com
+
+# 登录我们的仓库（客户的身份验证流程可能有所不同）
+aws ecr get-login-password --region $SOURCE_REGION | skopeo login --username AWS --password-stdin $SOURCE_ECR_REPO
+
+# 登录目标 AWS 仓库（客户的身份验证流程可能有所不同）
+aws ecr get-login-password --region $TARGET_REGION | skopeo login --username AWS --password-stdin $TARGET_ECR_REPO
+
+# 将每个镜像复制到目标 ECR，请务必添加 --all 标志
+skopeo copy --all docker://$SOURCE_ECR_REPO/clickhouse-server:<<SERVER_TAG>> docker://$TARGET_ECR_REPO/clickhouse-server:<<SERVER_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/clickhouse-keeper:<<KEEPER_TAG>> docker://$TARGET_ECR_REPO/clickhouse-keeper:<<KEEPER_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/clickhouse-operator:main-<<OPERATOR_TAG>> docker://$TARGET_ECR_REPO/clickhouse-operator:<<OPERATOR_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/helm/clickhouse-operator-helm:<<OPERATOR_TAG>> docker://$TARGET_ECR_REPO/helm/clickhouse-operator-helm:<<OPERATOR_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/helm/onprem-clickhouse-cluster:<<CR_HELM_TAG>> docker://$TARGET_ECR_REPO/helm/onprem-clickhouse-cluster:<<CR_HELM_TAG>>
+```
+
+<div id="creating-eks-cluster">
+  ### 创建 EKS 集群
+</div>
+
+需要集群 IAM 角色 和节点 IAM 角色。在 AWS Console UI 中使用“Create recommended role”按钮，按默认 permissions 创建的 roles 就足够了。
+
+运行以下命令，将新的 EKS 集群添加到 kubeconfig 中：
+
+```bash
+REGION=us-west-2
+EKS_CLUSTER_NAME=eks-clickhouse
+
+aws eks update-kubeconfig --region $REGION --name=$EKS_CLUSTER_NAME
+```
+
+<div id="cloud-formation-to-create-iam-role-to-pull-images">
+  ### 使用 CloudFormation 创建用于拉取镜像的 IAM 角色
+</div>
+
+需要一个 IAM 角色，才能从 ClickHouse 私有 ECR 拉取镜像。该角色通过 CloudFormation 模板创建。创建好角色 ARN 后，**你需要将该 ARN (见输出) 提供给 ClickHouse 团队**。
+
+**CloudFormation**
+
+```yaml expandable
+AWSTemplateFormatVersion: 2010-09-09
+Description: This CloudFormation template creates the ClickHouseAirgapECRPullRole.
+
+Resources:
+  ClickHouseAirgapECRPullRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ClickHouseAirgapECRPullRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: ClickHouseAirgapECRPullPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:DescribeImages
+                  - ecr:ListImages
+                Resource:
+                  - arn:aws:ecr:us-east-1:349290138304:repository/*
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource:
+                  - "*"
+
+Outputs:
+  RoleArn:
+    Description: IAM Role ARN for pulling images from all ECR repositories
+    Value: !GetAtt ClickHouseAirgapECRPullRole.Arn
+
+```
+
+<div id="ec2-launch-template-for-node-group-server">
+  ### 用于节点组服务器的 EC2 启动模板
+</div>
+
+在创建服务器节点组之前，建议先创建一个 EC2 启动模板，为节点配备 SSD 磁盘，以用于缓存 ClickHouse 查询。
+
+该模板应包含以下脚本。**请注意，如果此前已创建过启动模板，其中可能已包含现有数据，这些数据应保留**。在这种情况下，请确保不同文件之间使用指定的边界分隔。
+
+**高级详细信息 (用户数据**):
+
+```bash expandable
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+--==MYBOUNDARY==
+Content-Type: text/x-shellscript; charset="us-ascii"
+
+#!/bin/bash
+sudo sysctl net.ipv4.tcp_fin_timeout=15
+sudo sysctl net.ipv4.tcp_keepalive_time=15
+
+function build_raid() {
+set -x
+mapfile -t SSD_NVME_DEVICE_LIST < <(nvme list | grep "Amazon EC2 NVMe Instance Storage" | cut -d " " -f 1 || true)
+SSD_NVME_DEVICE_COUNT=${#SSD_NVME_DEVICE_LIST[@]}
+RAID_DEVICE=${RAID_DEVICE:-/dev/md0}
+RAID_CHUNK_SIZE=${RAID_CHUNK_SIZE:-512}              # 千字节
+FILESYSTEM_BLOCK_SIZE=${FILESYSTEM_BLOCK_SIZE:-4096} # 字节
+STRIDE=$((RAID_CHUNK_SIZE * 1024 / FILESYSTEM_BLOCK_SIZE))
+STRIPE_WIDTH=$((SSD_NVME_DEVICE_COUNT * STRIDE))
+BLK_LABEL=ssdcache
+MD_DEV_LABEL=dpssdcache
+
+# 如果 fstab 中已存在挂载项，则退出
+grep "${BLK_LABEL}" /etc/fstab && return 0
+
+nvme list
+echo "${SSD_NVME_DEVICE_COUNT}" "${SSD_NVME_DEVICE_LIST[*]}"
+
+# 根据 nvme 设备数量执行配置
+case  "${SSD_NVME_DEVICE_COUNT}" in
+"0")
+  echo 'No devices found of type "Amazon EC2 NVMe Instance Storage"'
+  echo "Maybe your node selectors are not set correct"
+  return 0
+  ;;
+"1")
+  mkfs.ext4 -L "${BLK_LABEL}" -m 0 -b "${FILESYSTEM_BLOCK_SIZE}" "${SSD_NVME_DEVICE_LIST[0]}"
+  ;;
+*)
+  mdadm --create --verbose "${RAID_DEVICE}" --name="${MD_DEV_LABEL}" --level=0 -c "${RAID_CHUNK_SIZE}" \
+    --raid-devices="${#SSD_NVME_DEVICE_LIST[@]}" "${SSD_NVME_DEVICE_LIST[@]}"
+
+  while mdadm --detail "${RAID_DEVICE}" | grep -q -ioE 'State :.*resyncing'
+  do
+    echo "Raid is resyncing.."
+    sleep 1
+  done
+  echo "Raid0 device  ${RAID_DEVICE} has been created with disks  ${SSD_NVME_DEVICE_LIST[*]}"
+  mkfs.ext4 -L "${BLK_LABEL}" -m 0 -b "${FILESYSTEM_BLOCK_SIZE}" -E "stride=${STRIDE},stripe-width=${STRIPE_WIDTH}" "${RAID_DEVICE}"
+  ;;
+esac
+
+# 挂载并添加到 fstab
+# 使用 UUID 以兼容 EKS NVME provisioner 工具
+DEV_NAME=$(blkid -s UUID -o value -L "${BLK_LABEL}")
+UUID=$(blkid -s UUID -o value "${DEV_NAME}")
+# 确保 UUID 已定义
+test -z ${UUID} && return 1
+mkdir -p /pv-disks/"${UUID}" /nvme/
+test -h /nvme/disk || ln -fs /pv-disks/"${UUID}" /nvme/disk
+
+cat<<EOF | tee -a /etc/fstab
+
+LABEL=${BLK_LABEL} /pv-disks/${UUID} ext4 defaults,noatime,discard,nobarrier  0 0
+EOF
+mount -a
+set +x
+}
+
+yum install -y nvme-cli mdadm
+build_raid
+mountpoint /nvme/disk/ || systemctl stop kubelet
+
+--==MYBOUNDARY==--
+```
+
+<div id="logging-into-ecr-from-helm">
+  ### 从 Helm 登录 ECR
+</div>
+
+如需使用 Helm CLI 从 ECR 拉取 Helm 图表，可能需要执行此步骤。请根据需要更新这些变量。
+
+```bash
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+REGION=us-west-2
+
+ aws ecr get-login-password \
+  --region $REGION | helm registry login \
+  --username AWS \
+  --password-stdin $ECR_HOST
+```
+
+<div id="install-storageclass-via-helm">
+  ### 通过 Helm 安装 StorageClass
+</div>
+
+如果需要 StorageClass，建议通过提供的 Helm 图表单独安装这些 clickhouse-operator 依赖，而不是将其与实际的 clickhousecluster CR 创建过程绑定在一起。这样一来，即使创建了多个 CR，这些依赖也不会隶属于任何集群，并且在删除某个集群时也不会被一并移除。**仅当你没有可用于 clickhouser-server 和 clickhouse-keeper 的自定义或现有 StorageClass CR 时，才需要执行此步骤。**
+
+```bash
+# 根据需要更新 ECR_HOST
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+CHART_VERSION=<<CR_HELM_TAG>>
+
+helm install clickhouse-prerequisites \
+    oci://$ECR_HOST/helm/onprem-clickhouse-cluster \
+    --version=$CHART_VERSION \
+    -n default \
+    --set-json="storageClass.create=true" \
+    --set-json="createCluster=false" \
+    --set-json="serviceAccount.create=false"
+```
+
+<div id="install-operator-via-helm">
+  ### 通过 Helm 安装 Operator
+</div>
+
+根据需要更新版本、ECR 主机地址和可用区 (由已创建的 VPC 确定) 。
+
+```bash expandable
+# 根据需要更新 ECR_HOST
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+
+# 应使用 operator 的 Helm 图表版本，而非 operator 本身的版本（例如 <<OPERATOR_TAG>>，而非 main.<<OPERATOR_TAG>>）
+OPERATOR_VERSION=<<OPERATOR_TAG>>
+
+# 根据 VPC 子网设置可用区
+AZ_LIST='["us-west-2a","us-west-2b","us-west-2c"]'
+
+helm install clickhouse-operator \
+   oci://$ECR_HOST/helm/clickhouse-operator-helm \
+   --version=$OPERATOR_VERSION \
+   --create-namespace \
+   -n clickhouse-operator-system \
+   --set-json="image.repository=\"$ECR_HOST/clickhouse-operator\"" \
+   --set-json='cilium.enabled=false' \
+   --set-json='idleScalerEnabled=false' \
+   --set-json='webhooks.enabled=false' \
+   --set-json='operator.debug=true' \
+   --set-json='operator.metricsScraper.enabled=false' \
+   --set-json="operator.availabilityZones=$AZ_LIST" \
+   --set-json='operator.featureFlags.backupOnASeparatePod=true' \
+   --set-json='operator.featureFlags.serverCMEKEnabled=true'
+```
+
+<div id="install-operator-via-kustomize">
+  ##### 通过 Kustomize 安装 Operator
+</div>
+
+如果你使用 kustomize，由于存在一个已知问题，你需要在 values 中显式设置 `namespaceOperator`，并将其指定为要安装 operator 的命名空间 (默认命名空间名称为：`clickhouse-operator-system`) ：[https://github.com/kubernetes-sigs/kustomize/issues/5566](https://github.com/kubernetes-sigs/kustomize/issues/5566)。
+
+<div id="install-aws-ebs-csi-driver">
+  ### 安装 aws-ebs-csi-driver
+</div>
+
+需要一个满足以下条件的 IAM 角色：
+
+* 使用托管策略 `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`
+* 对于信任策略，建议使用 sts:AssumeRoleWithWebIdentity，并配合 EKS 集群的 OIDC 提供商 ([示例](#example-trust-policy))
+* 所选角色名称必须与运行 aws-ebs-csi-driver 的服务账号上的注解一致
+  * 示例名称：`ClickHouse_EksEbsCsiDriverRole`
+
+按照 [Helm 安装](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/docs/install.md#helm) 指南操作，并添加额外的 values 配置，以将 IAM 角色关联到服务账号：
+
+```bash
+# 根据需要更新角色名称
+AWS_EBS_CSI_DRIVER_IAM_ROLE_ARN=arn:aws:iam::0000000000:role/ClickHouse_EksEbsCsiDriverRole
+
+helm upgrade --install aws-ebs-csi-driver \
+--namespace kube-system \
+aws-ebs-csi-driver/aws-ebs-csi-driver \
+--set-json="controller.serviceAccount.annotations={\"eks.amazonaws.com/role-arn\":\"$AWS_EBS_CSI_DRIVER_IAM_ROLE_ARN\"}"
+```
+
+<div id="install-volumesnapshot-crds">
+  ### 安装 VolumeSnapshot CRD
+</div>
+
+目前我们的 Operator 需要这些 CRD，但在你当前的配置中还不会用到。
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+```
+
+<div id="example-trust-policy">
+  ### 示例信任策略
+</div>
+
+请务必使用正确的命名空间、服务账号名称和 OIDC 提供商。命名空间和服务账号名称会因所配置的角色不同而有所差异。
+
+```json expandable
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::0000000000:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/XXXXXXXXXXXXXXXXXXXXX"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "oidc.eks.us-west-2.amazonaws.com/id/XXXXXXXXXXXXXXXXXXXXX:aud": "sts.amazonaws.com",
+"oidc.eks.us-west-2.amazonaws.com/id/XXXXXXXXXXXXXXXXXXXXX:sub": "system:serviceaccount:$NAMESPACE:$K8S_SERVICE_ACCOUNT"
+                }
+            }
+        }
+    ]
+}
+
+```
+
+<div id="naming-your-clickhouse-cluster">
+  ### 为 ClickHouse 集群命名
+</div>
+
+对于要预配的每个 ClickHouse 集群，请选择一个在目标 EKS 集群内**唯一的集群名称**。此名称将用于各种 AWS 和 Kubernetes 资源，并作为该集群的唯一标识。
+
+1. 命名约定应为 `$DESCRIPTOR-$LETTERS-$ORDINAL`
+   1. $DESCRIPTOR - 集群的描述性名称，仅可包含字母
+   2. $LETTERS - 预留字段，可任选两个字母；为简便起见，使用 `xx` 即可
+   3. $ORDINAL - 对于具有相同描述符的集群，从 `01` 开始递增的序号
+2. 示例名称：`default-xx-01`
+
+<div id="clickhousecluster-cr">
+  ### Clickhousecluster CR
+</div>
+
+请注意，以下值应根据生产环境进行审查和更新 (例如资源、功能标志、服务器配置等) 。在设置 `CLUSTER_NAME` 之前，请先参阅[命名相关章节](#naming-your-clickhouse-cluster)。
+使用以下命令 (OS X) 为给定的 `$PASSWORD` 生成密码哈希，然后将其传入 Helm 图表的 `account.hashedPassword` 值：
+
+```bash expandable
+# 这将是 `default` 用户的密码
+PASSWORD='My super secret p@$$w0rd'
+HASHED_PASSWORD=`echo -n $PASSWORD | shasum -a 256 | awk '{printf $1}' | base64`
+
+# 根据需要更新以下值，
+# ecr host 应为您账户中的地址
+# s3 bucket 应为之前创建的存储桶
+CLUSTER_NAME=default-xx-01
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+SA_IAM_ROLE_ARN=arn:aws:iam::0000000000:role/CH-S3-${CLUSTER_NAME}-uw2-00-Role
+S3_BUCKET_NAME=my-clickhouse-data
+
+# s3 key prefix 可使用任意 UUID 值，但对于所有在上述存储桶中存储数据的集群，该值必须唯一
+S3_KEY_PREFIX=ch-s3-$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+# 这些值应与添加到节点组的 clickhouseGroup 标签值一致
+SERVER_NG_GROUP=server-arm64
+KEEPER_NG_GROUP=keeper-arm64
+
+# 这些值应根据所选实例规格进行调整
+# 设置 CPU 和 MEMORY 值时，请务必将 daemon set 的资源需求纳入考量
+SERVER_CPU=64
+SERVER_MEMORY=256Gi
+KEEPER_CPU=4
+KEEPER_MEMORY=16Gi
+
+CHART_VERSION=<<CR_HELM_TAG>>
+
+# bytesPerGiRAM 是用于自动计算磁盘缓存大小的扩缩容因子。
+# 通常建议将缓存大小设置为可用 SSD 缓存磁盘大小的 80-90%。
+# 在 Helm 图表中设置 bytesPerGiRAM 后，pod 启动时将使用以下公式：
+#
+# CONFIG_DISK_CACHE_SIZE = bytesPerGiRAM * pod_memory_limit
+#
+# 示例：
+# bytesPerGiRAM = 11.3Gi
+# pod_memory_limit = 250Gi
+# CONFIG_DISK_CACHE_SIZE = 11.3 * 250 = 2825Gi
+CACHE_BYTES_PER_GI_RAM=11Gi
+
+helm install $CLUSTER_NAME \    oci://$ECR_HOST/helm/onprem-clickhouse-cluster \
+    --version=$CHART_VERSION \
+    -n ns-$CLUSTER_NAME \
+    --create-namespace \
+    --set-json="account.hashedPassword=\"$HASHED_PASSWORD\"" \
+    --set-json="server.image.repository=\"$ECR_HOST/clickhouse-server\"" \
+    --set-json="server.storage.s3.bucketName=\"$S3_BUCKET_NAME\"" \
+    --set-json="server.storage.s3.keyPrefix=\"$S3_KEY_PREFIX\"" \
+    --set-json='server.arm64=true' \
+    --set-json="server.image.tag=\"<<SERVER_TAG>>\"" \
+    --set-json="server.podPolicy.nodeSelector.clickhouseGroup=\"$SERVER_NG_GROUP\"" \
+    --set-json="keeper.image.repository=\"$ECR_HOST/clickhouse-keeper\"" \
+    --set-json='keeper.arm64=true' \
+    --set-json="keeper.image.tag=\"<<KEEPER_TAG>>\"" \
+    --set-json="keeper.podPolicy.nodeSelector.clickhouseGroup=\"$KEEPER_NG_GROUP\"" \
+    --set-json="serviceAccount.annotations={\"eks.amazonaws.com/role-arn\":\"$SA_IAM_ROLE_ARN\"}" \
+    --set-json='server.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]' \
+    --set-json='keeper.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]' \
+    --set-json="server.ssdCacheConfiguration.bytesPerGiRAM=\"$CACHE_BYTES_PER_GI_RAM\"" \
+    --set-json="server.podPolicy.resources.limits.cpu=\"$SERVER_CPU\"" \
+    --set-json="server.podPolicy.resources.limits.memory=\"$SERVER_MEMORY\"" \
+    --set-json="server.podPolicy.resources.requests.cpu=\"$SERVER_CPU\"" \
+    --set-json="server.podPolicy.resources.requests.memory=\"$SERVER_MEMORY\"" \
+    --set-json="keeper.podPolicy.resources.limits.cpu=\"$KEEPER_CPU\"" \
+    --set-json="keeper.podPolicy.resources.limits.memory=\"$KEEPER_MEMORY\"" \
+    --set-json="keeper.podPolicy.resources.requests.cpu=\"$KEEPER_CPU\"" \
+    --set-json="keeper.podPolicy.resources.requests.memory=\"$KEEPER_MEMORY\""
+```
+
+<div id="hydra-setup">
+  ## Hydra 设置
+</div>
+
+其思路是在一个 ClickHouse 集群内创建多个节点组。每个节点组都会有不同数量的节点 (内存大小也不同) ，并配有独立的端点。这些节点组将共享一个 Keeper 实例，以及共享 S3 存储桶中的同一份数据集/文件夹。
+
+<div id="provisioning-hydra-children-instances">
+  ### 创建 Hydra 子实例
+</div>
+
+<div id="prerequisites">
+  ##### 前置条件
+</div>
+
+应[安装](#install-operator-via-helm)该 operator，并通过如下设置启用 Hydra 功能 (默认为 false) ：
+
+```bash
+--set operator.featureFlags.privateHydraEnabled="true"
+```
+
+<div id="setup">
+  ##### 设置
+</div>
+
+*在创建子实例之前，您需要先选择一个现有的父 ClickHouse 集群和/或创建一个新的父 ClickHouse 集群，因此应提前明确子实例对应父级的**名称**和**命名空间**。*
+
+要创建新的子服务，请遵循创建服务的[相同步骤](#clickhousecluster-cr)，只需在创建 `ClickHouseCluster` 自定义资源 (CR) 时添加新的 Helm 值即可：
+
+```bash
+--set-json='parentCluster.name="c-${PARENT_NAME}'"'
+--set-json='parentCluster.namespace="ns-'${PARENT_NAME}'"'
+```
+
+**PARENT&#95;NAME** -  现有或新建的父 ClickHouse 集群名称。
+
+如果希望新的子节点为只读模式 (默认为 false) ，也可以添加：
+
+```bash
+--set-json='isReadonly=true'
+```
+
+<div id="limitations">
+  ### 限制
+</div>
+
+1. 如果父实例已停止、已终止或处于休眠状态，则无法预配子实例。
+2. 如果要删除父集群，必须先删除子实例。
+
+<div id="install-validation">
+  ## 安装验证
+</div>
+
+<div id="preflight-checks">
+  ### 预检
+</div>
+
+可使用 [Troubleshoot](https://troubleshoot.sh/) 执行可选的预检；它是一个用于 Kubernetes 集群诊断的插件。
+
+要安装所需插件，可以使用 Krew：
+
+```console
+kubectl krew install preflight
+```
+
+或者参阅 Troubleshoot 的[文档](https://troubleshoot.sh/docs/)，了解其他安装方式。
+
+ClickHouse 提供了一个 Helm 图表 (`helm/preflight-check`) ，可将其复制到你的 ECR，并在本地渲染以生成 preflight 规范，然后将其传递给 `kubectl preflight`。
+
+<div id="copying-the-preflight-check-helm-chart">
+  ##### 复制预检 Helm 图表
+</div>
+
+将该预检 Helm 图表添加到 [ECR 复制步骤](#copy-ecr-artifacts)：
+
+```bash
+skopeo copy --all docker://$SOURCE_ECR_REPO/helm/preflight-check:<<PREFLIGHT_CHART_TAG>> docker://$TARGET_ECR_REPO/helm/preflight-check:<<PREFLIGHT_CHART_TAG>>
+```
+
+<div id="running-the-preflight-checks">
+  ##### 运行预检
+</div>
+
+使用 `helm template` 渲染预检规范，然后通过管道直接传递给 `kubectl preflight`。将 `CLUSTER_NAME` 设置为要验证的 ClickHouse 集群名称 (请参阅 [为 ClickHouse 集群命名](#naming-your-clickhouse-cluster)) ：
+
+```bash
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+CHART_VERSION=<<PREFLIGHT_CHART_TAG>>
+CLUSTER_NAME=default-xx-01
+
+helm template clickhouse-preflight \
+    oci://$ECR_HOST/helm/preflight-check \
+    --version=$CHART_VERSION \
+    --set preflight.clickhouseClusterName=$CLUSTER_NAME | \
+kubectl preflight -
+```
+
+这会验证运行 ClickHouse Operator 和部署 ClickHouse 集群所需的条件。它会检查是否存在所需的节点标签，
+Storage Class 是否已正确配置等。
+
+输出会显示不同的预检项及其状态：
+![Preflight Example](/products/clickhouse-private/images/preflight-example.png)
+
+你可以滚动查看输出，确认每项检查都已通过。如果某项检查失败，则说明当前配置中存在 (潜在) 问题，可能会导致
+ClickHouse 集群无法正常运行。检查项中还会包含修复问题的建议。
+
+如果要针对默认值 (`gp3-encrypted`) 之外的 Storage Class 进行验证，请使用额外的 `--set` 参数覆盖：
+
+```bash
+    --set preflight.checks.prerequisites.storageClassName=<your-storage-class>
+```
+
+<div id="required-permissions">
+  ##### 所需权限
+</div>
+
+执行 `kubectl preflight` 的用户或服务账号必须能够读取集群级和命名空间级资源。至少需要具备以下访问权限：
+
+| 范围                                            | 资源                                                                                        |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 集群级                                           | `nodes`, `namespaces`, `persistentvolumes`, `storageclasses`, `customresourcedefinitions` |
+| Operator 命名空间 (`clickhouse-operator-system`)  | `deployments`, `replicasets`, `pods`, `services`, `configmaps`, `events`                  |
+| 集群命名空间 (`ns-<cluster-name>`)                  | `statefulsets`, `pods`, `persistentvolumeclaims`, `services`, `configmaps`, `events`      |
+
+实际中，具有内置 `view` 集群角色，并对相关命名空间拥有 `view` 访问权限的主体就足够了。绑定 `cluster-admin` 也可以，而且对于一次性验证运行来说配置更简单。
+
+<div id="port-forward-the-clickhouse-service-to-your-local-machine">
+  ### 将 ClickHouse 服务端口转发到本地机器
+</div>
+
+要将流量从本地机器转发到 c-default-xx-01-server-any 服务，请运行：
+
+```bash
+kubectl port-forward svc/c-default-xx-01-server-any 9000:9000 -n ns-default-xx-01
+```
+
+这会将该 service 的 `9000` 端口转发到你本地机器的 `9000` 端口。现在，你可以通过 `http://localhost:9000` 访问 ClickHouse HTTP 接口。
+
+<div id="access-clickhouse-and-run-query">
+  ### 访问 ClickHouse 并执行查询
+</div>
+
+端口转发完成后，你可以使用 `clickhouse-client` 等工具在本地连接到 ClickHouse。
+
+```bash
+clickhouse client --host localhost --port 9000 --password $PASSWORD
+```
+
+然后运行一个简单的查询：
+
+```sql
+clickhouse-cloud :) select 1;
+```
+
+你应该会看到类似下面这样的输出：
+
+```text
+SELECT 1
+Query id: 825591bf-a8e5-4995-ac9f-afb864854ba2
+   ┌─1─┐
+1. │ 1  │
+   └───┘
+1 row in set. Elapsed: 0.001 sec.
+```

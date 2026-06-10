@@ -1,0 +1,2276 @@
+---
+hidden: true
+title: "ClickHouse Private en GCP"
+slug: "docs/products/clickhouse-private/gcp"
+sidebarTitle: "GCP"
+---
+
+<div id="overview">
+  ## Descripción general
+</div>
+
+Esta guía explica cómo implementar ClickHouse Private en Google Cloud Platform (GCP) con Google Kubernetes Engine (GKE). Adapta el proceso de implementación estándar de AWS a los servicios específicos de GCP, incluidos Artifact Registry, GCS con API compatible con S3 y Workload Identity.
+
+Esta guía admite implementaciones **estándar** y **compatibles con FIPS 140-2**. Los pasos y la configuración específicos de FIPS se indican con **(FIPS)** en todo el documento. Configure `ENABLE_FIPS=true` en `00-env.sh` para habilitar el modo FIPS.
+
+<div id="prerequisites">
+  ## Requisitos previos
+</div>
+
+* Proyecto de GCP con la facturación activada
+* CLI de `gcloud` instalada y autenticada
+* `kubectl` instalado
+* `helm` v3.x instalado
+* `skopeo` instalado (para copiar imágenes de contenedor)
+* Credenciales de AWS con acceso de lectura a ECR de ClickHouse (para copiar imágenes)
+* **Host bastión** en la VPC para acceder al clúster privado
+* **Cuenta de servicio de despliegue** con los permisos adecuados (consulta más abajo)
+* **(FIPS)** Acceso a la imagen de contenedor Red Hat UBI8 (obtenida mediante GKE para la generación de certificados)
+
+***
+
+<div id="creating-a-service-account-for-clickhouse-deployment">
+  ## Creación de una cuenta de servicio para la implementación de ClickHouse
+</div>
+
+En entornos FedRAMP donde la autenticación directa de usuarios está restringida, cree una cuenta de servicio para la suplantación de identidad.
+
+<div id="option-1-via-gcp-console">
+  ### Opción 1: Desde la consola de GCP
+</div>
+
+1. Ve a **IAM &amp; Admin** → **Service Accounts**
+2. Haz clic en **+ CREATE SERVICE ACCOUNT**
+3. Introduce:
+   * **Name:** `clickhouse-deployer`
+   * **ID:** `clickhouse-deployer`
+   * **Description:** `Service account for deploying ClickHouse infrastructure`
+4. Haz clic en **CREATE AND CONTINUE**
+5. Agrega los siguientes roles:
+
+| Rol                                     | Propósito                                            |
+| --------------------------------------- | ---------------------------------------------------- |
+| `roles/compute.networkAdmin`            | Crear/administrar VPC, subredes, NAT y enrutadores   |
+| `roles/container.admin`                 | Crear/administrar clústeres de GKE y grupos de nodos |
+| `roles/storage.admin`                   | Crear/administrar buckets de GCS                     |
+| `roles/iam.serviceAccountAdmin`         | Crear/administrar cuentas de servicio                |
+| `roles/iam.serviceAccountUser`          | Usar cuentas de servicio para Workload Identity      |
+| `roles/iam.workloadIdentityUser`        | Configurar bindings de Workload Identity             |
+| `roles/artifactregistry.admin`          | Crear/administrar repositorios de Artifact Registry  |
+| `roles/resourcemanager.projectIamAdmin` | Administrar políticas de IAM en el proyecto          |
+
+6. Haz clic en **CONTINUE** → **DONE**
+
+**Concede el permiso Token Creator:**
+
+1. Haz clic en la cuenta de servicio `clickhouse-deployer` recién creada
+2. Ve a la pestaña **PERMISSIONS**
+3. Haz clic en **GRANT ACCESS**
+4. Agrega el principal: `<COMPUTE_SERVICE_ACCOUNT>@developer.gserviceaccount.com` (la cuenta de servicio de tu bastión)
+5. Asigna el rol: `roles/iam.serviceAccountTokenCreator`
+6. Haz clic en **SAVE**
+
+<div id="option-2-via-cli-requires-iam-admin-access">
+  ### Opción 2: Mediante la CLI (requiere acceso de administrador de IAM)
+</div>
+
+```bash expandable
+PROJECT_ID=your-project-id
+SA_EMAIL=clickhouse-deployer@${PROJECT_ID}.iam.gserviceaccount.com
+COMPUTE_SA=<COMPUTE_PROJECT_NUMBER>-compute@developer.gserviceaccount.com
+
+# Crear cuenta de servicio
+gcloud iam service-accounts create clickhouse-deployer \
+  --display-name="ClickHouse Deployer" \
+  --project=${PROJECT_ID}
+
+# Asignar roles
+for role in \
+  roles/compute.networkAdmin \
+  roles/container.admin \
+  roles/storage.admin \
+  roles/iam.serviceAccountAdmin \
+  roles/iam.serviceAccountUser \
+  roles/iam.workloadIdentityUser \
+  roles/artifactregistry.admin \
+  roles/resourcemanager.projectIamAdmin
+do
+  gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SA_EMAIL}" \
+    --role="${role}"
+done
+
+# Permitir que la SA de compute la suplante
+gcloud iam service-accounts add-iam-policy-binding ${SA_EMAIL} \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --project=${PROJECT_ID}
+```
+
+<div id="configure-impersonation-on-bastion">
+  ### Configurar la suplantación en el bastión
+</div>
+
+Añade esto a tu `00-env.sh` o ejecútalo antes de ejecutar los scripts:
+
+```bash
+# Configurar la suplantación para la cuenta de servicio del desplegador
+gcloud config set auth/impersonate_service_account clickhouse-deployer@${GCP_PROJECT}.iam.gserviceaccount.com
+
+# Verificar que funciona
+gcloud compute networks list --project=${GCP_PROJECT}
+```
+
+Para salir de la suplantación más tarde:
+
+```bash
+gcloud config unset auth/impersonate_service_account
+```
+
+<div id="set-up-tasks">
+  ## Configurar las tareas
+</div>
+
+<div id="gcp-resources">
+  ### Recursos de GCP
+</div>
+
+0. [Definir variables de entorno](#00-environment-variables) - `00-env.sh`
+1. [Crear un repositorio de Artifact Registry](#01-create-artifact-registry) - `01-artifact-registry.sh`
+2. [Copiar imágenes de contenedor](#02-copy-container-images) - `02-copy-images.sh`
+3. [Configurar la VPC y la subred de GKE](#03-configure-vpc-and-subnet) - `03-vpc-subnet.sh`
+4. [Crear Cloud NAT](#04-create-cloud-nat) - `04-cloud-nat.sh`
+5. [Crear una cuenta de servicio de GCP](#05-create-gcp-service-account) - `05-service-account.sh`
+6. [Crear un bucket de GCS](#06-create-gcs-bucket) - `06-gcs-bucket.sh`
+7. [Crear un clúster de GKE](#07-create-gke-cluster) - `07-gke-cluster.sh`
+   * **Habilitar nodos privados** (`--enable-private-nodes`)
+   * **Habilitar endpoint privado** (`--enable-private-endpoint`) - Sin acceso público a la API (FedRAMP)
+   * **Habilitar Workload Identity** (`--workload-pool=$PROJECT_ID.svc.id.goog`)
+8. [Crear grupos de nodos](#08-create-node-pools) - `08-node-pools.sh`
+9. [Implementar un conjunto de daemon de SSD local](#09-local-ssd-daemonset) - `09-local-ssd-daemonset.sh`
+10. [Añadir etiquetas de topología a los nodos](#10-add-topology-labels) - `10-topology-labels.sh`
+
+<div id="kubernetes-resources">
+  ### Recursos de Kubernetes
+</div>
+
+11. [Instalar la CRD de VolumeSnapshot](#11-install-volumesnapshot-crds) - `11-volumesnapshot-crds.sh`
+12. [Configurar Workload Identity](#12-workload-identity-setup) - `12-workload-identity.sh`
+13. [Instalar StorageClass](#13-install-storageclass) - `13-storageclass.sh` (opcional: puede usar `premium-rwo` integrado)
+
+<div id="fips-specific-steps-skip-if-enable_fipsfalse">
+  ### Pasos específicos de FIPS (omitir si `ENABLE_FIPS=false`)
+</div>
+
+14. **(FIPS)** [Crear certificados conformes con FIPS](#14-create-fips-certificates) - `14-create-fips-certs.sh`
+15. **(FIPS)** [Crear secretos de Kubernetes para certificados](#15-create-certificate-secrets) - `15-create-cert-secrets.sh`
+
+<div id="deploy-clickhouse">
+  ### Desplegar ClickHouse
+</div>
+
+16. [Instalar el operador con Helm](#16-install-operator) - `16-install-operator.sh`
+17. [Crear el recurso ClickHouseCluster](#17-install-clickhouse-cluster) - `17-install-cluster.sh`
+18. [Asociar Workload Identity a la SA de Helm](#18-bind-workload-identity-to-helm-sa) - `18-bind-helm-workload-identity.sh`
+19. [Verificar la instalación](#19-verify-installation)
+
+***
+
+<div id="00-environment-variables">
+  ## 00. Variables de entorno
+</div>
+
+**Archivo: `00-env.sh`**
+
+```bash expandable
+#!/bin/bash
+# ============================================
+# ClickHouse Private GCP - Configuración del entorno
+# ============================================
+# Actualice estos valores para su entorno
+
+# Proyecto y región de GCP
+export GCP_PROJECT=your-project-id
+export GCP_REGION=us-central1
+export GCP_ZONES="us-central1-a,us-central1-b,us-central1-c"
+
+# Clúster de GKE
+export GKE_CLUSTER_NAME=clickhouse-cluster
+
+# Clúster de ClickHouse (puede haber varios por clúster de GKE)
+export CLUSTER_NAME=default-xx-01
+export NAMESPACE=ns-${CLUSTER_NAME}
+
+# Redes - Use la VPC existente donde reside el bastión
+export VPC_NAME=clickhouse-vpc
+export SUBNET_NAME=gke-subnet
+export SUBNET_RANGE=10.1.0.0/24
+export POD_RANGE=10.244.0.0/14         # Debe estar en límite /14 (3er octeto divisible por 4)
+export SERVICE_RANGE=10.252.0.0/20     # Debe estar en límite /20
+export MASTER_IPV4_CIDR=172.16.0.0/28  # Para el plano de control del clúster privado
+export BASTION_SUBNET_RANGE=10.0.0.0/24  # Subred del bastión (para master-authorized-networks)
+
+# Almacenamiento
+export BUCKET_NAME=clickhouse-data-${GCP_PROJECT}
+export S3_KEY_PREFIX=ch-s3-$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+# Cuentas de servicio
+export GSA_NAME=clickhouse
+export GSA_EMAIL=${GSA_NAME}@${GCP_PROJECT}.iam.gserviceaccount.com
+export KSA_NAME=clickhouse
+
+# Registro de artefactos
+export GAR_REPO_NAME=clickhouse
+export GAR_HOST=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${GAR_REPO_NAME}
+
+# Configuración FIPS (establezca en true para cumplimiento con FIPS 140-2)
+export ENABLE_FIPS=false
+
+# Versiones de imagen - El modo FIPS utiliza compilaciones conformes con FIPS
+if [ "$ENABLE_FIPS" = "true" ]; then
+  export CLICKHOUSE_SERVER_VERSION=25.8.1.9104-fips
+  export CLICKHOUSE_KEEPER_VERSION=26.1.1.1493
+else
+  export CLICKHOUSE_SERVER_VERSION=25.8.1.9104
+  export CLICKHOUSE_KEEPER_VERSION=25.10.1.6624
+fi
+export CLICKHOUSE_OPERATOR_VERSION=main-1.16067.1
+export OPERATOR_HELM_VERSION=1.16067.1
+export CLUSTER_HELM_VERSION=1.1.155
+
+# Origen de AWS ECR (para copiar imágenes)
+export SOURCE_ECR_REGION=us-east-1
+export SOURCE_ECR_REPO=349290138304.dkr.ecr.${SOURCE_ECR_REGION}.amazonaws.com
+export AWS_PROFILE=clickhouse-ecr
+
+# Configuración del grupo de nodos
+export KEEPER_MACHINE_TYPE=n2-standard-4      # n2-standard-8 recomendado para producción
+export SERVER_MACHINE_TYPE=n2-standard-8      # n2-standard-64 recomendado para producción
+export DEFAULT_MACHINE_TYPE=n2-standard-4
+
+# Límites de recursos (ajuste según el tamaño de las instancias)
+export SERVER_CPU=4                           # Ajuste al tipo de máquina
+export SERVER_MEMORY=16Gi                     # Ajuste al tipo de máquina
+export KEEPER_CPU=2
+export KEEPER_MEMORY=8Gi
+
+# Configuración de caché
+export CACHE_BYTES_PER_GI_RAM=11Gi
+
+# Configuración de certificados FIPS (solo se usa cuando ENABLE_FIPS=true)
+if [ "$ENABLE_FIPS" = "true" ]; then
+  export KUBERNETES_DOMAIN=cluster.local
+  export CERT_DIR=./certs
+  export SELF_SIGNED=true  # Establezca en false si usa una CA existente
+fi
+
+# Contraseña de ClickHouse
+# Para producción/FIPS: use Secret Manager en su lugar:
+#   export CLICKHOUSE_PASSWORD=$(gcloud secrets versions access latest --secret=clickhouse-password --project=${GCP_PROJECT})
+export CLICKHOUSE_PASSWORD='change-me-not-for-production'
+
+echo "=========================================="
+echo "Environment Variables Set"
+echo "=========================================="
+echo "GCP Project:     ${GCP_PROJECT}"
+echo "GCP Region:      ${GCP_REGION}"
+echo "GKE Cluster:     ${GKE_CLUSTER_NAME}"
+echo "CH Cluster:      ${CLUSTER_NAME}"
+echo "Namespace:       ${NAMESPACE}"
+echo "VPC:             ${VPC_NAME}"
+echo "Subnet:          ${SUBNET_NAME}"
+echo "Bucket:          ${BUCKET_NAME}"
+echo "GAR Host:        ${GAR_HOST}"
+echo "FIPS Mode:       ${ENABLE_FIPS}"
+echo "=========================================="
+```
+
+**Importante:** Carga este archivo con source antes de ejecutar otros scripts:
+
+```bash
+source ./00-env.sh
+```
+
+***
+
+<div id="01-create-artifact-registry">
+  ## 01. Crear Artifact Registry
+</div>
+
+**Archivo: `01-artifact-registry.sh`**
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "01. Creating Artifact Registry"
+echo "=========================================="
+
+# Crear repositorio
+echo "Creating repository: ${GAR_REPO_NAME}..."
+if gcloud artifacts repositories describe ${GAR_REPO_NAME} \
+  --location=${GCP_REGION} \
+  --project=${GCP_PROJECT} &>/dev/null; then
+  echo "   ✓ Repository already exists"
+else
+  gcloud artifacts repositories create ${GAR_REPO_NAME} \
+    --repository-format=docker \
+    --location=${GCP_REGION} \
+    --description="ClickHouse container images" \
+    --project=${GCP_PROJECT}
+  echo "   ✓ Repository created"
+fi
+
+# Configurar autenticación de Docker
+echo ""
+echo "Configuring Docker authentication..."
+gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev --quiet
+echo "   ✓ Docker authentication configured"
+
+echo ""
+echo "=========================================="
+echo "✅ Artifact Registry Setup Complete!"
+echo "=========================================="
+echo ""
+echo "Repository URL: ${GAR_HOST}"
+```
+
+***
+
+<div id="02-copy-container-images">
+  ## 02. Copiar imágenes de contenedor
+</div>
+
+**Archivo: `02-copy-images.sh`**
+
+Requiere [skopeo](https://github.com/containers/skopeo) para conservar todas las arquitecturas.
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "02. Copying ClickHouse Images"
+echo "=========================================="
+
+# Verificar que el perfil de AWS existe
+if ! aws configure list --profile ${AWS_PROFILE} &>/dev/null; then
+  echo "ERROR: AWS profile '${AWS_PROFILE}' not found"
+  echo "To create the profile, run: aws configure --profile ${AWS_PROFILE}"
+  exit 1
+fi
+
+# Autenticarse en el ECR de origen
+echo "Authenticating to AWS ECR..."
+aws ecr get-login-password --region ${SOURCE_ECR_REGION} --profile ${AWS_PROFILE} | \
+  skopeo login --username AWS --password-stdin ${SOURCE_ECR_REPO}
+echo "✓ ECR authentication successful"
+
+# Autenticarse en GCP Artifact Registry
+echo "Authenticating to GCP Artifact Registry..."
+gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev --quiet
+echo "✓ GAR authentication successful"
+
+echo ""
+echo "Copying images..."
+
+echo "1/5 Copying ClickHouse Server ${CLICKHOUSE_SERVER_VERSION}..."
+skopeo copy --all \
+  docker://${SOURCE_ECR_REPO}/clickhouse-server:${CLICKHOUSE_SERVER_VERSION} \
+  docker://${GAR_HOST}/clickhouse-server:${CLICKHOUSE_SERVER_VERSION}
+echo "✓ Server copied"
+
+echo "2/5 Copying ClickHouse Keeper ${CLICKHOUSE_KEEPER_VERSION}..."
+skopeo copy --all \
+  docker://${SOURCE_ECR_REPO}/clickhouse-keeper:${CLICKHOUSE_KEEPER_VERSION} \
+  docker://${GAR_HOST}/clickhouse-keeper:${CLICKHOUSE_KEEPER_VERSION}
+echo "✓ Keeper copied"
+
+echo "3/5 Copying ClickHouse Operator ${CLICKHOUSE_OPERATOR_VERSION}..."
+skopeo copy --all \
+  docker://${SOURCE_ECR_REPO}/clickhouse-operator:${CLICKHOUSE_OPERATOR_VERSION} \
+  docker://${GAR_HOST}/clickhouse-operator:${CLICKHOUSE_OPERATOR_VERSION}
+echo "✓ Operator copied"
+
+echo "4/5 Copying Operator Helm Chart ${OPERATOR_HELM_VERSION}..."
+skopeo copy --all \
+  docker://${SOURCE_ECR_REPO}/helm/clickhouse-operator-helm:${OPERATOR_HELM_VERSION} \
+  docker://${GAR_HOST}/helm/clickhouse-operator-helm:${OPERATOR_HELM_VERSION}
+echo "✓ Operator Helm chart copied"
+
+echo "5/5 Copying Cluster Helm Chart ${CLUSTER_HELM_VERSION}..."
+skopeo copy --all \
+  docker://${SOURCE_ECR_REPO}/helm/onprem-clickhouse-cluster:${CLUSTER_HELM_VERSION} \
+  docker://${GAR_HOST}/helm/onprem-clickhouse-cluster:${CLUSTER_HELM_VERSION}
+echo "✓ Cluster Helm chart copied"
+
+echo ""
+echo "=========================================="
+echo "✅ All images copied successfully!"
+echo "=========================================="
+
+# Verificar
+echo ""
+echo "Verifying images in Artifact Registry..."
+gcloud artifacts docker images list ${GAR_HOST} --format="table(package,version)"
+```
+
+***
+
+<div id="03-configure-vpc-and-subnet">
+  ## 03. Configurar VPC y subred
+</div>
+
+**Archivo: `03-vpc-subnet.sh`**
+
+Este script asume que ya tienes una VPC existente con un host bastión. Crea o actualiza la subred de GKE con los rangos secundarios necesarios.
+
+**Importante: Requisitos de límites CIDR**
+
+* bloques `/14`: el tercer octeto debe ser divisible por 4 (p. ej., `10.244.0.0`, NO `10.245.0.0`)
+* bloques `/20`: el cuarto octeto debe ser 0 y el tercer octeto debe estar alineado a 16 (p. ej., `10.252.0.0`)
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "03. Configuring VPC and GKE Subnet"
+echo "=========================================="
+
+# Verificar si existe la VPC
+echo "Checking VPC: ${VPC_NAME}..."
+if gcloud compute networks describe ${VPC_NAME} --project=${GCP_PROJECT} &>/dev/null; then
+  echo "   ✓ VPC exists"
+else
+  echo "   Creating VPC..."
+  gcloud compute networks create ${VPC_NAME} \
+    --subnet-mode=custom \
+    --project=${GCP_PROJECT}
+  echo "   ✓ VPC created"
+fi
+
+# Verificar si existe la subred de GKE
+echo ""
+echo "Checking GKE subnet: ${SUBNET_NAME}..."
+if gcloud compute networks subnets describe ${SUBNET_NAME} --region=${GCP_REGION} --project=${GCP_PROJECT} &>/dev/null; then
+  # La subred existe - verificar rangos secundarios
+  EXISTING_SECONDARY=$(gcloud compute networks subnets describe ${SUBNET_NAME} \
+    --region=${GCP_REGION} \
+    --project=${GCP_PROJECT} \
+    --format="value(secondaryIpRanges.rangeName)" 2>/dev/null | grep -E "^pods$" || true)
+  
+  if [ -z "$EXISTING_SECONDARY" ]; then
+    echo "   ⚠️ Subnet exists but missing secondary ranges"
+    echo "   Adding secondary ranges for pods and services..."
+    gcloud compute networks subnets update ${SUBNET_NAME} \
+      --region=${GCP_REGION} \
+      --add-secondary-ranges=pods=${POD_RANGE},services=${SERVICE_RANGE} \
+      --project=${GCP_PROJECT}
+    echo "   ✓ Secondary ranges added"
+  else
+    echo "   ✓ Subnet exists with secondary ranges"
+  fi
+else
+  echo "   Creating GKE subnet..."
+  gcloud compute networks subnets create ${SUBNET_NAME} \
+    --network=${VPC_NAME} \
+    --region=${GCP_REGION} \
+    --range=${SUBNET_RANGE} \
+    --secondary-range=pods=${POD_RANGE},services=${SERVICE_RANGE} \
+    --enable-private-ip-google-access \
+    --project=${GCP_PROJECT}
+  echo "   ✓ Subnet created"
+fi
+
+# Habilitar Private Google Access
+echo ""
+echo "Ensuring Private Google Access is enabled..."
+gcloud compute networks subnets update ${SUBNET_NAME} \
+  --region=${GCP_REGION} \
+  --enable-private-ip-google-access \
+  --project=${GCP_PROJECT} 2>/dev/null || true
+echo "   ✓ Private Google Access enabled"
+
+echo ""
+echo "=========================================="
+echo "✅ VPC/Subnet Configuration Complete!"
+echo "=========================================="
+echo ""
+echo "VPC:          ${VPC_NAME}"
+echo "GKE Subnet:   ${SUBNET_NAME} (${SUBNET_RANGE})"
+echo "Pods:         ${POD_RANGE}"
+echo "Services:     ${SERVICE_RANGE}"
+echo "Bastion:      ${BASTION_SUBNET_RANGE}"
+```
+
+***
+
+<div id="04-create-cloud-nat">
+  ## 04. Crear Cloud NAT
+</div>
+
+**File: `04-cloud-nat.sh`**
+
+Los nodos privados de GKE requieren Cloud NAT para tener acceso saliente a Internet (por ejemplo, para descargar imágenes).
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "04. Creating Cloud NAT for Private Nodes"
+echo "=========================================="
+
+# Crear Cloud Router
+echo "Creating Cloud Router..."
+if gcloud compute routers describe clickhouse-router --region=${GCP_REGION} --project=${GCP_PROJECT} &>/dev/null; then
+  echo "   ✓ Router already exists"
+else
+  gcloud compute routers create clickhouse-router \
+    --network=${VPC_NAME} \
+    --region=${GCP_REGION} \
+    --project=${GCP_PROJECT}
+  echo "   ✓ Router created"
+fi
+
+# Crear Cloud NAT
+echo ""
+echo "Creating Cloud NAT..."
+if gcloud compute routers nats describe clickhouse-nat --router=clickhouse-router --region=${GCP_REGION} --project=${GCP_PROJECT} &>/dev/null; then
+  echo "   ✓ NAT already exists"
+else
+  gcloud compute routers nats create clickhouse-nat \
+    --router=clickhouse-router \
+    --region=${GCP_REGION} \
+    --nat-all-subnet-ip-ranges \
+    --auto-allocate-nat-external-ips \
+    --enable-logging \
+    --log-filter=ERRORS_ONLY \
+    --project=${GCP_PROJECT}
+  echo "   ✓ NAT created"
+fi
+
+echo ""
+echo "=========================================="
+echo "✅ Cloud NAT Setup Complete!"
+echo "=========================================="
+echo ""
+echo "Router: clickhouse-router"
+echo "NAT:    clickhouse-nat"
+echo "Region: ${GCP_REGION}"
+```
+
+***
+
+<div id="05-create-gcp-service-account">
+  ## 05. Crear una cuenta de servicio de GCP
+</div>
+
+**Archivo: `05-service-account.sh`**
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "05. Creando cuenta de servicio de GCP"
+echo "=========================================="
+
+echo "Creando cuenta de servicio: ${GSA_NAME}..."
+if gcloud iam service-accounts describe ${GSA_EMAIL} --project=${GCP_PROJECT} &>/dev/null; then
+  echo "   ✓ La cuenta de servicio ya existe"
+else
+  gcloud iam service-accounts create ${GSA_NAME} \
+    --project=${GCP_PROJECT} \
+    --display-name="ClickHouse Workload Identity Service Account"
+  echo "   ✓ Cuenta de servicio creada"
+fi
+
+echo ""
+echo "=========================================="
+echo "✅ ¡Cuenta de servicio creada!"
+echo "=========================================="
+echo ""
+echo "Cuenta de servicio: ${GSA_EMAIL}"
+```
+
+***
+
+<div id="06-create-gcs-bucket">
+  ## 06. Crear bucket de GCS
+</div>
+
+**Archivo: `06-gcs-bucket.sh`**
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "06. Creating GCS Bucket"
+echo "=========================================="
+
+# Crear bucket
+echo "Creating GCS bucket: ${BUCKET_NAME}..."
+if gcloud storage ls gs://${BUCKET_NAME}/ --project=${GCP_PROJECT} &>/dev/null; then
+  echo "   ✓ Bucket already exists"
+else
+  gcloud storage buckets create gs://${BUCKET_NAME} \
+    --project=${GCP_PROJECT} \
+    --default-storage-class=STANDARD \
+    --location=${GCP_REGION} \
+    --uniform-bucket-level-access
+  echo "   ✓ Bucket created"
+fi
+
+# Habilitar acceso uniforme a nivel de bucket
+echo ""
+echo "Enabling uniform bucket-level access..."
+gcloud storage buckets update gs://${BUCKET_NAME} --uniform-bucket-level-access
+echo "   ✓ Uniform access enabled"
+
+# Otorgar permisos a la cuenta de servicio
+echo ""
+echo "Granting permissions to service account..."
+gcloud storage buckets add-iam-policy-binding gs://${BUCKET_NAME} --member=serviceAccount:${GSA_EMAIL} --role=roles/storage.objectAdmin
+gcloud storage buckets add-iam-policy-binding gs://${BUCKET_NAME} --member=serviceAccount:${GSA_EMAIL} --role=roles/storage.legacyBucketReader
+echo "   ✓ Permissions granted"
+
+echo ""
+echo "=========================================="
+echo "✅ GCS Bucket Setup Complete!"
+echo "=========================================="
+echo ""
+echo "Bucket:   ${BUCKET_NAME}"
+echo "Region:   ${GCP_REGION}"
+echo "Endpoint: https://storage.googleapis.com"
+```
+
+***
+
+<div id="07-create-gke-cluster">
+  ## 07. Crear clúster de GKE
+</div>
+
+**Archivo: `07-gke-cluster.sh`**
+
+Crea un **clúster de GKE totalmente privado** para cumplir con FedRAMP:
+
+* Los nodos worker solo tienen IP internas
+* El plano de control tiene **solo un endpoint privado**
+* Todo el acceso debe provenir de dentro de la VPC (a través del bastión)
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "07. Creating Private GKE Cluster"
+echo "=========================================="
+
+echo "Creating cluster: ${GKE_CLUSTER_NAME}..."
+if gcloud container clusters describe ${GKE_CLUSTER_NAME} --region=${GCP_REGION} --project=${GCP_PROJECT} &>/dev/null; then
+  echo "   ✓ Cluster already exists"
+else
+  gcloud container clusters create ${GKE_CLUSTER_NAME} \
+    --region=${GCP_REGION} \
+    --node-locations=${GCP_ZONES} \
+    --network=${VPC_NAME} \
+    --subnetwork=${SUBNET_NAME} \
+    --cluster-secondary-range-name=pods \
+    --services-secondary-range-name=services \
+    --enable-ip-alias \
+    --enable-private-nodes \
+    --enable-private-endpoint \
+    --master-ipv4-cidr=${MASTER_IPV4_CIDR} \
+    --enable-master-authorized-networks \
+    --master-authorized-networks=${SUBNET_RANGE},${BASTION_SUBNET_RANGE} \
+    --workload-pool=${GCP_PROJECT}.svc.id.goog \
+    --num-nodes=1 \
+    --machine-type=${DEFAULT_MACHINE_TYPE} \
+    --disk-type=pd-standard \
+    --disk-size=50 \
+    --project=${GCP_PROJECT}
+  echo "   ✓ Cluster created"
+fi
+
+# Obtener credenciales (debe ejecutarse desde dentro de la VPC / bastión)
+echo ""
+echo "Getting cluster credentials..."
+gcloud container clusters get-credentials ${GKE_CLUSTER_NAME} \
+  --region=${GCP_REGION} \
+  --internal-ip \
+  --project=${GCP_PROJECT}
+echo "   ✓ Credentials configured"
+
+# Verificar acceso
+echo ""
+echo "Verifying cluster access..."
+kubectl get nodes
+
+echo ""
+echo "=========================================="
+echo "✅ Private GKE Cluster Ready!"
+echo "=========================================="
+echo ""
+echo "Cluster:     ${GKE_CLUSTER_NAME}"
+echo "Region:      ${GCP_REGION}"
+echo "Master CIDR: ${MASTER_IPV4_CIDR}"
+echo ""
+echo "Private cluster settings:"
+echo "  - Nodes have internal IPs only"
+echo "  - Control plane has NO public endpoint"
+echo "  - kubectl requires bastion access"
+```
+
+**Configuración del clúster privado:**
+
+| Configuración                         | Valor                     | Propósito                                         |
+| ------------------------------------- | ------------------------- | ------------------------------------------------- |
+| `--enable-private-nodes`              | Obligatorio               | Los nodos solo reciben IP internas                |
+| `--enable-private-endpoint`           | Obligatorio               | El plano de control no tiene IP pública (FedRAMP) |
+| `--master-ipv4-cidr`                  | `172.16.0.0/28`           | Rango de IP del plano de control                  |
+| `--enable-master-authorized-networks` | Obligatorio               | Habilita las restricciones de red                 |
+| `--master-authorized-networks`        | Subredes de GKE + bastión | CIDR autorizados para acceder al plano de control |
+
+<div id="accessing-the-private-cluster">
+  ### Acceso al clúster privado
+</div>
+
+Con `--enable-private-endpoint`, la API del clúster **solo es accesible desde la VPC**.
+
+**Desde el host bastión:**
+
+```bash
+# Obtener las credenciales del clúster
+gcloud container clusters get-credentials ${GKE_CLUSTER_NAME} \
+  --region=${GCP_REGION} \
+  --internal-ip \
+  --project=${GCP_PROJECT}
+
+# Verificar el acceso
+kubectl get nodes
+```
+
+***
+
+<div id="08-create-node-pools">
+  ## 08. Crear pools de nodos
+</div>
+
+**Archivo: `08-node-pools.sh`**
+
+| Pool de nodos | Tipo de máquina                             | Disco                        | Etiquetas                | Taints                                      |
+| ------------- | ------------------------------------------- | ---------------------------- | ------------------------ | ------------------------------------------- |
+| Keeper        | n2-standard-4 (dev) / n2-standard-8 (prod)  | 20GB pd-ssd                  | `clickhouseGroup=keeper` | `clickhouse.com/do-not-schedule:NoSchedule` |
+| Server        | n2-standard-8 (dev) / n2-standard-64 (prod) | 20GB pd-standard + SSD local | `clickhouseGroup=server` | `clickhouse.com/do-not-schedule:NoSchedule` |
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "08. Creating Node Pools"
+echo "=========================================="
+
+# Pool de nodos Keeper
+echo "Creating Keeper node pool..."
+if gcloud container node-pools describe keeper-pool --cluster=${GKE_CLUSTER_NAME} --region=${GCP_REGION} --project=${GCP_PROJECT} &>/dev/null; then
+  echo "   ✓ Keeper pool already exists"
+else
+  gcloud container node-pools create keeper-pool \
+    --cluster=${GKE_CLUSTER_NAME} \
+    --region=${GCP_REGION} \
+    --node-locations=${GCP_ZONES} \
+    --machine-type=${KEEPER_MACHINE_TYPE} \
+    --disk-type=pd-ssd \
+    --disk-size=20 \
+    --num-nodes=1 \
+    --enable-autoscaling \
+    --min-nodes=1 \
+    --max-nodes=3 \
+    --workload-metadata=GKE_METADATA \
+    --node-labels=clickhouseGroup=keeper \
+    --node-taints=clickhouse.com/do-not-schedule=true:NoSchedule \
+    --project=${GCP_PROJECT}
+  echo "   ✓ Keeper pool created"
+fi
+
+# Pool de nodos Server (con SSD local)
+# NOTA: GKE no permite --metadata-from-file=startup-script en pools de nodos
+# (clave reservada). El formateo/montaje del SSD local es gestionado por el conjunto de daemon en el paso 10.
+echo ""
+echo "Creating Server node pool..."
+if gcloud container node-pools describe server-pool --cluster=${GKE_CLUSTER_NAME} --region=${GCP_REGION} --project=${GCP_PROJECT} &>/dev/null; then
+  echo "   ✓ Server pool already exists"
+else
+  gcloud container node-pools create server-pool \
+    --cluster=${GKE_CLUSTER_NAME} \
+    --region=${GCP_REGION} \
+    --node-locations=${GCP_ZONES} \
+    --machine-type=${SERVER_MACHINE_TYPE} \
+    --local-ssd-count=1 \
+    --disk-type=pd-standard \
+    --disk-size=20 \
+    --num-nodes=1 \
+    --enable-autoscaling \
+    --min-nodes=1 \
+    --max-nodes=10 \
+    --workload-metadata=GKE_METADATA \
+    --node-labels=clickhouseGroup=server \
+    --node-taints=clickhouse.com/do-not-schedule=true:NoSchedule \
+    --project=${GCP_PROJECT}
+  echo "   ✓ Server pool created"
+fi
+
+echo ""
+echo "=========================================="
+echo "✅ Node Pools Created!"
+echo "=========================================="
+kubectl get nodes -L clickhouseGroup
+```
+
+***
+
+<div id="09-local-ssd-daemonset">
+  ## 09. Conjunto de daemon para SSD local
+</div>
+
+**Archivo: `09-local-ssd-daemonset.sh`**
+
+GKE Container-Optimized OS (COS) tiene un sistema de archivos raíz de solo lectura, por lo que no podemos crear `/nvme`. En su lugar, montamos el SSD local en `/mnt/disks/ssd0` y configuramos ClickHouse para usar esa ruta.
+
+**Nota:** GKE no permite `--metadata-from-file=startup-script` en los pools de nodos (clave reservada), por lo que se requiere un conjunto de daemon para formatear y montar el SSD local.
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "09. Desplegando conjunto de daemon de SSD local"
+echo "=========================================="
+
+kubectl apply -f - <<'EOF'
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: local-ssd-setup
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: local-ssd-setup
+  template:
+    metadata:
+      labels:
+        app: local-ssd-setup
+    spec:
+      hostPID: true
+      nodeSelector:
+        clickhouseGroup: server
+      tolerations:
+      - key: "clickhouse.com/do-not-schedule"
+        operator: "Exists"
+        effect: "NoSchedule"
+      initContainers:
+      - name: setup-ssd
+        image: busybox:1.36
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          
+          # Usar nsenter para ejecutar comandos en el host
+          nsenter -t 1 -m -- /bin/sh -c '
+            # Buscar dispositivo SSD local
+            if [ -b /dev/disk/by-id/google-local-nvme-ssd-0 ]; then
+              DEV=/dev/disk/by-id/google-local-nvme-ssd-0
+            elif [ -b /dev/disk/by-id/google-local-ssd-0 ]; then
+              DEV=/dev/disk/by-id/google-local-ssd-0
+            else
+              echo "No local SSD found"
+              exit 0
+            fi
+            
+            mkdir -p /mnt/disks/ssd0
+            
+            # Formatear si es necesario
+            if ! blkid $DEV 2>/dev/null | grep -q ext4; then
+              echo "Formatting $DEV..."
+              mkfs.ext4 -F $DEV
+            fi
+            
+            # Montar si es necesario
+            if ! mountpoint -q /mnt/disks/ssd0; then
+              echo "Mounting $DEV to /mnt/disks/ssd0..."
+              mount $DEV /mnt/disks/ssd0
+            fi
+            chmod 755 /mnt/disks/ssd0
+            
+            echo "Local SSD ready at /mnt/disks/ssd0"
+            df -h /mnt/disks/ssd0
+          '
+        securityContext:
+          privileged: true
+      containers:
+      - name: pause
+        image: gcr.io/google-containers/pause:3.2
+EOF
+
+echo ""
+echo "Esperando a que el conjunto de daemon esté listo..."
+sleep 15
+kubectl get ds -n kube-system local-ssd-setup
+kubectl get pods -n kube-system -l app=local-ssd-setup
+kubectl logs -n kube-system -l app=local-ssd-setup -c setup-ssd
+
+echo ""
+echo "=========================================="
+echo "✓ ¡Conjunto de daemon de SSD local desplegado!"
+echo "=========================================="
+echo ""
+echo "IMPORTANTE: El SSD está montado en /mnt/disks/ssd0"
+echo "Debe configurar ClickHouse para usar esta ruta"
+echo "en lugar de /nvme/disk (GKE COS tiene sistema de archivos raíz de solo lectura)"
+```
+
+**Notas importantes:**
+
+* GKE Container-Optimized OS tiene un **sistema de archivos raíz de solo lectura**; no se puede crear `/nvme`
+* El SSD local está montado en `/mnt/disks/ssd0`
+* Usa la imagen `busybox:1.36` (no se requiere conexión a Internet para `apt-get`)
+* Usa `nsenter` para ejecutar comandos en el sistema de archivos del host
+* El conjunto de daemon debe desplegarse **antes** del clúster de ClickHouse para evitar condiciones de carrera
+
+***
+
+<div id="10-add-topology-labels">
+  ## 10. Añadir etiquetas de topología
+</div>
+
+**Archivo: `10-topology-labels.sh`**
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "10. Adding Topology Labels to Nodes"
+echo "=========================================="
+
+# Etiquetar nodos keeper
+echo "Labeling keeper nodes..."
+for node in $(kubectl get nodes -l clickhouseGroup=keeper -o name); do
+  kubectl label $node topologyZone=c-${CLUSTER_NAME}-keeper --overwrite
+  echo "   ✓ Labeled: $node"
+done
+
+# Etiquetar nodos server
+echo ""
+echo "Labeling server nodes..."
+for node in $(kubectl get nodes -l clickhouseGroup=server -o name); do
+  kubectl label $node topologyZone=c-${CLUSTER_NAME}-server --overwrite
+  echo "   ✓ Labeled: $node"
+done
+
+echo ""
+echo "=========================================="
+echo "✅ Topology Labels Applied!"
+echo "=========================================="
+kubectl get nodes -L clickhouseGroup,topologyZone
+```
+
+***
+
+<div id="11-install-volumesnapshot-crds">
+  ## 11. Instalar las CRD de VolumeSnapshot
+</div>
+
+**Archivo: `11-volumesnapshot-crds.sh`**
+
+```bash
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "11. Instalando CRDs de VolumeSnapshot"
+echo "=========================================="
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+
+echo ""
+echo "=========================================="
+echo "✅ ¡CRDs de VolumeSnapshot instalados!"
+echo "=========================================="
+```
+
+***
+
+<div id="12-workload-identity-setup">
+  ## 12. Configuración de Workload Identity
+</div>
+
+**Archivo: `12-workload-identity.sh`**
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "12. Setting Up Workload Identity"
+echo "=========================================="
+
+# Crear espacio de nombres
+echo "Creating namespace: ${NAMESPACE}..."
+kubectl create namespace ${NAMESPACE} 2>/dev/null || echo "   Namespace exists"
+
+# Crear cuenta de servicio de Kubernetes
+echo ""
+echo "Creating Kubernetes Service Account..."
+kubectl create serviceaccount ${KSA_NAME} -n ${NAMESPACE} 2>/dev/null || echo "   KSA exists"
+
+# Anotar KSA con el correo electrónico de GSA
+kubectl annotate serviceaccount ${KSA_NAME} \
+  -n ${NAMESPACE} \
+  iam.gke.io/gcp-service-account=${GSA_EMAIL} \
+  --overwrite
+echo "   ✓ KSA annotated"
+
+# Vincular Workload Identity
+echo ""
+echo "Binding Workload Identity..."
+gcloud iam service-accounts add-iam-policy-binding ${GSA_EMAIL} \
+  --project=${GCP_PROJECT} \
+  --role=roles/iam.workloadIdentityUser \
+  --member="serviceAccount:${GCP_PROJECT}.svc.id.goog[${NAMESPACE}/${KSA_NAME}]" \
+  --quiet
+echo "   ✓ Workload Identity bound for ${KSA_NAME}"
+
+# Vincular también la serviceAccount 'default'
+echo ""
+echo "Binding 'default' ServiceAccount..."
+kubectl annotate serviceaccount default \
+  -n ${NAMESPACE} \
+  iam.gke.io/gcp-service-account=${GSA_EMAIL} \
+  --overwrite
+
+gcloud iam service-accounts add-iam-policy-binding ${GSA_EMAIL} \
+  --project=${GCP_PROJECT} \
+  --role=roles/iam.workloadIdentityUser \
+  --member="serviceAccount:${GCP_PROJECT}.svc.id.goog[${NAMESPACE}/default]" \
+  --quiet
+echo "   ✓ Workload Identity bound for default"
+
+# Conceder acceso de lectura a Artifact Registry
+echo ""
+echo "Granting Artifact Registry access..."
+gcloud artifacts repositories add-iam-policy-binding ${GAR_REPO_NAME} \
+  --location=${GCP_REGION} \
+  --member="serviceAccount:${GSA_EMAIL}" \
+  --role="roles/artifactregistry.reader" \
+  --project=${GCP_PROJECT} --quiet
+echo "   ✓ Artifact Registry access granted"
+
+echo ""
+echo "=========================================="
+echo "✅ Workload Identity Setup Complete!"
+echo "=========================================="
+echo ""
+echo "GCP SA:       ${GSA_EMAIL}"
+echo "K8s SA:       ${KSA_NAME}"
+echo "Namespace:    ${NAMESPACE}"
+```
+
+**Alineación de Workload Identity:**
+
+| Componente                              | Valor                                                             |
+| --------------------------------------- | ----------------------------------------------------------------- |
+| Cuenta de servicio de GCP               | `clickhouse@$PROJECT.iam.gserviceaccount.com`                     |
+| ServiceAccount de K8s (manual)          | `clickhouse` en el espacio de nombres `ns-$CLUSTER_NAME`          |
+| ServiceAccount de K8s (creada con helm) | `ch-$CLUSTER_NAME-sa` en el espacio de nombres `ns-$CLUSTER_NAME` |
+| Anotación de SA de K8s                  | `iam.gke.io/gcp-service-account=<GSA_EMAIL>`                      |
+| Miembro de la vinculación de IAM        | `serviceAccount:$PROJECT.svc.id.goog[<namespace>/<ksa>]`          |
+
+***
+
+<div id="13-install-storageclass">
+  ## 13. Instalar StorageClass
+</div>
+
+**Archivo: `13-storageclass.sh`** (Opcional)
+
+**Nota:** GKE usa `topology.gke.io/zone` en vez de `topology.kubernetes.io/zone`.
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "13. Installing StorageClass"
+echo "=========================================="
+
+# Autenticarse en el registro de Helm (sin prefijo https://)
+gcloud auth print-access-token | helm registry login \
+  -u oauth2accesstoken \
+  --password-stdin \
+  ${GCP_REGION}-docker.pkg.dev
+
+# Convertir zonas a JSON array
+ZONES_ARRAY=$(echo ${GCP_ZONES} | tr ',' '\n' | sed 's/.*/"&"/' | tr '\n' ',' | sed 's/,$//')
+
+helm install clickhouse-prerequisites \
+    oci://${GAR_HOST}/helm/onprem-clickhouse-cluster \
+    --version=${CLUSTER_HELM_VERSION} \
+    -n default \
+    --set-json="storageClass.create=true" \
+    --set-json="storageClass.provisioner=\"pd.csi.storage.gke.io\"" \
+    --set-json="storageClass.parameters.type=\"pd-ssd\"" \
+    --set-json="storageClass.allowedTopologies[0].matchLabelExpressions[0].key=\"topology.gke.io/zone\"" \
+    --set-json="storageClass.allowedTopologies[0].matchLabelExpressions[0].values=[${ZONES_ARRAY}]" \
+    --set-json="createCluster=false" \
+    --set-json="serviceAccount.create=false"
+
+# El gráfico de Helm incluye un StorageClass gp3-encrypted de AWS por defecto — eliminarlo
+kubectl delete storageclass gp3-encrypted --ignore-not-found
+
+echo ""
+echo "=========================================="
+echo "✅ StorageClass Installed!"
+echo "=========================================="
+kubectl get storageclass
+```
+
+***
+
+<div id="14-create-fips-certificates-fips-only">
+  ## 14. Crear certificados FIPS (solo FIPS)
+</div>
+
+**Archivo: `14-create-fips-certs.sh`** — Omite este paso si `ENABLE_FIPS=false`.
+
+Los certificados conformes con FIPS deben generarse con algoritmos aprobados por FIPS en un entorno con FIPS habilitado. Este script ejecuta un pod de Kubernetes de Red Hat UBI8 en el clúster de GKE con la política criptográfica FIPS habilitada y, a continuación, copia los certificados generados de vuelta al host bastión mediante `kubectl cp`.
+
+**Requisitos:**
+
+* Tamaño mínimo de clave RSA de 3072 bits
+* Algoritmo de firma SHA-256 o superior
+* Los nombres alternativos del sujeto (SAN) deben incluir los nombres DNS del clúster
+* Acceso con `kubectl` al clúster de GKE (no se requiere `docker`)
+
+**Tipos de certificados:**
+
+| Certificate | Files                                    | Purpose                            | SANs Required                                                                     |
+| ----------- | ---------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------- |
+| CA          | `ca/ca.crt`, `ca/ca.key`                 | Autoridad certificadora            | N/A                                                                               |
+| Server      | `server/server.crt`, `server/server.key` | Conexiones a clickhouse-server     | `*.c-${CLUSTER_NAME}-server-headless.ns-${CLUSTER_NAME}.svc.${KUBERNETES_DOMAIN}` |
+| Client      | `client/client.crt`, `client/client.key` | Conexiones desde clickhouse-server | No se requiere ninguno                                                            |
+| Keeper      | `keeper/keeper.crt`, `keeper/keeper.key` | Conexiones a clickhouse-keeper     | `*.c-${CLUSTER_NAME}-keeper-headless.ns-${CLUSTER_NAME}.svc.${KUBERNETES_DOMAIN}` |
+
+El script realiza estos pasos:
+
+1. Crea un ConfigMap con el script de generación de certificados
+2. Ejecuta un pod de Kubernetes UBI8 con un initContainer que instala OpenSSL, establece la política criptográfica FIPS mediante `update-crypto-policies --set FIPS` y genera todos los certificados
+3. Copia los certificados de vuelta al host bastión mediante `kubectl cp`
+4. Elimina el pod de Kubernetes y el ConfigMap
+
+Consulta `fips/14-create-fips-certs.sh` para ver el script completo.
+
+**Notas importantes:**
+
+* Los certificados caducan al cabo de 365 días de forma predeterminada; ajusta `CERT_VALIDITY` según sea necesario
+* El certificado de CA caduca al cabo de 3650 días (10 años)
+* Utiliza claves RSA de 3072 bits (el mínimo compatible con FIPS)
+* Mantén seguras las claves privadas (archivos `*.key`) y nunca las subas al control de versiones
+
+***
+
+<div id="15-create-certificate-secrets-fips-only">
+  ## 15. Crear secretos de certificados (solo FIPS)
+</div>
+
+**File: `15-create-cert-secrets.sh`** — Omita este paso si `ENABLE_FIPS=false`.
+
+Cree secretos de Kubernetes que contengan certificados compatibles con FIPS. Los secretos deben estar en el mismo espacio de nombres que el clúster de ClickHouse.
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "15. Creating Certificate Secrets"
+echo "=========================================="
+
+# Crear el espacio de nombres si no existe
+kubectl create namespace ${NAMESPACE} 2>/dev/null || echo "   Namespace exists"
+
+# Crear el secreto del certificado del servidor
+echo ""
+echo "Creating server certificate secret..."
+kubectl create secret generic -n ${NAMESPACE} ${CLUSTER_NAME}-server-cert-secret \
+  --from-file=ca.crt="${CERT_DIR}/ca/ca.crt" \
+  --from-file=server.crt="${CERT_DIR}/server/server.crt" \
+  --from-file=server.key="${CERT_DIR}/server/server.key" \
+  --from-file=client.crt="${CERT_DIR}/client/client.crt" \
+  --from-file=client.key="${CERT_DIR}/client/client.key" \
+  --dry-run=client -o yaml | kubectl apply -f -
+echo "   ✓ Server certificate secret created"
+
+# Crear el secreto del certificado de Keeper
+echo ""
+echo "Creating keeper certificate secret..."
+kubectl create secret generic -n ${NAMESPACE} ${CLUSTER_NAME}-keeper-cert-secret \
+  --from-file=ca.crt="${CERT_DIR}/ca/ca.crt" \
+  --from-file=keeper.crt="${CERT_DIR}/keeper/keeper.crt" \
+  --from-file=keeper.key="${CERT_DIR}/keeper/keeper.key" \
+  --dry-run=client -o yaml | kubectl apply -f -
+echo "   ✓ Keeper certificate secret created"
+
+echo ""
+echo "=========================================="
+echo "✅ Certificate Secrets Created!"
+echo "=========================================="
+```
+
+**Estructura del secreto:**
+
+| Nombre del secreto                   | Claves                                                           | Propósito                                          |
+| ------------------------------------ | ---------------------------------------------------------------- | -------------------------------------------------- |
+| `${CLUSTER_NAME}-server-cert-secret` | `ca.crt`, `server.crt`, `server.key`, `client.crt`, `client.key` | TLS del servidor y conexiones salientes de cliente |
+| `${CLUSTER_NAME}-keeper-cert-secret` | `ca.crt`, `keeper.crt`, `keeper.key`                             | TLS de Keeper                                      |
+
+***
+
+<div id="16-install-operator">
+  ## 16. Instalar el operador
+</div>
+
+**Archivo: `16-install-operator.sh`**
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "16. Installing ClickHouse Operator"
+echo "=========================================="
+
+# Autenticar en el registro de Helm (sin prefijo https://)
+gcloud auth print-access-token | helm registry login \
+  -u oauth2accesstoken \
+  --password-stdin \
+  ${GCP_REGION}-docker.pkg.dev
+
+# Convertir zonas a array JSON
+ZONES_ARRAY=$(echo ${GCP_ZONES} | tr ',' '\n' | sed 's/.*/"&"/' | tr '\n' ',' | sed 's/,$//')
+
+helm install clickhouse-operator \
+   oci://${GAR_HOST}/helm/clickhouse-operator-helm \
+   --version=${OPERATOR_HELM_VERSION} \
+   --create-namespace \
+   -n clickhouse-operator-system \
+   --set-json="image.repository=\"${GAR_HOST}/clickhouse-operator\"" \
+   --set-json="image.tag=\"${CLICKHOUSE_OPERATOR_VERSION}\"" \
+   --set-json='cilium.enabled=false' \
+   --set-json='idleScalerEnabled=false' \
+   --set-json='webhooks.enabled=false' \
+   --set-json='operator.debug=true' \
+   --set-json='operator.metricsScraper.enabled=false' \
+   --set-json="operator.availabilityZones=[${ZONES_ARRAY}]" \
+   --set-json='operator.featureFlags.backupOnASeparatePod=true' \
+   --set-json='operator.featureFlags.serverCMEKEnabled=true' \
+   --set-json='storageClass.create=false'
+
+echo ""
+echo "Waiting for operator to be ready..."
+kubectl wait --for=condition=ready pod \
+  -l app=clickhouse-operator \
+  -n clickhouse-operator-system \
+  --timeout=300s
+
+echo ""
+echo "=========================================="
+echo "✅ Operator Installation Complete!"
+echo "=========================================="
+kubectl get pods -n clickhouse-operator-system
+```
+
+***
+
+<div id="17-install-clickhouse-cluster">
+  ## 17. Instalar el clúster de ClickHouse
+</div>
+
+**Archivo: `17-install-cluster.sh`**
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "17. Installing ClickHouse Cluster"
+echo "=========================================="
+
+# Generar hash de contraseña
+if command -v sha256sum &> /dev/null; then
+  HASHED_PASSWORD=$(echo -n "${CLICKHOUSE_PASSWORD}" | sha256sum | awk '{printf $1}' | base64 | tr -d '\n')
+else
+  HASHED_PASSWORD=$(echo -n "${CLICKHOUSE_PASSWORD}" | shasum -a 256 | awk '{printf $1}' | base64 | tr -d '\n')
+fi
+
+echo "Cluster Configuration:"
+echo "  Name:      ${CLUSTER_NAME}"
+echo "  Namespace: ${NAMESPACE}"
+echo "  Bucket:    gs://${BUCKET_NAME}"
+echo "  Prefix:    ${S3_KEY_PREFIX}"
+echo ""
+
+# Construir flags FIPS si están habilitados
+FIPS_FLAGS=()
+if [ "$ENABLE_FIPS" = "true" ]; then
+  FIPS_FLAGS=(
+    --set-json='server.openSSL.enabled=true'
+    --set-json='server.openSSL.required=true'
+    --set-json="server.openSSL.selfSigned=${SELF_SIGNED}"
+    --set-json='keeper.openSSL.enabled=true'
+    --set-json='keeper.openSSL.required=true'
+    --set-json="keeper.openSSL.selfSigned=${SELF_SIGNED}"
+  )
+  echo "FIPS OpenSSL flags: ${#FIPS_FLAGS[@]} flags added"
+fi
+
+# Autenticarse en el registro de Helm (sin prefijo https://)
+gcloud auth print-access-token | helm registry login \
+  -u oauth2accesstoken \
+  --password-stdin \
+  ${GCP_REGION}-docker.pkg.dev
+
+helm install ${CLUSTER_NAME} \
+    oci://${GAR_HOST}/helm/onprem-clickhouse-cluster \
+    --version=${CLUSTER_HELM_VERSION} \
+    -n ${NAMESPACE} \
+    --create-namespace \
+    --set-json="storageClass.create=false" \
+    --set-json="storageClass.name=\"premium-rwo\"" \
+    --set-json="account.hashedPassword=\"${HASHED_PASSWORD}\"" \
+    \
+    --set-json="server.image.repository=\"${GAR_HOST}/clickhouse-server\"" \
+    --set-json="server.image.tag=\"${CLICKHOUSE_SERVER_VERSION}\"" \
+    --set-json="server.storage.s3.endpoint=\"https://storage.googleapis.com\"" \
+    --set-json="server.storage.s3.bucketName=\"${BUCKET_NAME}\"" \
+    --set-json="server.storage.s3.keyPrefix=\"${S3_KEY_PREFIX}\"" \
+    --set-json="server.storage.s3.region=\"auto\"" \
+    --set-json="server.storage.s3.useEnvironmentCredentials=true" \
+    --set-json="server.storage.storageClassName=\"premium-rwo\"" \
+    \
+    --set-json="server.config.storage_configuration.disks.diskPlainRewritableForSystemTables.http_client=\"gcp_oauth\"" \
+    --set-json="server.config.storage_configuration.disks.s3WithKeeperSystemDisk.http_client=\"gcp_oauth\"" \
+    --set-json="server.config.storage_configuration.disks.s3WithKeeperSystemDisk.path=\"/var/lib/clickhouse/disks/s3_with_keeper_system/\"" \
+    --set-json="server.config.storage_configuration.disks.s3disk.http_client=\"gcp_oauth\"" \
+    --set-json="server.config.storage_configuration.disks.s3WithKeeperDisk.http_client=\"gcp_oauth\"" \
+    \
+    "${FIPS_FLAGS[@]}" \
+    \
+    --set-json="server.ssdCacheConfiguration.bytesPerGiRAM=\"${CACHE_BYTES_PER_GI_RAM}\"" \
+    --set-json="server.ssdCacheConfiguration.hostPathBaseDirectory=\"/mnt/disks/ssd0/\"" \
+    \
+    --set-json="server.podPolicy.nodeSelector.clickhouseGroup=\"server\"" \
+    --set-json="server.podPolicy.resources.limits.cpu=\"${SERVER_CPU}\"" \
+    --set-json="server.podPolicy.resources.limits.memory=\"${SERVER_MEMORY}\"" \
+    --set-json="server.podPolicy.resources.requests.cpu=\"${SERVER_CPU}\"" \
+    --set-json="server.podPolicy.resources.requests.memory=\"${SERVER_MEMORY}\"" \
+    --set-json='server.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]' \
+    \
+    --set-json="keeper.image.repository=\"${GAR_HOST}/clickhouse-keeper\"" \
+    --set-json="keeper.image.tag=\"${CLICKHOUSE_KEEPER_VERSION}\"" \
+    --set-json="keeper.storage.s3.endpoint=\"https://storage.googleapis.com\"" \
+    --set-json="keeper.storage.s3.bucketName=\"${BUCKET_NAME}\"" \
+    --set-json="keeper.storage.s3.keyPrefix=\"${S3_KEY_PREFIX}\"" \
+    --set-json="keeper.storage.s3.region=\"auto\"" \
+    --set-json="keeper.storage.s3.useEnvironmentCredentials=true" \
+    --set-json="keeper.storage.storageClassName=\"premium-rwo\"" \
+    \
+    --set-json="keeper.config.storage_configuration.disks.s3_keeper_log_disk.http_client=\"gcp_oauth\"" \
+    --set-json="keeper.config.storage_configuration.disks.s3_keeper_snapshot_disk.http_client=\"gcp_oauth\"" \
+    \
+    --set-json="keeper.podPolicy.nodeSelector.clickhouseGroup=\"keeper\"" \
+    --set-json="keeper.podPolicy.resources.limits.cpu=\"${KEEPER_CPU}\"" \
+    --set-json="keeper.podPolicy.resources.limits.memory=\"${KEEPER_MEMORY}\"" \
+    --set-json="keeper.podPolicy.resources.requests.cpu=\"${KEEPER_CPU}\"" \
+    --set-json="keeper.podPolicy.resources.requests.memory=\"${KEEPER_MEMORY}\"" \
+    --set-json='keeper.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]'
+
+echo ""
+echo "=========================================="
+echo "✅ ClickHouse Cluster Deployment Complete!"
+echo "=========================================="
+echo ""
+echo "The operator automatically configured SSD cache volumes."
+echo ""
+echo "⚠️  Next step: Run ./18-bind-helm-workload-identity.sh"
+echo "   Pods will fail to access GCS until Workload Identity is bound."
+echo ""
+echo "Monitor pods:"
+echo "  kubectl get pods -n ${NAMESPACE} -w"
+echo ""
+echo "Verify SSD cache is mounted:"
+echo "  kubectl exec -n ${NAMESPACE} \$(kubectl get pods -n ${NAMESPACE} -l clickhouseGroup=server -o name | head -1) -- df -h | grep cache"
+```
+
+**Ajustes importantes específicos de GCP:**
+
+* `storageClass.create=false`: No crear la StorageClass de AWS
+* `storageClass.name="premium-rwo"`: Use la StorageClass SSD integrada de GCP
+* `server.storage.s3.endpoint`: `https://storage.googleapis.com` para la API compatible con S3 de GCS
+* `server.storage.s3.useEnvironmentCredentials=true`: Obligatorio para Workload Identity
+* `keeper.storage.s3.useEnvironmentCredentials=true`: **¡También debe configurarse para Keeper!**
+
+**Ajustes de OpenSSL (FIPS)** (se incluyen automáticamente cuando `ENABLE_FIPS=true`):
+
+| Configuración               | Valor          | Propósito                                       |
+| --------------------------- | -------------- | ----------------------------------------------- |
+| `server.openSSL.enabled`    | `true`         | Habilitar TLS en el servidor                    |
+| `server.openSSL.required`   | `true`         | Rechazar conexiones sin TLS                     |
+| `server.openSSL.selfSigned` | `true`/`false` | Certificados autofirmados o firmados por una CA |
+| `keeper.openSSL.enabled`    | `true`         | Habilitar TLS en Keeper                         |
+| `keeper.openSSL.required`   | `true`         | Rechazar conexiones sin TLS en Keeper           |
+
+***
+
+<div id="18-bind-workload-identity-to-helm-sa">
+  ## 18. Vincular Workload Identity a la cuenta de servicio de Helm
+</div>
+
+**Archivo: `18-bind-helm-workload-identity.sh`**
+
+El gráfico de Helm crea su propia cuenta de servicio (`ch-${CLUSTER_NAME}-sa`). Debe vincular Workload Identity a esta cuenta de servicio para acceder a GCS.
+
+**Importante:** Los pods de Keeper y del servidor creados durante el paso 17 se inician *antes* de que exista esta vinculación de Workload Identity, por lo que fallarán con errores 403 Access Denied de GCS. Este script reinicia automáticamente los pods después de realizar la vinculación para que recojan las nuevas credenciales.
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "18. Vinculando Workload Identity a Helm SA"
+echo "=========================================="
+
+# Esperar a que se cree la SA de Helm
+echo "Esperando a que se cree la cuenta de servicio de Helm..."
+timeout=300
+elapsed=0
+while ! kubectl get serviceaccount ch-${CLUSTER_NAME}-sa -n ${NAMESPACE} &>/dev/null; do
+  if [ $elapsed -ge $timeout ]; then
+    echo "ERROR: Tiempo de espera agotado esperando la cuenta de servicio de Helm"
+    exit 1
+  fi
+  sleep 5
+  elapsed=$((elapsed + 5))
+  echo "  Esperando... (${elapsed}s)"
+done
+echo "   ✓ Cuenta de servicio de Helm encontrada"
+
+# Anotar la SA creada por helm
+echo ""
+echo "Anotando la cuenta de servicio de Helm..."
+kubectl annotate serviceaccount ch-${CLUSTER_NAME}-sa \
+  -n ${NAMESPACE} \
+  iam.gke.io/gcp-service-account=${GSA_EMAIL} \
+  --overwrite
+echo "   ✓ Cuenta de servicio anotada"
+
+# Vincular Workload Identity
+echo ""
+echo "Vinculando Workload Identity..."
+gcloud iam service-accounts add-iam-policy-binding ${GSA_EMAIL} \
+  --project=${GCP_PROJECT} \
+  --role=roles/iam.workloadIdentityUser \
+  --member="serviceAccount:${GCP_PROJECT}.svc.id.goog[${NAMESPACE}/ch-${CLUSTER_NAME}-sa]" \
+  --quiet
+echo "   ✓ Workload Identity vinculada"
+
+echo ""
+echo "Verificando anotación..."
+kubectl get sa ch-${CLUSTER_NAME}-sa -n ${NAMESPACE} -o yaml | grep -A3 annotations
+
+# Reiniciar los pods para que adopten las nuevas credenciales de Workload Identity.
+# Los pods creados en el paso 17 se iniciaron antes de que existiera el vínculo, por lo que
+# no tienen credenciales de GCP y fallarán con 403 en GCS.
+echo ""
+echo "Reiniciando los pods de keeper y servidor para adoptar Workload Identity..."
+kubectl delete pods -n ${NAMESPACE} -l clickhouseGroup=keeper --wait=false 2>/dev/null || true
+kubectl delete pods -n ${NAMESPACE} -l clickhouseGroup=server --wait=false 2>/dev/null || true
+echo "   ✓ Pods reiniciándose"
+
+echo ""
+echo "Esperando a que los pods de keeper estén listos..."
+kubectl wait --for=condition=ready pod \
+  -l clickhouseGroup=keeper \
+  -n ${NAMESPACE} \
+  --timeout=600s
+echo "   ✓ Pods de keeper listos"
+
+echo ""
+echo "Esperando a que se creen los pods de servidor..."
+echo "   (El operador crea los servidores una vez que los keepers están en buen estado)"
+timeout=600
+elapsed=0
+while ! kubectl get pods -n ${NAMESPACE} -l clickhouseGroup=server -o name 2>/dev/null | grep -q .; do
+  if [ $elapsed -ge $timeout ]; then
+    echo "ERROR: Tiempo de espera agotado esperando la creación de los pods de servidor"
+    echo "  kubectl get pods -n ${NAMESPACE}"
+    exit 1
+  fi
+  sleep 10
+  elapsed=$((elapsed + 10))
+  echo "  Esperando los pods de servidor... (${elapsed}s)"
+done
+
+echo "Esperando a que los pods de servidor estén listos..."
+kubectl wait --for=condition=ready pod \
+  -l clickhouseGroup=server \
+  -n ${NAMESPACE} \
+  --timeout=600s
+echo "   ✓ Pods de servidor listos"
+
+echo ""
+echo "=========================================="
+echo "✅ ¡Workload Identity vinculada a Helm SA!"
+echo "=========================================="
+echo ""
+kubectl get pods -n ${NAMESPACE}
+```
+
+***
+
+<div id="19-verify-installation">
+  ## 19. Verificar la instalación
+</div>
+
+**Modo estándar** (sin TLS):
+
+```bash
+# Reenvío de puertos al puerto nativo de ClickHouse
+kubectl port-forward svc/c-${CLUSTER_NAME}-server-any 9000:9000 -n ${NAMESPACE} &
+
+# Conectar con clickhouse-client
+clickhouse client --host localhost --port 9000 --password "${CLICKHOUSE_PASSWORD}"
+```
+
+**Modo TLS (FIPS)** — Con `openSSL.required=true`, ClickHouse solo acepta conexiones en puertos seguros. Use el puerto **9440** (TLS nativo) en lugar del 9000:
+
+```bash
+# Reenvío de puertos al puerto nativo seguro de ClickHouse
+kubectl port-forward svc/c-${CLUSTER_NAME}-server-any 9440:9440 -n ${NAMESPACE} &
+
+# Conectar con certificados autofirmados
+clickhouse client --host localhost --port 9440 \
+  --password "${CLICKHOUSE_PASSWORD}" \
+  --secure \
+  --accept-invalid-certificate
+```
+
+La opción `--accept-invalid-certificate` es necesaria porque usamos certificados autofirmados. En producción, si usa certificados válidos firmados por una CA, especifique explícitamente el certificado de la CA:
+
+```bash
+clickhouse client --host localhost --port 9440 \
+  --password "${CLICKHOUSE_PASSWORD}" \
+  --secure \
+  --config-file <(cat <<'EOF'
+<config>
+    <openSSL>
+        <client>
+            <caConfig>./certs/ca/ca.crt</caConfig>
+        </client>
+    </openSSL>
+</config>
+EOF
+)
+```
+
+**Ejecute una consulta de prueba:**
+
+```sql
+SELECT 1;
+```
+
+Resultado esperado:
+
+```
+   ┌─1─┐
+1. │ 1 │
+   └───┘
+1 row in set. Elapsed: 0.001 sec.
+```
+
+**Importante (FIPS):** Los puertos 9000 (protocolo nativo en texto sin cifrar) y 8123 (HTTP en texto sin cifrar) rechazarán las conexiones cuando `openSSL.required=true`. Use en su lugar el puerto 9440 (TLS nativo) o 8443 (HTTPS).
+
+***
+
+<div id="appendix-aws-to-gcp-component-mapping">
+  ## Apéndice: Correspondencia de componentes de AWS a GCP
+</div>
+
+| Componente de AWS       | Equivalente en GCP          | Diferencias clave                                     |
+| ----------------------- | --------------------------- | ----------------------------------------------------- |
+| ECR                     | Artifact Registry           | Usa `gcloud auth configure-docker`                    |
+| S3                      | GCS con API de S3           | Endpoint: `https://storage.googleapis.com`            |
+| Rol de IAM (IRSA)       | Workload Identity           | Anota la KSA con `iam.gke.io/gcp-service-account`     |
+| Claves HMAC             | Workload Identity           | Usa `useEnvironmentCredentials=true`                  |
+| Controlador CSI de EBS  | Controlador CSI de GCE PD   | Preinstalado; aprovisionador: `pd.csi.storage.gke.io` |
+| Zonas de disponibilidad | Zonas de GKE                | Clave de topología: `topology.gke.io/zone`            |
+| NLB                     | Balanceador de carga de GCP | Usa la anotación `type: LoadBalancer`                 |
+
+***
+
+<div id="appendix-fips-specific-considerations">
+  ## Apéndice: Consideraciones específicas de FIPS
+</div>
+
+> **Nota:** Esta sección solo se aplica cuando `ENABLE_FIPS=true` está configurado en `00-env.sh`.
+
+<div id="certificate-requirements">
+  ### Requisitos de certificados
+</div>
+
+El cumplimiento de FIPS requiere:
+
+* Claves RSA de al menos 3072 bits
+* Algoritmos de firma aprobados por FIPS (SHA-256 o superior)
+* Certificados generados en un entorno con FIPS habilitado (Red Hat UBI8)
+* Validación correcta de la cadena de certificados
+
+<div id="openssl-configuration">
+  ### Configuración de OpenSSL
+</div>
+
+Tanto el servidor como Keeper deben tener:
+
+* `openSSL.enabled=true` - Habilita TLS
+* `openSSL.required=true` - Exige TLS (rechaza conexiones sin TLS)
+* `openSSL.selfSigned=true` - Para certificados autofirmados (establece `false` si usas una CA válida)
+
+<div id="key-differences-from-standard-gcp-installation">
+  ### Diferencias clave respecto a la instalación estándar de GCP
+</div>
+
+| Configuración                       | Estándar        | FIPS                            |
+| ----------------------------------- | --------------- | ------------------------------- |
+| Etiqueta de imagen del servidor     | `25.8.1.9104`   | `25.8.1.9104-fips`              |
+| Etiqueta de imagen de Keeper        | `25.10.1.6624`  | `26.1.1.1493`                   |
+| OpenSSL habilitado                  | Sin configurar  | `true`                          |
+| OpenSSL requerido                   | Sin configurar  | `true`                          |
+| Certificados TLS                    | No obligatorios | Obligatorios (RSA de 3072 bits) |
+| Puerto de conexión del cliente      | `9000` (nativo) | `9440` (TLS nativo)             |
+| Puerto HTTP                         | `8123`          | `8443` (HTTPS)                  |
+| Opción `--secure` del cliente       | No necesaria    | Obligatoria                     |
+| Opción para certificado autofirmado | N/A             | `--accept-invalid-certificate`  |
+
+***
+
+<div id="appendix-troubleshooting">
+  ## Apéndice: Solución de problemas
+</div>
+
+<div id="certificate-verification-failures-fips">
+  ### Errores de verificación de certificados (FIPS)
+</div>
+
+Si ve errores como &quot;certificate verify failed&quot;:
+
+1. Verifique que el certificado de la CA sea correcto:
+
+```bash
+openssl x509 -in ${CERT_DIR}/ca/ca.crt -text -noout
+```
+
+2. Verifique los SAN del certificado del servidor:
+
+```bash
+openssl x509 -in ${CERT_DIR}/server/server.crt -text -noout | grep -A5 "Subject Alternative Name"
+```
+
+3. Compruebe el contenido del secreto:
+
+```bash
+kubectl get secret ${CLUSTER_NAME}-server-cert-secret -n ${NAMESPACE} -o yaml
+```
+
+<div id="fips-mode-verification">
+  ### Verificación del modo FIPS
+</div>
+
+Verifique que los certificados generados cumplan con FIPS:
+
+```bash
+# Verificar el tamaño de la clave
+openssl rsa -in ${CERT_DIR}/server/server.key -text -noout | grep "Private-Key"
+
+# Verificar el algoritmo de firma
+openssl x509 -in ${CERT_DIR}/server/server.crt -text -noout | grep "Signature Algorithm"
+```
+
+Debería mostrar:
+
+* Clave privada: 3072 bits
+* Algoritmo de firma: sha256WithRSAEncryption (o una versión superior)
+
+<div id="pods-stuck-in-pending-node-selector-issues">
+  ### Pods bloqueados en Pending - Problemas con el selector de nodos
+</div>
+
+```bash
+kubectl get nodes --show-labels | grep clickhouseGroup
+
+# Agregar etiquetas faltantes
+kubectl label node <node-name> clickhouseGroup=keeper
+kubectl label node <node-name> topologyZone=c-${CLUSTER_NAME}-keeper
+```
+
+<div id="private-nodes-cannot-pull-images">
+  ### Los nodos privados no pueden descargar imágenes
+</div>
+
+Verifique que Cloud NAT esté configurado:
+
+```bash
+gcloud compute routers nats list \
+  --router=clickhouse-router \
+  --region=${GCP_REGION} \
+  --project=${GCP_PROJECT}
+```
+
+<div id="gcs-access-denied-errors-403">
+  ### Errores de acceso denegado a GCS (403)
+</div>
+
+La causa más común es una **condición de carrera de Workload Identity**: los pods se inician durante la instalación de Helm (paso 17) antes de que a la SA creada por Helm (`ch-${CLUSTER_NAME}-sa`) se le haya aplicado la vinculación de Workload Identity en el paso 18. El paso 18 ahora resuelve esto automáticamente reiniciando los pods después de aplicar la vinculación.
+
+Si sigues viendo errores 403:
+
+```bash
+# 1. Verificar la anotación de Workload Identity en la SA creada por Helm
+kubectl get sa ch-${CLUSTER_NAME}-sa -n ${NAMESPACE} -o yaml | grep -A5 annotations
+
+# 2. Verificar el enlace IAM
+gcloud iam service-accounts get-iam-policy ${GSA_EMAIL}
+
+# 3. Verificar los permisos del bucket de GCS para la GSA
+gcloud storage buckets get-iam-policy gs://${BUCKET_NAME} | grep ${GSA_EMAIL}
+
+# 4. Probar desde dentro del pod (debe devolver el correo electrónico de la GSA)
+kubectl exec -it <pod-name> -n ${NAMESPACE} -- curl -s -H "Metadata-Flavor: Google" \
+  http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/email
+
+# 5. Reiniciar los pods para aplicar las credenciales (si el paso 18 se ejecutó después de que los pods arrancaron)
+kubectl delete pods -n ${NAMESPACE} -l clickhouseGroup=keeper
+kubectl delete pods -n ${NAMESPACE} -l clickhouseGroup=server
+```
+
+<div id="cannot-access-cluster-from-bastion">
+  ### No se puede acceder al clúster desde el bastión
+</div>
+
+Verifique que la subred del bastión esté en las redes autorizadas:
+
+```bash
+gcloud container clusters describe ${GKE_CLUSTER_NAME} \
+  --region=${GCP_REGION} \
+  --project=${GCP_PROJECT} \
+  --format="yaml(masterAuthorizedNetworksConfig)"
+
+# Agregar subred de bastión si falta
+gcloud container clusters update ${GKE_CLUSTER_NAME} \
+  --region=${GCP_REGION} \
+  --enable-master-authorized-networks \
+  --master-authorized-networks=${SUBNET_RANGE},${BASTION_SUBNET_RANGE} \
+  --project=${GCP_PROJECT}
+```
+
+<div id="connection-refused-on-port-9000-fips">
+  ### Conexión rechazada en el puerto 9000 (FIPS)
+</div>
+
+Con TLS FIPS habilitado (`openSSL.required=true`), ClickHouse no acepta conexiones en texto plano. Los puertos 9000 (nativo) y 8123 (HTTP) rechazarán las conexiones. Use en su lugar los puertos seguros:
+
+| Protocolo | Puerto sin cifrar | Puerto TLS |
+| --------- | ----------------- | ---------- |
+| Nativo    | 9000              | **9440**   |
+| HTTP      | 8123              | **8443**   |
+
+```bash
+# Incorrecto - conexión rechazada
+kubectl port-forward svc/c-${CLUSTER_NAME}-server-any 9000:9000 -n ${NAMESPACE}
+clickhouse client --host localhost --port 9000
+
+# Correcto
+kubectl port-forward svc/c-${CLUSTER_NAME}-server-any 9440:9440 -n ${NAMESPACE}
+clickhouse client --host localhost --port 9440 --secure --accept-invalid-certificate
+```
+
+<div id="helm-registry-login-fails">
+  ### Error al iniciar sesión en el registro de Helm
+</div>
+
+`helm registry login` **no** acepta el prefijo `https://`:
+
+```bash
+# Incorrecto - fallará con "invalid registry"
+gcloud auth print-access-token | helm registry login \
+  -u oauth2accesstoken --password-stdin \
+  https://${GCP_REGION}-docker.pkg.dev
+
+# Correcto
+gcloud auth print-access-token | helm registry login \
+  -u oauth2accesstoken --password-stdin \
+  ${GCP_REGION}-docker.pkg.dev
+```
+
+<div id="validate-ssd-cache-script">
+  ### Script para validar la caché SSD
+</div>
+
+`validate-ssd-cache.sh`
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "17. Validating SSD Cache Configuration"
+echo "=========================================="
+
+echo ""
+echo "1. Checking DaemonSet status..."
+DS_READY=$(kubectl get ds local-ssd-setup -n kube-system -o jsonpath='{.status.numberReady}')
+DS_DESIRED=$(kubectl get ds local-ssd-setup -n kube-system -o jsonpath='{.status.desiredNumberScheduled}')
+
+if [ "$DS_READY" = "$DS_DESIRED" ]; then
+  echo "✅ DaemonSet ready: $DS_READY/$DS_DESIRED pods"
+else
+  echo "❌ DaemonSet not ready: $DS_READY/$DS_DESIRED pods"
+  exit 1
+fi
+
+echo ""
+echo "2. Checking ClickHouseCluster SSD configuration..."
+SSD_CONFIG=$(kubectl get clickhousecluster c-${CLUSTER_NAME} -n ${NAMESPACE} -o jsonpath='{.spec.ssdCacheConfiguration}')
+
+if echo "$SSD_CONFIG" | jq -e '.hostPathBaseDirectory == "/mnt/disks/ssd0/"' > /dev/null; then
+  echo "✅ SSD cache configured in CRD:"
+  echo "$SSD_CONFIG" | jq .
+else
+  echo "❌ SSD cache not properly configured"
+  exit 1
+fi
+
+echo ""
+echo "3. Waiting for server pods to be ready..."
+kubectl wait --for=condition=ready pod \
+  -l clickhouseGroup=server \
+  -n ${NAMESPACE} \
+  --timeout=300s
+
+echo ""
+echo "4. Checking pod volume mounts..."
+SERVER_POD=$(kubectl get pods -n ${NAMESPACE} -l clickhouseGroup=server -o name | head -1)
+echo "Checking pod: $SERVER_POD"
+
+CACHE_MOUNT=$(kubectl get $SERVER_POD -n ${NAMESPACE} -o jsonpath='{.spec.containers[0].volumeMounts}' | jq '.[] | select(.name == "ch-cache-volume")')
+
+if [ -n "$CACHE_MOUNT" ]; then
+  echo "✅ Cache volume mounted:"
+  echo "$CACHE_MOUNT" | jq .
+else
+  echo "❌ Cache volume not found in pod"
+  exit 1
+fi
+
+echo ""
+echo "5. Checking pod volume definition..."
+CACHE_VOL=$(kubectl get $SERVER_POD -n ${NAMESPACE} -o jsonpath='{.spec.volumes}' | jq '.[] | select(.name == "ch-cache-volume")')
+
+if [ -n "$CACHE_VOL" ]; then
+  echo "✅ Cache volume defined:"
+  echo "$CACHE_VOL" | jq .
+else
+  echo "❌ Cache volume not found in pod spec"
+  exit 1
+fi
+
+echo ""
+echo "6. Verifying cache is accessible inside container..."
+if kubectl exec -n ${NAMESPACE} $SERVER_POD -- df -h /mnt/clickhouse-cache 2>/dev/null; then
+  echo "✅ Cache directory accessible and mounted"
+else
+  echo "❌ Cache directory not accessible"
+  exit 1
+fi
+
+echo ""
+echo "7. Checking cache usage in ClickHouse..."
+echo "Connecting to ClickHouse to verify cache configuration..."
+
+# Construir las opciones de conexión del cliente
+CLIENT_FLAGS=(--password="${CLICKHOUSE_PASSWORD}")
+if [ "$ENABLE_FIPS" = "true" ]; then
+  # En modo FIPS, OpenSSL es obligatorio: localice el certificado de la CA y configure TLS
+  CA_CERT_PATH=$(kubectl exec -n ${NAMESPACE} $SERVER_POD -- \
+    find /etc -name "ca.crt" -type f 2>/dev/null | head -1)
+  if [ -z "$CA_CERT_PATH" ]; then
+    echo "❌ Could not find CA cert inside container"
+    exit 1
+  fi
+  echo "Using CA cert: $CA_CERT_PATH"
+
+  CLIENT_FLAGS+=(--secure --config-file=/tmp/ch-client-ssl.xml)
+  kubectl exec -n ${NAMESPACE} $SERVER_POD -- bash -c "cat > /tmp/ch-client-ssl.xml << EOF
+<clickhouse>
+  <openSSL>
+    <client>
+      <caConfig>${CA_CERT_PATH}</caConfig>
+    </client>
+  </openSSL>
+</clickhouse>
+EOF"
+fi
+
+# Consultar la configuración de la caché del sistema de archivos (la caché SSD es una capa de caché del sistema de archivos
+# sobre los discos de ObjectStorage, por lo que aparece en system.filesystem_cache_settings
+# en lugar de como un disco independiente en system.disks)
+CACHE_INFO=$(kubectl exec -n ${NAMESPACE} $SERVER_POD -- clickhouse-client "${CLIENT_FLAGS[@]}" -q "
+SELECT
+    cache_name,
+    path,
+    formatReadableSize(max_size) as max_size,
+    formatReadableSize(current_size) as current_size,
+    current_elements_num,
+    is_initialized
+FROM system.filesystem_cache_settings
+FORMAT Vertical
+" 2>/dev/null) || true
+
+if [ -n "$CACHE_INFO" ]; then
+  echo "✅ Filesystem cache active in ClickHouse:"
+  echo "$CACHE_INFO"
+else
+  echo "⚠️  Could not query ClickHouse cache info (cluster may still be initializing)"
+fi
+
+echo ""
+echo "=========================================="
+echo "✅ SSD Cache Validation Complete!"
+echo "=========================================="
+echo ""
+echo "Summary:"
+echo "  • DaemonSet mounted SSD at: /mnt/disks/ssd0 (on host)"
+echo "  • Operator created volume:  ch-cache-volume"
+echo "  • Container mount point:    /mnt/clickhouse-cache"
+echo "  • Cache size configured:    ${CACHE_BYTES_PER_GI_RAM} per GiB RAM"
+echo ""
+echo "The SSD cache is fully configured and operational!"
+```
+
+<div id="query-cache-status">
+  ### Estado de la caché de consultas
+</div>
+
+`query-cache-status.sh`
+
+```bash expandable
+#!/bin/bash
+set -e
+source ./00-env.sh
+
+echo "=========================================="
+echo "Consultando el estado de caché de ClickHouse"
+echo "=========================================="
+
+SERVER_POD=$(kubectl get pods -n ${NAMESPACE} -l clickhouseGroup=server -o name | head -1)
+
+if [ -z "$SERVER_POD" ]; then
+  echo "❌ No se encontraron pods de servidor"
+  exit 1
+fi
+
+echo "Usando pod: $SERVER_POD"
+echo ""
+
+# Construir los parámetros de conexión del cliente
+CLIENT_FLAGS=(--password="${CLICKHOUSE_PASSWORD}")
+if [ "$ENABLE_FIPS" = "true" ]; then
+  # En modo FIPS, se requiere OpenSSL — buscar el certificado de CA y configurar TLS
+  CA_CERT_PATH=$(kubectl exec -n ${NAMESPACE} $SERVER_POD -- \
+    find /etc -name "ca.crt" -type f 2>/dev/null | head -1)
+  if [ -z "$CA_CERT_PATH" ]; then
+    echo "❌ No se pudo encontrar el certificado de CA dentro del contenedor"
+    exit 1
+  fi
+  echo "Usando certificado de CA: $CA_CERT_PATH"
+
+  CLIENT_FLAGS+=(--secure --config-file=/tmp/ch-client-ssl.xml)
+  kubectl exec -n ${NAMESPACE} $SERVER_POD -- bash -c "cat > /tmp/ch-client-ssl.xml << EOF
+<clickhouse>
+  <openSSL>
+    <client>
+      <caConfig>${CA_CERT_PATH}</caConfig>
+    </client>
+  </openSSL>
+</clickhouse>
+EOF"
+fi
+
+# Función para ejecutar una consulta de ClickHouse
+run_query() {
+  local query="$1"
+  kubectl exec -n ${NAMESPACE} $SERVER_POD -- \
+    clickhouse-client "${CLIENT_FLAGS[@]}" -q "$query"
+}
+
+echo "=========================================="
+echo "1. Verificando todos los discos"
+echo "=========================================="
+run_query "
+SELECT 
+    name,
+    path,
+    formatReadableSize(free_space) as free_space,
+    formatReadableSize(total_space) as total_space,
+    formatReadableSize(unreserved_space) as unreserved_space,
+    type
+FROM system.disks 
+ORDER BY name
+FORMAT Pretty
+"
+
+echo ""
+echo "=========================================="
+echo "2. Verificando las políticas de almacenamiento"
+echo "=========================================="
+run_query "
+SELECT 
+    policy_name,
+    volume_name,
+    volume_priority,
+    disks,
+    max_data_part_size,
+    move_factor
+FROM system.storage_policies
+FORMAT Pretty
+"
+
+echo ""
+echo "=========================================="
+echo "3. Verificando discos relacionados con la caché"
+echo "=========================================="
+echo "Buscando discos con 'cache' en la ruta o el nombre..."
+run_query "
+SELECT 
+    name,
+    path,
+    type,
+    formatReadableSize(total_space) as total_space,
+    formatReadableSize(free_space) as free_space
+FROM system.disks 
+WHERE path LIKE '%cache%' OR name LIKE '%cache%'
+FORMAT Vertical
+"
+
+echo ""
+echo "=========================================="
+echo "4. Verificando la configuración de caché del sistema de archivos"
+echo "=========================================="
+run_query "
+SELECT 
+    name,
+    value,
+    changed,
+    description
+FROM system.settings
+WHERE name LIKE '%cache%' AND name LIKE '%filesystem%'
+ORDER BY name
+FORMAT Pretty
+"
+
+echo ""
+echo "=========================================="
+echo "5. Verificando métricas del sistema relacionadas con la caché"
+echo "=========================================="
+run_query "
+SELECT 
+    metric,
+    value,
+    description
+FROM system.metrics
+WHERE metric LIKE '%Cache%' OR metric LIKE '%cache%'
+ORDER BY metric
+FORMAT Pretty
+"
+
+echo ""
+echo "=========================================="
+echo "6. Verificando métricas asíncronas relacionadas con la caché"
+echo "=========================================="
+run_query "
+SELECT 
+    metric,
+    value
+FROM system.asynchronous_metrics
+WHERE metric LIKE '%Cache%' OR metric LIKE '%cache%'
+ORDER BY metric
+FORMAT Pretty
+"
+
+echo ""
+echo "=========================================="
+echo "7. Creando tabla de prueba para verificar el uso de caché"
+echo "=========================================="
+
+echo "Creando base de datos y tabla de prueba..."
+run_query "CREATE DATABASE IF NOT EXISTS test"
+
+run_query "
+DROP TABLE IF EXISTS test.cache_test
+"
+
+run_query "
+CREATE TABLE test.cache_test
+(
+    id UInt64,
+    data String
+)
+ENGINE = MergeTree()
+ORDER BY id
+SETTINGS storage_policy = 'default'
+"
+
+echo "✓ Tabla de prueba creada"
+
+echo ""
+echo "Insertando datos de prueba..."
+run_query "
+INSERT INTO test.cache_test 
+SELECT 
+    number,
+    repeat('x', 1000)
+FROM numbers(100000)
+"
+echo "✓ Se insertaron 100K filas"
+
+echo ""
+echo "Ejecutando consulta para activar el uso de caché..."
+run_query "SELECT count() FROM test.cache_test" > /dev/null
+run_query "SELECT count() FROM test.cache_test WHERE id < 50000" > /dev/null
+echo "✓ Consultas ejecutadas"
+
+echo ""
+echo "=========================================="
+echo "8. Verificando estadísticas de caché tras las consultas"
+echo "=========================================="
+run_query "
+SELECT 
+    metric,
+    value
+FROM system.asynchronous_metrics
+WHERE metric LIKE '%FilesystemCache%'
+ORDER BY metric
+FORMAT Pretty
+"
+
+echo ""
+echo "=========================================="
+echo "9. Verificando la caché de consultas (si está habilitada)"
+echo "=========================================="
+run_query "
+SELECT 
+    query,
+    result_size,
+    formatReadableSize(result_size) as result_size_readable,
+    stale
+FROM system.query_cache
+LIMIT 5
+FORMAT Pretty
+" || echo "Es posible que la caché de consultas no esté habilitada o no haya consultas en caché"
+
+echo ""
+echo "=========================================="
+echo "10. Verificando el directorio físico de caché"
+echo "=========================================="
+echo "Verificando /mnt/clickhouse-cache dentro del contenedor..."
+kubectl exec -n ${NAMESPACE} $SERVER_POD -- sh -c "
+  echo 'Punto de montaje:'
+  df -h /mnt/clickhouse-cache 2>/dev/null || echo 'No montado'
+  echo ''
+  echo 'Contenido del directorio:'
+  ls -lah /mnt/clickhouse-cache/ 2>/dev/null || echo 'No se puede acceder'
+  echo ''
+  echo 'Uso de disco:'
+  du -sh /mnt/clickhouse-cache/* 2>/dev/null || echo 'Aún no hay archivos de caché'
+"
+
+echo ""
+echo "=========================================="
+echo "✅ Consulta de estado de caché completada"
+echo "=========================================="
+echo ""
+echo "Indicadores clave de que la caché SSD funciona correctamente:"
+echo "  1. Disco con tipo 'cache' o ruta que contiene 'cache'"
+echo "  2. FilesystemCacheSize > 0 en las métricas asíncronas"
+echo "  3. /mnt/clickhouse-cache está montado y accesible"
+echo "  4. Archivos de caché presentes en /mnt/clickhouse-cache/"
+echo ""
+echo "Para limpiar los datos de prueba:"
+echo "  kubectl exec -n ${NAMESPACE} $SERVER_POD -- clickhouse-client --password=\"\${CLICKHOUSE_PASSWORD}\" -q 'DROP TABLE test.cache_test'"
+```
+
+---
+
+<div id="security-best-practices">
+  ## Mejores prácticas de seguridad
+</div>
+
+1. **Gestión de certificados** (FIPS)
+   * Rote los certificados antes de su vencimiento (valor predeterminado: 365 días)
+   * Almacene las claves privadas de forma segura (use gestión de secretos)
+   * Nunca suba certificados al control de versiones
+   * Use certificados adecuados firmados por una CA en producción
+
+2. **Seguridad de red**
+   * Use un clúster privado de GKE sin endpoint público
+   * Restrinja `master-authorized-networks` al host bastión y a las subredes de GKE
+   * Habilite los logs de flujo de VPC
+   * Use Cloud NAT para un acceso saliente controlado
+
+3. **Control de acceso**
+   * Use Workload Identity en lugar de credenciales estáticas
+   * Habilite RBAC de Kubernetes
+   * Audite regularmente los logs de acceso
+   * Use la suplantación de cuentas de servicio para la implementación
+
+4. **Monitorización**
+   * Supervise las fechas de vencimiento de los certificados (FIPS)
+   * Configure alertas para conexiones TLS fallidas (FIPS)
+   * Supervise los patrones de acceso de GCS
+   * Habilite Cloud Audit Logging

@@ -1,0 +1,115 @@
+---
+hidden: true
+title: "How-To 가이드"
+slug: "docs/products/clickhouse-private/howto-guides"
+---
+
+이 섹션에는 프라이빗 환경에서 ClickHouse를 구성하는 일반적인 방법에 대한 가이드가 포함되어 있습니다.
+
+<div id="how-to-configure-cert-manager-to-generate-the-certificates-for-clickhouse-server-keeper">
+  ### 방법: Cert Manager를 구성하여 ClickHouse 서버 &amp; Keeper의 인증서 생성하기
+</div>
+
+이 가이드에서는 [Cert Manager](https://cert-manager.io/)가 이미 클러스터에 설치되어 있다고 가정합니다. 또한 ClickHouse 클러스터의 이름이 `default-xx-01`이라고 가정합니다.
+
+먼저 인증서 서명에 사용할 인증 기관(CA)이 필요합니다:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+```
+
+간편하게 설정하기 위해 자체 서명된 `Issuer`를 사용합니다. 이렇게 하면 유효한 CA가 생성됩니다. 이는 테스트용이며, 운영 환경 수준의 `Issuer`는 [옵션 목록](https://cert-manager.io/docs/configuration/issuers/)을 참고하는 것이 좋습니다.
+
+이후 `Certificate` 리소스를 사용해 인증서를 생성할 수 있습니다:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: clickhouse-server-tls
+  namespace: ns-default-xx-01
+spec:
+  secretName: default-xx-01-server-cert-secret
+  dnsNames:
+    - "*.default-xx-01.ns-default-xx-01.svc.cluster.local"
+  issuerRef:
+    name: selfsigned-issuer
+    kind: Issuer
+```
+
+이렇게 하면 `default-xx-01-server-cert-secret`라는 이름의 시크릿이 생성되고, `ca.crt`, `tls.crt`, `tls.key` 키가 포함됩니다.
+
+`ca.crt`는 issuer에서 제공되는 경우에만 추가된다는 점에 유의하십시오. 예를 들어 ACME를 사용하는 경우 시크릿에는 `ca.crt`가 추가되지 않습니다. 이 경우에는 공개 루트를 해당 키의 `ca.crt` 값에 추가해야 합니다(예: [trust-manager](https://cert-manager.io/docs/trust/trust-manager/)를 사용해 CA 번들을 생성하고 올바른 시크릿을 대상으로 지정).
+
+기본적으로 onprem-ClickHouse-cluster Helm 차트는 `<cluster_name>-server-cert-secret`라는 이름의 시크릿을 기대하며, `ca.crt`, `server.crt` &amp; `server.key` 키가 포함되어 있어야 합니다.
+
+다음 값을 사용하면 ClickHouse 클러스터가 시크릿의 올바른 키에서 인증서를 로드하도록 할 수 있습니다:
+
+```yaml
+# 기본 시크릿 이름(default-xx-01-server-cert-secret) 사용 - 별도 지정 불필요
+server:
+  openSSL:
+    enabled: true
+    secret:
+      caKey: ca.crt
+      certKey: tls.crt
+      keyKey: tls.key
+```
+
+인증서는 ClickHouse 서버의 경우 파드 내 `/etc/ClickHouse-server/certs/`에, ClickHouse Keeper의 경우 `/etc/clickhouse-keeper/certs/`에 마운트됩니다.
+ClickHouse에 적합한 OpenSSL 구성은 Helm 차트에서 생성됩니다.
+
+<div id="how-to-configure-remote_servers-with-secretkeyref-and-from_env">
+  ### How-To: secretKeyRef 및 @from_env를 사용한 remote_servers 구성
+</div>
+
+> ClickHouse 서버의 `remote_servers` 설정을 구성하려면 `onprem-clickHouse-cluster` Helm 차트 버전이 최소 `1.1.151` 이상이어야 합니다
+
+이 가이드에서는 분산 테이블과 cluster() 함수에서 사용할 [`remote_servers`](/ko/reference/settings/server-settings/settings#remote_servers)를 구성하는 방법을 설명합니다. 이 가이드에서는 ClickHouse 클러스터 이름이 `default-xx-01`이고, 클러스터 네임스페이스에 `default-xx-01-password`라는 이름의 [시크릿](https://kubernetes.io/docs/concepts/configuration/secret/)이 있다고 가정합니다.
+
+> 참고: 외부 시크릿 저장소와 통합하는 경우에도 [Kubernetes Secrets Store CSI Driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver)를 사용하여 시크릿을 마운트하고 [환경 변수로 로드](https://secrets-store-csi-driver.sigs.k8s.io/topics/set-as-env-var)하는 유사한 방식을 사용할 수 있습니다.
+
+권장되는 방법은 [Kubernetes 시크릿의 `secretKeyRef`](https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#define-container-environment-variables-using-secret-data)를 사용해 민감한 데이터를 환경 변수로 주입한 뒤, ClickHouse 구성에서 [`@from_env`](/ko/concepts/features/configuration/server-config/configuration-files#from_env_zk)로 해당 변수를 참조하는 것입니다.
+
+예시:
+
+```yaml
+server:
+  additionalEnvVars:
+    - name: DEFAULT_XX_01_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: default-xx-01-password
+          key: password
+  config:
+    remote_servers:
+      default-xx-01:
+        shard:
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-0r280c0-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-f9cshqb-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-gsip6lp-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+```
+
+이 패턴을 사용하면 민감한 데이터를 매니페스트에 직접 템플릿으로 삽입하지 않아도 됩니다. `additionalEnvVars` 필드는 `secretKeyRef`를 사용해 Kubernetes 시크릿의 값을 환경 변수로 설정하며, ClickHouse 구성의 `@from_env` 지시어는 런타임에 해당 값을 로드합니다.
+
+레플리카 호스트의 FQDN 포맷은 다음과 같은 Kubernetes 패턴을 따릅니다: `<pod-name>.<headless-service-name>.<namespace>.svc.cluster.local`.

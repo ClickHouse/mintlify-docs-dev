@@ -1,0 +1,71 @@
+---
+description: 'このエンジンを使用すると、Apache Arrow Flight 経由でリモートのデータセットにクエリを実行できます。'
+sidebarTitle: 'ArrowFlight'
+slug: /engines/table-engines/integrations/arrowflight
+title: 'ArrowFlight テーブルエンジン'
+doc_type: 'reference'
+---
+
+ArrowFlight テーブルエンジンを使用すると、ClickHouse は [Apache Arrow Flight](https://arrow.apache.org/docs/format/Flight.html) プロトコル経由でリモートのデータセットにクエリを実行できます。
+このインテグレーションにより、ClickHouse は外部の Flight 対応サーバーから、列指向の Arrow フォーマットでデータを高性能に取得できます。
+
+<div id="creating-a-table">
+  ## テーブルの作成
+</div>
+
+```sql
+CREATE TABLE [IF NOT EXISTS] [db.]table_name (name1 [type1], name2 [type2], ...)
+    ENGINE = ArrowFlight('host:port', 'dataset_name' [, 'username', 'password']);
+```
+
+**エンジンパラメータ**
+
+* `host:port` — リモート Arrow Flight サーバー のアドレス。
+* `dataset_name` — Flight server 上のデータセットの識別子。
+* `username` - HTTP Basic 認証で使用するユーザー名。
+* `password` - HTTP Basic 認証で使用するパスワード。
+  `username` と `password` が指定されていない場合は、認証は使用されないことを意味します
+  (これは Arrow Flight サーバー 側で許可されている場合にのみ機能します) 。
+
+<div id="usage-example">
+  ## 使用例
+</div>
+
+この例では、リモートの Arrow Flight サーバーからデータを読み取るテーブルを作成する方法を示します。
+
+```sql
+CREATE TABLE remote_flight_data
+(
+    id UInt32,
+    name String,
+    value Float64
+) ENGINE = ArrowFlight('127.0.0.1:9005', 'sample_dataset');
+```
+
+ローカルテーブルと同じようにリモートデータをクエリします:
+
+```sql
+SELECT * FROM remote_flight_data ORDER BY id;
+```
+
+```text
+┌─id─┬─name────┬─value─┐
+│  1 │ foo     │ 42.1  │
+│  2 │ bar     │ 13.3  │
+│  3 │ baz     │ 77.0  │
+└────┴─────────┴───────┘
+```
+
+<div id="notes">
+  ## 注意事項
+</div>
+
+* ClickHouse で定義したスキーマは、Flight server が返すスキーマと一致している必要があります。
+* このエンジンは、フェデレーテッドクエリ、データ仮想化、ストレージとコンピュートの分離に適しています。
+
+<div id="see-also">
+  ## 関連項目
+</div>
+
+* [Apache Arrow Flight SQL](https://arrow.apache.org/docs/format/FlightSql.html)
+* [ClickHouse での Arrow フォーマットのインテグレーション](/ja/reference/formats/Arrow/Arrow)

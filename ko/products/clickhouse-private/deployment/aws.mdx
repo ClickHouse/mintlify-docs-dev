@@ -1,0 +1,709 @@
+---
+hidden: true
+title: "AWS용 ClickHouse Private"
+slug: "docs/products/clickhouse-private/aws"
+sidebarTitle: "AWS"
+---
+
+<div id="set-up-tasks">
+  ## 작업 설정하기
+</div>
+
+<div id="aws-resources">
+  ### AWS 리소스
+</div>
+
+* [프라이빗 ClickHouse ECR에서 이미지를 가져올 IAM role 생성](#cloud-formation-to-create-iam-role-to-pull-images)
+* 자체 ECR에서 아티팩트 사본을 호스팅할 수 있도록 ECR 리포지토리를 생성하십시오. 이 가이드에서는 아래 이름을 ECR 리포지토리 이름으로 사용한다고 가정합니다. 각 아티팩트에는 지정된 태그를 사용하십시오.
+* [당사 ECR에서 사용자 ECR 리포지토리로 ECR 아티팩트 복사하기](#copy-ecr-artifacts)
+* [VPC 생성하기](#example-vpc-configuration)
+* [EKS 클러스터 생성](#creating-eks-cluster)
+  * 다음 구성 요소가 필요합니다:
+    * 원하는 CNI(반드시 IPv4 사용), 예: [Amazon VPC CNI](https://github.com/aws/amazon-vpc-cni-k8s)
+      * Amazon VPC CNI를 사용하는 경우 IRSA 사용을 권장합니다. 다음 가이드의 IPv4 지침을 따르십시오: [https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html](https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html)
+    * EBS CSI Driver, 예: [aws-ebs-csi-driver](#install-aws-ebs-csi-driver)
+    * DNS, 예: CoreDNS
+    * 권장 사항: 자동 스케일링, [cluster autoscaler](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/cloudprovider/aws/README.md)와 같은 구성 요소가 필요할 수 있습니다
+  * 이전에 생성한 VPC에 연결합니다
+  * 노드 그룹
+    * **모든 노드에는 인증을 위해 [IMDS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html)가 필요합니다**
+    * Keeper 및 서버 노드 그룹의 경우, [여기](https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#i-have-a-couple-of-pending-pods-but-there-was-no-scale-up)에서 권장하는 것처럼 여러 AZ에서 cluster autoscaler를 지원하려면 **AZ마다 하나의 노드 그룹을 생성하십시오**. 그렇지 않으면 적절한 AZ 서브넷을 사용하여 단일 노드 그룹으로 생성할 수 있습니다
+    * Keeper 노드 그룹
+      * AMI 이미지:
+        * x86: AL2023&#95;x86&#95;64
+        * arm64: AL2023&#95;ARM&#95;64
+      * 디스크 크기: 20GB
+      * 자동 스케일링을 사용하지 않는 경우 최소 노드 수와 원하는 노드 수는 ClickHouse 클러스터당 3개여야 합니다
+      * 권장 인스턴스 유형: `m7g.2xlarge`
+      * Kubernetes 레이블
+        * x86: `clickhouseGroup: keeper`
+        * arm64: `clickhouseGroup: keeper-arm64`
+      * Kubernetes 테인트
+        * `clickhouse.com/do-not-schedule: true, NoSchedule`
+        * arm64: [`clickhouse.com/arch`](http://clickhouse.com/arch)`: arm64, NoSchedule`
+      * 태그
+        * cluster-autoscaler를 사용하는 경우 필요할 수 있습니다
+          * 예시:
+            * `k8s.io/cluster-autoscaler/enabled: true`
+            * `k8s.io/cluster-autoscaler/$CLUSTER_NAME: owned`
+    * 서버 노드 그룹
+      * AMI 이미지
+        * x86: AL2023&#95;x86&#95;64
+        * arm64: AL2023&#95;ARM&#95;64
+      * 디스크 크기: 20GB
+      * [노드 그룹용 EC2 Launch Template](#ec2-launch-template-for-node-group-server))
+      * 자동 스케일링을 사용하지 않는 경우 최소 노드 수와 원하는 노드 수는 원하는 ClickHouse 레플리카 수와 같아야 합니다
+      * 권장 인스턴스 유형: `m7gd.16xlarge`
+        * ClickHouse가 캐시로 사용할 NVME SSD가 포함된 **&quot;d&quot; 시리즈 인스턴스**(예: `m7gd.*`) 사용을 강력히 권장합니다
+          * NVME SSD가 있는 인스턴스의 경우 [사용자 지정 launch template](#ec2-launch-template-for-node-group-server)을 사용하여 NVME SSD를 자동으로 마운트하십시오
+      * Kubernetes 레이블
+        * x86: `clickhouseGroup: server`
+        * arm64: `clickhouseGroup: server-arm64`
+      * Kubernetes 테인트
+        * `clickhouse.com/do-not-schedule: true, NoSchedule`
+        * arm64: [`clickhouse.com/arch`](http://clickhouse.com/arch)`: arm64, NoSchedule`
+      * 태그
+        * cluster-autoscaler를 사용하는 경우 필요할 수 있습니다
+          * 예시:
+            * `k8s.io/cluster-autoscaler/enabled: true`
+            * `k8s.io/cluster-autoscaler/$CLUSTER_NAME: owned`
+    * x86 기반의 다른 프로세스(operator, ...)를 실행하기 위한 x86 노드 그룹
+      * EKS 클러스터가 이미 있는 경우, 최소 xlarge 노드 크기의 x86 호환 환경이면 기존 노드 그룹을 사용할 수 있습니다
+      * 새 노드 그룹의 경우
+        * AMI 이미지: AL2023&#95;x86&#95;64
+        * 디스크 크기: 20GB
+        * 인스턴스 크기: 최소 xlarge
+        * 인스턴스 유형: x86 호환 유형이면 모두 가능
+* EKS 클러스터용 OIDC 제공자 생성
+* 암호화를 활성화한 S3 버킷(S3 Standard 클래스)을 생성합니다
+  * 버킷은 EKS 클러스터와 동일한 Region에 있어야 합니다
+  * 프로비저닝된 ClickHouse 클러스터마다 버킷을 생성할 수 있으며, 단일 버킷을 사용할 수도 있지만 ClickHouse 클러스터마다 고유한 prefix가 필요합니다(`clickhouse` CR/Helm 차트에서 정의)
+* Kubernetes 클러스터 외부 인그레스가 필요한 경우 필수인 NLB를 생성합니다
+  * NLB가 필요**한 경우, [istio](https://istio.io/)와 같이 요청을 올바른 클러스터로 라우팅해 주는 것이 없다면 ClickHouse 클러스터**별로 프로비저닝해야 합니다
+  * Route 53 레코드를 생성합니다. Kubernetes 어노테이션을 사용하면 [external-dns](https://github.com/kubernetes-sigs/external-dns)와 같은 도구로 자동화할 수 있습니다(설정 지침은 이 문서에 포함되어 있지 않습니다)
+* IAM 역할 생성:
+  * **별도 지정이 없는 한, 아래 역할은 [이와 유사한 신뢰 정책](#example-trust-policy)을 사용해야 합니다(즉, IRSA를 사용해야 합니다)**
+  * clickhouse-server/keeper 역할
+    * **이 역할은 프로비저닝된 각 ClickHouse 클러스터에 필요합니다**
+    * 명명 규칙은 `CH-S3-$NAME-$REGION-$ORDINAL-Role`이어야 합니다
+      * `$NAME`: 클러스터 이름(예: `default-xx-01`)
+      * `$REGION`: 동일한 클러스터 이름을 사용할 때 리전 간 이름 충돌을 방지할 수 있도록 클러스터의 리전을 식별합니다.
+        * 전체 리전 이름은 필요하지 않으며, 사용하면 허용된 길이 제한을 초과하는 역할 이름이 될 수 있습니다. `us-west-2`는 `uw2`처럼 축약해서 사용해도 됩니다
+      * `$ORDINAL`: 예약된 값이며 `00`으로 설정합니다
+      * us-west-2의 `default-xx-01` 서비스에 대한 예시 역할 이름: `CH-S3-default-xx-01-uw2-00-Role`
+    * 버킷 권한
+      * 최소 권한: 버킷 리소스에 대한 `s3:*`, `s3:ListBucket`
+
+<div id="kubernetes-resources">
+  ### Kubernetes 리소스
+</div>
+
+* [VolumeSnapshot CRD 설치](#install-volumesnapshot-crds)
+* [사용자 지정 또는 기존 StorageClass를 사용하지 않으려는 경우 Helm 차트로 StorageClass 설치](#install-storageclass-via-helm)
+* [Helm 차트로 오퍼레이터 설치](#install-operator-via-helm)
+* [clickhousecluster 리소스 생성](#clickhousecluster-cr) (프로비저닝하는 각 ClickHouse 클러스터마다 반복)
+* [클러스터에 접속하고 설치 확인](#install-validation)
+* [Hydra 설정(컴퓨트 분리)](#hydra-setup)
+
+<div id="technical-details">
+  ## 기술 세부 정보
+</div>
+
+<div id="example-vpc-configuration">
+  ### 예시 VPC 구성
+</div>
+
+* IPv4 CIDR 블록: 10.20.0.0/16
+* IPv6 CIDR 블록 없음
+* 테넌시: 기본값
+* AZ 수: 3, AZ 간 고가용성(HA)을 위해 최소 3개여야 합니다
+* 퍼블릭 서브넷:
+  * us-west-2a: 10.20.192.0/20
+  * us-west-2b: 10.20.208.0/20
+  * us-west-2c: 10.20.224.0/20
+* 프라이빗 서브넷:
+  * us-west-2a: 10.20.0.0/18
+  * us-west-2b: 10.20.64.0/18
+  * us-west-2c: 10.20.128.0/18
+* NAT 게이트웨이: AZ당 1개
+* VPC 엔드포인트: S3 게이트웨이
+* DNS 옵션:
+  * DNS 호스트명 활성화: true
+  * DNS 해석 활성화: true
+
+<div id="copy-ecr-artifacts">
+  ### ECR 아티팩트 복사
+</div>
+
+**이미지 복사에는 [skopeo](https://github.com/containers/skopeo) 사용을 강력히 권장합니다**. Docker 이미지에 포함된 모든 아키텍처가 그대로 유지되기 때문입니다. 아래의 `TARGET_REGION`과 `TARGET_ECR_REPO`를 ECR 리전 및 호스트에 맞게 설정하십시오.
+
+```bash
+SOURCE_REGION=us-east-1
+SOURCE_ECR_REPO=349290138304.dkr.ecr.$SOURCE_REGION.amazonaws.com
+
+TARGET_REGION=us-west-2
+TARGET_ECR_REPO=0000000000.dkr.ecr.$TARGET_REGION.amazonaws.com
+
+# 소스 ECR에 로그인 (고객에 따라 인증 방식이 다를 수 있음)
+aws ecr get-login-password --region $SOURCE_REGION | skopeo login --username AWS --password-stdin $SOURCE_ECR_REPO
+
+# 대상 AWS 리포지토리에 로그인 (고객에 따라 인증 방식이 다를 수 있음)
+aws ecr get-login-password --region $TARGET_REGION | skopeo login --username AWS --password-stdin $TARGET_ECR_REPO
+
+# 각 이미지를 대상 ECR로 복사 (--all 플래그를 반드시 포함할 것)
+skopeo copy --all docker://$SOURCE_ECR_REPO/clickhouse-server:<<SERVER_TAG>> docker://$TARGET_ECR_REPO/clickhouse-server:<<SERVER_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/clickhouse-keeper:<<KEEPER_TAG>> docker://$TARGET_ECR_REPO/clickhouse-keeper:<<KEEPER_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/clickhouse-operator:main-<<OPERATOR_TAG>> docker://$TARGET_ECR_REPO/clickhouse-operator:<<OPERATOR_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/helm/clickhouse-operator-helm:<<OPERATOR_TAG>> docker://$TARGET_ECR_REPO/helm/clickhouse-operator-helm:<<OPERATOR_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/helm/onprem-clickhouse-cluster:<<CR_HELM_TAG>> docker://$TARGET_ECR_REPO/helm/onprem-clickhouse-cluster:<<CR_HELM_TAG>>
+```
+
+<div id="creating-eks-cluster">
+  ### EKS 클러스터 생성
+</div>
+
+클러스터 IAM role과 노드 IAM roles가 필요합니다. AWS Console UI에서 기본 permissions로 &quot;Create recommended role&quot; 버튼을 사용해 생성한 역할이면 충분합니다.
+
+새 EKS 클러스터를 kubeconfig에 추가하려면 다음을 실행하십시오:
+
+```bash
+REGION=us-west-2
+EKS_CLUSTER_NAME=eks-clickhouse
+
+aws eks update-kubeconfig --region $REGION --name=$EKS_CLUSTER_NAME
+```
+
+<div id="cloud-formation-to-create-iam-role-to-pull-images">
+  ### 이미지 풀링을 위한 IAM role 생성용 CloudFormation
+</div>
+
+ClickHouse 비공개 ECR에서 이미지를 가져오려면 IAM role이 필요합니다. 이 role은 CloudFormation 템플릿을 사용해 생성합니다. role ARN이 생성되면 **ARN(출력값 참조)을 ClickHouse 팀에 제공해야 합니다**.
+
+**CloudFormation**
+
+```yaml expandable
+AWSTemplateFormatVersion: 2010-09-09
+Description: This CloudFormation template creates the ClickHouseAirgapECRPullRole.
+
+Resources:
+  ClickHouseAirgapECRPullRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ClickHouseAirgapECRPullRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: ClickHouseAirgapECRPullPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:DescribeImages
+                  - ecr:ListImages
+                Resource:
+                  - arn:aws:ecr:us-east-1:349290138304:repository/*
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource:
+                  - "*"
+
+Outputs:
+  RoleArn:
+    Description: IAM Role ARN for pulling images from all ECR repositories
+    Value: !GetAtt ClickHouseAirgapECRPullRole.Arn
+
+```
+
+<div id="ec2-launch-template-for-node-group-server">
+  ### 노드 그룹 서버용 EC2 시작 템플릿
+</div>
+
+서버 노드 그룹을 생성하기 전에, ClickHouse 쿼리 캐싱을 위한 SSD 디스크를 사용하도록 노드를 프로비저닝할 수 있게 EC2 시작 템플릿을 만드는 것이 좋습니다.
+
+템플릿에는 아래 스크립트가 포함되어야 합니다. **이전에 시작 템플릿을 생성한 경우 기존 데이터가 있을 수 있으며, 해당 데이터는 그대로 유지되어야 한다는 점에 유의하십시오**. 이 경우 서로 다른 파일이 지정된 경계로 구분되어 있어야 합니다.
+
+**고급 세부 정보  (사용자 데이터**):
+
+```bash expandable
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+--==MYBOUNDARY==
+Content-Type: text/x-shellscript; charset="us-ascii"
+
+#!/bin/bash
+sudo sysctl net.ipv4.tcp_fin_timeout=15
+sudo sysctl net.ipv4.tcp_keepalive_time=15
+
+function build_raid() {
+set -x
+mapfile -t SSD_NVME_DEVICE_LIST < <(nvme list | grep "Amazon EC2 NVMe Instance Storage" | cut -d " " -f 1 || true)
+SSD_NVME_DEVICE_COUNT=${#SSD_NVME_DEVICE_LIST[@]}
+RAID_DEVICE=${RAID_DEVICE:-/dev/md0}
+RAID_CHUNK_SIZE=${RAID_CHUNK_SIZE:-512}              # 킬로바이트
+FILESYSTEM_BLOCK_SIZE=${FILESYSTEM_BLOCK_SIZE:-4096} # 바이트
+STRIDE=$((RAID_CHUNK_SIZE * 1024 / FILESYSTEM_BLOCK_SIZE))
+STRIPE_WIDTH=$((SSD_NVME_DEVICE_COUNT * STRIDE))
+BLK_LABEL=ssdcache
+MD_DEV_LABEL=dpssdcache
+
+# fstab에 마운트 항목이 있으면 종료
+grep "${BLK_LABEL}" /etc/fstab && return 0
+
+nvme list
+echo "${SSD_NVME_DEVICE_COUNT}" "${SSD_NVME_DEVICE_LIST[*]}"
+
+# nvme 장치 수에 따라 프로비저닝 수행
+case  "${SSD_NVME_DEVICE_COUNT}" in
+"0")
+  echo 'No devices found of type "Amazon EC2 NVMe Instance Storage"'
+  echo "Maybe your node selectors are not set correct"
+  return 0
+  ;;
+"1")
+  mkfs.ext4 -L "${BLK_LABEL}" -m 0 -b "${FILESYSTEM_BLOCK_SIZE}" "${SSD_NVME_DEVICE_LIST[0]}"
+  ;;
+*)
+  mdadm --create --verbose "${RAID_DEVICE}" --name="${MD_DEV_LABEL}" --level=0 -c "${RAID_CHUNK_SIZE}" \
+    --raid-devices="${#SSD_NVME_DEVICE_LIST[@]}" "${SSD_NVME_DEVICE_LIST[@]}"
+
+  while mdadm --detail "${RAID_DEVICE}" | grep -q -ioE 'State :.*resyncing'
+  do
+    echo "Raid is resyncing.."
+    sleep 1
+  done
+  echo "Raid0 device  ${RAID_DEVICE} has been created with disks  ${SSD_NVME_DEVICE_LIST[*]}"
+  mkfs.ext4 -L "${BLK_LABEL}" -m 0 -b "${FILESYSTEM_BLOCK_SIZE}" -E "stride=${STRIDE},stripe-width=${STRIPE_WIDTH}" "${RAID_DEVICE}"
+  ;;
+esac
+
+# 마운트 후 fstab에 추가
+# UUID는 EKS NVME 프로비저너 도구와의 호환성을 위해 사용
+DEV_NAME=$(blkid -s UUID -o value -L "${BLK_LABEL}")
+UUID=$(blkid -s UUID -o value "${DEV_NAME}")
+# UUID가 정의되었는지 확인
+test -z ${UUID} && return 1
+mkdir -p /pv-disks/"${UUID}" /nvme/
+test -h /nvme/disk || ln -fs /pv-disks/"${UUID}" /nvme/disk
+
+cat<<EOF | tee -a /etc/fstab
+
+LABEL=${BLK_LABEL} /pv-disks/${UUID} ext4 defaults,noatime,discard,nobarrier  0 0
+EOF
+mount -a
+set +x
+}
+
+yum install -y nvme-cli mdadm
+build_raid
+mountpoint /nvme/disk/ || systemctl stop kubelet
+
+--==MYBOUNDARY==--
+```
+
+<div id="logging-into-ecr-from-helm">
+  ### Helm에서 ECR에 로그인하기
+</div>
+
+Helm CLI를 사용해 ECR에서 Helm 차트를 가져오려면 이 과정이 필요할 수 있습니다. 필요에 따라 변수를 수정하세요.
+
+```bash
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+REGION=us-west-2
+
+ aws ecr get-login-password \
+  --region $REGION | helm registry login \
+  --username AWS \
+  --password-stdin $ECR_HOST
+```
+
+<div id="install-storageclass-via-helm">
+  ### Helm을 통해 StorageClass 설치
+</div>
+
+StorageClass가 필요한 경우, 제공된 Helm 차트를 사용해 이러한 clickhouse-operator 종속성을 실제 clickhousecluster CR 생성과 분리하여 별도로 설치하는 것이 좋습니다. 이렇게 하면 여러 CR을 생성하더라도 종속성이 특정 클러스터에 종속되지 않으며, 해당 클러스터를 삭제해도 함께 제거되지 않습니다. **이 단계는 clickhouser-server와 clickhouse-keeper에 사용할 사용자 지정 StorageClass CR 또는 기존 StorageClass CR이 없는 경우에만 수행하면 됩니다.**
+
+```bash
+# 필요에 따라 ECR_HOST를 업데이트하세요
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+CHART_VERSION=<<CR_HELM_TAG>>
+
+helm install clickhouse-prerequisites \
+    oci://$ECR_HOST/helm/onprem-clickhouse-cluster \
+    --version=$CHART_VERSION \
+    -n default \
+    --set-json="storageClass.create=true" \
+    --set-json="createCluster=false" \
+    --set-json="serviceAccount.create=false"
+```
+
+<div id="install-operator-via-helm">
+  ### helm으로 연산자 설치
+</div>
+
+필요에 따라 버전, ECR 호스트, 가용 영역(생성한 VPC를 기준으로 결정됨)을 수정하십시오.
+
+```bash expandable
+# 필요에 따라 ECR_HOST를 업데이트하세요
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+
+# 연산자 자체의 버전이 아닌 연산자의 helm 차트 버전을 사용해야 합니다 (예: <<OPERATOR_TAG>>, main.<<OPERATOR_TAG>> 아님)
+OPERATOR_VERSION=<<OPERATOR_TAG>>
+
+# VPC 서브넷에 따라 결정된 가용 영역(AZ)을 설정하세요
+AZ_LIST='["us-west-2a","us-west-2b","us-west-2c"]'
+
+helm install clickhouse-operator \
+   oci://$ECR_HOST/helm/clickhouse-operator-helm \
+   --version=$OPERATOR_VERSION \
+   --create-namespace \
+   -n clickhouse-operator-system \
+   --set-json="image.repository=\"$ECR_HOST/clickhouse-operator\"" \
+   --set-json='cilium.enabled=false' \
+   --set-json='idleScalerEnabled=false' \
+   --set-json='webhooks.enabled=false' \
+   --set-json='operator.debug=true' \
+   --set-json='operator.metricsScraper.enabled=false' \
+   --set-json="operator.availabilityZones=$AZ_LIST" \
+   --set-json='operator.featureFlags.backupOnASeparatePod=true' \
+   --set-json='operator.featureFlags.serverCMEKEnabled=true'
+```
+
+<div id="install-operator-via-kustomize">
+  ##### Kustomize를 통해 Operator 설치
+</div>
+
+kustomize를 사용하는 경우 알려진 이슈로 인해 values에 `namespaceOperator`를 명시적으로 지정해야 합니다. 이 값에는 연산자를 설치할 네임스페이스(기본 네임스페이스 이름: `clickhouse-operator-system`)를 입력합니다: [https://github.com/kubernetes-sigs/kustomize/issues/5566](https://github.com/kubernetes-sigs/kustomize/issues/5566).
+
+<div id="install-aws-ebs-csi-driver">
+  ### aws-ebs-csi-driver 설치
+</div>
+
+다음을 충족하는 IAM role이 필요합니다:
+
+* 관리형 정책 `arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy`를 사용합니다
+* 신뢰 정책으로는 EKS 클러스터의 OIDC provider와 함께 sts:AssumeRoleWithWebIdentity를 사용하는 것을 권장합니다([예시](#example-trust-policy))
+* 선택한 역할 이름은 aws-ebs-csi-driver를 실행하는 서비스 계정의 annotation과 일치해야 합니다
+  * 예시 이름: `ClickHouse_EksEbsCsiDriverRole`
+
+IAM role을 서비스 계정에 연결하기 위한 추가 값을 사용하여 다음 [Helm installation](https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/docs/install.md#helm) 가이드를 따르십시오:
+
+```bash
+# 필요에 따라 역할 이름을 업데이트하세요
+AWS_EBS_CSI_DRIVER_IAM_ROLE_ARN=arn:aws:iam::0000000000:role/ClickHouse_EksEbsCsiDriverRole
+
+helm upgrade --install aws-ebs-csi-driver \
+--namespace kube-system \
+aws-ebs-csi-driver/aws-ebs-csi-driver \
+--set-json="controller.serviceAccount.annotations={\"eks.amazonaws.com/role-arn\":\"$AWS_EBS_CSI_DRIVER_IAM_ROLE_ARN\"}"
+```
+
+<div id="install-volumesnapshot-crds">
+  ### VolumeSnapshot CRD 설치
+</div>
+
+현재 당사 연산자에 필요하지만, 현재 구성에서는 사용되지 않습니다.
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/master/client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+```
+
+<div id="example-trust-policy">
+  ### 예시 신뢰 정책
+</div>
+
+올바른 네임스페이스, 서비스 계정 이름, OIDC 공급자를 사용해야 합니다. 네임스페이스와 서비스 계정 이름은 구성하는 Role에 따라 달라집니다.
+
+```json expandable
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::0000000000:oidc-provider/oidc.eks.us-west-2.amazonaws.com/id/XXXXXXXXXXXXXXXXXXXXX"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "oidc.eks.us-west-2.amazonaws.com/id/XXXXXXXXXXXXXXXXXXXXX:aud": "sts.amazonaws.com",
+"oidc.eks.us-west-2.amazonaws.com/id/XXXXXXXXXXXXXXXXXXXXX:sub": "system:serviceaccount:$NAMESPACE:$K8S_SERVICE_ACCOUNT"
+                }
+            }
+        }
+    ]
+}
+
+```
+
+<div id="naming-your-clickhouse-cluster">
+  ### ClickHouse 클러스터 이름 지정
+</div>
+
+프로비저닝되는 각 ClickHouse 클러스터마다 대상 EKS 클러스터 내에서 **고유한 클러스터 이름**을 선택하십시오. 이 이름은 다양한 AWS 및 Kubernetes 리소스에서 사용되며, 클러스터를 고유하게 식별하는 데에도 사용됩니다.
+
+1. 이름 지정 규칙은 `$DESCRIPTOR-$LETTERS-$ORDINAL`이어야 합니다.
+   1. $DESCRIPTOR - 문자만으로 구성된 클러스터의 설명용 이름
+   2. $LETTERS - 예약된 값으로, 임의의 두 글자를 선택하십시오. 간단하게 `xx`를 사용해도 됩니다.
+   3. $ORDINAL - 동일한 descriptor를 가진 클러스터에 대해 `01`부터 시작하는 증가하는 일련번호
+2. 예시 이름: `default-xx-01`
+
+<div id="clickhousecluster-cr">
+  ### Clickhousecluster CR
+</div>
+
+아래 값은 운영 환경에 맞게 검토하고 수정해야 합니다(예: 리소스, 기능 플래그, 서버 구성 등). `CLUSTER_NAME`을 설정하기 전에 [이름 지정 관련 섹션](#naming-your-clickhouse-cluster)을 확인하십시오.
+다음 명령(macOS)을 사용해 지정된 `$PASSWORD`의 비밀번호 해시를 생성한 후, 그 값을 Helm 차트의 `account.hashedPassword` 값에 전달하십시오:
+
+```bash expandable
+# `default` 사용자의 비밀번호입니다
+PASSWORD='My super secret p@$$w0rd'
+HASHED_PASSWORD=`echo -n $PASSWORD | shasum -a 256 | awk '{printf $1}' | base64`
+
+# 아래 값을 필요에 따라 업데이트하십시오.
+# ecr 호스트는 계정에 있는 것을 사용하십시오.
+# s3 버킷은 앞서 생성한 것을 사용하십시오.
+CLUSTER_NAME=default-xx-01
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+SA_IAM_ROLE_ARN=arn:aws:iam::0000000000:role/CH-S3-${CLUSTER_NAME}-uw2-00-Role
+S3_BUCKET_NAME=my-clickhouse-data
+
+# s3 키 접두사는 임의의 UUID 값을 사용할 수 있지만, 위에서 지정한 버킷에 데이터를 저장하는 모든 클러스터에서 고유한 값이어야 합니다
+S3_KEY_PREFIX=ch-s3-$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+# 노드 그룹에 추가된 clickhouseGroup 레이블 값과 일치해야 합니다
+SERVER_NG_GROUP=server-arm64
+KEEPER_NG_GROUP=keeper-arm64
+
+# 이 값은 선택한 인스턴스 크기에 따라 조정하십시오
+# CPU 및 MEMORY 값 설정 시 데몬셋 요구 사항을 반드시 고려하십시오
+SERVER_CPU=64
+SERVER_MEMORY=256Gi
+KEEPER_CPU=4
+KEEPER_MEMORY=16Gi
+
+CHART_VERSION=<<CR_HELM_TAG>>
+
+# bytesPerGiRAM은 디스크 캐시 크기를 자동으로 계산하는 스케일링 계수입니다.
+# 일반적으로 캐시 크기는 사용 가능한 SSD 캐시 디스크 크기의 80~90%로 설정하십시오.
+# Helm 차트에서 bytesPerGiRAM을 설정하면 파드 시작 시 다음 공식이 적용됩니다:
+#
+# CONFIG_DISK_CACHE_SIZE = bytesPerGiRAM * pod_memory_limit
+#
+# 예시:
+# bytesPerGiRAM = 11.3Gi
+# pod_memory_limit = 250Gi
+# CONFIG_DISK_CACHE_SIZE = 11.3 * 250 = 2825Gi
+CACHE_BYTES_PER_GI_RAM=11Gi
+
+helm install $CLUSTER_NAME \    oci://$ECR_HOST/helm/onprem-clickhouse-cluster \
+    --version=$CHART_VERSION \
+    -n ns-$CLUSTER_NAME \
+    --create-namespace \
+    --set-json="account.hashedPassword=\"$HASHED_PASSWORD\"" \
+    --set-json="server.image.repository=\"$ECR_HOST/clickhouse-server\"" \
+    --set-json="server.storage.s3.bucketName=\"$S3_BUCKET_NAME\"" \
+    --set-json="server.storage.s3.keyPrefix=\"$S3_KEY_PREFIX\"" \
+    --set-json='server.arm64=true' \
+    --set-json="server.image.tag=\"<<SERVER_TAG>>\"" \
+    --set-json="server.podPolicy.nodeSelector.clickhouseGroup=\"$SERVER_NG_GROUP\"" \
+    --set-json="keeper.image.repository=\"$ECR_HOST/clickhouse-keeper\"" \
+    --set-json='keeper.arm64=true' \
+    --set-json="keeper.image.tag=\"<<KEEPER_TAG>>\"" \
+    --set-json="keeper.podPolicy.nodeSelector.clickhouseGroup=\"$KEEPER_NG_GROUP\"" \
+    --set-json="serviceAccount.annotations={\"eks.amazonaws.com/role-arn\":\"$SA_IAM_ROLE_ARN\"}" \
+    --set-json='server.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]' \
+    --set-json='keeper.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]' \
+    --set-json="server.ssdCacheConfiguration.bytesPerGiRAM=\"$CACHE_BYTES_PER_GI_RAM\"" \
+    --set-json="server.podPolicy.resources.limits.cpu=\"$SERVER_CPU\"" \
+    --set-json="server.podPolicy.resources.limits.memory=\"$SERVER_MEMORY\"" \
+    --set-json="server.podPolicy.resources.requests.cpu=\"$SERVER_CPU\"" \
+    --set-json="server.podPolicy.resources.requests.memory=\"$SERVER_MEMORY\"" \
+    --set-json="keeper.podPolicy.resources.limits.cpu=\"$KEEPER_CPU\"" \
+    --set-json="keeper.podPolicy.resources.limits.memory=\"$KEEPER_MEMORY\"" \
+    --set-json="keeper.podPolicy.resources.requests.cpu=\"$KEEPER_CPU\"" \
+    --set-json="keeper.podPolicy.resources.requests.memory=\"$KEEPER_MEMORY\""
+```
+
+<div id="hydra-setup">
+  ## Hydra 설정
+</div>
+
+핵심 아이디어는 하나의 ClickHouse 클러스터 내부에 여러 노드 그룹을 만드는 것입니다. 각 노드 그룹은 서로 다른 수의 노드(메모리 용량도 서로 다름)와 별도의 엔드포인트를 갖습니다. 또한 이러한 노드 그룹은 단일 Keeper 인스턴스와 공유 S3 버킷 내의 단일 데이터 세트/폴더를 사용합니다.
+
+<div id="provisioning-hydra-children-instances">
+  ### Hydra 하위 인스턴스 프로비저닝
+</div>
+
+<div id="prerequisites">
+  ##### 사전 요구사항
+</div>
+
+연산자는 다음 설정으로 Hydra 기능을 활성화한 상태에서 [설치](#install-operator-via-helm)해야 합니다(기본값: false):
+
+```bash
+--set operator.featureFlags.privateHydraEnabled="true"
+```
+
+<div id="setup">
+  ##### 설정
+</div>
+
+*하위 인스턴스를 생성하기 전에 기존 부모 ClickHouse 클러스터를 선택하거나 새로 생성해야 하므로, 하위 인스턴스에 사용할 부모의 **이름**과 **네임스페이스**를 미리 확인해 두어야 합니다.*
+
+새 하위 서비스를 생성하려면 서비스 생성에 대한 [동일한 지침](#clickhousecluster-cr)을 따르고, `ClickHouseCluster` 사용자 지정 리소스(CR)를 생성할 때 Helm 값만 추가하면 됩니다:
+
+```bash
+--set-json='parentCluster.name="c-${PARENT_NAME}'"'
+--set-json='parentCluster.namespace="ns-'${PARENT_NAME}'"'
+```
+
+**PARENT&#95;NAME** - 기존 또는 새 상위 ClickHouse 클러스터의 이름입니다.
+
+선택 사항으로, 새 하위 클러스터를 읽기 전용(기본값은 false)으로 설정하려면 다음을 추가할 수 있습니다:
+
+```bash
+--set-json='isReadonly=true'
+```
+
+<div id="limitations">
+  ### 제한 사항
+</div>
+
+1. 부모 인스턴스가 중지, 종료 또는 비활성 상태(idled)인 경우 하위 인스턴스를 프로비저닝할 수 없습니다.
+2. 부모 클러스터를 삭제하려면 먼저 하위 인스턴스를 삭제해야 합니다.
+
+<div id="install-validation">
+  ## 설치 확인
+</div>
+
+<div id="preflight-checks">
+  ### 사전 점검
+</div>
+
+클러스터 진단용 Kubernetes 플러그인인 [Troubleshoot](https://troubleshoot.sh/)를 사용해 선택적으로 사전 점검을 수행할 수 있습니다.
+
+필요한 플러그인을 설치하려면 Krew를 사용할 수 있습니다:
+
+```console
+kubectl krew install preflight
+```
+
+또는 다른 설치 옵션은 Troubleshoot의 [문서](https://troubleshoot.sh/docs/)를 참조하십시오.
+
+ClickHouse는 Helm 차트(`helm/preflight-check`)를 제공하며, 이를 ECR에 복사하고 로컬에서 렌더링하여 preflight 사양을 생성한 다음 `kubectl preflight`에 전달할 수 있습니다.
+
+<div id="copying-the-preflight-check-helm-chart">
+  ##### 사전 점검용 Helm 차트 복사
+</div>
+
+사전 점검 차트를 [ECR 복사 단계](#copy-ecr-artifacts)에 추가하세요:
+
+```bash
+skopeo copy --all docker://$SOURCE_ECR_REPO/helm/preflight-check:<<PREFLIGHT_CHART_TAG>> docker://$TARGET_ECR_REPO/helm/preflight-check:<<PREFLIGHT_CHART_TAG>>
+```
+
+<div id="running-the-preflight-checks">
+  ##### 사전 점검 실행
+</div>
+
+`helm template`를 사용해 사전 점검 사양을 렌더링한 다음, 출력을 바로 `kubectl preflight`에 파이프로 전달하세요. `CLUSTER_NAME`은 검증할 ClickHouse 클러스터 이름으로 설정하십시오([ClickHouse 클러스터 이름 지정](#naming-your-clickhouse-cluster) 참조):
+
+```bash
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+CHART_VERSION=<<PREFLIGHT_CHART_TAG>>
+CLUSTER_NAME=default-xx-01
+
+helm template clickhouse-preflight \
+    oci://$ECR_HOST/helm/preflight-check \
+    --version=$CHART_VERSION \
+    --set preflight.clickhouseClusterName=$CLUSTER_NAME | \
+kubectl preflight -
+```
+
+이는 ClickHouse Operator를 실행하고 ClickHouse 클러스터를 배포하기 위한 요구 사항을 검증합니다. 필요한 노드 레이블이
+존재하는지, Storage Class가 올바르게 구성되어 있는지 등을 확인합니다.
+
+출력에는 다양한 사전 점검 항목과 해당 상태가 표시됩니다:
+![Preflight Example](/products/clickhouse-private/images/preflight-example.png)
+
+출력을 스크롤하며 각 점검이 통과했는지 확인할 수 있습니다. 점검이 실패하면 설정에 (잠재적인) 문제가 있음을 의미하며, 이로 인해
+ClickHouse 클러스터를 정상적으로 실행하는 데 문제가 발생할 수 있습니다. 각 점검에는 문제 해결을 위한 권장 사항도 포함되어 있습니다.
+
+기본값(`gp3-encrypted`)이 아닌 다른 Storage Class를 대상으로 검증하려면 추가 `--set` 플래그로 재정의하십시오:
+
+```bash
+    --set preflight.checks.prerequisites.storageClassName=<your-storage-class>
+```
+
+<div id="required-permissions">
+  ##### 필요한 권한
+</div>
+
+`kubectl preflight`를 실행하는 사용자 또는 서비스 계정은 클러스터 수준 리소스와 네임스페이스 수준 리소스를 읽을 수 있어야 합니다. 최소한 다음 권한이 필요합니다.
+
+| 범위                                             | 리소스                                                                                       |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 클러스터 전체                                        | `nodes`, `namespaces`, `persistentvolumes`, `storageclasses`, `customresourcedefinitions` |
+| Operator 네임스페이스 (`clickhouse-operator-system`) | `deployments`, `replicasets`, `pods`, `services`, `configmaps`, `events`                  |
+| 클러스터 네임스페이스 (`ns-<cluster-name>`)              | `statefulsets`, `pods`, `persistentvolumeclaims`, `services`, `configmaps`, `events`      |
+
+실제로는 기본 제공 `view` 클러스터 역할과 관련 네임스페이스에 대한 `view` 권한을 가진 주체면 충분합니다. `cluster-admin` 바인딩도 사용할 수 있으며, 일회성 검증 시 더 간단하게 구성할 수 있습니다.
+
+<div id="port-forward-the-clickhouse-service-to-your-local-machine">
+  ### ClickHouse 서비스를 로컬 머신으로 포트 포워딩하기
+</div>
+
+로컬 머신에서 c-default-xx-01-server-any 서비스로 트래픽을 포워딩하려면 다음을 실행하십시오:
+
+```bash
+kubectl port-forward svc/c-default-xx-01-server-any 9000:9000 -n ns-default-xx-01
+```
+
+이렇게 하면 service의 포트 `9000`이 로컬 머신의 포트 `9000`으로 포트 포워딩됩니다. 이제 `http://localhost:9000`에서 ClickHouse HTTP 인터페이스에 접속할 수 있습니다.
+
+<div id="access-clickhouse-and-run-query">
+  ### ClickHouse에 접속해 쿼리 실행
+</div>
+
+포트 포워딩이 완료되면 `clickhouse-client`와 같은 도구를 사용해 로컬 환경에서 ClickHouse에 연결할 수 있습니다.
+
+```bash
+clickhouse client --host localhost --port 9000 --password $PASSWORD
+```
+
+그런 다음 간단한 쿼리를 실행합니다:
+
+```sql
+clickhouse-cloud :) select 1;
+```
+
+다음과 같은 출력이 나타나야 합니다:
+
+```text
+SELECT 1
+Query id: 825591bf-a8e5-4995-ac9f-afb864854ba2
+   ┌─1─┐
+1. │ 1  │
+   └───┘
+1 row in set. Elapsed: 0.001 sec.
+```

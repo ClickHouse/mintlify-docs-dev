@@ -1,0 +1,115 @@
+---
+hidden: true
+title: "操作指南"
+slug: "docs/products/clickhouse-private/howto-guides"
+---
+
+本节提供在私有环境中部署 ClickHouse 的常见配置指南。
+
+<div id="how-to-configure-cert-manager-to-generate-the-certificates-for-clickhouse-server-keeper">
+  ### 操作指南：配置 cert-manager 为 ClickHouse Server 和 Keeper 生成证书
+</div>
+
+本指南假定集群中已安装 [cert-manager](https://cert-manager.io/)。此外，还假定 ClickHouse 集群的名称为 `default-xx-01`。
+
+首先，我们需要一个证书颁发机构 (CA) 来为这些证书签名：
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+```
+
+为简便起见，我们使用自签名的 `Issuer`，因为这样会生成有效的 CA。这仅用于测试；对于生产环境可用的 `Issuer`，建议查看[可选方案列表](https://cert-manager.io/docs/configuration/issuers/)。
+
+之后，我们可以使用 `Certificate` 资源来创建证书：
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: clickhouse-server-tls
+  namespace: ns-default-xx-01
+spec:
+  secretName: default-xx-01-server-cert-secret
+  dnsNames:
+    - "*.default-xx-01.ns-default-xx-01.svc.cluster.local"
+  issuerRef:
+    name: selfsigned-issuer
+    kind: Issuer
+```
+
+这将创建一个名为 `default-xx-01-server-cert-secret` 的 secret，其中包含键 `ca.crt`、`tls.crt` 和 `tls.key`。
+
+请注意，只有签发方提供 `ca.crt` 时，才会将其添加进去。例如，使用 ACME 时，secret 中不会包含 `ca.crt`。在这种情况下，应将公共根证书添加到该键对应的 `ca.crt` 值中 (例如，可使用 [trust-manager](https://cert-manager.io/docs/trust/trust-manager/) 生成 CA bundle，并将其定向到正确的 secret) 。
+
+默认情况下，onprem-ClickHouse-cluster Helm 图表要求使用一个名为 `<cluster_name>-server-cert-secret` 的 secret，其中包含键 `ca.crt`、`server.crt` 和 `server.key`。
+
+可以使用以下值，确保 ClickHouse 集群从该 secret 的正确键中加载证书：
+
+```yaml
+# 使用默认 Secret 名称（default-xx-01-server-cert-secret），无需指定
+server:
+  openSSL:
+    enabled: true
+    secret:
+      caKey: ca.crt
+      certKey: tls.crt
+      keyKey: tls.key
+```
+
+证书会挂载到 Pod (容器组) 中的 `/etc/ClickHouse-server/certs/` (用于 ClickHouse Server) 或 `/etc/clickhouse-keeper/certs/` (用于 ClickHouse Keeper) 。
+ClickHouse 所需的正确 OpenSSL 配置由 Helm 图表生成。
+
+<div id="how-to-configure-remote_servers-with-secretkeyref-and-from_env">
+  ### 操作指南：使用 secretKeyRef 和 @from_env 配置 remote_servers
+</div>
+
+> 要配置 ClickHouse Server 的 `remote_servers` 设置，至少需要使用 `onprem-clickHouse-cluster` Helm 图表 `1.1.151` 及以上版本
+
+本指南介绍如何配置 [`remote_servers`](/zh/reference/settings/server-settings/settings#remote_servers)，以便与分布式表和 `cluster()` 函数配合使用。本指南假设 ClickHouse 集群名称为 `default-xx-01`，并且该集群的命名空间中有一个名为 `default-xx-01-password` 的 [Secret](https://kubernetes.io/docs/concepts/configuration/secret/)。
+
+> 注意：如果你集成了外部密钥存储，也可以采用类似的方法，使用 [Kubernetes Secrets Store CSI Driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver) 进行挂载，并[将密钥加载为环境变量](https://secrets-store-csi-driver.sigs.k8s.io/topics/set-as-env-var)。
+
+推荐的方法是使用带有 `secretKeyRef` 的 [Kubernetes Secret](https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#define-container-environment-variables-using-secret-data)，将敏感数据注入为环境变量，然后在 ClickHouse 配置中使用 [`@from_env`](/zh/concepts/features/configuration/server-config/configuration-files#from_env_zk) 引用这些变量。
+
+示例：
+
+```yaml
+server:
+  additionalEnvVars:
+    - name: DEFAULT_XX_01_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: default-xx-01-password
+          key: password
+  config:
+    remote_servers:
+      default-xx-01:
+        shard:
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-0r280c0-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-f9cshqb-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-gsip6lp-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+```
+
+这种模式可确保敏感数据不会直接写入清单模板中。`additionalEnvVars` 字段通过 `secretKeyRef` 从 Kubernetes Secret 中设置环境变量，而 ClickHouse 配置中的 `@from_env` 指令会在运行时加载这些值。
+
+请注意，副本主机的 FQDN 格式遵循 Kubernetes 的模式：`<pod-name>.<headless-service-name>.<namespace>.svc.cluster.local`。

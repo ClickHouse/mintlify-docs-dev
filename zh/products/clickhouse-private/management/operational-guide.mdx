@@ -1,0 +1,840 @@
+---
+hidden: true
+title: "运维指南"
+slug: "docs/products/clickhouse-private/operational-guide"
+---
+
+<div id="enabling-feature-flags">
+  ### 启用功能开关
+</div>
+
+要在集群上启用功能开关，可以直接编辑 `clickhousecluster` 资源，并更新或添加 `spec.featureFlags` 下的值。请注意，更改某些功能开关可能会触发集群滚动重启。
+
+<div id="backups-on-clickhouse-private">
+  ### ClickHouse Private 备份
+</div>
+
+<div id="prerequisites">
+  #### 前置条件
+</div>
+
+* 与集群位于同一区域的 S3 bucket
+* 绑定到 Kubernetes 服务账号的 IAM role 必须对该 bucket 具有读取、写入和列出权限
+* 集群上必须[启用两个功能开关](#enabling-feature-flags) (设为 `true`) ：`userInitiatedBackupsEnabled` 和 `enableUseEnvironmentalCredentialsByDefault`
+
+<div id="performing-a-backup">
+  #### 执行备份
+</div>
+
+你可以在其中一个服务器 pod (容器组) 中运行以下命令，在后台发起一个备份任务：
+
+```
+BACKUP TABLE system.users, TABLE system.roles, TABLE system.settings_profiles, TABLE system.row_policies, TABLE system.quotas, TABLE system.functions, ALL EXCEPT DATABASES INFORMATION_SCHEMA,information_schema, system TO S3('https://s3.$REGION.amazonaws.com/$S3_BUCKET/$CLUSTER_S3_PREFIX/$BACKUP_ID') SETTINGS id='$BACKUP_ID' ASYNC;
+```
+
+* `$REGION` 是 S3 区域，例如 `us-west-2`
+* `$S3_BUCKET` 是用于存放备份的 S3 bucket 名称
+* `$CLUSTER_S3_PREFIX` 是创建 cluster 时设置的 S3 key prefix (每个 cluster 都应各不相同) 。你可以在 cluster 的 `clickhousecluster` 资源中的 `spec.s3.keyPrefix` 下找到它。它应类似于 `ch-s3-{uuid}`
+* `$BACKUP_ID` 是此次备份的唯一标识符。你可以为该值使用任意 UUID。
+
+<div id="backup-status">
+  ##### Backup 状态
+</div>
+
+发出上述备份命令后，它会在后台异步运行。你可以通过查询 `system.backups` 表中你提供的 id 来查看状态。**务必确认 `status` 字段未处于任何错误状态**。如果处于错误状态，则表示备份失败，需要在解决底层错误后重新发起备份。查询此表还可以帮助你确认备份何时成功完成。
+
+<div id="incremental-backups">
+  ##### 增量备份
+</div>
+
+您也可以执行增量备份，以上一个备份为基础，从而避免每次备份时重复复制相同的数据。更多信息请参见：[https://clickhouse.com/docs/operations/backup#take-an-incremental-backup](/zh/reference/engines/database-engines/backup#take-an-incremental-backup)。
+
+<div id="restoring-from-a-backup">
+  #### 从备份中恢复
+</div>
+
+要从备份中恢复，请在要恢复到的集群中运行以下命令：
+
+```
+RESTORE ALL FROM S3('https://s3.$REGION.amazonaws.com/$S3_BUCKET/$CLUSTER_S3_PREFIX/$BACKUP_ID') SETTINGS id='$RESTORE_ID', allow_different_database_def=true;
+```
+
+上述变量与创建备份时使用的变量相同。`$RESTORE_ID` 是你为此次恢复操作指定的任意唯一标识符。
+
+### Operator
+
+<div id="overview">
+  #### 概述
+</div>
+
+clickhouse-operator 负责已注册的 clickhousecluster 自定义资源的预配、协调以及集群生命周期管理，包括：
+
+* 部署和终止服务器与 keeper 组件
+* 控制集群状态 (运行/停止等)
+* 处理备份请求
+* 清理 PVC
+* 对集群进行水平扩缩容
+
+<div id="architecture">
+  #### 架构
+</div>
+
+<div id="instance-lifecycle">
+  ##### 实例生命周期
+</div>
+
+![instance\_lifecycle](/products/clickhouse-private/images/instance_lifecycle.png)
+
+<div id="multistatefulset-aka-multists">
+  ##### MultiStatefulSet (又称 MultiSTS)
+</div>
+
+MultiStatefulSet 是 clickhouse-operator 的一项功能，它使 ClickHouse server pod (容器组) 能够以这样的方式运行：每个 StatefulSet 只管理 1 个 ClickHouse Server pod (容器组)  (即一个副本) 。这与 SingleSTS 不同：在 SingleSTS 中，1 个 StatefulSet 会管理所有副本。
+
+**SingleSTS**
+
+单个 StatefulSet 的形式如下：
+
+![](/products/clickhouse-private/images/sts.png)
+
+**MultiSTS**
+
+相比之下，MultiSTS 中运行的 pod (容器组) 如下所示：
+
+![](/products/clickhouse-private/images/msts.png)
+
+<div id="replicastatemap-how-multiple-statefulsets-are-tracked">
+  ###### ReplicaStateMap - 如何跟踪多个 StatefulSet
+</div>
+
+MultiSTS 的副本不能依赖序号来作为判断 pod (容器组) 年龄/生命周期的可靠固定方式。由于我们需要一种方式来跟踪每个 StatefulSet 的状态，因此会将这些信息作为 CR 状态的一部分存储在 map 中。
+
+一个 replicaStateMap 示例可能如下所示：
+
+```
+❯ kubectl get clickhousecluster c-navy-wl-64 -o yaml | yq .status
+replicaStateMap:
+  c-navy-wl-64-server-5hvvzxe:
+    createdAt: "2023-08-03T13:25:40Z"
+    isBackupPod: true
+    state: Pending
+    updatedAt: "2023-08-03T13:25:40Z"
+  c-navy-wl-64-server-fvnytjb:
+    createdAt: "2023-08-03T13:25:40Z"
+    state: Pending
+    updatedAt: "2023-08-03T13:25:40Z"
+  c-navy-wl-64-server-un85gpo:
+    createdAt: "2023-08-03T13:25:40Z"
+    state: Pending
+    updatedAt: "2023-08-03T13:25:40Z"
+
+```
+
+* 状态可以是 **Pending**、**Ready**、**Stopped** 或 **Condemned**。
+* ReplicaStateMap 还会在任意时刻将 1 个 pod (容器组) 标记为 **IsBackupPod** 为 true 的 pod (容器组) 。顾名思义，该 pod (容器组) 就是执行备份的地方。
+* **备份**副本永远不会被标记为 **Condemned**
+* 一旦某个副本的名称被添加到 map 中，Operator 将确保它从 **Pending** 状态变为 **Ready** 状态。
+
+*警告：此外，map 内置的状态跟踪仅用于 Operator 的内部状态管理，不应被外部组件使用。*
+
+<div id="parallel-vs-rolling-reconciliation">
+  ###### 并行与滚动式协调
+</div>
+
+如果 StatefulSet 规格中的唯一变更只是副本数量的调整，operator 将执行并行 pod (容器组) 管理。
+
+如果 StatefulSet 规格所需的变更不只是调整副本数量，我们就不再依赖并行 pod (容器组) 管理，而是会启动第二个升级循环。
+
+升级循环会检查 PDB (maxUnavailable) ，并开始逐个协调 StatefulSet，确保始终不会超出中断预算。
+
+<div id="horizontal-scaling-in-multists-mode">
+  ###### MultiSTS 模式下的水平扩缩容
+</div>
+
+在 MultiSTS 模式下进行扩容很简单。一旦新的副本名称被添加到 ReplicaStateMap 中，Operator 就会确保相应的 StatefulSet 被创建并完成调谐。后续的调谐循环会确保新创建的副本保持最新状态。
+
+缩容则更为繁琐和复杂。由于正在缩容的副本仍可能继续接收流量，我们会遵循多个步骤来确保该副本安全缩容。
+
+**废弃副本**
+
+我们引入了“废弃副本”这一概念。当实际副本数量超过期望数量时，就意味着我们需要缩容。被标记为删除的副本就是**废弃**副本。我们会将它们在 **ReplicaStateMap** 中的状态从 **Ready** 改为 **Condemned**。这样可以确保在后续流程中，我们始终记得哪些副本需要被安全删除并从映射中移除。
+
+**缩容**
+
+现在你已经了解了废弃副本，下面是缩容流程：
+
+1. 移除 Topology Key (这样该副本就不再参与 TopologySpreadConstraint 的 Skew 计算) 。
+2. 确保所有 StatefulSet 都处于 **Ready** 状态。否则，我们不会执行 scaleIn (并继续重新入队) 。
+3. 对每个复制数据库中的每张表执行 **SYSTEM SYNC REPLICA** $database.$table LIGHTWEIGHT。*注意：此命令会在标记为用于备份的副本上执行 (因为该副本永远不会被标记为废弃) 。*
+4. **删除****废弃的 StatefulSet**，并将它们从 ReplicaStateMap 中移除。
+5. 在处于 Ready 状态的副本上执行 **SYSTEM DROP REPLICA** $replicaName，以从 Keeper 中移除其信息。
+
+*注意：由于我们已经从 ReplicaStateMap 中移除了副本，因此会查询 ClickHouse 以获取所有已知副本的集合，然后只删除其中需要删除的副本。*
+*为已删除 StatefulSet 的 PVC 添加 clickhouse.com/delete-pvc 标签。这会导致 PVC 泄漏。*
+*到这里，Operator 的职责就结束了，接下来由 PersistentVolumeClaimCleaner 接手。*
+
+<div id="key-metrics">
+  #### 关键指标
+</div>
+
+* `last_cluster_reconcile`
+  * 表示上次对 `app` (CR 名称，例如 `c-default-xx-01`) 执行 reconcile 的时间的 Gauge 指标
+  * 可使用此指标判断 reconcile 是否在定期发生
+  * [示例 alertmanager 告警定义](#operator-not-reconciling-alert)
+* `controller_runtime_reconcile_errors_total`
+  * 表示每个控制器 协调 error 总数的 Counter 指标
+  * 将此指标与 `controller_runtime_reconcile_total` 结合使用，可确定 reconcile 的错误率
+  * [示例 alertmanager 告警定义](#operator-reconciliation-error-alert)
+
+<div id="common-issues">
+  #### 常见问题
+</div>
+
+<div id="changes-were-made-to-the-cr-but-they-arent-being-applied">
+  ##### 已对 CR 进行了更改，但这些更改没有生效
+</div>
+
+如果 ClickhouseCluster CR 长时间未完成 reconcile，
+这通常意味着以下情况之一：
+
+1. Operator 处于 **crashlooping** 状态。请检查 Operator 日志。
+2. ClickHouse pod (容器组) 处于 **crashlooping** 状态。请检查 **Keeper 和 server pod (容器组)&#x20;**，找出原因。
+3. CR 中存在 **clickhouse.com/skip-reconcile** 注解。
+
+<div id="drop-a-server-replica">
+  ##### 删除服务器副本
+</div>
+
+如果你想在不缩减集群规模的情况下从集群中移除一个副本，请使用此方法。
+
+<div id="add-skip-reconcile">
+  ###### 添加 skip-reconcile 标记
+</div>
+
+```
+kubectl annotate clickhousecluster c-default-xx-01 -n ns-default-xx-01 clickhouse.com/skip-reconcile=remove-replica
+```
+
+这里可以使用任意值。这里以 remove-replica 为例。确认 Operator 已注意到这个注解。你应该能在 Operator 日志中看到这一点。
+
+```
+kubectl logs -f -n clickhouse-operator-system operator-clickhouse-operator-helm-5576dd598b-sqhxh
+```
+
+`跳过 ClickhouseCluster 协调请求 ... 因为它带有 clickhouse.com/skip-reconcile 注解`
+
+<div id="remove-from-replica-state-map">
+  ###### 从副本状态映射中移除
+</div>
+
+我们将从 `replica-state-map` 中移除该副本。你可以在这里看到它的记录：
+
+```
+kubectl get clickhousecluster c-default-xx-01 -n ns-default-xx-01 -o json |jq .status.replicaStateMap
+```
+
+现在编辑状态字段，从副本状态映射中删除该副本。
+
+```
+EDITOR=vim kubectl edit clickhousecluster c-default-xx-01 -n ns-default-xx-01 --subresource=status
+```
+
+<div id="delete-statefulset">
+  ###### 删除 StatefulSet
+</div>
+
+```
+kubectl delete sts c-default-xx-01-server-082s2da -n ns-default-xx-01
+```
+
+删除 StatefulSet 后，等待 pod (容器组) 终止。
+
+<div id="remove-skip-reconcile">
+  ###### 去掉 skip-reconcile
+</div>
+
+```
+kubectl annotate clickhousecluster c-default-xx-01 -n ns-default-xx-01 clickhouse.com/skip-reconcile-
+```
+
+Operator 将启动一个新的副本，并清理 ClickHouse 中已移除的副本。
+
+<div id="verify">
+  ###### 验证
+</div>
+
+登录到您的 ClickHouse 集群，确认该副本已被移除。
+
+如果该副本持有的任何租约尚未过期，operator 会重试删除操作。应会在 5 分钟内清理完成。
+
+<div id="server-pod-is-hanging-from-the-termination">
+  ##### Server pod (容器组) 卡在终止状态
+</div>
+
+```
+NAME                            READY   STATUS        RESTARTS   AGE
+c-navy-wl-64-keeper-0           1/1     Running       0          3m40s
+c-navy-wl-64-keeper-1           1/1     Running       0          3m40s
+c-navy-wl-64-keeper-2           1/1     Running       0          3m40s
+c-navy-wl-64-server-gbwmanx-0   1/2     Terminating   0          3m25s
+c-navy-wl-64-server-pxb9mde-0   1/2     Terminating   0          3m25s
+```
+
+因此，在终止服务器 pod (容器组) 之前，我们会尽量先排空连接，并等待正在处理的请求完成。为此，我们使用一个 PreStop hook 来执行相关逻辑。
+
+在这种情况下，你可以：
+
+检查 **prestop.log**
+
+```
+kubectl exec c-navy-wl-64-server-gbwmanx-0 -- cat /var/log/clickhouse-server/prestop.log
+```
+
+检查服务器日志中是否有收到信号的相关日志消息
+
+<div id="why-is-the-cr-not-in-a-healthy-running-state">
+  ##### 为什么 CR 没有处于健康的 &quot;Running&quot; 状态？
+</div>
+
+使用 kubectl 检查实例状态
+
+```
+kubectl get clickhouseclusters -A
+```
+
+检查服务器重启的原因，并查看 pod (容器组) 的描述信息：
+
+```
+kubectl describe pod c-navy-wl-64-server-2 -n ns-navy-wl-64
+```
+
+查看之前已终止的 pod (容器组) 日志：
+
+```
+kubectl logs -p c-navy-wl-64-server-2 -n ns-navy-wl-64
+```
+
+查看事件
+
+```
+kubectl get events -n ns-navy-wl-64
+```
+
+### ClickHouse 服务器
+
+#### 概览
+
+clickhouse-server 组件是 ClickHouse 的主要进程，负责摄取、查询、存储和处理数据。
+
+<div id="key-metrics">
+  #### 关键指标
+</div>
+
+[Granfana ClickHouse mixin](https://grafana.com/docs/grafana-cloud/monitor-infrastructure/integrations/integration-reference/integration-clickhouse/) 在一个预置的仪表板中提供了许多 ClickHouse 指标。请注意，ClickHouse server 的 Pod (容器组) 上已经有一组 `prometheus.io/*` annotations。这些 annotations 会暴露部分指标，但不会提供下文定义的 `ClickHouse_CustomMetrics_*`。你应计划通过 PodMonitor 或等效方式，将每个 server Pod (容器组) 上的 `:8123/metrics` Prometheus endpoint 配置为抓取目标。该 endpoint 需要身份验证，且应使用具有只读权限的专用用户进行身份验证。
+
+* `ClickHouse_CustomMetric_NumberOfBrokenDetachedParts`
+  * Gauge 指标，表示已损坏的 detached parts 数量。
+  * [alertmanager 告警定义示例](#broken-detached-parts)
+* `ClickHouse_CustomMetric_LostPartCount`
+  * Gauge 指标，表示丢失的 parts 数量，这意味着发生了数据丢失。**可能会出现误报。**
+  * [alertmanager 告警定义示例](#data-loss)
+* `ClickHouseErrorMetric_*`
+  * Counter 指标，表示给定 error 类型的计数。
+  * [`ClickHouseErrorMetric_CANNOT_WRITE_TO_FILE_DESCRIPTOR` alertmanager 告警定义示例](#cannot-write-to-file-descriptor)
+  * [`ClickHouseErrorMetric_CHECKSUM_DOESNT_MATCH` alertmanager 告警定义示例](#checksum-doesn't-match)
+  * [`ClickHouseErrorMetric_CORRUPTED_DATA` alertmanager 告警定义示例](#corrupted-data)
+  * [`ClickHouseErrorMetric_LOGICAL_ERROR` alertmanager 告警定义示例](#logical-errors)
+  * [`ClickHouseErrorMetric_NOT_ENOUGH_DISK_SPACE` alertmanager 告警定义示例](#not-enough-space)
+  * [`ClickHouseErrorMetric_POTENTIALLY_BROKEN_DATA_PART` alertmanager 告警定义示例](#broken-parts-detected-on-select)
+  * [`ClickHouseErrorMetric_REPLICA_ALREADY_EXISTS` alertmanager 告警定义示例](#replica-already-exists)
+* `ClickHouseMetrics_IsServerShuttingDown`
+  * Gauge 指标，表示 ClickHouse server 是否正在关闭。
+  * [alertmanager 告警定义示例](#clickhouse-server-stuck-shutting-down)
+* `ClickHouse_CustomMetric_TableReadOnlyDurationSeconds`
+  * 用于计时的 Gauge 指标，表示表处于 READONLY 模式的时长。
+  * [alertmanager 告警定义示例](#table-replicas-read-only)
+
+<div id="common-issues">
+  #### 常见问题
+</div>
+
+<div id="crashlooping-server-pods">
+  ##### 服务器 Pod (容器组) 反复崩溃重启
+</div>
+
+检查 ClickHouse server pod (容器组) 的日志。日志应能说明进程崩溃的原因。如果是由于内存压力等原因导致 Kubernetes 终止了该 pod (容器组) ，请检查 Kubernetes 事件以获取更多信息。
+
+<div id="check-ch-metrics-with-sql">
+  ##### 用 SQL 检查 ClickHouse 指标
+</div>
+
+<div id="replication-queue-size-per-table">
+  ###### 每个表的复制队列大小。
+</div>
+
+触发条件：如果任一表的该数值大于 100，则必须触发告警。
+
+```
+SELECT
+    concat(database, '.', table),
+    count()
+FROM system.replication_queue
+GROUP BY
+    database,
+    table
+```
+
+另一种方法：
+
+```
+SELECT
+    concat(database, '.', table),
+    queue_size
+FROM system.replicas
+```
+
+<div id="replication-queue-oldest-entry-per-table">
+  ###### 每个表的复制队列中最旧的条目。
+</div>
+
+触发条件：如果该数值大于 1 天，就应触发告警。
+
+```
+SELECT
+    concat(database, '.', table),
+    min(create_time)
+FROM system.replication_queue
+GROUP BY
+    database,
+    table
+```
+
+<div id="clickhouse-keeper">
+  ### ClickHouse Keeper
+</div>
+
+#### 概览
+
+[clickhouse-keeper](https://clickhouse.com/blog/clickhouse-keeper-a-zookeeper-alternative-written-in-cpp#usage-in-clickhouse) 组件是一个与 ZooKeeper 兼容的分布式服务，用于管理 clickhouse-server 副本之间的分布式协调，并负责存储 ClickHouse 数据的元数据。如果你希望从 keeper 的 Pod (容器组) 中采集指标，则应为 `:8001/metrics` 创建一个 PodMonitor。
+
+<div id="key-metrics">
+  #### 关键指标
+</div>
+
+TODO
+
+<div id="common-issues">
+  #### 常见问题
+</div>
+
+<div id="high-znode-count">
+  ##### ZNode 数量过多
+</div>
+
+TODO
+
+<div id="alerting">
+  ### 告警
+</div>
+
+通常，应针对崩溃循环的 Pod (容器组) 、无法调度的 Pod (容器组) 以及其他因环境而异的基础设施相关问题设置标准告警。下面给出了针对上述各个组件的推荐告警示例。
+
+<div id="operator">
+  #### Operator
+</div>
+
+<div id="operator-not-reconciling-alert">
+  ##### Operator 未进行协调告警
+</div>
+
+```
+alert: ClickhouseOperatorNotReconciling
+expr: avg(increase(last_cluster_reconcile[90m])) by (app) == 0
+for: 120m
+```
+
+**用途：** 当 operator 在指定时间内未完成协调时触发告警
+**操作：** 检查 operator 是否正在运行且状态健康。查看 operator 日志，确认是什么阻止了协调。同时还要确认你的 CR 上没有 `clickhouse.com/skip-reconcile` 注解，如[此处](#changes-were-made-to-the-cr-but-they-aren't-being-applied)所述。
+
+<div id="operator-reconciliation-error-alert">
+  ##### Operator 协调错误告警
+</div>
+
+```
+alert: ClickhouseOperatorReconcileErrors
+expr: |
+  (
+    sum(rate(controller_runtime_reconcile_errors_total{namespace="clickhouse-operator-system"}[5m])) by (controller, namespace)
+    /
+    sum(rate(controller_runtime_reconcile_total{namespace="clickhouse-operator-system"}[5m])) by (controller, namespace)
+  ) > 0.05
+for: 15m
+```
+
+**目的：** 当协调错误占协调总次数超过 5% 时触发告警。
+**操作：** 检查 Operator 日志中的错误信息，以确定根本原因。
+
+<div id="clickhouse-server">
+  #### ClickHouse 服务器
+</div>
+
+<div id="broken-detached-parts">
+  ##### 损坏的 Detached Parts
+</div>
+
+```
+alert: ClickHouseBrokenDetachedParts
+expr: ClickHouse_CustomMetric_NumberOfBrokenDetachedParts > 100
+for: 60m
+```
+
+**目的：** 当损坏的 detached parts 数量持续至少 60 分钟超过 100 时触发。
+**操作：**
+如果 shared merge tree/replicated merge tree 的数据分区片段确实已损坏，也应触发 [ClickHouseDataLoss](#data-loss)。
+对于元数据类型为 Local 的表 (即 `s3disk` 或 `s3diskWithCache`) ，少量损坏的 detached parts **并不一定总是意味着发生了故障**，因为在硬重启期间，我们可能已经为 parts 创建了文件，但还未来得及向其中写入数据。因此，阈值设为 100。
+
+**缓解措施：**
+首先，等待一段时间，观察 [ClickHouseDataLoss](#data-loss) 是否已触发。如果 ClickHouseDataLoss 已触发，则应改为调查并缓解该问题；修复后，再确认是否已不存在损坏的 detached parts。否则，请联系 ClickHouse 支持。
+
+<div id="data-loss">
+  ##### 数据丢失
+</div>
+
+```
+alert: ClickHouseDataLoss
+expr: ClickHouse_CustomMetric_LostPartCount > 0
+for: 30m -- 使用更大的时间窗口以减少误报
+```
+
+**目的：** 表示可能存在数据丢失，需要进一步调查确认。
+**操作：** 联系 ClickHouse 支持团队。你也可以先按以下步骤做一些初步调查。
+
+<div id="understanding-what-data-parts-are-lost">
+  ###### 了解丢失了哪些数据分区片段
+</div>
+
+数据丢失告警使用的是 system.replicas 表中的 lost&#95;part&#95;count。要了解丢失了多少个数据分区片段，以及这些数据分区片段位于哪些表中，可以使用以下查询：
+
+```
+SELECT
+    database,
+    table,
+    lost_part_count AS value
+FROM system.replicas
+WHERE value > 0
+
+```
+
+现在我们需要找出 ClickHouse 认为已永久丢失的数据分区片段。为此，你需要查找类似 `Part * is lost forever` 的日志。
+如果你正在调查很久以前发生的潜在数据丢失，还应该查找类似 `Dropping table with non-zero lost&#95;part&#95;count equal to {}` 的日志。
+
+<div id="finding-logs-related-to-lost-parts">
+  ###### 查找与丢失的 parts 相关的日志
+</div>
+
+你可以通过以下几种方式查看日志：
+
+1. pod (容器组) 中的 `/var/log/clickhouse-server/` 目录包含最新日志的归档文件。你可以使用 zgrep 查找日志信息。如果 ClickHouse server 上活动很多，日志文件可能会轮转得非常快。
+2. system.text&#95;log 表。该表在云端的生存时间 (TTL) 为 30 天。
+   你可以使用以下 SQL 查询：
+
+```
+SELECT
+    hostName(),
+    event_time,
+    logger_name,
+    message
+FROM clusterAllReplicas(default, system.text_log)
+WHERE message_format_string = 'Part {} is lost forever.'
+ORDER BY hostName(), event_time
+```
+
+你可以为 event&#95;time 的时间范围添加筛选条件，以加快查询速度。
+
+<div id="understanding-the-history-of-the-lost-parts">
+  ###### 了解丢失 parts 的历史情况
+</div>
+
+收集完丢失 parts 的列表后，下一步是弄清这些 parts 发生了什么。
+从列表中任选一个数据分区片段。找到与其相关的所有日志：
+
+```
+SELECT
+    event_time,
+    message
+FROM system.text_log
+WHERE message LIKE '%<part name>%' AND hostName() = '<host where lost forver log was created>'
+ORDER BY event_time ASC
+```
+
+检查日志消息 `Part * is lost forever` 之前发生了什么。注意：在 `part is lost forever` 之后的所有日志消息都无关紧要 (因此，如果你看到该 part 最终在某个副本上找到了——那其实是一个为了替代丢失 part 而创建的空 part) 。
+
+检查该 part 是否原本就应该被删除 (这种情况下很可能是误报) ：
+
+1. 检查该表是否设置了生存时间 (TTL)，并确认丢失的 part 是否本就应因 TTL 而被删除。
+2. 检查 system.query&#95;log 中是否有本应删除这些丢失 parts 的 TRUNCATE 或 DROP PARTITION 查询。
+
+还需要调查的其他事项：
+
+1. 如果该 part 是以 broken 状态被 detached 的，请尝试查明它为什么会损坏。
+2. 如果你看到 `The specified key does not exist`，应搜索所有包含该 blob 名称的日志，并找出它是在何时、因何被删除的。同时，也要检查与 zero-copy 锁相关的日志消息。
+
+如果该实例上所有 `part is lost forever` 错误都在相近时间发生在同一张表上，那么它们很可能是由同一个原因导致的。如果不是，就从另一组中选一个 part，然后重复上述检查 (它可能是因不同原因丢失的) 。
+
+<div id="cannot-write-to-file-descriptor">
+  ##### 无法写入文件描述符
+</div>
+
+```
+alert: ClickHouseCannotWriteToFileDescriptor
+expr: |
+    increase(ClickHouseErrorMetric_CANNOT_READ_FROM_FILE_DESCRIPTOR[30s]) > 0
+
+    or (
+        ClickHouseErrorMetric_CANNOT_READ_FROM_FILE_DESCRIPTOR > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**目的：** 此告警通常表示缓存磁盘已满 (进而导致 &quot;设备上没有剩余空间&quot; 或 &quot;CANNOT&#95;WRITE&#95;TO&#95;FILE&#95;DESCRIPTOR&quot; 错误) 。
+**操作：** 原因可能是配置错误，也可能是 ClickHouse 中的缺陷。如果你的节点规格或类型最近发生了变化，则可能与配置错误有关。无论哪种情况，请联系 ClickHouse 支持。
+
+<div id="checksum-doesnt-match">
+  ##### 校验和不匹配
+</div>
+
+```
+alert: ClickHouseChecksumsMismatch
+expr: |
+    increase(ClickHouseErrorMetric_CHECKSUM_DOESNT_MATCH[30s]) > 0
+    or (
+        ClickHouseErrorMetric_CHECKSUM_DOESNT_MATCH > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**目的**
+**：** 某些数据 parts 的校验和不一致。如果这是在升级后发生的，可能表明代码库中存在 bug。
+**处理措施**：请联系 ClickHouse 支持团队。
+
+<div id="corrupted-data">
+  ##### 损坏的数据
+</div>
+
+```
+alert: ClickHouseCorruptedData
+expr: |
+    increase(ClickHouseErrorMetric_CORRUPTED_DATA[30s]) > 0
+    or (
+        ClickHouseErrorMetric_CORRUPTED_DATA > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**用途：**某些数据分区片段已损坏。如果这种情况发生在升级后，可能表明代码库中存在缺陷。
+**操作：**请联系 ClickHouse 支持团队。
+
+<div id="logical-errors">
+  ##### 逻辑错误
+</div>
+
+```
+alert: ClickHouseLogicalErrors
+expr: |
+    increase(ClickHouseErrorMetric_LOGICAL_ERROR[30s]) > 0
+    or (
+        ClickHouseErrorMetric_LOGICAL_ERROR > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**目的：** ClickHouse 发生了逻辑错误。这通常意味着代码库中存在缺陷。
+**操作：** 请联系 ClickHouse 支持团队
+
+<div id="not-enough-space">
+  ##### 空间不足
+</div>
+
+```
+alert: ClickHouseNotEnoughSpaceErrors
+expr: |
+    increase(ClickHouseErrorMetric_NOT_ENOUGH_SPACE[30s]) > 0
+    or (
+        ClickHouseErrorMetric_NOT_ENOUGH_SPACE > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**用途：** 服务器报告了 NOT&#95;ENOUGH&#95;SPACE 错误。这可能表示 PVC 已满、存在配置错误、ClickHouse 尝试为临时数据预留较大的块但未获批准，或由其他原因导致。
+**操作：** 请联系 ClickHouse 支持团队。
+
+<div id="broken-parts-detected-on-select">
+  ##### Select 查询时检测到损坏的 parts
+</div>
+
+```
+alert: ClickHouseBrokenPartDetectedOnSelect
+expr: |
+    increase(ClickHouseErrorMetric_POTENTIALLY_BROKEN_DATA_PART[30s]) > 0
+    or (
+        ClickHouseErrorMetric_POTENTIALLY_BROKEN_DATA_PART > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**目的：** 由于出现 POTENTIALLY&#95;BROKEN&#95;DATA&#95;PART 错误，Select 失败。这表明发生了数据丢失。
+**操作：** 请参阅 [数据丢失](#data-loss) 中的操作，并联系 ClickHouse 支持。
+
+<div id="replica-already-exists">
+  ##### 副本已存在
+</div>
+
+```
+alert: ClickHouseReplicaAlreadyExists
+expr: |
+    increase(ClickHouseErrorMetric_REPLICA_ALREADY_EXISTS[30s]) > 0
+    or (
+        ClickHouseErrorMetric_REPLICA_ALREADY_EXISTS > 0
+        and
+        ignoring (table) ClickHouseAsyncMetrics_Uptime < 3 * 60 * 60
+    )
+```
+
+**目的：** 由于副本已存在，创建副本失败。这通常是 Replicated 数据库引擎中的一个缺陷。
+**操作：** 请联系 ClickHouse 支持团队。
+
+<div id="clickhouse-server-stuck-shutting-down">
+  ##### ClickHouse server 关闭时卡住
+</div>
+
+```
+alert: ClickHouseServerShutdownStuck
+expr: ClickHouseMetrics_IsServerShuttingDown == 1
+for: 70m
+```
+
+**目的：** ClickHouse server 处于关闭过程中已超过一小时。
+**操作：** 通过 system.stack&#95;trace 或 GDB 检查线程。
+
+<div id="table-replicas-read-only">
+  ##### 表副本处于只读状态
+</div>
+
+```
+alert: ClickHouseTableReplicasReadOnly
+expr: ClickHouse_CustomMetric_TableReadOnlyDurationSeconds > 3600
+```
+
+**目的：** 表处于只读状态已超过一小时。
+**操作**：按受影响的表名筛选并检查服务器日志，确认其进入只读模式的原因。这也可能表明 Keeper 存在问题。检查 Keeper 日志，排查潜在问题。
+
+<div id="incident-runbooks">
+  ### 事件处置手册
+</div>
+
+<div id="data-losscorruption-clickhousebrokenpartdetectedonselect">
+  #### 数据丢失/损坏。ClickHouseBrokenPartDetectedOnSelect
+</div>
+
+<div id="reason">
+  ##### 原因
+</div>
+
+当 SMT 数据分区片段读取失败，且错误 (很可能) 不可重试时，就会触发 `ClickHouseBrokenPartDetectedOnSelect`。
+
+当抛出 `POTENTIALLY_BROKEN_DATA_PART` 异常时，就会触发该告警。
+
+<div id="mitigation">
+  ##### 缓解措施
+</div>
+
+检查日志中是否存在 `POTENTIALLY_BROKEN_DATA_PART` 异常。如果告警已触发，日志里一定会有这条记录。如果由于某种原因没有，也可以检查 `system.errors`。
+
+这样一来，通常就能从异常消息和堆栈跟踪中看出具体出了什么问题。
+
+<div id="smt-clickhousetablereplicasreadonly">
+  #### SMT. ClickHouseTableReplicasReadOnly
+</div>
+
+<div id="reason">
+  ##### 原因
+</div>
+
+如果某个表处于只读状态至少一小时，就会触发 `ClickHouseTableReplicasReadOnly`。
+
+现在已排除 `*_broken_replicated_tables` 和 `*_broken_tables` 数据库中的表。
+
+也可能是一次异常的 `DROP` 操作导致的。
+
+##### 处理措施
+
+检查集群中是否还有任何只读表：
+
+```sql
+SELECT
+  readonly_duration,
+  database,
+  table,
+  hostname()
+FROM clusterAllReplicas(default, system.replicas)
+WHERE readonly_start_time IS NOT NULL
+```
+
+通常，出现这类表通常表示我们执行了 `StorageSharedMergeTree::shutdown`，但由于某种原因决定保留该存储对象，而没有将其销毁。要确认/排查具体原因，可以在文本日志中按表名对应的 logger 名称进行搜索。
+
+有时问题很简单，只需重启副本即可修复。
+首先，尝试对受影响的表执行 [SYSTEM RESTART REPLICA](/zh/reference/statements/system#restart-replica)。你可以从上文提到的查询中获取表名。
+
+<div id="smt-clickhousereplicaalreadyexists">
+  #### SMT. ClickHouseReplicaAlreadyExists
+</div>
+
+<div id="reason">
+  ##### 原因
+</div>
+
+每当实例上出现带有 `REPLICA_ALREADY_EXISTS` 错误的异常时，都会触发 `ClickHouseReplicaAlreadyExists`。
+
+这类异常通常发生在我们为复制表 (SMT 或 RMT) 创建副本失败时，原因是某个现有副本已经与该路径关联。
+
+<div id="mitigation">
+  ##### 缓解措施
+</div>
+
+这不太可能是由用户操作失误导致的。过去，用户可能会尝试使用相同的 ZooKeeper 路径创建两个表。但现在我们通过 `database_replicated_allow_explicit_uuid` 禁止了这种行为。
+
+这很可能是 Replicated 数据库或 Shared Catalog 中的一个缺陷。
+
+<div id="misc-clickhousecannotwritetofiledescriptor">
+  #### 杂项：ClickHouseCannotWriteToFileDescriptor
+</div>
+
+<div id="reason">
+  ##### 原因
+</div>
+
+当实例上发生带有 `CANNOT_WRITE_TO_FILE_DESCRIPTOR` 错误的异常时，会触发 `ClickHouseCannotWriteToFileDescriptor`。
+
+当缓存磁盘没有足够空间容纳新的缓存项，或用于外部数据处理 (例如外部聚合、外部 JOIN) 时，就会抛出该异常。
+
+这是一个配置错误问题：实际创建的磁盘空间小于 CR 配置中请求的空间。
+
+<div id="mitigation">
+  ##### 缓解措施
+</div>
+
+**重要：** 如果指定了查询设置 `join_algorithm = 'partial_merge'`，缓存磁盘使用量的跟踪会受到一个已知问题的影响。因此，请先检查这一点。
+
+要确认问题是由配置错误引起，还是出在磁盘使用量跟踪上，请执行以下操作：
+
+1. 运行 `kubectl exec -n <namespace> -it <pod> -- /bin/bash` 连接到 pod (容器组) 。
+2. 运行 `df -h` 查看缓存磁盘大小。
+3. 运行 `select path, max_size from system.filesystem_cache_settings` 查看所需的缓存磁盘大小。请注意，我们通常会有不同的缓存 (例如 `s3diskWithCache`、`diskPlainRewritableForSystemTablesWithCache`) 共享同一路径 (即 `/mnt/clickhouse-cache/sharedS3DiskCache`) 。
+4. 如果实际磁盘大小更小，则问题出在配置错误上。请联系 Data Plane Operator 团队。
+5. 否则，很可能是缓存磁盘使用量跟踪中的一个 bug。要进一步排查，可以尝试搜索 `system.filesystem_cache`。

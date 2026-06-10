@@ -1,0 +1,482 @@
+---
+hidden: true
+title: "API privada do ClickHouse"
+slug: "docs/products/clickhouse-private/api"
+---
+
+<div id="introduction">
+  ### Introdução
+</div>
+
+<div id="starting-with-the-clickhouse-private-api">
+  #### Começando com a API privada do ClickHouse
+</div>
+
+A API privada do ClickHouse oferece suporte a operações comuns para gerenciar seu cluster do ClickHouse, como fazer backups ou viabilizar
+o escalonamento vertical.
+
+É um componente opcional e independente que pode ser adicionado ao seu ambiente para simplificar o gerenciamento.
+
+<div id="installation">
+  #### Instalação
+</div>
+
+A API privada do ClickHouse é distribuída como uma imagem Docker e um Chart do Helm, que devem ser copiados para o seu repositório privado no ECR e instalados no cluster EKS.
+
+<div id="prerequisites">
+  ##### Pré-requisitos
+</div>
+
+* O ClickHouse Operator deve estar instalado (consulte [Install Operator via Helm](/pt-BR/products/clickhouse-private/deployment/aws#install-operator-via-helm))
+* Pelo menos um cluster do ClickHouse deve estar implantado (consulte [ClickHouseCluster CR](/pt-BR/products/clickhouse-private/deployment/aws#clickhousecluster-cr))
+* Acesso ao repositório ECR privado do ClickHouse
+* Repositório ECR de destino criado na sua conta da AWS:
+  * `airgap-management`
+  * `helm/airgap-management`
+
+<div id="copy-ecr-artifacts-for-private-api">
+  ##### Copie os artefatos do ECR para a API privada
+</div>
+
+**Recomendamos fortemente o uso do [skopeo](https://github.com/containers/skopeo) para copiar as imagens**, pois ele preserva todas as arquiteturas das imagens Docker. Certifique-se de definir `TARGET_REGION` e `TARGET_ECR_REPO` abaixo com a região e o host do seu ECR.
+
+```bash
+SOURCE_REGION=us-east-1
+SOURCE_ECR_REPO=349290138304.dkr.ecr.$SOURCE_REGION.amazonaws.com
+
+TARGET_REGION=us-west-2
+TARGET_ECR_REPO=0000000000.dkr.ecr.$TARGET_REGION.amazonaws.com
+
+# faça login no nosso ECR
+aws ecr get-login-password --region $SOURCE_REGION | skopeo login --username AWS --password-stdin $SOURCE_ECR_REPO
+
+# faça login no repositório AWS de destino
+aws ecr get-login-password --region $TARGET_REGION | skopeo login --username AWS --password-stdin $TARGET_ECR_REPO
+
+# copie cada imagem para o ECR de destino, certifique-se de incluir a flag --all
+skopeo copy --all docker://$SOURCE_ECR_REPO/airgap-management:<<API_TAG>> docker://$TARGET_ECR_REPO/airgap-management:<<API_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/helm/airgap-management:<<API_HELM_TAG>> docker://$TARGET_ECR_REPO/helm/airgap-management:<<API_HELM_TAG>>
+```
+
+<div id="install-private-api-via-helm">
+  ##### Instale a API privada via Helm
+</div>
+
+A API privada deve ser instalada em um espaço de nomes dedicado. Atualize o host do ECR, as tags de versão e as configurações de autenticação conforme necessário.
+
+```bash
+# atualize ECR_HOST conforme necessário
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+
+# deve usar a versão do chart do Helm da API
+API_HELM_VERSION=<<API_HELM_TAG>>
+
+# defina a tag da imagem da API
+API_IMAGE_TAG=<<API_TAG>>
+
+helm install clickhouse-private-api \
+   oci://$ECR_HOST/helm/airgap-management \
+   --version=$API_HELM_VERSION \
+   --create-namespace \
+   -n clickhouse-private-api \
+   --set-json="image.repository=\"$ECR_HOST/airgap-management\"" \
+   --set-json="image.tag=\"$API_IMAGE_TAG\""
+```
+
+**Observação sobre autenticação:**
+
+* Por padrão, a autenticação básica fica desativada. Em ambientes de produção, é possível ativá-la definindo `api.basicAuth.enabled=true` e fornecendo credenciais seguras.
+* O usuário e a senha devem ser armazenados com segurança e alterados regularmente, de acordo com as políticas de segurança da sua organização.
+
+<div id="verify-installation">
+  ##### Verifique a instalação
+</div>
+
+Verifique se o pod do Kubernetes da API privada está em execução:
+
+```bash
+kubectl get pods -n clickhouse-private-api
+```
+
+Você verá uma saída semelhante a:
+
+```
+NAME                                    READY   STATUS    RESTARTS   AGE
+clickhouse-private-api-xxxxxxxxxx-xxxxx   1/1     Running   0          1m
+```
+
+Verifique se a API está acessível por meio do redirecionamento de porta do serviço:
+
+```bash
+kubectl port-forward svc/clickhouse-private-api-airgap-management 8080:8080 -n clickhouse-private-api
+```
+
+Teste o endpoint de integridade da API:
+
+```bash
+curl http://localhost:8080/readiness
+```
+
+Se a autenticação estiver ativada, inclua as credenciais:
+
+```bash
+curl -u admin:YOUR_SECURE_PASSWORD_HERE http://localhost:8080/readiness
+```
+
+<div id="configuration-options">
+  ##### Opções de configuração
+</div>
+
+As principais opções de configuração a seguir estão disponíveis por meio dos valores do Helm:
+
+* `image.repository`: Repositório ECR da imagem da API privada
+* `image.tag`: Tag da imagem a ser implantada
+* `api.port`: Porta em que a API escuta (padrão: 8080)
+* `api.basicAuth.enabled`: Habilita a autenticação básica HTTP (padrão: false)
+* `api.basicAuth.username`: Nome de usuário da autenticação básica (padrão: &quot;admin&quot;)
+* `api.basicAuth.password`: Senha da autenticação básica (padrão: &quot;changeme&quot;)
+* `serviceAccount.enabled`: Cria uma conta de serviço para a API (padrão: true)
+* `serviceAccount.annotations`: Anotações da conta de serviço (por exemplo, para IRSA)
+
+Para ver a lista completa de opções de configuração, consulte o `README.md` do Chart do Helm.
+
+<div id="api-tutorials">
+  ### Tutoriais da API
+</div>
+
+<div id="tutorial-managing-backups-through-the-api">
+  #### Tutorial: Gerenciando backups por meio da API
+</div>
+
+A API privada do ClickHouse oferece suporte para simplificar o gerenciamento de backups. O recurso REST `api/v1/backups` está disponível para interagir com
+os backups de um cluster do ClickHouse implantado.
+
+Para este guia, vamos supor que você consiga acessar a API em `http://localhost:8080/`, por exemplo, usando o redirecionamento de porta do pod do Kubernetes. Usaremos o [curl](https://curl.se/) para interagir com a API e enviar solicitações HTTP. Também vamos supor que um cluster do ClickHouse chamado default-xx-01 foi implantado (consulte [o guia de configuração](/pt-BR/products/clickhouse-private/deployment/aws) para mais detalhes sobre como implantar um cluster do ClickHouse).
+
+Primeiro, vamos criar um backup. Crie um backup completo da seguinte forma:
+
+backup.json
+
+```json
+{
+    "incremental": false
+}
+```
+
+Comando cURL
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/backups?instance_id=default-xx-01" \
+    -H "Content-Type: application/json" \
+    --data-binary "@backup.json"
+```
+
+Para especificar o cluster do ClickHouse no qual o backup será criado, usa-se o parâmetro de consulta `instance_id`. Para isso, é usado o nome do cluster do ClickHouse definido durante a implantação.
+
+Isso criará um backup completo, em vez de um backup incremental, conforme especificado pelo campo `incremental` no corpo. Além disso, `backupObject` pode ser usado para especificar de quais tabelas ou bancos de dados você deseja fazer backup. Neste caso, usamos `type` como Common, indicando todas as tabelas e bancos de dados.
+
+A resposta conterá informações sobre o backup criado, incluindo um UUID que pode ser usado para se referir ao backup.
+
+Nos bastidores, a API criará um objeto `Backup` dentro do espaço de nomes do cluster do ClickHouse.
+O ClickHouse Operator observará o `Backup` no espaço de nomes do cluster do ClickHouse e, se um novo objeto `Backup` for criado, o operador executará a instrução SQL de Backup relevante no cluster e monitorará o status (usando as tabelas de sistema).
+
+Esse UUID do backup pode ser usado para monitorar o estado do backup por meio da API:
+
+```sh
+curl "http://localhost:8080/api/v1/backups/{uuid}?instance_id=default-xx-01
+```
+
+Isso retornará o objeto de backup, e o campo `status` poderá ser usado para obter informações sobre o backup. Se o backup for concluído com sucesso, o campo `state` retornará `Ready`.
+
+Além disso, você pode monitorar todos os backups criados da seguinte forma:
+
+```sh
+curl "http://localhost:8080/api/v1/backups?instance_id=default-xx-01"
+```
+
+<div id="tutorial-vertically-scaling-clickhouse-clusters-through-the-api">
+  #### Tutorial: Escalonamento vertical de clusters do ClickHouse pela API
+</div>
+
+A API privada do ClickHouse oferece suporte ao escalonamento vertical do seu cluster do ClickHouse por meio do ajuste de recursos de CPU e memória. O recurso REST `api/v1/instances/{instance_id}/scale` está disponível para modificar a alocação de recursos de um cluster do ClickHouse implantado.
+
+Neste guia, vamos supor que você consegue acessar a API em `http://localhost:8080/`, por exemplo, fazendo o redirecionamento de porta do pod do Kubernetes. Usaremos [curl](https://curl.se/) para interagir com a API e fazer solicitações HTTP. Também vamos supor que um cluster do ClickHouse chamado default-xx-01 foi implantado (consulte [o guia de configuração](/pt-BR/products/clickhouse-private/deployment/aws) para mais detalhes sobre como implantar um cluster do ClickHouse).
+
+Vamos escalar um cluster ajustando seus recursos. Crie uma solicitação de escala da seguinte forma:
+
+scale.json
+
+```json
+{
+  "vertical": {
+    "resources": {
+        "cpu": "4",
+        "memory": "16Gi"
+    }
+  }
+}
+```
+
+Comando cURL
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/instances/default-xx-01/scale" \
+    -H "Content-Type: application/json" \
+    --data-binary "@scale.json"
+```
+
+Para especificar qual cluster do ClickHouse será escalado, usa-se o parâmetro de caminho `instance_id`. Ele usa o nome do cluster do ClickHouse definido durante a implantação.
+
+O campo `resources` especifica a alocação de CPU e memória para o cluster. Tanto a CPU quanto a memória são especificadas usando o formato de quantidade de recursos do Kubernetes (por exemplo, &quot;4&quot; para 4 núcleos de CPU, &quot;16Gi&quot; para 16 gibibytes de memória).
+
+**Importante**: A API impõe uma proporção de 1:4 entre CPU e memória (1 núcleo de CPU para cada 4 GiB de memória), com uma margem de 5%. Se você fornecer apenas um tipo de recurso, a API derivará automaticamente o outro para manter essa proporção. Por exemplo, especificar apenas `"memory": "16Gi"` fará com que a CPU seja automaticamente definida como 4 núcleos.
+
+O ClickHouse escala muito bem com recursos adicionais e, em geral, recomenda-se escalar verticalmente o ClickHouse antes de considerar o escalonamento horizontal (Horizontal Scaling). O ClickHouse usará todos os núcleos disponíveis para melhorar o desempenho da consulta.
+
+Nos bastidores, a API atualizará o `ServerPodPolicy` do recurso personalizado `ClickhouseCluster` no Kubernetes. O ClickHouse Operator detectará essa alteração e acionará uma reinicialização gradual dos StatefulSets que gerenciam o servidor ClickHouse com a nova alocação de recursos.
+
+**Importante**: Ao contrário do ClickHouse Cloud, no ClickHouse Private o recurso de escalonamento vertical não usa [Make Before Break (MBB) scaling](/pt-BR/products/cloud/features/autoscaling/overview#how-scaling-works-in-clickhouse-cloud). Isso significa que o escalonamento vertical pode causar interrupções no serviço, já que uma reinicialização gradual é aplicada aos StatefulSets que gerenciam o ClickHouse server.
+
+<div id="tutorial-resetting-the-main-clickhouse-user-password">
+  #### Tutorial: Redefinindo a senha do usuário principal do ClickHouse.
+</div>
+
+A API privada do ClickHouse oferece suporte para redefinir a senha de usuários do cluster do ClickHouse. O endpoint `api/v1/instances/{instance_id}/reset-user-password` está disponível para atualizar as credenciais de usuários em um cluster do ClickHouse implantado.
+
+Para este guia, vamos presumir que você consegue acessar a API por meio de `http://localhost:8080/`, por exemplo, fazendo o redirecionamento de porta do pod do Kubernetes. Usaremos [curl](https://curl.se/) para interagir com a API e fazer requisições HTTP. Também vamos presumir que um cluster do ClickHouse chamado default-xx-01 foi implantado (consulte [o guia de configuração](/pt-BR/products/clickhouse-private/deployment/aws) para mais detalhes sobre como implantar um cluster do ClickHouse).
+
+**Importante**: Redefinições de senha não podem ser realizadas em instâncias filhas do Hydra. Se você precisar redefinir a senha de uma instância filha do Hydra, deverá redefini-la na instância pai.
+
+Antes de redefinir a senha, você precisa gerar uma senha com hash. A API exige que a senha seja processada com SHA-256 (ou outra função de hash compatível) e depois codificada em base64. Gere a senha com hash da seguinte forma:
+
+```sh
+# esta será a nova senha do usuário
+PASSWORD='My super secret p@$$w0rd'
+HASHED_PASSWORD=$(echo -n $PASSWORD | shasum -a 256 | awk '{printf $1}' | base64)
+```
+
+Agora, crie uma solicitação de redefinição de senha. O corpo da solicitação deve conter a senha em formato hash:
+
+password&#95;reset.json
+
+```json
+{
+  "user_hashed_password": "<base64-encoded-sha256-hash>",
+  "hashing_function": "sha256",
+  "username": "default"
+}
+```
+
+Os campos são:
+
+* `user_hashed_password` (obrigatório): O hash da nova senha codificado em base64
+* `hashing_function` (opcional): O algoritmo de hash usado. Se não for fornecido, o padrão é `"sha256"`
+* `username` (opcional): O nome de usuário para o qual a senha será redefinida. Se não for fornecido, o padrão é `"default"`
+
+Comando cURL:
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/instances/default-xx-01/reset-user-password" \
+    -H "Content-Type: application/json" \
+    --data-binary "@password_reset.json"
+```
+
+Para especificar o cluster do ClickHouse para o qual a senha será redefinida, usa-se o parâmetro de caminho `instance_id`. Ele usa o nome do cluster do ClickHouse informado durante a implantação.
+
+Se a solicitação for bem-sucedida, você receberá uma resposta:
+
+```json
+{
+  "message": "User password reset successfully"
+}
+```
+
+Nos bastidores, a API atualiza o campo `CustomerAccount` no recurso personalizado `ClickhouseCluster` no Kubernetes. O ClickHouse Operator detectará essa alteração e atualizará as credenciais do usuário no cluster do ClickHouse conforme necessário.
+
+**Observação**: A redefinição da senha entrará em vigor depois que o ClickHouse Operator processar a alteração. Você pode confirmar se a senha foi atualizada tentando se conectar ao cluster com a nova senha.
+
+<div id="how-to">
+  ### Guia prático
+</div>
+
+<div id="how-to-check-the-current-state-of-a-clickhouse-cluster-and-monitor-state-transitions">
+  #### Como fazer: verificar o estado atual de um cluster do ClickHouse e monitorar transições de estado.
+</div>
+
+A API privada do ClickHouse expõe um endpoint: `http://{api_base_url}/api/v1/instances/{instance_id}/status` para validar o estado atual do cluster do ClickHouse especificado.
+
+O endpoint de status retorna um JSON com os seguintes campos:
+
+* `state`: o estado atual do cluster do ClickHouse.
+* `previousState`: o estado a partir do qual o cluster do ClickHouse fez a transição.
+* `message`: a mensagem associada à transição de estado. Ela contém detalhes sobre por que o cluster mudou de estado.
+* `stateProvidedBy`: qual processo foi responsável por causar a transição de estado.
+
+Há vários casos em que esse endpoint pode ser útil. Por exemplo:
+
+* Você acionou uma operação de escalonamento vertical por meio da API e quer saber se o operador concluiu a operação de escalonamento.
+* Você redefiniu a senha do usuário e quer saber se a API aplicou as alterações em todo o cluster.
+
+<div id="how-to-incremental-backups">
+  #### Como fazer: Backups incrementais
+</div>
+
+Os backups incrementais podem ser usados para fazer backup apenas dos dados desde o último backup. Isso reduz o armazenamento total necessário para
+
+Os backups incrementais são sempre criados como uma cadeia de backups, em que cada backup faz referência ao backup anterior, tendo um backup completo como ponto de partida.
+
+Eles podem ser criados da seguinte forma, supondo que você já tenha criado um backup anterior:
+
+```json
+{
+    "incremental": true,
+    "baseBackupUuid": <uuid of previous backup>
+}
+```
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/backups?instance_id=default-xx-01" \
+    -H "Content-Type: application/json" \
+    --data-binary "@backup.json"
+```
+
+Para encontrar o último backup concluído com sucesso &amp; obter o UUID, a API List backups (`http://localhost:8080/api/v1/backups`) oferece suporte a parâmetros de consulta para localizar o último backup concluído com sucesso: `http://localhost:8080/api/v1/backups?instance_id=default-xx-01&status__state__eq=Ready&sort=status__effictiveFinishTime&limit=1 | jq -r '.[].id'`.
+
+<div id="how-to-scheduling-backups">
+  #### Como fazer: Agendar backups
+</div>
+
+Agendar backups é simples com CronJobs do Kubernetes:
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: clickhouse-daily-backup
+  namespace: clickhouse-private-api
+spec:
+  schedule: "0 2 * * *"  # Executar diariamente às 2h
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: curlimages/curl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              curl -X POST "http://clickhouse-private-api-airgap-management:8080/api/v1/backups?instance_id=default-xx-01" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "incremental": false
+                }'
+          restartPolicy: OnFailure
+```
+
+O CronJob acima agenda um backup completo para ser executado diariamente às 2h da manhã. Pressupõe que a API privada esteja acessível em `http://clickhouse-private-api-airgap-management:8080`.
+
+<div id="how-to-backing-up-only-specific-tables-or-databases">
+  #### Como fazer: backup apenas de tabelas ou bancos de dados específicos
+</div>
+
+É possível controlar quais tabelas e bancos de dados serão incluídos no backup. Isso é feito por meio dos campos `databases` e `tables`
+no corpo da solicitação.
+
+Observe que, para o campo `tables`, é necessário informar nomes de tabela totalmente qualificados (ou seja, `db.table`).
+
+Para criar um backup contendo apenas bancos de dados e tabelas específicos, use a solicitação a seguir:
+
+```json
+{
+    "incremental": false,
+    "databases": ["mydb"],
+    "tables": ["mydb2.table"]
+}
+```
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/backups?instance_id=default-xx-01" \
+    -H "Content-Type: application/json" \
+    --data-binary "@backup.json"
+```
+
+<div id="how-to-restoring-backups">
+  #### Como fazer: Restaurar backups
+</div>
+
+Para restaurar backups, recomenda-se iniciar um novo cluster do ClickHouse (seguindo as etapas para [criar um recurso ClickhouseCluster](/pt-BR/products/clickhouse-private/deployment/aws#clickhousecluster-cr)) e restaurar no novo cluster para evitar sobrecarregar o cluster original.
+
+A API expõe um endpoint `api/v1/backups/<uuid>/restore?instance_id=default-xx-01&target_instance_id=default-xx-02` que aciona a restauração do backup informado na instância de destino. Isso executará um `RESTORE ALL` do backup na instância de destino.
+
+Por motivos de segurança, esta API não permite a restauração na mesma instância.
+
+Como alternativa, você pode restaurar manualmente um backup, o que oferece um controle mais granular sobre o que restaurar. Por exemplo, para o banco de dados `example`, você pode executar a seguinte instrução SQL:
+
+```sql
+RESTORE DATABASE example
+AS example_restored
+FROM S3('https://<bucket_name>.s3.amazonaws.com/backups/<uuid>')
+```
+
+Isso restaurará o banco de dados `example` a partir do backup com o UUID fornecido, como um novo banco de dados chamado `example_restored`.
+
+<div id="how-to-manage-the-lifecycle-of-backups-on-s3">
+  #### How-To: Gerenciar o ciclo de vida dos backups no S3
+</div>
+
+Para gerenciar o ciclo de vida dos backups, há vários aspectos a considerar:
+
+* Por quanto tempo você quer manter seus backups? Por exemplo, precisa manter backups históricos por motivos de conformidade? Quanto está disposto a pagar pelo armazenamento?
+* Se você criou backups incrementais, certifique-se de que toda a cadeia de backup completo esteja disponível.
+
+Em geral, existem duas abordagens para gerenciar ciclos de vida no S3:
+
+* Usar políticas de ciclo de vida do S3
+* Excluir backups manualmente, por exemplo, usando um cronjob.
+
+Um exemplo de política de ciclo de vida no S3 pode ser encontrado abaixo:
+
+```json
+{
+  "Rules": [
+    {
+      "ID": "ClickHouseBackupLifecycle",
+      "Prefix": "backups/",
+      "Status": "Enabled",
+      "Transitions": [
+        { "Days": 7, "StorageClass": "STANDARD_IA" },
+        { "Days": 30, "StorageClass": "GLACIER_IR" }
+      ],
+      "Expiration": { "Days": 90 }
+    }
+  ]
+}
+```
+
+Esse backup move todos os backups, após 7 dias, para uma camada mais econômica do S3 (Intelligent Archive) e, após 30 dias, para o Glacier. Após 90 dias, os backups serão excluídos.
+
+As políticas de ciclo de vida do S3 não conseguem monitorar backups que fazem parte de uma cadeia de backups. Por exemplo, se no exemplo acima tivéssemos excluído os backups após 7 dias e feito apenas um backup completo
+a cada 14 dias, quebraríamos a cadeia de backups, o que resultaria em backups inutilizáveis.
+
+Portanto, recomendamos ter cuidado ao definir como implementar o gerenciamento do ciclo de vida dos seus backups, e é sempre uma boa prática testar regularmente se é possível restaurá-los.
+
+<div id="how-to-understanding-resource-quantity-formats">
+  #### Como fazer: Entender os formatos de quantidade de recursos
+</div>
+
+A API aceita formatos de quantidade de recursos do Kubernetes para CPU e memória:
+
+**Quantidades de CPU:**
+
+* Valores inteiros: `"4"` (4 núcleos de CPU)
+* Valores decimais: `"2.5"` (2,5 núcleos de CPU)
+* Millicores: `"500m"` (0,5 núcleos de CPU)
+
+**Quantidades de memória:**
+
+* Unidades binárias: `"16Gi"` (16 gibibytes), `"4096Mi"` (4096 mebibytes)
+* Unidades decimais: `"16G"` (16 gigabytes), `"16000M"` (16000 megabytes)
+
+Observe que as unidades binárias (Ki, Mi, Gi) são recomendadas para memória, em conformidade com as convenções do Kubernetes.
