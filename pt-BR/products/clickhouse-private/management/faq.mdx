@@ -1,0 +1,96 @@
+---
+hidden: true
+title: "FAQ"
+slug: "docs/products/clickhouse-private/faq"
+---
+
+<div id="zone-details-couldnt-be-found-for-any-pv">
+  ### não foi possível encontrar detalhes da zona para nenhum PV?
+</div>
+
+Se esse erro aparecer nos logs do ClickHouse Operator, isso significa que ele não está conseguindo concluir a reconciliação do ClickHouse Cluster porque o operador espera que as afinidades de nó sensíveis à topologia sejam preenchidas automaticamente nos PersistentVolumes. Especificamente, o operador procura afinidades de nó com base no label `topology.kubernetes.io/zone`. Normalmente, isso é feito por provisionadores de volume sensíveis à topologia (por exemplo, ao usar o provisionador de volume AWS EBS).
+
+No entanto, para determinados provedores de Cloud (por exemplo, IBM) ou ambientes on-premise, esse valor não será preenchido automaticamente, ou serão usados labels fora do padrão. Para garantir que o operador ainda consiga continuar operando, recomenda-se adicionar as afinidades de nó na classe de armazenamento, por exemplo:
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-nvme-sc
+allowVolumeExpansion: true
+parameters:
+  path: /nvme/disk
+provisioner: rancher.io/local-path
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowedTopologies:
+  - matchLabelExpressions:
+      - key: topology.kubernetes.io/zone
+        values:
+          - <your_cluster_name>-keeper
+          - <your_host_1>
+          - <your_host_2>
+          - <your_host_3>
+          - <your_host_4>
+          - <your_host_5>
+          - <your_host_6>
+      - key: directpv.min.io/zone
+        values:
+          - default
+```
+
+Isso garantirá que os volumes de armazenamento sejam criados com os afinamentos de nó corretos. Por exemplo:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  ...
+spec:
+  accessModes:
+    - ReadWriteOnce
+  ...
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: directpv.min.io/zone
+              operator: In
+              values:
+                - default
+  ...
+```
+
+Se forem usados rótulos não padrão para lidar com a topologia, o operador expõe uma propriedade `additionalZoneLabelRegexes`. Por exemplo, se você estiver usando o Chart do Helm para instalar o operador, poderá definir o valor do helm `operator.additionalZoneLabelRegexes` como `directpv.*zone` para corresponder ao PersistentVolume acima.
+
+<div id="what-does-the-loadbalancertype-field-on-the-clickhousecluster-crd-do">
+  ### O que o campo `loadBalancerType` no CRD do ClickHouseCluster faz?
+</div>
+
+Na prática, o `loadBalancerType` não adiciona annotations de load balancer ao Service do cluster do ClickHouse. No momento, o ClickHouse Operator não oferece suporte à criação de um load balancer para o cluster do ClickHouse. Esse campo só tem utilidade no ClickHouse Cloud, onde é usado para ajudar a criar usuários no Cloud SQL Console.
+
+<div id="do-i-have-to-use-a-nvme-attached-instance-what-purpose-does-the-nvme-disk-serve">
+  ### Preciso usar uma instância com NVMe anexado? Qual é a finalidade do disco NVMe?
+</div>
+
+O disco NVMe é usado pelo ClickHouse Operator para montar um volume de cache nos pods do servidor ClickHouse. Esse volume de cache é usado para armazenar em cache os dados vindos do S3 (ou de armazenamentos de objetos equivalentes). O Operator configura automaticamente os discos na configuração do servidor ClickHouse:
+
+```yaml
+s3diskWithCache:
+    type: cache
+    disk: s3disk
+    path: /mnt/ClickHouse-cache/sharedS3DiskCache
+    max_size:
+    '@from_env': CONFIG_DISK_CACHE_SIZE
+    cache_on_write_operations: 1
+```
+
+Observe que, ao usar o SharedMergeTree, o ClickHouse na verdade não armazena dados localmente. Não há outra finalidade senão otimizar o desempenho das consultas executadas no SharedMergeTree.
+
+É possível usar outros dispositivos de armazenamento, como, por exemplo, o AWS EBS ao usar instâncias EC2. Isso altera algumas etapas no guia de onboarding:
+
+* Você precisa garantir que os discos estejam anexados às instâncias usadas para executar os pods do Kubernetes do servidor ClickHouse
+* O template de inicialização deve ser alterado para refletir as mudanças na arquitetura de disco. Ainda é possível criar um disco RAID &amp; formatá-lo como ext4 ou xfs, mas, obviamente, os dispositivos devem ser identificados com outra ferramenta (por exemplo, lsblk).
+* Se os discos não estiverem montados em `/nvme/disk`, como no template de inicialização de exemplo, o `hostPathBaseDirectory` no Chart do Helm do ClickHouseCluster deve ser definido com o ponto de montagem real.
+
+Observe que, dependendo das escolhas feitas, isso pode afetar o desempenho das consultas.

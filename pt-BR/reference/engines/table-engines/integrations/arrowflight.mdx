@@ -1,0 +1,71 @@
+---
+description: 'O motor permite consultar conjuntos de dados remotos por meio do Apache Arrow Flight.'
+sidebarTitle: 'ArrowFlight'
+slug: /engines/table-engines/integrations/arrowflight
+title: 'Motor de tabela ArrowFlight'
+doc_type: 'reference'
+---
+
+O motor de tabela ArrowFlight permite que o ClickHouse consulte conjuntos de dados remotos por meio do protocolo [Apache Arrow Flight](https://arrow.apache.org/docs/format/Flight.html).
+Essa integração permite que o ClickHouse obtenha dados de servidores externos com suporte a Flight no formato colunar Arrow, com alto desempenho.
+
+<div id="creating-a-table">
+  ## Criando uma tabela
+</div>
+
+```sql
+CREATE TABLE [IF NOT EXISTS] [db.]table_name (name1 [type1], name2 [type2], ...)
+    ENGINE = ArrowFlight('host:port', 'dataset_name' [, 'username', 'password']);
+```
+
+**Parâmetros do motor**
+
+* `host:port` — Endereço do servidor Arrow Flight remoto.
+* `dataset_name` — Identificador do conjunto de dados no servidor Flight.
+* `username` - Nome de usuário a ser usado com autenticação básica no estilo HTTP.
+* `password` - Senha a ser usada com autenticação básica no estilo HTTP.
+  Se `username` e `password` não forem especificados, isso significa que a autenticação não será usada
+  (isso só funcionará se o servidor Arrow Flight permitir).
+
+<div id="usage-example">
+  ## Exemplo de uso
+</div>
+
+Este exemplo mostra como criar uma tabela que lê dados de um servidor remoto do Arrow Flight:
+
+```sql
+CREATE TABLE remote_flight_data
+(
+    id UInt32,
+    name String,
+    value Float64
+) ENGINE = ArrowFlight('127.0.0.1:9005', 'sample_dataset');
+```
+
+Consulte os dados remotos como se estivessem em uma tabela local:
+
+```sql
+SELECT * FROM remote_flight_data ORDER BY id;
+```
+
+```text
+┌─id─┬─name────┬─value─┐
+│  1 │ foo     │ 42.1  │
+│  2 │ bar     │ 13.3  │
+│  3 │ baz     │ 77.0  │
+└────┴─────────┴───────┘
+```
+
+<div id="notes">
+  ## Notas
+</div>
+
+* O esquema definido no ClickHouse deve corresponder ao esquema retornado pelo servidor Flight.
+* Este motor é adequado para consultas federadas, virtualização de dados e desacoplamento entre armazenamento e computação.
+
+<div id="see-also">
+  ## Veja também
+</div>
+
+* [Apache Arrow Flight SQL](https://arrow.apache.org/docs/format/FlightSql.html)
+* [Integração com o formato Arrow no ClickHouse](/pt-BR/reference/formats/Arrow/Arrow)

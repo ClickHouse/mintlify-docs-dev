@@ -41,7 +41,7 @@ EXTS = (".md", ".mdx")
 RUNNABLE_IMPORT = 'import { RunnableCode } from "/snippets/components/RunnableCode/RunnableCode.jsx";'
 IMAGE_IMPORT = 'import { Image } from "/snippets/components/Image.jsx";'
 ADMON_TAG = {"note": "Note", "tip": "Tip", "info": "Info", "warning": "Warning",
-             "caution": "Warning", "danger": "Warning", "important": "Warning"}
+             "caution": "Warning", "danger": "Danger", "important": "Warning"}
 
 
 # ----- lookups ---------------------------------------------------------------
@@ -86,6 +86,14 @@ def build_lookups(slug_map_csv: Path) -> tuple[Lookups, list[dict]]:
             lk.slug_to_url[slug] = url
             lk.slug_to_url.setdefault(slug.rstrip("/"), url)
             lk.slug_to_url.setdefault(slug + "/", url)
+        elif r["status"] == "deleted":
+            # Deleted pages have no Mintlify file; rewrite links to new_url
+            # (which may be an internal Mintlify path or an external URL).
+            dest = r.get("new_url", "").strip()
+            if dest:
+                lk.slug_to_url[slug] = dest
+                lk.slug_to_url.setdefault(slug.rstrip("/"), dest)
+                lk.slug_to_url.setdefault(slug + "/", dest)
         for p in all_paths:
             lk.by_mintlify_file.setdefault(p, r)
         if r["docusaurus_file"]:
@@ -365,7 +373,7 @@ def _override_newjson(text: str) -> str:
     )
     replacement = (
         '<Card title="Looking for a guide?" '
-        'href="/core/concepts/best-practices/json-type" icon="book">\n'
+        'href="/concepts/best-practices/json-type" icon="book">\n'
         '  Check out our JSON best practice guide for examples, advanced features '
         'and considerations for using the JSON type.\n'
         '</Card>\n\n'
@@ -586,28 +594,28 @@ doc_type: 'landing-page'
 ---
 
 <CardGroup cols={{2}}>
-  <Card title="SQL Reference" icon="code" href="/core/reference/syntax">
+  <Card title="SQL Reference" icon="code" href="/reference/syntax">
     SQL statements, clauses, operators, and syntax reference.
   </Card>
-  <Card title="Data Types" icon="database" href="/core/reference/data-types">
+  <Card title="Data Types" icon="database" href="/reference/data-types">
     All supported data types including numeric, string, date/time, arrays, maps, and more.
   </Card>
-  <Card title="Engines" icon="gear" href="/core/reference/engines">
+  <Card title="Engines" icon="gear" href="/reference/engines">
     Table and database engine reference — MergeTree family, Log, Integration, and Special engines.
   </Card>
-  <Card title="Functions" icon="function" href="/core/reference/functions">
+  <Card title="Functions" icon="function" href="/reference/functions">
     Regular, aggregate, table, and window functions.
   </Card>
-  <Card title="Formats" icon="file-code" href="/core/reference/formats">
+  <Card title="Formats" icon="file-code" href="/reference/formats">
     Input and output format reference for all supported data formats.
   </Card>
-  <Card title="Settings" icon="sliders" href="/core/reference/settings">
+  <Card title="Settings" icon="sliders" href="/reference/settings">
     Server, session, and MergeTree settings reference.
   </Card>
-  <Card title="System Tables" icon="table" href="/core/reference/system-tables">
+  <Card title="System Tables" icon="table" href="/reference/system-tables">
     System tables for monitoring, diagnostics, and introspection.
   </Card>
-  <Card title="Data Lakes" icon="water" href="/core/reference/datalakes">
+  <Card title="Data Lakes" icon="water" href="/reference/datalakes">
     Data lake integration reference — Iceberg, Delta Lake, and Hudi.
   </Card>
 </CardGroup>
@@ -628,6 +636,26 @@ def _override_third_party_libraries_sidebar(text: str) -> str:
     )
 
 
+def _override_kapalink_ask_ai(text: str) -> str:
+    """Upstream embeds Docusaurus's globally-registered <KapaLink> component to
+    open the Kapa "Ask AI" widget. Mintlify has no such component, so the bare
+    tag is an undefined component that fails the page build. Rewrite it to a
+    button that opens Kapa's Ask AI via the global window.Kapa API, matching the
+    homepage's Ask AI entry point. Idempotent: the source always carries the
+    <KapaLink> tag, so each migration regenerates the same button."""
+    def repl(m: "re.Match") -> str:
+        label = (m.group(1) or "").strip() or "Ask AI"
+        return (
+            '<button type="button" onClick={() => { '
+            "if (typeof window !== 'undefined' && window.Kapa && "
+            "typeof window.Kapa.open === 'function') window.Kapa.open({ mode: 'ai' }); }} "
+            "style={{ background: 'none', border: 'none', padding: 0, "
+            "color: 'var(--primary)', cursor: 'pointer', font: 'inherit', "
+            "textDecoration: 'underline' }}>" + label + "</button>"
+        )
+    return re.sub(r"<KapaLink>(.*?)</KapaLink>", repl, text, flags=re.DOTALL)
+
+
 POST_TRANSFORM_OVERRIDES: dict[str, callable] = {
     "docs/sql-reference/data-types/newjson.md": _override_newjson,
     "docs/use-cases/AI_ML/MCP/03_librechat.md": _override_librechat,
@@ -645,6 +673,8 @@ POST_TRANSFORM_OVERRIDES: dict[str, callable] = {
     # etc.) are intentionally illustrative and not meant to resolve.
     "docs/development/developer-instruction.md": _override_strip_markers,
     "docs/interfaces/third-party/integrations.md": _override_third_party_libraries_sidebar,
+    # <KapaLink> is a Docusaurus-only component; rewrite to a Mintlify Ask AI button.
+    "docs/troubleshooting/index.md": _override_kapalink_ask_ai,
 }
 
 
@@ -934,11 +964,12 @@ ADMON_RE = re.compile(
 def transform_admonitions(text: str) -> str:
     def repl(m: re.Match) -> str:
         atype = m.group("type")
-        title = m.group("btitle") or m.group("stitle")
+        raw_title = m.group("btitle") or m.group("stitle")
+        title = raw_title.strip() if raw_title else None
         body = m.group("body").rstrip("\n")
         if title:
             tag = "Info" if atype == "note" else ADMON_TAG[atype]
-            return f"<{tag}>\n**{title.strip()}**\n\n{body}\n</{tag}>"
+            return f"<{tag}>\n**{title}**\n\n{body}\n</{tag}>"
         tag = ADMON_TAG[atype]
         return f"<{tag}>\n{body}\n</{tag}>"
     return ADMON_RE.sub(repl, text)
@@ -1912,6 +1943,26 @@ SKIP_FILES = {
     # The upstream Docusaurus page is a markdown table; we deliberately
     # diverge here for a richer landing layout.
     "integrations/language-clients/index.mdx",
+    # Heavily post-processed from the VLDB 2024 paper migration: figures
+    # converted to <Frame caption="...">, inline citations wrapped in <sup>,
+    # reference list styled with smaller font and superscript numbers, and
+    # scroll-margin-top anchors added throughout. A force-migrate would
+    # overwrite all of these Mintlify-specific transforms.
+    "concepts/core-concepts/academic-overview.mdx",
+    # Upstream SVG diagram was migrated with width="32" (icon-sized). Fixed to
+    # use <Image size="lg"> for full-width display.
+    "products/bring-your-own-cloud/overview/architecture.mdx",
+    # Hand-authored card-grid landing page with custom React components (CsCard,
+    # useDark) and icon grid for Applications, Infrastructure, and Databases &
+    # Services. The upstream Docusaurus page is a plain markdown table; migrating
+    # would destroy the grid layout.
+    "clickstack/index.mdx",
+    # MP4 import removed (Mintlify has no file-loader for video assets); src
+    # changed to a plain string path. Video wrapped in <Frame>.
+    "clickstack/service-maps.mdx",
+    # GIF imported as a JS module variable (clickpy_trace) which Mintlify
+    # can't resolve. Replaced with a plain string path inside a <Frame>.
+    "clickstack/features/session-replay.mdx",
 }
 # Path prefixes (relative to THIS_REPO) whose pages are tracked outside the
 # Docusaurus pipeline. The migrator must never overwrite them: their canonical
@@ -1920,6 +1971,11 @@ SKIP_FILES = {
 SKIP_PATH_PREFIXES = (
     # Synced manually from https://github.com/ClickHouse/clickhouse-operator/tree/main/docs
     "products/kubernetes-operator/",
+    # Hand-authored use-case landing pages with custom React components
+    # (ExclusiveGroup, PrimaryButton) and ClickStack-specific narrative that
+    # deliberately diverges from the upstream Docusaurus source. Some pages
+    # (agentic-analytics.mdx) have no upstream counterpart at all.
+    "get-started/use-cases/",
 )
 
 

@@ -1,0 +1,51 @@
+---
+description: 'Avalia uma consulta do Prometheus usando dados de uma tabela TimeSeries.'
+sidebarTitle: 'prometheusQueryRange'
+slug: /sql-reference/table-functions/prometheusQueryRange
+title: 'prometheusQueryRange'
+doc_type: 'reference'
+---
+
+Avalia uma consulta do Prometheus usando dados de uma tabela TimeSeries em um intervalo de momentos de avaliação.
+
+<div id="syntax">
+  ## Sintaxe
+</div>
+
+```sql
+prometheusQueryRange('db_name', 'time_series_table', 'promql_query', start_time, end_time, step)
+prometheusQueryRange(db_name.time_series_table, 'promql_query', start_time, end_time, step)
+prometheusQueryRange('time_series_table', 'promql_query', start_time, end_time, step)
+```
+
+<div id="arguments">
+  ## Argumentos
+</div>
+
+* `db_name` - O nome do banco de dados em que uma tabela TimeSeries está localizada.
+* `time_series_table` - O nome de uma tabela TimeSeries.
+* `promql_query` - Uma consulta escrita em [sintaxe PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/).
+* `start_time` - O horário de início do intervalo de avaliação.
+* `end_time` - O horário de término do intervalo de avaliação.
+* `step` - O passo usado para percorrer o tempo de avaliação de `start_time` até `end_time` (inclusive).
+
+<div id="returned_value">
+  ## Valor retornado
+</div>
+
+A função pode retornar colunas diferentes, dependendo do tipo de resultado da consulta passada no parâmetro `promql_query`:
+
+| Tipo de resultado | Colunas retornadas                                                                        | Exemplo                                             |
+| ----------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| vector            | tags Array(Tuple(String, String)), timestamp TimestampType, value ValueType               | prometheusQuery(mytable, &#39;up&#39;)              |
+| matrix            | tags Array(Tuple(String, String)), time&#95;series Array(Tuple(TimestampType, ValueType)) | prometheusQuery(mytable, &#39;up[1m]&#39;)          |
+| scalar            | scalar ValueType                                                                          | prometheusQuery(mytable, &#39;1h30m&#39;)           |
+| string            | string String                                                                             | prometheusQuery(mytable, &#39;&quot;abc&quot;&#39;) |
+
+<div id="example">
+  ## Exemplo
+</div>
+
+```sql
+SELECT * FROM prometheusQueryRange(mytable, 'rate(http_requests{job="prometheus"}[10m])[1h:10m]', now() - INTERVAL 10 MINUTES, now(), INTERVAL 1 MINUTE)
+```

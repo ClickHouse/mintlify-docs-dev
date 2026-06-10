@@ -128,9 +128,10 @@ export const IntegrationGrid = () => {
     return descriptions[type] || 'Integrate ClickHouse with specialized tools and services.';
   }
 
-  function IntegrationCard({ integration }) {
-  const isDark = useDarkMode();
-
+  // Plain render function (not a component) so cards reconcile by key instead of
+  // remounting on every IntegrationGrid render. isDark is passed in from the single
+  // top-level useDarkMode() call.
+  function renderIntegrationCard(integration, isDark, key) {
   const getNavigationLink = (docsLink, slug) => {
     if (!docsLink) {
       return slug;
@@ -153,11 +154,17 @@ export const IntegrationGrid = () => {
 
   const linkTo = getNavigationLink(integration.docsLink, integration.slug);
 
+  // External links point outside the docs (not to clickhouse.com/docs)
+  const isExternalLink =
+    linkTo.startsWith('http') && !linkTo.includes('clickhouse.com/docs');
+
   return (
     <a
+      key={key}
       href={linkTo}
       className="block no-underline integration-card-link"
       style={{ textDecoration: 'none' }}
+      {...(isExternalLink ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
       <div
         className="relative flex min-h-[120px] flex-col items-center justify-center rounded-xl transition-all duration-300 p-5 cursor-pointer integration-card"
@@ -168,21 +175,38 @@ export const IntegrationGrid = () => {
           boxShadow: isDark ? '0 1px 3px 0 rgba(0, 0, 0, 0.2)' : '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
         }}
       >
+        {isExternalLink && (
+          <div className="integration-external-overlay">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+              />
+            </svg>
+          </div>
+        )}
         {integration.integration_tier && integration.integration_tier !== 'community' && (
           <div className="absolute top-3 right-3 opacity-70">
             {getTierIcon(integration.integration_tier)}
           </div>
         )}
-        <div className="w-full flex flex-col items-center justify-center gap-3">
-          <div className="w-full flex items-center justify-center mb-3">
+        <div className="w-full flex flex-col items-center justify-center gap-2">
+          <div className="w-full flex items-center justify-center">
             <img
               src={getLogoSrc()}
               alt={`${integration.integration_title || integration.slug} logo`}
               className="object-contain"
-              style={{ width: '64px', height: '64px' }}
+              style={{ width: '64px', height: '64px', pointerEvents: 'none' }}
             />
           </div>
-          <div className="w-full text-center text-sm font-medium" style={{ color: '#000', marginTop: '8px' }}>
+          <div className="w-full text-center text-sm font-semibold" style={{ color: '#000' }}>
             {integration.integration_title}
           </div>
         </div>
@@ -191,12 +215,12 @@ export const IntegrationGrid = () => {
     );
   }
 
-  function IntegrationCards({ integrations }) {
+  function renderIntegrationCards(integrations, isDark) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 my-8">
-      {integrations.map((integration, index) => (
-        <IntegrationCard key={`${integration.slug}-${integration.integration_title || index}`} integration={integration} />
-      ))}
+      {integrations.map((integration, index) =>
+        renderIntegrationCard(integration, isDark, `${integration.slug}-${integration.integration_title || index}`)
+      )}
       </div>
     );
   }
@@ -231,11 +255,18 @@ export const IntegrationGrid = () => {
 }
 
 function useCMSIntegrations() {
-  const [integrations, setIntegrations] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Mintlify remounts the whole content subtree on a theme toggle, which would
+  // otherwise re-show the "Loading…" state and refetch. Seed state from a cross-remount
+  // cache on window so cards render instantly; the effect still refreshes in the background.
+  const cached = (typeof window !== 'undefined' && window.__chIntegrationsCache) || null;
+  const [integrations, setIntegrations] = useState(cached || []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const cacheIntegrations = (data) => {
+      if (typeof window !== 'undefined') window.__chIntegrationsCache = data;
+    };
     const fetchIntegrations = async () => {
       try {
         const fallbackResponse = await fetch('/assets/integrations-fallback.json', {
@@ -246,6 +277,7 @@ function useCMSIntegrations() {
           const fallbackData = await fallbackResponse.json();
           const transformedData = transformCMSData(fallbackData.data || []);
           setIntegrations(transformedData);
+          cacheIntegrations(transformedData);
           setError(null);
           setLoading(false);
           console.log('Loaded fallback integrations data');
@@ -283,6 +315,7 @@ function useCMSIntegrations() {
         const transformedData = transformCMSData(data.data || []);
 
         setIntegrations(transformedData);
+        cacheIntegrations(transformedData);
         setError(null);
         console.log('Successfully updated with fresh CMS data');
       } catch (cmsErr) {
@@ -309,6 +342,9 @@ function useCMSIntegrations() {
   }
 
   const { integrations, loading, error } = useCMSIntegrations();
+
+  // Detect dark mode once for the whole grid (single observer) and pass down to cards.
+  const isDark = useDarkMode();
 
   const [searchTerm, setSearchTerm] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -522,6 +558,52 @@ function useCMSIntegrations() {
           box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.3);
           border-color: rgba(252, 255, 116, 0.3) !important;
         }
+        /* Keep card links free of the prose link color/underline in both themes and on
+           hover. The light-mode selector mirrors Mintlify's html:not(.dark) .prose a... rule
+           (which carries an extra element in its specificity) plus the .integration-card-link
+           class, so it must outrank it; same for the dark variants. */
+        html:not(.dark) .prose a.integration-card-link:not(.card):not(.card *),
+        html:not(.dark) .prose a.integration-card-link:not(.card):not(.card *):hover,
+        .dark .prose a.integration-card-link:not(.card):not(.card *),
+        .dark .prose a.integration-card-link:not(.card):not(.card *):hover,
+        :is(.dark) .prose a.integration-card-link:not(.card):not(.card *),
+        :is(.dark) .prose a.integration-card-link:not(.card):not(.card *):hover {
+          text-decoration: none !important;
+          color: inherit !important;
+        }
+        /* External link overlay: hidden until card hover */
+        .integration-external-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.15);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          border-radius: 0.75rem;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+          pointer-events: none;
+          z-index: 1;
+        }
+        .dark .integration-external-overlay {
+          background: rgba(255, 255, 255, 0.15);
+        }
+        .integration-external-overlay svg {
+          width: 32px;
+          height: 32px;
+          color: #fff;
+        }
+        .dark .integration-external-overlay svg {
+          color: #1f1f1f;
+        }
+        .integration-card:hover .integration-external-overlay {
+          opacity: 1;
+        }
       `}} />
     <div className="max-w-7xl mx-auto px-4">
       <div className="my-8 flex justify-center items-center" style={{ margin: '2rem 0 12px 0' }}>
@@ -650,7 +732,7 @@ function useCMSIntegrations() {
               <p className="text-base text-gray-600 dark:text-gray-400 mb-8 leading-relaxed" style={{ marginBottom: '2rem', lineHeight: '1.6' }}>
                 {getSectionDescription(type)}
               </p>
-              <IntegrationCards integrations={typeIntegrations} />
+              {renderIntegrationCards(typeIntegrations, isDark)}
             </section>
           ))
       ) : (
@@ -661,7 +743,7 @@ function useCMSIntegrations() {
           <p className="text-base text-gray-600 dark:text-gray-400 mb-8 leading-relaxed" style={{ marginBottom: '2rem', lineHeight: '1.6' }}>
             {getSectionDescription(selectedFilter)}
           </p>
-          <IntegrationCards integrations={filteredIntegrations} />
+          {renderIntegrationCards(filteredIntegrations, isDark)}
         </section>
       )}
 

@@ -1,7 +1,7 @@
 ---
 slug: /integrations/dbt
 description: 'You can transform and model your data in ClickHouse using dbt'
-title: 'Integrating dbt and ClickHouse'
+title: Integrating dbt and ClickHouse
 keywords: ['dbt', 'data transformation', 'analytics engineering', 'SQL modeling', 'ELT pipeline']
 doc_type: 'guide'
 integration:
@@ -11,8 +11,6 @@ integration:
 ---
 
 import ClickHouseSupportedBadge from "/snippets/components/ClickHouseSupported/ClickHouseSupported.jsx";
-
-# Integrating dbt and ClickHouse {#integrate-dbt-clickhouse}
 
 <ClickHouseSupportedBadge/>
 
@@ -65,24 +63,24 @@ dbt introduces the concept of a model. This is defined as a SQL statement, poten
 
 dbt provides 5 types of materialization. All of them are supported by `dbt-clickhouse`:
 
-* **view** (default): The model is built as a view in the database. At ClickHouse this is built as a [view](/core/reference/statements/create/view).
-* **table**: The model is built as a table in the database. At ClickHouse this is built as a [table](/core/reference/statements/create/table).
+* **view** (default): The model is built as a view in the database. At ClickHouse this is built as a [view](/reference/statements/create/view).
+* **table**: The model is built as a table in the database. At ClickHouse this is built as a [table](/reference/statements/create/table).
 * **ephemeral**: The model isn't directly built in the database but is instead pulled into dependent models as CTEs (Common Table Expressions).
 * **incremental**: The model is initially materialized as a table, and in subsequent runs, dbt inserts new rows and updates changed rows in the table.
-* **materialized view**: The model is built as a materialized view in the database. At ClickHouse this is built as a [materialized view](/core/reference/statements/create/view#materialized-view).
+* **materialized view**: The model is built as a materialized view in the database. At ClickHouse this is built as a [materialized view](/reference/statements/create/view#materialized-view).
 
 Additional syntax and clauses define how these models should be updated if their underlying data changes. dbt generally recommends starting with the view materialization until performance becomes a concern. The table materialization provides a query time performance improvement by capturing the results of the model's query as a table at the expense of increased storage. The incremental approach builds on this further to allow subsequent updates to the underlying data to be captured in the target table.
 
 The[ current adapter](https://github.com/silentsokolov/dbt-clickhouse) for ClickHouse supports also support **dictionary**, **distributed table** and **distributed incremental** materializations. The adapter also supports dbt [snapshots](https://docs.getdbt.com/docs/building-a-dbt-project/snapshots#check-strategy) and [seeds](https://docs.getdbt.com/docs/building-a-dbt-project/seeds).
 
-The following are [experimental features](/core/reference/settings/beta-and-experimental-features) in `dbt-clickhouse`:
+The following are [experimental features](/reference/settings/beta-and-experimental-features) in `dbt-clickhouse`:
 
 | Type                                    | Supported?                                    | Details                                                                                                                                                                                 |
 |-----------------------------------------|-----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Materialized View materialization       | Yes. Creation with explicit target is in Beta | Creates a [materialized view](/core/reference/statements/create/view#materialized-view).                                                                                                 |
-| Distributed table materialization       | Yes, Experimental                             | Creates a [distributed table](/core/reference/engines/table-engines/special/distributed).                                                                                                              |
+| Materialized View materialization       | Yes. Creation with explicit target is in Beta | Creates a [materialized view](/reference/statements/create/view#materialized-view).                                                                                                 |
+| Distributed table materialization       | Yes, Experimental                             | Creates a [distributed table](/reference/engines/table-engines/special/distributed).                                                                                                              |
 | Distributed incremental materialization | Yes, Experimental                             | Incremental model based on the same idea as distributed table. Note that not all strategies are supported, visit [their docs section](/integrations/connectors/data-ingestion/etl-tools/dbt/materializations#materialization-distributed-incremental) for more info. |
-| Dictionary materialization              | Yes, Experimental                             | Creates a [dictionary](/core/reference/engines/table-engines/special/dictionary).                                                                                                                      |
+| Dictionary materialization              | Yes, Experimental                             | Creates a [dictionary](/reference/engines/table-engines/special/dictionary).                                                                                                                      |
 
 ## Setup of dbt and the ClickHouse adapter {#setup-of-dbt-and-the-clickhouse-adapter}
 
@@ -151,7 +149,7 @@ To keep your development environments in sync and avoid running your models agai
 We recommend using a dedicated ClickHouse cluster or service for the testing environment (i.e., a staging environment) to avoid impacting the operation of your production environment. To ensure the testing environment is representative, it's important that you use a subset of your production data, as well as run dbt in a way that prevents schema drift between environments.
 
 - If you don't need fresh data to test against, you can restore a backup of your production data into the staging environment.
-- If you need fresh data to test against, you can use a combination of the [`remoteSecure()` table function](/core/reference/functions/table-functions/remote) and refreshable materialized views to insert at the desired frequency. Another option is to use object storage as an intermediate and periodically write data from your production service, then import it into the staging environment using the object storage table functions or ClickPipes (for continuous ingestion).
+- If you need fresh data to test against, you can use a combination of the [`remoteSecure()` table function](/reference/functions/table-functions/remote) and refreshable materialized views to insert at the desired frequency. Another option is to use object storage as an intermediate and periodically write data from your production service, then import it into the staging environment using the object storage table functions or ClickPipes (for continuous ingestion).
 
 Using a dedicated environment for CI testing also allows you to perform manual testing without impacting your production environment. For example, you may want to point a BI tool to this environment for testing.
 
@@ -178,7 +176,7 @@ The current ClickHouse adapter for dbt has several limitations you should be awa
 
 - The plugin uses syntax that requires ClickHouse version 25.3 or newer. We don't test older versions of Clickhouse. We also don't currently test Replicated tables.
 - Different runs of the `dbt-adapter` may collide if they're run at the same time as internally they can use the same table names for the same operations. For more information, check the issue [#420](https://github.com/ClickHouse/dbt-clickhouse/issues/420).
-- The adapter currently materializes models as tables using an [INSERT INTO SELECT](/core/reference/statements/insert-into#inserting-the-results-of-select). This effectively means data duplication if the run is executed again. Very large datasets (PB) can result in extremely long run times, making some models unviable. To improve performance, use ClickHouse Materialized Views by implementing the view as `materialized: materialization_view`. Additionally, aim to minimize the number of rows returned by any query by utilizing `GROUP BY` where possible. Prefer models that summarize data over those that simply transform while maintaining row counts of the source.
+- The adapter currently materializes models as tables using an [INSERT INTO SELECT](/reference/statements/insert-into#inserting-the-results-of-select). This effectively means data duplication if the run is executed again. Very large datasets (PB) can result in extremely long run times, making some models unviable. To improve performance, use ClickHouse Materialized Views by implementing the view as `materialized: materialization_view`. Additionally, aim to minimize the number of rows returned by any query by utilizing `GROUP BY` where possible. Prefer models that summarize data over those that simply transform while maintaining row counts of the source.
 - To use Distributed tables to represent a model, you must create the underlying replicated tables on each node manually. The Distributed table can, in turn, be created on top of these. The adapter doesn't manage cluster creation.
 - When dbt creates a relation (table/view) in a database, it usually creates it as: `{{ database }}.{{ schema }}.{{ table/view id }}`. ClickHouse has no notion of schemas. The adapter therefore uses `{{schema}}.{{ table/view id }}`, where `schema` is the ClickHouse database.
 - Ephemeral models/CTEs don't work if placed before the `INSERT INTO` in a ClickHouse insert statement, see https://github.com/ClickHouse/ClickHouse/issues/30323. This shouldn't affect most models, but care should be taken where an ephemeral model is placed in model definitions and other SQL statements. {/* TODO review this limitation, looks like the issue was already closed and the fix was introduced in 24.10 */}

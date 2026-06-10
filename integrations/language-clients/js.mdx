@@ -134,7 +134,7 @@ When creating a client instance, the following connection settings can be adjust
 | **session_id**?: string                                                  | Optional ClickHouse Session ID to send with every request.                          | -                       | -                                                                                          |
 | **keep_alive**?: `{ **enabled**?: boolean }`                             | Enabled by default in both Node.js and Web versions.                                | -                       | -                                                                                          |
 | **http_headers**?: `Record<string, string>`                              | Additional HTTP headers for outgoing ClickHouse requests.                           | -                       | [Reverse proxy with authentication docs](/integrations/language-clients/js#reverse-proxy-with-authentication)        |
-| **roles**?: string \|  string[]                                          | ClickHouse role names to attach to the outgoing requests.                         | -                       | [Using roles with the HTTP interface](/core/concepts/features/interfaces/http#setting-role-with-query-parameters) |
+| **roles**?: string \|  string[]                                          | ClickHouse role names to attach to the outgoing requests.                         | -                       | [Using roles with the HTTP interface](/concepts/features/interfaces/http#setting-role-with-query-parameters) |
 
 #### Node.js-specific configuration parameters {#nodejs-specific-configuration-parameters}
 
@@ -148,9 +148,9 @@ When creating a client instance, the following connection settings can be adjust
 
 ### URL configuration {#url-configuration}
 
-:::important
+<Warning>
 URL configuration will _always_ overwrite the hardcoded values and a warning will be logged in this case.
-:::
+</Warning>
 
 It is possible to configure most of the client instance parameters with a URL. The URL format is `http[s]://[username:password@]hostname:port[/database][?param1=value1&param2=value2]`. In almost every case, the name of a particular parameter reflects its path in the config options interface, with a few exceptions. The following parameters are supported:
 
@@ -231,7 +231,7 @@ See also: [Keep-Alive configuration](/integrations/language-clients/js#keep-aliv
 ### Query ID {#query-id}
 
 Every method that sends a query or a statement (`command`, `exec`, `insert`, `select`) will provide `query_id` in the result. This unique identifier is assigned by the client per query, and might be useful to fetch the data from `system.query_log`,
-if it is enabled in the [server configuration](/core/reference/settings/server-settings/settings), or cancel long-running queries (see [the example](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/troubleshooting/cancel_query.ts)). If necessary, `query_id` can be overridden by the user in `command`/`query`/`exec`/`insert` methods params.
+if it is enabled in the [server configuration](/reference/settings/server-settings/settings), or cancel long-running queries (see [the example](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/troubleshooting/cancel_query.ts)). If necessary, `query_id` can be overridden by the user in `command`/`query`/`exec`/`insert` methods params.
 
 <Tip>
 If you're overriding the `query_id` parameter, you need to ensure its uniqueness for every call. A random UUID is a good choice.
@@ -299,11 +299,11 @@ You should start consuming the `ResultSet` as soon as possible, as it holds the 
 
 Alternatively, if it's too large to fit into memory at once, you can call the `stream` method, and process the data in the streaming mode. Each of the response chunks will be transformed into a relatively small arrays of rows instead (the size of this array depends on the size of a particular chunk the client receives from the server, as it may vary, and the size of an individual row), one chunk at a time. 
 
-Please refer to the list of the [supported data formats](/integrations/language-clients/js#supported-data-formats) to determine what the best format is for streaming in your case. For example, if you want to stream JSON objects, you could choose [JSONEachRow](/core/reference/formats/JSON/JSONEachRow), and each row will be parsed as a JS object, or, perhaps, a more compact [JSONCompactColumns](/core/reference/formats/JSON/JSONCompactColumns) format that will result in each row being a compact array of values. See also: [streaming files](/integrations/language-clients/js#streaming-files-nodejs-only).
+Please refer to the list of the [supported data formats](/integrations/language-clients/js#supported-data-formats) to determine what the best format is for streaming in your case. For example, if you want to stream JSON objects, you could choose [JSONEachRow](/reference/formats/JSON/JSONEachRow), and each row will be parsed as a JS object, or, perhaps, a more compact [JSONCompactColumns](/reference/formats/JSON/JSONCompactColumns) format that will result in each row being a compact array of values. See also: [streaming files](/integrations/language-clients/js#streaming-files-nodejs-only).
 
-:::important
+<Warning>
 If the `ResultSet` or its stream isn't fully consumed, it will be destroyed after the `request_timeout` period of inactivity.
-:::
+</Warning>
 
 ```ts
 interface BaseResultSet<Stream> {
@@ -454,7 +454,7 @@ If the insert statement was sent to the server, the `executed` flag will be `tru
 
 It can work with either a `Stream.Readable` or a plain `Array<T>`, depending on the [data format](/integrations/language-clients/js#supported-data-formats) specified to the `insert` method. See also this section about the [file streaming](/integrations/language-clients/js#streaming-files-nodejs-only).
 
-Insert method is supposed to be awaited; however, it is possible to specify an input stream and await the `insert` operation later, only when the stream is completed (which will also resolve the `insert` promise). This could potentially be useful for event listeners and similar scenarios, but the error handling might be non-trivial with a lot of edge cases on the client side. Instead, consider using [async inserts](/core/concepts/features/operations/insert/asyncinserts) as illustrated in [this example](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/performance/async_insert_without_waiting.ts).
+Insert method is supposed to be awaited; however, it is possible to specify an input stream and await the `insert` operation later, only when the stream is completed (which will also resolve the `insert` promise). This could potentially be useful for event listeners and similar scenarios, but the error handling might be non-trivial with a lot of edge cases on the client side. Instead, consider using [async inserts](/concepts/features/operations/insert/asyncinserts) as illustrated in [this example](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/performance/async_insert_without_waiting.ts).
 
 <Tip>
 If you have a custom INSERT statement that is difficult to model with this method, consider using the [command method](/integrations/language-clients/js#command-method). 
@@ -481,9 +481,9 @@ interface InsertParams<T> extends BaseQueryParams {
 
 See also: [Base parameters for all client methods](/integrations/language-clients/js#base-parameters-for-all-client-methods).
 
-:::important
+<Warning>
 A request canceled with `abort_signal` doesn't guarantee that data insertion didn't take place, as the server could have received some of the streamed data before the cancellation.
-:::
+</Warning>
 
 **Example:** (Node.js/Web) Insert an array of values. 
 [Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/coding/array_json_each_row.ts).
@@ -655,9 +655,9 @@ await client.command({
 })
 ```
 
-:::important
+<Warning>
 A request cancelled with `abort_signal` doesn't guarantee that the statement wasn't executed by the server.
-:::
+</Warning>
 
 ### Exec method {#exec-method}
 
@@ -785,11 +785,11 @@ If you specify `format` as one from the JSON family of formats (`JSONEachRow`, `
 Data provided in the "raw" text formats (`CSV`, `TabSeparated` and `CustomSeparated` families) are sent over the wire without additional transformations.
 
 <Tip>
-There might be confusion between JSON as a general format and [ClickHouse JSON format](/core/reference/formats/JSON/JSON). 
+There might be confusion between JSON as a general format and [ClickHouse JSON format](/reference/formats/JSON/JSON). 
 
-The client supports streaming JSON objects with formats such as [JSONEachRow](/core/reference/formats/JSON/JSONEachRow) (see the table overview for other streaming-friendly formats; see also the `select_streaming_` [examples in the client repository](https://github.com/ClickHouse/clickhouse-js/tree/main/examples/node)). 
+The client supports streaming JSON objects with formats such as [JSONEachRow](/reference/formats/JSON/JSONEachRow) (see the table overview for other streaming-friendly formats; see also the `select_streaming_` [examples in the client repository](https://github.com/ClickHouse/clickhouse-js/tree/main/examples/node)). 
 
-It's only that formats like [ClickHouse JSON](/core/reference/formats/JSON/JSON) and a few others are represented as a single object in the response and can't be streamed by the client.
+It's only that formats like [ClickHouse JSON](/reference/formats/JSON/JSON) and a few others are represented as a single object in the response and can't be streamed by the client.
 </Tip>
 
 | Format                                     | Input (array) | Input (object) | Input/Output (Stream) | Output (JSON) | Output (text)  |
@@ -826,7 +826,7 @@ For Parquet, the main use case for selects likely will be writing the resulting 
 `JSONEachRowWithProgress` is an output-only format that supports progress reporting in the stream. See [this example](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/performance/select_json_each_row_with_progress.ts) for more details.
 
 The entire list of ClickHouse input and output formats is available 
-[here](/core/reference/formats).
+[here](/reference/formats).
 
 ## Supported ClickHouse data types {#supported-clickhouse-data-types}
 
@@ -868,7 +868,7 @@ The related JS type is relevant for any `JSON*` formats except the ones that rep
 | Time/Time64            | ✔️              | string                     |
 
 The entire list of supported ClickHouse formats is available 
-[here](/core/reference/data-types).
+[here](/reference/data-types).
 
 See also: 
 
@@ -949,7 +949,7 @@ Though the server can accept it as a number, it is returned as a string in `JSON
 integer overflow as max values for these types are bigger than `Number.MAX_SAFE_INTEGER`.
 
 This behavior, however, can be modified
-with [`output_format_json_quote_64bit_integers` setting](/core/reference/settings/formats#output_format_json_quote_64bit_integers)
+with [`output_format_json_quote_64bit_integers` setting](/reference/settings/formats#output_format_json_quote_64bit_integers)
 .
 
 **Example:** Adjust the JSON output format for 64-bit numbers.
@@ -975,7 +975,7 @@ expect(await resultSet.json()).toEqual([ { number: 0 } ])
 
 ## ClickHouse settings {#clickhouse-settings}
 
-The client can adjust ClickHouse behavior via [settings](/core/reference/settings/session-settings)
+The client can adjust ClickHouse behavior via [settings](/reference/settings/session-settings)
 mechanism.
 The settings can be set on the client instance level so that they will be applied to every request sent to the
 ClickHouse:
@@ -997,9 +997,9 @@ client.query({
 A type declaration file with all the supported ClickHouse settings can be found 
 [here](https://github.com/ClickHouse/clickhouse-js/blob/main/packages/client-common/src/settings.ts).
 
-:::important
+<Warning>
 Make sure that the user on whose behalf the queries are made has sufficient rights to change the settings.
-:::
+</Warning>
 
 ## Advanced topics {#advanced-topics}
 
@@ -1018,7 +1018,7 @@ the following format:
 where:
 
 - `name` — Placeholder identifier.
-- `data_type` - [Data type](/core/reference/data-types) of the app parameter value.
+- `data_type` - [Data type](/reference/data-types) of the app parameter value.
 
 **Example:**: Query with parameters. 
 [Source code](https://github.com/ClickHouse/clickhouse-js/blob/main/examples/node/coding/query_with_parameter_binding.ts)
@@ -1059,9 +1059,9 @@ Configurations parameters are:
 
 ### Logging (Node.js only) {#logging-nodejs-only}
 
-:::important
+<Warning>
 The logging is an experimental feature and is subject to change in the future.
-:::
+</Warning>
 
 The default logger implementation emits log records into `stdout` via `console.debug/info` methods and `stderr` via `console.warn/error` methods.
 You can customize the logging logic via providing a `LoggerClass`, and choose the desired log level via `level` parameter (default is `WARN`):
@@ -1252,7 +1252,7 @@ If you're experiencing `socket hang up` errors even when using the latest versio
 
 ### Read-only users {#read-only-users}
 
-When using the client with a [readonly=1 user](/core/concepts/features/configuration/settings/permissions-for-queries#readonly), the response compression can't be enabled, as it requires `enable_http_compression` setting. The following configuration will result in an error:
+When using the client with a [readonly=1 user](/concepts/features/configuration/settings/permissions-for-queries#readonly), the response compression can't be enabled, as it requires `enable_http_compression` setting. The following configuration will result in an error:
 
 ```ts
 const client = createClient({
@@ -1381,7 +1381,7 @@ With certificates _and_ a custom _HTTPS_ Agent, it is likely necessary to disabl
 
 ## Tips for performance optimizations {#tips-for-performance-optimizations}
 
-- To reduce application memory consumption, consider using streams for large inserts (e.g. from files) and selects when applicable. For event listeners and similar use cases, [async inserts](/core/concepts/features/operations/insert/asyncinserts) could be another good option, allowing to minimize, or even completely avoid batching on the client side. Async insert examples are available in the [client repository](https://github.com/ClickHouse/clickhouse-js/tree/main/examples/node), with `async_insert_` as the file name prefix.
+- To reduce application memory consumption, consider using streams for large inserts (e.g. from files) and selects when applicable. For event listeners and similar use cases, [async inserts](/concepts/features/operations/insert/asyncinserts) could be another good option, allowing to minimize, or even completely avoid batching on the client side. Async insert examples are available in the [client repository](https://github.com/ClickHouse/clickhouse-js/tree/main/examples/node), with `async_insert_` as the file name prefix.
 - The client doesn't enable request or response compression by default. However, when selecting or inserting large datasets, you could consider enabling it via `ClickHouseClientConfigOptions.compression` (either for just `request` or `response`, or both).
 - Compression has significant performance penalty. Enabling it for `request` or `response` will negatively impact the speed of selects or inserts, respectively, but will reduce the amount of network traffic transferred by the application.
 

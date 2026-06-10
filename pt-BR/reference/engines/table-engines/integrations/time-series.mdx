@@ -1,0 +1,349 @@
+---
+description: 'Um motor de tabela que armazena séries temporais, ou seja, um conjunto
+  de valores associado a timestamps e tags (ou labels).'
+sidebarTitle: 'TimeSeries'
+slug: /engines/table-engines/special/time_series
+title: Funções
+doc_type: 'reference'
+---
+
+import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
+
+<ExperimentalBadge />
+
+<CloudNotSupportedBadge />
+
+Um motor de tabela que armazena séries temporais, ou seja, um conjunto de valores associados a timestamps e tags (ou labels):
+
+```sql
+metric_name1[tag1=value1, tag2=value2, ...] = {timestamp1: value1, timestamp2: value2, ...}
+metric_name2[...] = ...
+```
+
+<Info>
+  Este é um recurso experimental que pode mudar de formas incompatíveis com versões anteriores em lançamentos futuros.
+  Habilite o uso do motor de tabela TimeSeries
+  com a configuração [allow&#95;experimental&#95;time&#95;series&#95;table](/pt-BR/reference/settings/session-settings#allow_experimental_time_series_table).
+  Execute o comando `set allow_experimental_time_series_table = 1`.
+</Info>
+
+<div id="syntax">
+  ## Sintaxe
+</div>
+
+```sql
+CREATE TABLE name [(columns)] ENGINE=TimeSeries
+[SETTINGS var1=value1, ...]
+[DATA db.data_table_name | DATA ENGINE data_table_engine(arguments)]
+[TAGS db.tags_table_name | TAGS ENGINE tags_table_engine(arguments)]
+[METRICS db.metrics_table_name | METRICS ENGINE metrics_table_engine(arguments)]
+```
+
+<div id="usage">
+  ## Uso
+</div>
+
+É mais fácil começar com tudo configurado com os valores padrão (é permitido criar uma tabela `TimeSeries` sem especificar uma lista de colunas):
+
+```sql
+CREATE TABLE my_table ENGINE=TimeSeries
+```
+
+Essa tabela pode ser usada com os seguintes protocolos (uma porta deve ser atribuída na configuração do servidor):
+
+* [prometheus remote-write](/pt-BR/concepts/features/interfaces/prometheus#remote-write)
+* [prometheus remote-read](/pt-BR/concepts/features/interfaces/prometheus#remote-read)
+
+<div id="target-tables">
+  ## Tabelas de destino
+</div>
+
+Uma tabela `TimeSeries` não armazena dados próprios; tudo é armazenado em suas tabelas de destino.
+Isso é semelhante ao funcionamento de uma [visão materializada](/pt-BR/reference/statements/create/view#materialized-view),
+com a diferença de que uma visão materializada tem uma tabela de destino,
+enquanto uma tabela `TimeSeries` tem três tabelas de destino chamadas [data](#data-table), [tags](#tags-table) e [metrics](#metrics-table).
+
+As tabelas de destino podem ser especificadas explicitamente na consulta `CREATE TABLE`
+ou o motor de tabela `TimeSeries` pode gerar automaticamente tabelas de destino internas.
+
+As tabelas de destino são as seguintes:
+
+<div id="data-table">
+  ### Tabela *data*
+</div>
+
+A tabela *data* contém séries temporais associadas a um identificador.
+
+A tabela *data* deve ter as seguintes colunas:
+
+| Nome        | Obrigatória? | Tipo padrão     | Tipos possíveis        | Descrição                                             |
+| ----------- | ------------ | --------------- | ---------------------- | ----------------------------------------------------- |
+| `id`        | [x]          | `UUID`          | qualquer               | Identifica uma combinação de nomes de métricas e tags |
+| `timestamp` | [x]          | `DateTime64(3)` | `DateTime64(X)`        | Um ponto no tempo                                     |
+| `value`     | [x]          | `Float64`       | `Float32` ou `Float64` | Um valor associado ao `timestamp`                     |
+
+<div id="tags-table">
+  ### Tabela de tags
+</div>
+
+A tabela *tags* contém identificadores calculados para cada combinação de nome de métrica e tags.
+
+A tabela *tags* deve ter as colunas:
+
+| Nome                 | Obrigatório? | Tipo padrão                           | Tipos possíveis                                                                                                         | Descrição                                                                                                                                                                                |
+| -------------------- | ------------ | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | [x]          | `UUID`                                | qualquer tipo (deve corresponder ao tipo de `id` na tabela [data](#data-table))                                         | Um `id` identifica uma combinação de nome de métrica e tags. A expressão DEFAULT especifica como calcular esse identificador                                                             |
+| `metric_name`        | [x]          | `LowCardinality(String)`              | `String` ou `LowCardinality(String)`                                                                                    | O nome de uma métrica                                                                                                                                                                    |
+| `<tag_value_column>` | [ ]          | `String`                              | `String` ou `LowCardinality(String)` ou `LowCardinality(Nullable(String))`                                              | O valor de uma tag específica; o nome da tag e o nome da coluna correspondente são especificados na configuração [tags&#95;to&#95;columns](#settings)                                    |
+| `tags`               | [x]          | `Map(LowCardinality(String), String)` | `Map(String, String)` ou `Map(LowCardinality(String), String)` ou `Map(LowCardinality(String), LowCardinality(String))` | map de tags, excluindo a tag `__name__`, que contém o nome de uma métrica, e excluindo as tags com nomes listados na configuração [tags&#95;to&#95;columns](#settings)                   |
+| `all_tags`           | [ ]          | `Map(String, String)`                 | `Map(String, String)` ou `Map(LowCardinality(String), String)` ou `Map(LowCardinality(String), LowCardinality(String))` | Coluna efêmera; cada linha é um map de todas as tags, excluindo apenas a tag `__name__`, que contém o nome de uma métrica. O único propósito dessa coluna é ser usada no cálculo de `id` |
+| `min_time`           | [ ]          | `Nullable(DateTime64(3))`             | `DateTime64(X)` ou `Nullable(DateTime64(X))`                                                                            | timestamp mínimo da série temporal com esse `id`. A coluna é criada se [store&#95;min&#95;time&#95;and&#95;max&#95;time](#settings) for `true`                                           |
+| `max_time`           | [ ]          | `Nullable(DateTime64(3))`             | `DateTime64(X)` ou `Nullable(DateTime64(X))`                                                                            | timestamp máximo da série temporal com esse `id`. A coluna é criada se [store&#95;min&#95;time&#95;and&#95;max&#95;time](#settings) for `true`                                           |
+
+<div id="metrics-table">
+  ### Tabela de métricas
+</div>
+
+A tabela *metrics* contém algumas informações sobre as métricas coletadas, os tipos dessas métricas e suas descrições.
+
+A tabela *metrics* deve conter as colunas:
+
+| Nome                 | Obrigatória? | Tipo padrão | Tipos possíveis                      | Descrição                                                                                                                                                                     |
+| -------------------- | ------------ | ----------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `metric_family_name` | [x]          | `String`    | `String` ou `LowCardinality(String)` | O nome de uma família de métricas                                                                                                                                             |
+| `type`               | [x]          | `String`    | `String` ou `LowCardinality(String)` | O tipo de uma família de métricas, um de &quot;counter&quot;, &quot;gauge&quot;, &quot;summary&quot;, &quot;stateset&quot;, &quot;histogram&quot;, &quot;gaugehistogram&quot; |
+| `unit`               | [x]          | `String`    | `String` ou `LowCardinality(String)` | A unidade usada em uma métrica                                                                                                                                                |
+| `help`               | [x]          | `String`    | `String` ou `LowCardinality(String)` | A descrição de uma métrica                                                                                                                                                    |
+
+Qualquer linha inserida em uma tabela `TimeSeries` será, na verdade, armazenada nessas três tabelas de destino.
+Uma tabela `TimeSeries` contém todas essas colunas das tabelas [data](#data-table), [tags](#tags-table), [metrics](#metrics-table).
+
+<div id="creation">
+  ## Criação
+</div>
+
+Há várias maneiras de criar uma tabela com o motor de tabela `TimeSeries`.
+A instrução mais simples
+
+```sql
+CREATE TABLE my_table ENGINE=TimeSeries
+```
+
+na verdade, criará a tabela a seguir (você pode verificar isso executando `SHOW CREATE TABLE my_table`):
+
+```sql
+CREATE TABLE my_table
+(
+    `id` UUID DEFAULT reinterpretAsUUID(sipHash128(metric_name, all_tags)),
+    `timestamp` DateTime64(3),
+    `value` Float64,
+    `metric_name` LowCardinality(String),
+    `tags` Map(LowCardinality(String), String),
+    `all_tags` Map(String, String),
+    `min_time` Nullable(DateTime64(3)),
+    `max_time` Nullable(DateTime64(3)),
+    `metric_family_name` String,
+    `type` String,
+    `unit` String,
+    `help` String
+)
+ENGINE = TimeSeries
+DATA ENGINE = MergeTree ORDER BY (id, timestamp)
+DATA INNER UUID '01234567-89ab-cdef-0123-456789abcdef'
+TAGS ENGINE = AggregatingMergeTree PRIMARY KEY metric_name ORDER BY (metric_name, id)
+TAGS INNER UUID '01234567-89ab-cdef-0123-456789abcdef'
+METRICS ENGINE = ReplacingMergeTree ORDER BY metric_family_name
+METRICS INNER UUID '01234567-89ab-cdef-0123-456789abcdef'
+```
+
+Assim, as colunas foram geradas automaticamente, e também há três UUIDs internos nesta instrução -
+um para cada tabela de destino interna criada.
+(UUIDs internos normalmente não são exibidos até que a configuração
+[show&#95;table&#95;uuid&#95;in&#95;table&#95;create&#95;query&#95;if&#95;not&#95;nil](/pt-BR/reference/settings/session-settings#show_table_uuid_in_table_create_query_if_not_nil)
+seja definida.)
+
+As tabelas de destino internas têm nomes como `.inner_id.data.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`,
+`.inner_id.tags.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`, `.inner_id.metrics.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+e cada tabela de destino tem colunas que são um subconjunto das colunas da tabela principal `TimeSeries`:
+
+```sql
+CREATE TABLE default.`.inner_id.data.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+(
+    `id` UUID,
+    `timestamp` DateTime64(3),
+    `value` Float64
+)
+ENGINE = MergeTree
+ORDER BY (id, timestamp)
+```
+
+```sql
+CREATE TABLE default.`.inner_id.tags.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+(
+    `id` UUID DEFAULT reinterpretAsUUID(sipHash128(metric_name, all_tags)),
+    `metric_name` LowCardinality(String),
+    `tags` Map(LowCardinality(String), String),
+    `all_tags` Map(String, String) EPHEMERAL,
+    `min_time` SimpleAggregateFunction(min, Nullable(DateTime64(3))),
+    `max_time` SimpleAggregateFunction(max, Nullable(DateTime64(3)))
+)
+ENGINE = AggregatingMergeTree
+PRIMARY KEY metric_name
+ORDER BY (metric_name, id)
+```
+
+```sql
+CREATE TABLE default.`.inner_id.metrics.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+(
+    `metric_family_name` String,
+    `type` String,
+    `unit` String,
+    `help` String
+)
+ENGINE = ReplacingMergeTree
+ORDER BY metric_family_name
+```
+
+<div id="adjusting-column-types">
+  ## Ajustando os tipos das colunas
+</div>
+
+Você pode ajustar os tipos de quase qualquer coluna das tabelas de destino internas, especificando-os explicitamente
+ao definir a tabela principal. Por exemplo,
+
+```sql
+CREATE TABLE my_table
+(
+    timestamp DateTime64(6)
+) ENGINE=TimeSeries
+```
+
+fará com que a tabela interna de [data](#data-table) armazene o timestamp em microssegundos em vez de milissegundos:
+
+```sql
+CREATE TABLE default.`.inner_id.data.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+(
+    `id` UUID,
+    `timestamp` DateTime64(6),
+    `value` Float64
+)
+ENGINE = MergeTree
+ORDER BY (id, timestamp)
+```
+
+<div id="id-column">
+  ## A coluna `id`
+</div>
+
+A coluna `id` contém identificadores; cada identificador é calculado com base em uma combinação do nome da métrica e das tags.
+A expressão DEFAULT da coluna `id` é usada para calcular esses identificadores.
+Tanto o tipo da coluna `id` quanto essa expressão podem ser ajustados, especificando-os explicitamente:
+
+```sql
+CREATE TABLE my_table
+(
+  id UInt64 DEFAULT sipHash64(metric_name, all_tags)
+)
+ENGINE=TimeSeries
+```
+
+<div id="tags-and-all-tags">
+  ## As colunas `tags` e `all_tags`
+</div>
+
+Há duas colunas que contêm maps de tags: `tags` e `all_tags`. Neste exemplo, elas são equivalentes, mas podem ser diferentes
+se a configuração `tags_to_columns` for usada. Essa configuração permite especificar que uma tag específica deve ser armazenada em uma coluna separada, em vez de ficar armazenada
+em um map dentro da coluna `tags`:
+
+```sql
+CREATE TABLE my_table
+ENGINE = TimeSeries 
+SETTINGS tags_to_columns = {'instance': 'instance', 'job': 'job'}
+```
+
+Esta instrução adicionará as colunas:
+
+```sql
+`instance` String,
+`job` String
+```
+
+à definição de `my_table` e de sua tabela de destino interna de [tags](#tags-table). Nesse caso, a coluna `tags` não conterá as tags `instance` e `job`,
+mas a coluna `all_tags` conterá. A coluna `all_tags` é efêmera e serve apenas para ser usada na expressão DEFAULT
+da coluna `id`.
+
+Os tipos das colunas podem ser ajustados especificando-os explicitamente:
+
+```sql
+CREATE TABLE my_table (
+  instance LowCardinality(String),
+  job LowCardinality(Nullable(String))
+)
+ENGINE=TimeSeries
+SETTINGS tags_to_columns = {'instance': 'instance', 'job': 'job'}
+```
+
+<div id="inner-table-engines">
+  ## Motores de tabela das tabelas de destino internas
+</div>
+
+Por padrão, as tabelas de destino internas usam os seguintes motores de tabela:
+
+* a tabela [data](#data-table) usa [MergeTree](/pt-BR/reference/engines/table-engines/mergetree-family/mergetree);
+* a tabela [tags](#tags-table) usa [AggregatingMergeTree](/pt-BR/reference/engines/table-engines/mergetree-family/aggregatingmergetree) porque os mesmos dados costumam ser inseridos várias vezes nessa tabela, então precisamos de uma forma
+  de remover duplicatas, além de ser necessário fazer agregação para as colunas `min_time` e `max_time`;
+* a tabela [metrics](#metrics-table) usa [ReplacingMergeTree](/pt-BR/reference/engines/table-engines/mergetree-family/replacingmergetree) porque os mesmos dados costumam ser inseridos várias vezes nessa tabela, então precisamos de uma forma
+  de remover duplicatas.
+
+Outros motores de tabela também podem ser usados nas tabelas de destino internas, caso isso seja especificado:
+
+```sql
+CREATE TABLE my_table ENGINE=TimeSeries
+DATA ENGINE=ReplicatedMergeTree
+TAGS ENGINE=ReplicatedAggregatingMergeTree
+METRICS ENGINE=ReplicatedReplacingMergeTree
+```
+
+<div id="external-target-tables">
+  ## Tabelas de destino externas
+</div>
+
+É possível fazer com que uma tabela `TimeSeries` use uma tabela criada manualmente:
+
+```sql
+CREATE TABLE data_for_my_table
+(
+    `id` UUID,
+    `timestamp` DateTime64(3),
+    `value` Float64
+)
+ENGINE = MergeTree
+ORDER BY (id, timestamp);
+
+CREATE TABLE tags_for_my_table ...
+
+CREATE TABLE metrics_for_my_table ...
+
+CREATE TABLE my_table ENGINE=TimeSeries DATA data_for_my_table TAGS tags_for_my_table METRICS metrics_for_my_table;
+```
+
+<div id="settings">
+  ## Configurações
+</div>
+
+Aqui está uma lista de configurações que podem ser especificadas ao definir uma tabela `TimeSeries`:
+
+| Nome                                 | Tipo | Padrão | Descrição                                                                                                                                                                                                                                    |
+| ------------------------------------ | ---- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tags_to_columns`                    | Map  | {}     | Map que especifica quais tags devem ser colocadas em colunas separadas na tabela [tags](#tags-table). Sintaxe: `{'tag1': 'column1', 'tag2' : column2, ...}`                                                                                  |
+| `use_all_tags_column_to_generate_id` | Bool | true   | Ao gerar uma expressão para calcular o identificador de uma série temporal, esta opção permite usar a coluna `all_tags` nesse cálculo                                                                                                        |
+| `store_min_time_and_max_time`        | Bool | true   | Se definido como true, a tabela armazenará `min_time` e `max_time` para cada série temporal                                                                                                                                                  |
+| `aggregate_min_time_and_max_time`    | Bool | true   | Ao criar uma tabela `tags` interna de destino, esta opção permite usar `SimpleAggregateFunction(min, Nullable(DateTime64(3)))` em vez de apenas `Nullable(DateTime64(3))` como tipo da coluna `min_time`, e o mesmo para a coluna `max_time` |
+| `filter_by_min_time_and_max_time`    | Bool | true   | Se definido como true, a tabela usará as colunas `min_time` e `max_time` para filtrar séries temporais                                                                                                                                       |
+
+Aqui está uma lista de funções que aceitam uma tabela `TimeSeries` como argumento:
+
+* [timeSeriesData](/pt-BR/reference/functions/table-functions/timeSeriesData)
+* [timeSeriesTags](/pt-BR/reference/functions/table-functions/timeSeriesTags)
+* [timeSeriesMetrics](/pt-BR/reference/functions/table-functions/timeSeriesMetrics)

@@ -1,0 +1,344 @@
+---
+description: 'Documentación de las funciones de IA'
+sidebarTitle: 'IA'
+slug: /sql-reference/functions/ai-functions
+title: 'Funciones de IA'
+doc_type: 'reference'
+---
+
+Las funciones de IA son funciones integradas de ClickHouse que puedes usar para invocar IA o generar embeddings con los que trabajar con tus datos, extraer información, clasificar datos, etc...
+
+<Note>
+  Las funciones de IA pueden devolver resultados impredecibles. El resultado dependerá en gran medida de la calidad del prompt y del modelo utilizado.
+</Note>
+
+Todas las funciones comparten una infraestructura común que proporciona:
+
+* **Aplicación de cuotas**: Límites por consulta de tokens ([`ai_function_max_input_tokens_per_query`](/es/reference/settings/session-settings#ai_function_max_input_tokens_per_query), [`ai_function_max_output_tokens_per_query`](/es/reference/settings/session-settings#ai_function_max_output_tokens_per_query)) y llamadas a la API ([`ai_function_max_api_calls_per_query`](/es/reference/settings/session-settings#ai_function_max_api_calls_per_query)).
+* **Reintentos con backoff**: Los fallos transitorios se reintentan ([`ai_function_max_retries`](/es/reference/settings/session-settings#ai_function_max_retries)) con backoff exponencial ([`ai_function_retry_initial_delay_ms`](/es/reference/settings/session-settings#ai_function_retry_initial_delay_ms)).
+
+<div id="configuration">
+  ## Configuración
+</div>
+
+Las funciones de IA hacen referencia a una **colección nombrada** que almacena las credenciales del proveedor y la configuración. El primer argumento de cada función es el nombre de esta colección.
+
+Instrucción de ejemplo para crear una colección nombrada con credenciales del proveedor:
+
+```sql
+CREATE NAMED COLLECTION ai_credentials AS
+    provider = 'openai',
+    endpoint = 'https://api.openai.com/v1/chat/completions',
+    model = 'gpt-4o-mini',
+    api_key = 'sk-...';
+```
+
+<div id="named-collection-parameters">
+  ### Parámetros de la colección nombrada
+</div>
+
+| Parámetro     | Tipo   | Predeterminado | Descripción                                                                                  |
+| ------------- | ------ | -------------- | -------------------------------------------------------------------------------------------- |
+| `provider`    | String | —              | Proveedor del modelo. Admitidos: `'openai'`, `'anthropic'`. Consulte la nota a continuación. |
+| `endpoint`    | String | —              | URL del endpoint de la API.                                                                  |
+| `model`       | String | —              | Nombre del modelo (p. ej. `'gpt-4o-mini'`, `'text-embedding-3-small'`).                      |
+| `api_key`     | String | —              | Clave de autenticación del proveedor.                                                        |
+| `max_tokens`  | UInt64 | `1024`         | Número máximo de tokens de salida por llamada a la API.                                      |
+| `api_version` | String | —              | Cadena de versión de la API. La utiliza Anthropic (`'2023-06-01'`).                          |
+
+<Note>
+  Se puede usar cualquier API compatible con OpenAI (p. ej. vLLM, Ollama, LiteLLM) configurando `provider = 'openai'` y apuntando `endpoint` a su servicio.
+</Note>
+
+<div id="query-level-settings">
+  ### Configuración a nivel de consulta
+</div>
+
+Toda la configuración relacionada con la IA se enumera en [Configuración](/es/reference/settings/session-settings) con el prefijo `ai_function_`.
+
+<div id="restricting-endpoint-hosts">
+  ### Restricción de hosts de endpoint
+</div>
+
+La URL de `endpoint` en una colección nombrada de IA es un destino saliente al que el servidor se conecta con su propia identidad, enviando la `api_key` de la colección nombrada en los encabezados de la solicitud. De forma predeterminada, ClickHouse permite cualquier host. Para restringir las funciones a un conjunto específico de proveedores, configure [`remote_url_allow_hosts`](/es/reference/settings/server-settings/settings#remote_url_allow_hosts) en la configuración del servidor, por ejemplo:
+
+```xml
+<remote_url_allow_hosts>
+    <host>api.openai.com</host>
+    <host>api.anthropic.com</host>
+</remote_url_allow_hosts>
+```
+
+Ten en cuenta que esta configuración es global para el servidor y se aplica a todas las funciones que usan HTTP.
+
+<div id="supported-providers">
+  ## Proveedores compatibles
+</div>
+
+| Proveedor | Valor de `provider` | Funciones de chat | Notas                           |
+| --------- | ------------------- | ----------------- | ------------------------------- |
+| OpenAI    | `'openai'`          | Sí                | Proveedor por defecto.          |
+| Anthropic | `'anthropic'`       | Sí                | Usa el endpoint `/v1/messages`. |
+
+<div id="observability">
+  ## Observabilidad
+</div>
+
+La actividad de la función de IA se supervisa mediante los [ProfileEvents](/es/reference/system-tables/query_log) de ClickHouse:
+
+| ProfileEvent      | Description                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `AIAPICalls`      | Número de solicitudes HTTP realizadas al proveedor de IA.                                           |
+| `AIInputTokens`   | Total de tokens de entrada consumidos.                                                              |
+| `AIOutputTokens`  | Total de tokens de salida consumidos.                                                               |
+| `AIRowsProcessed` | Número de filas que recibieron un resultado.                                                        |
+| `AIRowsSkipped`   | Número de filas omitidas (se superó la cuota o hubo un error con `ai_function_throw_on_error = 0`). |
+
+Consulta estos eventos:
+
+```sql
+SELECT
+    ProfileEvents['AIAPICalls'] AS api_calls,
+    ProfileEvents['AIInputTokens'] AS input_tokens,
+    ProfileEvents['AIOutputTokens'] AS output_tokens
+FROM system.query_log
+WHERE query_id = 'query_id'
+AND type = 'QueryFinish'
+ORDER BY event_time DESC;
+```
+
+{/*
+  El contenido interno de las etiquetas siguientes se sustituye durante la compilación del framework de documentación por
+  documentación generada a partir de system.functions. Por favor, no modifique ni elimine las etiquetas.
+  Consulte: https://github.com/ClickHouse/clickhouse-docs/blob/main/contribute/autogenerated-documentation-from-source.md
+  */}
+
+{/*AUTOGENERATED_START*/}
+
+<div id="aiClassify">
+  ## aiClassify
+</div>
+
+Introducido en: v26.4.0
+
+Clasifica el texto dado en una de las categorías proporcionadas mediante un proveedor de LLM.
+
+La función envía el texto junto con un prompt de clasificación fijo y un formato de respuesta con esquema JSON
+que obliga al modelo a devolver exactamente una de las etiquetas proporcionadas. Cuando la respuesta se devuelve como un objeto JSON
+con la forma `{"category": "..."}`, se extrae la etiqueta y se devuelve su cadena de texto.
+
+El primer argumento es una colección nombrada que especifica el proveedor, el modelo, el endpoint y la API key.
+
+**Sintaxis**
+
+```sql
+aiClassify(collection, text, categories[, temperature])
+```
+
+**Alias**: `AIClassify`
+
+**Argumentos**
+
+* `collection` — Nombre de una colección nombrada que contiene credenciales del proveedor y configuración. [`String`](/es/reference/data-types/string)
+* `text` — Texto que se va a clasificar. [`String`](/es/reference/data-types/string)
+* `categories` — Lista constante de etiquetas de categorías candidatas. [`Array(String)`](/es/reference/data-types/array)
+* `temperature` — Temperatura de muestreo que controla la aleatoriedad. Valor predeterminado: `0.0`. [`Float64`](/es/reference/data-types/float)
+
+**Valor devuelto**
+
+Una de las etiquetas de categoría proporcionadas, o el valor predeterminado del tipo de columna (cadena vacía) si la solicitud falla y `ai_function_throw_on_error` está deshabilitada. [`String`](/es/reference/data-types/string)
+
+**Ejemplos**
+
+**Clasificación de sentimiento**
+
+```sql title=Query
+SELECT aiClassify('ai_credentials', 'I love this product!', ['positive', 'negative', 'neutral'])
+```
+
+```response title=Response
+positive
+```
+
+**Clasificar una columna**
+
+```sql title=Query
+SELECT body, aiClassify('ai_credentials', body, ['bug', 'question', 'feature']) AS kind FROM issues LIMIT 5
+```
+
+```response title=Response
+```
+
+<div id="aiExtract">
+  ## aiExtract
+</div>
+
+Introducido en: v26.4.0
+
+Extrae información estructurada de texto no estructurado usando un proveedor de LLM.
+
+El tercer argumento puede ser una instrucción en lenguaje natural de formato libre (p. ej., `'the main complaint'`) o un
+esquema codificado en JSON con la forma `'{"field_a": "description of field a", "field_b": "description of field b"}'`.
+
+En el modo de instrucción, la función devuelve el valor extraído como una cadena de texto simple, o una cadena vacía si no se encuentra nada.
+En el modo de esquema, la función devuelve una cadena que contiene un objeto JSON cuyas claves coinciden con el esquema solicitado; los campos ausentes son `null`.
+
+El primer argumento es una colección nombrada que especifica el proveedor, el modelo, el endpoint y la API key.
+
+**Sintaxis**
+
+```sql
+aiExtract(collection, text, instruction_or_schema[, temperature])
+```
+
+**Alias**: `AIExtract`
+
+**Argumentos**
+
+* `collection` — Nombre de una colección nombrada que contiene las credenciales del proveedor y la configuración. [`String`](/es/reference/data-types/string)
+* `text` — Texto del que extraer información. [`String`](/es/reference/data-types/string)
+* `instruction_or_schema` — Instrucción de extracción en formato libre, o un objeto JSON constante que describe los campos que se deben extraer. [`const String`](/es/reference/data-types/string)
+* `temperature` — Temperatura de muestreo que controla la aleatoriedad. Valor predeterminado: `0.0`. [`const Float64`](/es/reference/data-types/float)
+
+**Valor devuelto**
+
+Un único valor extraído (modo de instrucción) o una cadena con un objeto JSON (modo de esquema). Devuelve el valor predeterminado para el tipo de columna (cadena vacía) si la solicitud falló y `ai_function_throw_on_error` está deshabilitado. [`String`](/es/reference/data-types/string)
+
+**Ejemplos**
+
+**Instrucción en formato libre**
+
+```sql title=Query
+SELECT aiExtract('ai_credentials', 'The package arrived late and was damaged.', 'the main complaint')
+```
+
+```response title=Response
+late and damaged package
+```
+
+**Extracción del esquema**
+
+```sql title=Query
+SELECT aiExtract('ai_credentials', review, '{"sentiment": "positive, negative or neutral", "topic": "main topic of the review"}') FROM reviews LIMIT 5
+```
+
+```response title=Response
+```
+
+<div id="aiGenerate">
+  ## aiGenerate
+</div>
+
+Introducido en: v26.4.0
+
+Genera contenido de texto libre a partir de un prompt mediante un proveedor de LLM.
+
+La función envía el prompt al proveedor de IA configurado y devuelve el texto generado.
+Opcionalmente, se puede proporcionar un prompt del sistema para guiar el comportamiento del modelo (p. ej., tono, formato, rol).
+Si no se proporciona ningún prompt del sistema, el prompt del sistema predeterminado es: `You are a helpful assistant. Provide a clear and concise response.`
+
+El primer argumento es una colección nombrada que especifica el proveedor, el modelo, el endpoint y la API key.
+
+**Sintaxis**
+
+```sql
+aiGenerate(collection, prompt[, system_prompt[, temperature]])
+```
+
+**Alias**: `AIGenerate`
+
+**Argumentos**
+
+* `collection` — Nombre de una colección con nombre que contiene las credenciales del proveedor y la configuración. [`String`](/es/reference/data-types/string)
+* `prompt` — El prompt o la pregunta del usuario que se enviará al modelo. [`String`](/es/reference/data-types/string)
+* `system_prompt` — Instrucción opcional y constante a nivel de sistema que guía el comportamiento del modelo (p. ej., persona, formato de salida), enviada junto con cada prompt. [`String`](/es/reference/data-types/string)
+* `temperature` — Temperatura de muestreo que controla la aleatoriedad. Valor predeterminado: `0.7`. [`Float64`](/es/reference/data-types/float)
+
+**Valor devuelto**
+
+La respuesta de texto generada, o el valor predeterminado del tipo de columna (cadena vacía) si la solicitud falló y `ai_function_throw_on_error` está deshabilitado. [`String`](/es/reference/data-types/string)
+
+**Ejemplos**
+
+**Pregunta simple**
+
+```sql title=Query
+SELECT aiGenerate('ai_credentials', 'What is 2 + 2? Reply with just the number.')
+```
+
+```response title=Response
+4
+```
+
+**Con system prompt**
+
+```sql title=Query
+SELECT aiGenerate('ai_credentials', 'Explain ClickHouse', 'You are a database expert. Be concise.')
+```
+
+```response title=Response
+```
+
+**Resumir los valores de una columna**
+
+```sql title=Query
+SELECT article_title, aiGenerate('ai_credentials', concat('Summarize in one sentence: ', article_body)) AS summary FROM articles LIMIT 5
+```
+
+```response title=Response
+```
+
+<div id="aiTranslate">
+  ## aiTranslate
+</div>
+
+Introducido en: v26.4.0
+
+Traduce el texto dado al idioma de destino especificado mediante un proveedor de LLM.
+
+También se pueden pasar instrucciones adicionales de estilo o dialecto como cuarto argumento (por ejemplo, `'mantener los términos técnicos sin traducir'`).
+
+El primer argumento es una colección nombrada que especifica el proveedor, el modelo, el endpoint y la API key.
+
+**Sintaxis**
+
+```sql
+aiTranslate(collection, text, target_language[, instructions[, temperature]])
+```
+
+**Alias**: `AITranslate`
+
+**Argumentos**
+
+* `collection` — Nombre de una colección nombrada que contiene las credenciales del proveedor y la configuración. [`String`](/es/reference/data-types/string)
+* `text` — Texto que se va a traducir. [`String`](/es/reference/data-types/string)
+* `target_language` — Nombre del idioma de destino o código BCP-47 (p. ej., `'French'`, `'es-MX'`). [`String`](/es/reference/data-types/string)
+* `instructions` — Instrucciones adicionales constantes opcionales para el traductor. [`String`](/es/reference/data-types/string)
+* `temperature` — Temperatura de muestreo que controla la aleatoriedad. Valor predeterminado: `0.3`. [`Float64`](/es/reference/data-types/float)
+
+**Valor devuelto**
+
+El texto traducido, o el valor predeterminado del tipo de columna (cadena vacía) si la solicitud falló y `ai_function_throw_on_error` está deshabilitado. [`String`](/es/reference/data-types/string)
+
+**Ejemplos**
+
+**Traducir al francés**
+
+```sql title=Query
+SELECT aiTranslate('ai_credentials', 'Hello, world!', 'French')
+```
+
+```response title=Response
+Bonjour le monde!
+```
+
+**Traducir al japonés siguiendo las instrucciones de estilo**
+
+```sql title=Query
+SELECT aiTranslate('ai_credentials', body, 'Japanese', 'Use polite form (desu/masu)') FROM articles LIMIT 5
+```
+
+```response title=Response
+```
+
+{/*AUTOGENERATED_END*/}

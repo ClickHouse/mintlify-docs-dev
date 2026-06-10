@@ -14,7 +14,7 @@ SKIP_NAMES = {"AGENTS.md", "README.md", "changelog_entry_guidelines.mdx"}
 # Path prefixes whose pages are intentionally outside docs.json (e.g. wired
 # via a dynamic explorer component instead of the sidebar nav).
 SKIP_PREFIXES = (
-    "core/get-started/quickstarts/",
+    "get-started/quickstarts/",
 )
 
 

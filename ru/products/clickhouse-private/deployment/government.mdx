@@ -1,0 +1,433 @@
+---
+hidden: true
+title: "ClickHouse Government"
+slug: "docs/products/clickhouse-private/government"
+sidebarTitle: "Government"
+---
+
+<div id="prerequisites">
+  ### Предварительные требования
+</div>
+
+* Для настройки ресурсов AWS выполните инструкции из [ClickHouse Private AWS Technical Setup Guide](/ru/products/clickhouse-private/deployment/aws) (раздел Kubernetes Resources выполнять не нужно), учитывая следующие особенности при использовании FIPS:
+  * **Созданный здесь S3 бакет не должен содержать точек** (`.`), так как при использовании FIPS конечные точки S3 FIPS требуют virtual-host-style, который не работает, если имя бакета содержит точки.
+* Используйте следующие теги версий:
+  * clickhouse-server
+    * `<<SERVER_TAG>>-fips`
+  * clickhouse-keeper
+    * `<<KEEPER_TAG>>`
+  * clickhouse-operator
+    * `main-<<OPERATOR_TAG>>`
+  * helm/clickhouse-operator-helm
+    * `<<OPERATOR_TAG>>`
+  * helm/onprem-clickhouse-cluster
+    * `<<CR_HELM_TAG>>`
+
+<div id="setup-tasks">
+  ### Задачи по настройке
+</div>
+
+* [Создать сертификаты](#creating-certificates-with-openssl) для следующего:
+  * Центр сертификации (если применимо, например при использовании самоподписанных сертификатов)
+    * Имя: `ca.crt`
+  * Сертификаты:
+    * Требования к сертификатам:
+      * Они должны быть подписаны центром сертификации, созданным выше, либо вашим существующим центром сертификации. Если используется существующий центр сертификации, у вас должен быть доступ к сертификату, чтобы его можно было установить.
+      * Если требуется соответствие требованиям FIPS, сертификаты должны быть созданы с использованием FIPS-совместимых алгоритмов и сред
+      * Вам потребуется доступ к открытому ключу (сертификату) и закрытому ключу
+      * Subject Alternative Name (SAN) должен содержать следующие записи:
+        * `*.c-${CLUSTER_NAME}-{server|keeper}-headless.ns-${CLUSTER_NAME}.svc.cluster.local` - компоненты кластера будут использовать этот DNS-домен для связи друг с другом. Если в вашем Kubernetes используется другое доменное имя (`.cluster.local`), замените его на доменное имя вашего Kubernetes
+          * `${CLUSTER_NAME}` — имя создаваемого кластера
+          * `{server|keeper}` указывает, что здесь следует использовать либо `server`, либо `keeper` в зависимости от того, устанавливается сертификат в `clickhouse-server` или `clickhouse-keeper` соответственно
+          * Пример для имени кластера `default-xx-01`:
+            * Сервер: `*.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local`
+            * Keeper: `*.c-default-xx-01-keeper-headless.ns-default-xx-01.svc.cluster.local`
+    * Сертификаты, которые нужно создать:
+      * Один для подключений к clickhouse-server
+        * Имя закрытого ключа: `server.key`
+        * Имя открытого ключа: `server.crt`
+      * Один для подключений от clickhouse-server (например, к clickhouse-keeper и другим HTTPS-источникам, таким как словари)
+        * Имя закрытого ключа: `client.key`
+        * Имя открытого ключа: `client.crt`
+      * Один для подключений к clickhouse-keeper
+        * Имя закрытого ключа: `keeper.key`
+        * Имя открытого ключа: `keeper.crt`
+* [Установить CRD для VolumeSnapshot](/ru/products/clickhouse-private/deployment/aws#install-volumesnapshot-crds)
+* [Установить StorageClass через Helm-чарт](/ru/products/clickhouse-private/deployment/aws#install-storageclass-via-helm), если вы не хотите использовать пользовательский или существующий StorageClass
+* [Установить оператор через Helm-чарт](#install-operator-via-helm)
+* [Создать секреты Kubernetes из сгенерированных сертификатов](#create-kubernetes-certificate-secrets)
+* [Создать пользовательский ресурс clickhousecluster](#clickhousecluster-cr)
+  * [Доступ к кластеру и проверка установки](#install-validation)
+
+<div id="technical-details">
+  ### Технические подробности
+</div>
+
+<div id="creating-certificates-with-openssl">
+  #### Создание сертификатов с помощью OpenSSL
+</div>
+
+Ниже показано, как создать самоподписанные сертификаты с помощью OpenSSL. Прежде чем использовать этот способ создания и подписания сертификатов в производственной среде, убедитесь, что он соответствует вашим политикам безопасности. Перед продолжением необходимо [выбрать имя кластера](/ru/products/clickhouse-private/deployment/aws#naming-your-clickhouse-cluster) — оно понадобится позже при [создании кластера](#clickhousecluster-cr). **Для каждого подготавливаемого кластера ClickHouse необходимо создать уникальный набор сертификатов (за исключением CA‑сертификата)**.
+
+Здесь предполагается, что вам нужен сертификат, соответствующий требованиям FIPS, и что у вас установлен Docker с доступом к репозиторию Docker-образов Red Hat. В случае успеха будет создан центр сертификации, который можно использовать для подписания и проверки сертификатов, а также три набора сертификатов (для clickhouse-keeper, clickhouse-server и клиентского использования clickhouse-server). Вам потребуется сохранить файлы `*.crt` (сертификат/открытый ключ) и `*.key` (закрытый ключ) из каждого каталога (`ca/`, `server/`, `keeper/` и `client/`).
+
+Если у вас есть собственный центр сертификации, которым вы будете подписывать сертификаты, вы можете исключить создание CA‑сертификата из скрипта и смонтировать свой собственный CA‑сертификат в Docker-образ, чтобы использовать его для подписания. Используйте копию этого CA‑сертификата на следующих шагах данного руководства по настройке, когда там упоминается `ca.crt` (например, при создании секретов Kubernetes).
+
+Обратите внимание, что срок действия сертификатов, создаваемых ниже, истекает через 365 дней. Измените это значение в соответствии с вашими требованиями безопасности и обязательно установите напоминание, чтобы перевыпустить сертификаты до истечения срока их действия.
+
+```
+# при необходимости обновите переменные ниже:
+
+CLUSTER_NAME=default-xx-01
+KUBERNETES_DOMAIN=cluster.local
+COUNTRY=US
+STATE=YourState
+CITY=YourCity
+ORG=YourOrganization
+ORG_UNIT=YourOrganizationalUnit
+CN=YourRootCA
+
+docker run -it --rm \
+  -v $(pwd):/certs \
+  registry.access.redhat.com/ubi8/ubi \
+  /bin/bash -c "
+    set -e
+
+    # Установите необходимые пакеты
+    dnf -y install openssl crypto-policies-scripts
+
+    # Включите режим FIPS
+    fips-mode-setup --enable
+
+    # Создайте структуру каталогов в подключённом томе
+    mkdir -p /certs/{ca,server,keeper,client}
+
+    # Сгенерируйте CA‑сертификат
+    cd /certs/ca
+    openssl genrsa -out ca.key 3072
+
+    cat > ca.cnf << EOF
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = v3_ca
+prompt             = no
+
+[ req_distinguished_name ]
+C  = ${COUNTRY}
+ST = ${STATE}
+L  = ${CITY}
+O  = ${ORG}
+OU = ${ORG_UNIT}
+CN = ${CN}
+
+[ v3_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+EOF
+
+    openssl req -new -x509 -days 3650 -key ca.key -out ca.crt -config ca.cnf
+
+    # Сгенерируйте серверный сертификат
+    cd /certs/server
+
+    cat > server.cnf << EOF
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+prompt             = no
+
+[ req_distinguished_name ]
+C  = ${COUNTRY}
+ST = ${STATE}
+L  = ${CITY}
+O  = ${ORG}
+OU = ${ORG_UNIT}
+CN = clickhouse-server
+
+[ v3_req ]
+subjectKeyIdentifier = hash
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = *.c-${CLUSTER_NAME}-server-headless.ns-${CLUSTER_NAME}.svc.${KUBERNETES_DOMAIN}
+EOF
+
+    openssl genrsa -out server.key 3072
+    openssl req -new -key server.key -out server.csr -config server.cnf
+    openssl x509 -req -days 365 -in server.csr -CA /certs/ca/ca.crt -CAkey /certs/ca/ca.key \
+      -CAcreateserial -out server.crt -extensions v3_req -extfile server.cnf
+
+    # Сгенерируйте сертификат Keeper
+    cd /certs/keeper
+
+    cat > keeper.cnf << EOF
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+prompt             = no
+
+[ req_distinguished_name ]
+C  = ${COUNTRY}
+ST = ${STATE}
+L  = ${CITY}
+O  = ${ORG}
+OU = ${ORG_UNIT}
+CN = clickhouse-keeper
+
+[ v3_req ]
+subjectKeyIdentifier = hash
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = *.c-${CLUSTER_NAME}-keeper-headless.ns-${CLUSTER_NAME}.svc.${KUBERNETES_DOMAIN}
+EOF
+
+    openssl genrsa -out keeper.key 3072
+    openssl req -new -key keeper.key -out keeper.csr -config keeper.cnf
+    openssl x509 -req -days 365 -in keeper.csr -CA /certs/ca/ca.crt -CAkey /certs/ca/ca.key \
+      -CAcreateserial -out keeper.crt -extensions v3_req -extfile keeper.cnf
+
+    # Сгенерируйте клиентский сертификат
+    cd /certs/client
+
+    cat > client.cnf << EOF
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions     = v3_req
+prompt             = no
+
+[ req_distinguished_name ]
+C  = ${COUNTRY}
+ST = ${STATE}
+L  = ${CITY}
+O  = ${ORG}
+OU = ${ORG_UNIT}
+CN = clickhouse-client
+
+[ v3_req ]
+subjectKeyIdentifier = hash
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth
+EOF
+
+    openssl genrsa -out client.key 3072
+    openssl req -new -key client.key -out client.csr -config client.cnf
+    openssl x509 -req -days 365 -in client.csr -CA /certs/ca/ca.crt -CAkey /certs/ca/ca.key \
+      -CAcreateserial -out client.crt -extensions v3_req -extfile client.cnf
+
+    # Настройте разрешения
+    chmod -R 755 /certs
+
+    # Проверьте соответствие требованиям FIPS
+    echo 'Verifying FIPS compliance of generated certificates:'
+    openssl version
+    openssl rsa -in /certs/server/server.key -text -noout | grep 'Private-Key'
+    openssl x509 -in /certs/server/server.crt -text -noout | grep 'Signature Algorithm'
+
+    # Выведите сообщение об успешном завершении
+    echo 'FIPS-compliant certificates have been generated successfully!'
+  "
+```
+
+<div id="install-operator-via-helm">
+  #### Установите оператор с помощью Helm
+</div>
+
+При необходимости обновите версию, хост ECR и зоны доступности (в соответствии с созданным VPC).
+
+```
+# обновите ECR_HOST при необходимости
+ECR_HOST=0000000000.dkr-ecr-fips.us-west-2.on.aws
+
+# следует использовать версию Helm-чарта оператора, а не самого оператора (например, <<OPERATOR_TAG>>, а не main-<<OPERATOR_TAG>>)
+OPERATOR_VERSION=<<OPERATOR_TAG>>
+
+# укажите зоны доступности в соответствии с подсетями VPC
+AZ_LIST='["us-west-2a","us-west-2b","us-west-2c"]'
+
+helm install clickhouse-operator \
+   oci://$ECR_HOST/helm/clickhouse-operator-helm \
+   --version=$OPERATOR_VERSION \
+   --create-namespace \
+   -n clickhouse-operator-system \
+   --set-json="image.repository=\"$ECR_HOST/clickhouse-operator\"" \
+   --set-json='cilium.enabled=false' \
+   --set-json='idleScalerEnabled=false' \
+   --set-json='webhooks.enabled=false' \
+   --set-json='operator.debug=true' \
+   --set-json='operator.metricsScraper.enabled=false' \
+   --set-json="operator.availabilityZones=$AZ_LIST" \
+   --set-json='operator.featureFlags.backupOnASeparatePod=true' \
+   --set-json='operator.featureFlags.serverCMEKEnabled=true'
+```
+
+<div id="create-kubernetes-certificate-secrets">
+  #### Создание секретов сертификатов Kubernetes
+</div>
+
+Секреты должны быть установлены в том же пространстве имен Kubernetes, где будет запущен кластер ClickHouse. Если имя вашего кластера — `default-xx-01`, то пространство имен, в котором он будет работать, — `ns-default-xx-01`. Убедитесь, что это пространство имен существует, и перед выполнением приведенных ниже команд обновите переменные `CERT_DIR` и `CLUSTER_NAME`.
+
+Секреты должны иметь имена, сгенерированные ниже, а имена ключей должны точно соответствовать указанным, **не изменяйте имена секретов и ключей**.
+
+```
+CERT_DIR=.
+CLUSTER_NAME=default-xx-01
+
+# сервер
+kubectl create secret generic -n ns-${CLUSTER_NAME} ${CLUSTER_NAME}-server-cert-secret \
+  --from-file=ca.crt="$CERT_DIR/ca/ca.crt" \
+  --from-file=server.crt="$CERT_DIR/server/server.crt" \
+  --from-file=server.key="$CERT_DIR/server/server.key" \
+  --from-file=client.crt="$CERT_DIR/client/client.crt" \
+  --from-file=client.key="$CERT_DIR/client/client.key"
+
+# keeper
+kubectl create secret generic -n ns-${CLUSTER_NAME} ${CLUSTER_NAME}-keeper-cert-secret \
+  --from-file=ca.crt="$CERT_DIR/ca/ca.crt" \
+  --from-file=keeper.crt="$CERT_DIR/keeper/keeper.crt" \
+  --from-file=keeper.key="$CERT_DIR/keeper/keeper.key"
+```
+
+<div id="clickhousecluster-cr">
+  #### Clickhousecluster CR
+</div>
+
+Обязательно используйте правильную FIPS-версию указанных ниже конечных точек ECR и S3; её можно найти [здесь](https://aws.amazon.com/compliance/fips/).
+
+```
+# это будет пароль пользователя `default`
+PASSWORD='My super secret p@$$w0rd'
+HASHED_PASSWORD=`echo -n $PASSWORD | shasum -a 256 | awk '{printf $1}' | base64`
+
+# при необходимости обновите значения ниже,
+# ecr host должен соответствовать вашей учётной записи
+# s3 бакет должен быть тем, что был создан ранее
+CLUSTER_NAME=default-xx-01
+ECR_HOST=0000000000.dkr-ecr-fips.us-west-2.on.aws
+SA_IAM_ROLE_ARN=arn:aws:iam::0000000000:role/CH-S3-${CLUSTER_NAME}-uw2-00-Role
+
+S3_BUCKET_REGION=us-gov-west-1
+S3_BUCKET_URL=https://my-clickhouse-data.us-gov-west-1.amazonaws.com
+S3_BUCKET_NAME=my-clickhouse-data
+
+# префикс ключа s3 может быть любым значением UUID, но должен быть уникальным для всех кластеров, хранящих данные в указанном выше бакете
+S3_KEY_PREFIX=ch-s3-$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+# эти значения должны совпадать со значением метки clickhouseGroup, добавленной в группу узлов
+SERVER_NG_GROUP=server-arm64
+KEEPER_NG_GROUP=keeper-arm64
+
+# эти значения зависят от выбранных размеров инстансов
+# при задании значений CPU и MEMORY обязательно учитывайте требования daemon set
+SERVER_CPU=64
+SERVER_MEMORY=256Gi
+KEEPER_CPU=4
+KEEPER_MEMORY=16Gi
+
+# обновите в зависимости от того, являются ли ваши сертификаты самоподписанными:
+SERVER_SELF_SIGNED=true
+KEEPER_SELF_SIGNED=true
+
+CHART_VERSION=<<CR_HELM_TAG>>
+
+# Как правило, размер кэша следует устанавливать равным 80–90% доступного размера SSD-диска кэша.
+# Например, для типа m6id.2xlarge с 1x474 NVMe это значение должно составлять 379Gi (~80%)
+CACHE_DISK_SIZE_GI=379Gi
+
+helm install $CLUSTER_NAME \    oci://$ECR_HOST/helm/onprem-clickhouse-cluster \
+    --version=$CHART_VERSION \
+    -n ns-$CLUSTER_NAME \
+    --create-namespace \
+    --set-json="account.hashedPassword=\"$HASHED_PASSWORD\"" \
+    --set-json="server.image.repository=\"$ECR_HOST/clickhouse-server\"" \
+    --set-json="server.storage.s3.endpoint=\"$S3_BUCKET_URL\"" \
+    --set-json="server.storage.s3.region=\"$S3_BUCKET_REGION\"" \
+    --set-json="server.storage.s3.bucketName=\"$S3_BUCKET_NAME\"" \
+    --set-json="server.storage.s3.keyPrefix=\"$S3_KEY_PREFIX\"" \
+    --set-json='server.arm64=true \
+    --set-json="server.image.tag=\"<<SERVER_TAG>>-fips\"" \
+    --set-json="server.podPolicy.nodeSelector.clickhouseGroup=\"$SERVER_NG_GROUP\"" \
+    --set-json="server.openSSL.enabled=true" \
+    --set-json="server.openSSL.required=true" \
+    --set-json="server.openSSL.selfSigned=$SERVER_SELF_SIGNED" \
+    --set-json="keeper.image.repository=\"$ECR_HOST/clickhouse-keeper\"" \
+    --set-json='keeper.arm64=true \
+    --set-json="keeper.image.tag=\"<<KEEPER_TAG>>\"" \
+    --set-json="keeper.podPolicy.nodeSelector.clickhouseGroup=\"$KEEPER_NG_GROUP\"" \
+    --set-json="keeper.openSSL.enabled=true" \
+    --set-json="keeper.openSSL.required=true" \
+    --set-json="keeper.openSSL.selfSigned=$KEEPER_SELF_SIGNED" \
+    --set-json="serviceAccount.annotations={\"eks.amazonaws.com/role-arn\":\"$SA_IAM_ROLE_ARN\"}" \
+    --set-json='server.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]' \
+    --set-json='keeper.tolerations=[{"effect":"NoSchedule","key":"clickhouse.com/do-not-schedule","operator":"Exists"}]' \
+    --set-json="server.ssdCacheConfiguration.cacheDiskSize=\"$CACHE_DISK_SIZE_GI\"" \
+    --set-json="server.podPolicy.resources.limits.cpu=\"$SERVER_CPU\"" \
+    --set-json="server.podPolicy.resources.limits.memory=\"$SERVER_MEMORY\"" \
+    --set-json="server.podPolicy.resources.requests.cpu=\"$SERVER_CPU\"" \
+    --set-json="server.podPolicy.resources.requests.memory=\"$SERVER_MEMORY\"" \
+    --set-json="keeper.podPolicy.resources.limits.cpu=\"$KEEPER_CPU\"" \
+    --set-json="keeper.podPolicy.resources.limits.memory=\"$KEEPER_MEMORY\"" \
+    --set-json="keeper.podPolicy.resources.requests.cpu=\"$KEEPER_CPU\"" \
+    --set-json="keeper.podPolicy.resources.requests.memory=\"$KEEPER_MEMORY\""
+```
+
+<div id="install-validation">
+  ### Проверка установки
+</div>
+
+<div id="port-forward-the-clickhouse-service-to-your-local-machine">
+  #### Пробросьте порт сервиса ClickHouse на локальную машину
+</div>
+
+Чтобы перенаправить трафик с локальной машины на сервис c-default-xx-01-server-any, выполните:
+
+```
+kubectl port-forward svc/c-default-xx-01-server-any 9440:9440 -n ns-default-xx-01
+```
+
+Это перенаправит порт `9440` сервиса на порт `9440` на вашем локальном компьютере. Теперь вы можете получить доступ к HTTP-интерфейсу ClickHouse по адресу `https://localhost:9440`.
+
+<div id="access-clickhouse-and-run-query">
+  #### Доступ к ClickHouse и выполнение запроса
+</div>
+
+После перенаправления порта вы можете локально подключиться к ClickHouse с помощью такого инструмента, как clickhouse-client, используя следующий файл конфигурации. Обязательно укажите путь к вашему файлу `ca.crt`.
+
+```
+# client-config.xml
+<config>
+    <openSSL>
+        <client>
+            <caConfig>/path/to/certs/ca.crt</caConfig>
+        </client>
+    </openSSL>
+</config>
+
+clickhouse client --host localhost --port 9440 --password $PASSWORD --secure --config=client-config.xml
+```
+
+и выполните простой запрос:
+
+```
+clickhouse-cloud :) select 1;
+```
+
+Должен появиться примерно такой вывод:
+
+```
+SELECT 1
+Query id: 825591bf-a8e5-4995-ac9f-afb864854ba2
+   ┌─1─┐
+1. │ 1  │
+   └───┘
+1 row in set. Elapsed: 0.001 sec.
+```

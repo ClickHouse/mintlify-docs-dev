@@ -1,0 +1,174 @@
+---
+description: '包含 `system.dropped_tables` 中已删除 MergeTree 表的 parts 信息的系统表'
+keywords: ['系统表', 'dropped_tables_parts']
+slug: /operations/system-tables/dropped_tables_parts
+title: 'system.dropped_tables_parts'
+doc_type: 'reference'
+---
+
+<div id="description">
+  ## 描述
+</div>
+
+包含来自 [system.dropped&#95;tables](/zh/reference/system-tables/dropped_tables) 的已删除 [MergeTree](/zh/reference/engines/table-engines/mergetree-family/mergetree) 表的 parts 信息
+
+此表的 schema 与 [system.parts](/zh/reference/system-tables/parts) 相同
+
+<div id="columns">
+  ## 列
+</div>
+
+{/*自动生成开始*/}
+
+* `partition` ([String](/zh/reference/data-types)) — 分区标识符 (由表分区键表达式派生的字符串表示形式) 。
+* `name` ([String](/zh/reference/data-types)) —
+  数据分区片段的名称。数据分区片段的命名结构可用于判断数据、摄取和合并模式的许多特征。数据分区片段的命名格式如下：
+
+```text
+<partition_id>_<minimum_block_number>_<maximum_block_number>_<level>_<data_version>
+```
+
+* 定义：
+  * `partition_id` - 标识分区键
+  * `minimum_block_number` - 标识该 分片 中的最小块编号。ClickHouse 总是合并连续的块
+  * `maximum_block_number` - 标识该 分片 中的最大块编号
+  * `level` - 该 分片 每额外合并一次，值就加一。level 为 0 表示这是一个尚未合并的新 分片。需要注意的是，ClickHouse 中的所有 分片 始终都是不可变的
+  * `data_version` - 可选值，在 分片 发生变更时递增 (同样，变更后的数据也只会写入新的 分片，因为 分片 是不可变的)
+
+* `uuid` ([UUID](/zh/reference/data-types)) — 数据分区片段的 UUID。
+
+* `part_type` ([String](/zh/reference/data-types)) — 数据分区片段的存储格式。可能的值：`Wide` — 每一列存储在单独的文件中，`Compact` — 所有列存储在同一个文件中。数据存储格式由 MergeTree 表的 `min_bytes_for_wide_part` 和 `min_rows_for_wide_part` 设置控制。
+
+* `active` ([UInt8](/zh/reference/data-types)) — 用于指示数据分区片段是否处于活动状态的标志。如果某个数据分区片段处于活动状态，则表示它正被表使用。否则，它将被删除。非活动的数据分区片段会在合并和变更操作后产生。
+
+* `marks` ([UInt64](/zh/reference/data-types)) — 标记数量。要获取一个数据分区片段中大致的行数，可将标记数乘以索引粒度 (通常为 8192)  (此提示不适用于自适应粒度) 。
+
+* `rows` ([UInt64](/zh/reference/data-types)) — 行数。
+
+* `files` ([UInt64](/zh/reference/data-types)) — 数据分区片段中的文件数。
+
+* `bytes_on_disk` ([UInt64](/zh/reference/data-types)) — 所有数据分区片段文件的总大小，单位为字节。
+
+* `data_compressed_bytes` ([UInt64](/zh/reference/data-types)) — 数据分区片段中压缩数据的总大小。不包含任何辅助文件 (例如标记文件) 。
+
+* `data_uncompressed_bytes` ([UInt64](/zh/reference/data-types)) — 数据分区片段中未压缩数据的总大小。不包含任何辅助文件 (例如标记文件) 。
+
+* `primary_key_size` ([UInt64](/zh/reference/data-types)) — 磁盘上 primary.idx/cidx 文件中主键值所占用的内存量 (以字节为单位) 。
+
+* `marks_bytes` ([UInt64](/zh/reference/data-types)) — 标记文件大小。
+
+* `secondary_indices_compressed_bytes` ([UInt64](/zh/reference/data-types)) — 数据分区片段中二级索引压缩数据的总大小。不包括所有辅助文件 (例如标记文件) 。
+
+* `secondary_indices_uncompressed_bytes` ([UInt64](/zh/reference/data-types)) — 数据分区片段中二级索引的未压缩数据总大小。不包含所有辅助文件 (例如标记文件) 。
+
+* `secondary_indices_marks_bytes` ([UInt64](/zh/reference/data-types)) — 二级索引标记文件的大小。
+
+* `modification_time` ([DateTime](/zh/reference/data-types)) — 存放数据分区片段的目录的修改时间。通常对应于数据分区片段的创建时间。
+
+* `remove_time` ([DateTime](/zh/reference/data-types)) — 数据分区片段变为非活跃状态的时间。
+
+* `refcount` ([UInt32](/zh/reference/data-types)) — 数据分区片段被使用的次数。值大于 2 表示该数据分区片段正用于查询或合并操作。
+
+* `min_date` ([Date](/zh/reference/data-types)) — 数据分区片段中日期键的最小值。
+
+* `max_date` ([Date](/zh/reference/data-types)) — 数据分区片段中日期键的最大值。
+
+* `min_time` ([DateTime](/zh/reference/data-types)) — 数据分区片段中日期时间键的最小值。
+
+* `max_time` ([DateTime](/zh/reference/data-types)) — 数据分区片段中的日期时间键的最大值。
+
+* `partition_id` ([String](/zh/reference/data-types)) — 分区 ID。
+
+* `min_block_number` ([Int64](/zh/reference/data-types)) — 合并后构成当前数据分区片段的各数据分区片段中的最小编号。
+
+* `max_block_number` ([Int64](/zh/reference/data-types)) — 合并后组成当前数据分区片段的各数据分区片段中的最大编号。
+
+* `level` ([UInt32](/zh/reference/data-types)) — 合并树的层级深度。零表示当前 part 是通过 insert 创建的，而不是通过合并其他 parts 生成的。
+
+* `data_version` ([UInt64](/zh/reference/data-types)) — 用于确定哪些变更应应用到数据分区片段上的数值 (版本高于 data&#95;version 的变更) 。
+
+* `primary_key_bytes_in_memory` ([UInt64](/zh/reference/data-types)) — 主键值占用的内存量 (以字节为单位) 。当启用 `primary_key_lazy_load` 且主键未加载时，该值为 0。非零时，这些字节驻留在 part 本身中，并计入 `jemalloc.mergetree_arena.active_bytes`。它们绝不会计入 `PrimaryIndexCacheBytes` —— 对于每个 part，这两者是互斥的：索引要么位于 part 中 (此指标) ，要么位于共享的 `PrimaryIndexCache` 中 (另一个指标) ，具体取决于 `primary_key_lazy_load` 和 `use_primary_key_cache`。
+
+* `primary_key_bytes_in_memory_allocated` ([UInt64](/zh/reference/data-types)) — 为主键值预留的内存大小 (以字节为单位) 。当启用 `primary_key_lazy_load` 且键尚未加载时，该值为 0。若非 0，则计入 `jemalloc.mergetree_arena.active_bytes`。有关它与 `PrimaryIndexCacheBytes` 之间的关系，请参见 `primary_key_bytes_in_memory` 的说明。
+
+* `index_granularity_bytes_in_memory` ([UInt64](/zh/reference/data-types)) — 索引粒度值占用的内存量 (以字节为单位)  (在 primary&#95;key&#95;lazy&#95;load=1 且 use&#95;primary&#95;key&#95;cache=1 时，该值为 0) 。当该值非零时，这些字节的部分所有权归属于 `jemalloc.mergetree_arena.active_bytes`，并计入其中。
+
+* `index_granularity_bytes_in_memory_allocated` ([UInt64](/zh/reference/data-types)) — 为索引粒度值预留的内存大小 (以字节为单位)  (在 primary&#95;key&#95;lazy&#95;load=1 且 use&#95;primary&#95;key&#95;cache=1 时为 0) 。当该值非 0 时，会计入 `jemalloc.mergetree_arena.active_bytes`。
+
+* `is_frozen` ([UInt8](/zh/reference/data-types)) — 表示分区数据备份是否存在的标志。1 表示备份存在，0 表示备份不存在。更多详情，请参见 FREEZE PARTITION。
+
+* `database` ([String](/zh/reference/data-types)) — 数据库名称。
+
+* `table` ([String](/zh/reference/data-types)) — 表名。
+
+* `engine` ([String](/zh/reference/data-types)) — 不含参数的表引擎名称。
+
+* `disk_name` ([String](/zh/reference/data-types)) — 存储该数据分区片段的磁盘名称。
+
+* `path` ([String](/zh/reference/data-types)) — 存放数据分区片段文件的文件夹的绝对路径。
+
+* `hash_of_all_files` ([String](/zh/reference/data-types)) — 压缩文件的 sipHash128 哈希值。
+
+* `hash_of_uncompressed_files` ([String](/zh/reference/data-types)) — 未压缩文件 (包括带有标记、索引文件等的文件) 的 sipHash128 哈希值。
+
+* `uncompressed_hash_of_compressed_files` ([String](/zh/reference/data-types)) — 将压缩文件中的数据视为未压缩时计算得到的 sipHash128。
+
+* `delete_ttl_info_min` ([DateTime](/zh/reference/data-types)) — TTL DELETE 规则对应的日期时间键最小值。
+
+* `delete_ttl_info_max` ([DateTime](/zh/reference/data-types)) — TTL DELETE 规则的日期时间键的最大值。
+
+* `move_ttl_info.expression` ([Array(String)](/zh/reference/data-types)) — 表达式的数组。每个表达式定义一个 TTL MOVE 规则。
+
+* `move_ttl_info.min` ([Array(DateTime)](/zh/reference/data-types)) — 日期和时间值数组。每个元素表示一条 TTL MOVE 规则的最小键值。
+
+* `move_ttl_info.max` ([Array(DateTime)](/zh/reference/data-types)) — 日期和时间值数组。每个元素表示 TTL MOVE 规则的最大键值。
+
+* `default_compression_codec` ([String](/zh/reference/data-types)) — 用于压缩此数据分区片段的 codec 名称 (如果列没有显式指定 codec) 。
+
+* `recompression_ttl_info.expression` ([Array(String)](/zh/reference/data-types)) — 生存时间 (TTL) 表达式。
+
+* `recompression_ttl_info.min` ([Array(DateTime)](/zh/reference/data-types)) — 此分片内计算得到的 TTL 表达式的最小值。用于判断是否至少有一行的生存时间 (TTL) 已过期。
+
+* `recompression_ttl_info.max` ([Array(DateTime)](/zh/reference/data-types)) — 此分片内计算出的 TTL 表达式的最大值。用于判断是否所有行的 TTL 均已过期。
+
+* `group_by_ttl_info.expression` ([Array(String)](/zh/reference/data-types)) — 生存时间 (TTL) 表达式。
+
+* `group_by_ttl_info.min` ([Array(DateTime)](/zh/reference/data-types)) — 此分片内计算得到的 TTL 表达式的最小值。用于判断是否至少有一行的生存时间 (TTL) 已过期。
+
+* `group_by_ttl_info.max` ([Array(DateTime)](/zh/reference/data-types)) — 此分片内计算出的生存时间 (TTL) 表达式的最大值。用于判断是否已包含所有生存时间 (TTL) 已过期的行。
+
+* `rows_where_ttl_info.expression` ([Array(String)](/zh/reference/data-types)) — 生存时间 (TTL) 表达式。
+
+* `rows_where_ttl_info.min` ([Array(DateTime)](/zh/reference/data-types)) — 此分片中计算出的 TTL 表达式的最小值。用于判断是否至少存在一行其生存时间 (TTL) 已过期。
+
+* `rows_where_ttl_info.max` ([Array(DateTime)](/zh/reference/data-types)) — 此分片内计算所得的 TTL 表达式的最大值。用于判断是否已包含所有生存时间 (TTL) 已过期的行。
+
+* `projections` ([Array(String)](/zh/reference/data-types)) — 为该分片计算的投影名称列表。
+
+* `visible` ([UInt8](/zh/reference/data-types)) — 指示该分片是否对 SELECT 查询可见的标志。
+
+* `creation_tid` ([Tuple(UInt64, UInt64, UUID)](/zh/reference/data-types)) — 创建此对象或正尝试创建此对象的事务 ID。
+
+* `removal_tid_lock` ([UInt64](/zh/reference/data-types)) — `removal_tid` 的哈希值，用于锁定待删除的对象。
+
+* `removal_tid` ([Tuple(UInt64, UInt64, UUID)](/zh/reference/data-types)) — 已移除或正尝试移除此对象的事务 ID
+
+* `creation_csn` ([UInt64](/zh/reference/data-types)) — 创建该对象的事务的 CSN
+
+* `removal_csn` ([UInt64](/zh/reference/data-types)) — 删除此对象的事务的 CSN
+
+* `has_lightweight_delete` ([UInt8](/zh/reference/data-types)) — 用于指示该数据分片是否带有轻量级删除掩码的标志。
+
+* `last_removal_attempt_time` ([DateTime](/zh/reference/data-types)) — server 上次尝试删除此分片的时间。
+
+* `removal_state` ([String](/zh/reference/data-types)) — 分片移除过程的当前状态。
+
+{/*AUTOGENERATED_END*/}
+
+<div id="see-also">
+  ## 另请参见
+</div>
+
+* [MergeTree 家族](/zh/reference/engines/table-engines/mergetree-family/mergetree)
+* [system.parts](/zh/reference/system-tables/parts)
+* [system.dropped&#95;tables](/zh/reference/system-tables/dropped_tables)

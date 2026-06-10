@@ -26,8 +26,8 @@ s3(path, [aws_access_key_id, aws_secret_access_key,] [format, [structure, [compr
 
 where:
 
-* path — Bucket URL with a path to the file. This supports following wildcards in read-only mode: `*`, `?`, `{abc,def}` and `{N..M}` where `N`, `M` are numbers, `'abc'`, `'def'` are strings. For more information, see the docs on [using wildcards in path](/core/reference/engines/table-engines/integrations/s3#wildcards-in-path).
-* format — The [format](/core/reference/formats#formats-overview) of the file.
+* path — Bucket URL with a path to the file. This supports following wildcards in read-only mode: `*`, `?`, `{abc,def}` and `{N..M}` where `N`, `M` are numbers, `'abc'`, `'def'` are strings. For more information, see the docs on [using wildcards in path](/reference/engines/table-engines/integrations/s3#wildcards-in-path).
+* format — The [format](/reference/formats#formats-overview) of the file.
 * structure — Structure of the table. Format `'column1_name column1_type, column2_name column2_type, ...'`.
 * compression — Parameter is optional. Supported values: `none`, `gzip/gz`, `brotli/br`, `xz/LZMA`, `zstd/zst`. By default, it will autodetect compression by file extension.
 
@@ -45,7 +45,9 @@ The output of the `DESCRIBE TABLE` statement should show you how ClickHouse woul
 
 ```sql
 DESCRIBE TABLE s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/nyc-taxi/trips_*.gz', 'TabSeparatedWithNames') SETTINGS describe_compact_output=1
+```
 
+```response
 ┌─name──────────────────┬─type───────────────┐
 │ trip_id               │ Nullable(Int64)    │
 │ vendor_id             │ Nullable(Int64)    │
@@ -95,7 +97,7 @@ DESCRIBE TABLE s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/nyc
 └───────────────────────┴────────────────────┘
 ```
 
-To interact with our S3-based dataset, we prepare a standard `MergeTree` table as our destination. The statement below creates a table named `trips` in the default database. Note that we have chosen to modify some of those data types as inferred above, particularly to not use the [`Nullable()`](/core/reference/data-types/nullable) data type modifier, which could cause some unnecessary additional stored data and some additional performance overhead:
+To interact with our S3-based dataset, we prepare a standard `MergeTree` table as our destination. The statement below creates a table named `trips` in the default database. Note that we have chosen to modify some of those data types as inferred above, particularly to not use the [`Nullable()`](/reference/data-types/nullable) data type modifier, which could cause some unnecessary additional stored data and some additional performance overhead:
 
 ```sql
 CREATE TABLE trips
@@ -151,7 +153,7 @@ PARTITION BY toYYYYMM(pickup_date)
 ORDER BY pickup_datetime
 ```
 
-Note the use of [partitioning](/core/reference/engines/table-engines/mergetree-family/custom-partitioning-key) on the `pickup_date` field. Usually a partition key is for data management, but later on we will use this key to parallelize writes to S3.
+Note the use of [partitioning](/reference/engines/table-engines/mergetree-family/custom-partitioning-key) on the `pickup_date` field. Usually a partition key is for data management, but later on we will use this key to parallelize writes to S3.
 
 Each entry in our taxi dataset contains a taxi trip. This anonymized data consists of 20M records compressed in the S3 bucket https://datasets-documentation.s3.eu-west-3.amazonaws.com/ under the folder **nyc-taxi**. The data is in the TSV format with approximately 1M rows per file.
 
@@ -167,7 +169,7 @@ LIMIT 10;
 
 Note that we're not required to list the columns since the `TabSeparatedWithNames` format encodes the column names in the first row. Other formats, such as `CSV` or `TSV`, will return auto-generated columns for this query, e.g., `c1`, `c2`, `c3` etc.
 
-Queries additionally support [virtual columns](/core/reference/functions/table-functions/s3#virtual-columns), like `_path` and `_file`, that provide information regarding the bucket path and filename respectively. For example:
+Queries additionally support [virtual columns](/reference/functions/table-functions/s3#virtual-columns), like `_path` and `_file`, that provide information regarding the bucket path and filename respectively. For example:
 
 ```sql
 SELECT  _path, _file, trip_id
@@ -291,7 +293,7 @@ LIMIT 100000;
 
 ### Utilizing clusters {#utilizing-clusters}
 
-The above functions are all limited to execution on a single node. Read speeds will scale linearly with CPU cores until other resources (typically network) are saturated, allowing users to vertically scale. However, this approach has its limitations. While you can alleviate some resource pressure by inserting into a distributed table when performing an `INSERT INTO SELECT` query, this still leaves a single node reading, parsing, and processing the data. To address this challenge and allow us to scale reads horizontally, we have the [s3Cluster](/core/reference/functions/table-functions/s3Cluster) function.
+The above functions are all limited to execution on a single node. Read speeds will scale linearly with CPU cores until other resources (typically network) are saturated, allowing users to vertically scale. However, this approach has its limitations. While you can alleviate some resource pressure by inserting into a distributed table when performing an `INSERT INTO SELECT` query, this still leaves a single node reading, parsing, and processing the data. To address this challenge and allow us to scale reads horizontally, we have the [s3Cluster](/reference/functions/table-functions/s3Cluster) function.
 
 The node which receives the query, known as the initiator, creates a connection to every node in the cluster. The glob pattern determining which files need to be read is resolved to a set of files. The initiator distributes files to the nodes in the cluster, which act as workers. These workers, in turn, request files to process as they complete reads. This process ensures that we can scale reads horizontally.
 
@@ -302,9 +304,9 @@ s3Cluster(cluster_name, source, [access_key_id, secret_access_key,] format, stru
 ```
 
 * `cluster_name` — Name of a cluster that is used to build a set of addresses and connection parameters to remote and local servers.
-* `source` — URL to a file or a bunch of files. Supports following wildcards in read-only mode: `*`, `?`, `{'abc','def'}` and `{N..M}` where N, M — numbers, abc, def — strings. For more information see [Wildcards In Path](/core/reference/engines/table-engines/integrations/s3#wildcards-in-path).
+* `source` — URL to a file or a bunch of files. Supports following wildcards in read-only mode: `*`, `?`, `{'abc','def'}` and `{N..M}` where N, M — numbers, abc, def — strings. For more information see [Wildcards In Path](/reference/engines/table-engines/integrations/s3#wildcards-in-path).
 * `access_key_id` and `secret_access_key` — Keys that specify credentials to use with the given endpoint. Optional.
-* `format` — The [format](/core/reference/formats#formats-overview) of the file.
+* `format` — The [format](/reference/formats#formats-overview) of the file.
 * `structure` — Structure of the table. Format 'column1_name column1_type, column2_name column2_type, ...'.
 
 Like any `s3` functions, the credentials are optional if the bucket is insecure or you define security through the environment, e.g., IAM roles. Unlike the s3 function, however, the structure must be specified in the request as of 22.3.1, i.e., the schema isn't inferred.
@@ -321,7 +323,7 @@ INSERT INTO default.trips_all
     )
 ```
 
-Inserts will occur against the initiator node. This means that while reads will occur on each node, the resulting rows will be routed to the initiator for distribution. In high throughput scenarios, this may prove a bottleneck. To address this, set the parameter [parallel_distributed_insert_select](/core/reference/settings/session-settings#parallel_distributed_insert_select) for the `s3cluster` function.
+Inserts will occur against the initiator node. This means that while reads will occur on each node, the resulting rows will be routed to the initiator for distribution. In high throughput scenarios, this may prove a bottleneck. To address this, set the parameter [parallel_distributed_insert_select](/reference/settings/session-settings#parallel_distributed_insert_select) for the `s3cluster` function.
 
 ## S3 table engines {#s3-table-engines}
 
@@ -333,8 +335,8 @@ CREATE TABLE s3_engine_table (name String, value UInt32)
     [SETTINGS ...]
 ```
 
-* `path` — Bucket URL with a path to the file. Supports following wildcards in read-only mode: `*`, `?`, `{abc,def}` and `{N..M}` where N, M — numbers, 'abc', 'def' — strings. For more information, see [here](/core/reference/engines/table-engines/integrations/s3#wildcards-in-path).
-* `format` — The[ format](/core/reference/formats#formats-overview) of the file.
+* `path` — Bucket URL with a path to the file. Supports following wildcards in read-only mode: `*`, `?`, `{abc,def}` and `{N..M}` where N, M — numbers, 'abc', 'def' — strings. For more information, see [here](/reference/engines/table-engines/integrations/s3#wildcards-in-path).
+* `format` — The[ format](/reference/formats#formats-overview) of the file.
 * `aws_access_key_id`, `aws_secret_access_key` - Long-term credentials for the AWS account user. You can use these to authenticate your requests. The parameter is optional. If credentials aren't specified, configuration file values are used. For more information, see [Managing credentials](#managing-credentials).
 * `compression` — Compression type. Supported values: none, gzip/gz, brotli/br, xz/LZMA, zstd/zst. The parameter is optional. By default, it will autodetect compression by file extension.
 
@@ -399,7 +401,9 @@ Notice the use of the `{0..9}` pattern to limit to the first ten files. Once cre
 SELECT DISTINCT(pickup_ntaname)
 FROM trips_raw
 LIMIT 10;
+```
 
+```response
 ┌─pickup_ntaname───────────────────────────────────┐
 │ Lenox Hill-Roosevelt Island                      │
 │ Airport                                          │
@@ -469,7 +473,7 @@ Both of these settings default to 0 - thus forcing the user to set one of them. 
 Some notes about the `S3` table engine:
 
 - Unlike a traditional `MergeTree` family table, dropping an `S3` table won't delete the underlying data.
-- Full settings for this table type can be found [here](/core/reference/engines/table-engines/integrations/s3#settings).
+- Full settings for this table type can be found [here](/reference/engines/table-engines/integrations/s3#settings).
 - Be aware of the following caveats when using this engine:
   * ALTER queries aren't supported
   * SAMPLE operations aren't supported
@@ -496,7 +500,7 @@ In the previous examples, we have passed credentials in the `s3` function or `S3
     </clickhouse>
     ```
 
-    These credentials will be used for any requests where the endpoint above is an exact prefix match for the requested URL. Also, note the ability in this example to declare an authorization header as an alternative to access and secret keys. A complete list of supported settings can be found [here](/core/reference/engines/table-engines/integrations/s3#settings).
+    These credentials will be used for any requests where the endpoint above is an exact prefix match for the requested URL. Also, note the ability in this example to declare an authorization header as an alternative to access and secret keys. A complete list of supported settings can be found [here](/reference/engines/table-engines/integrations/s3#settings).
 
 * The example above highlights the availability of the configuration parameter `use_environment_credentials`. This configuration parameter can also be set globally at the `s3` level:
 
@@ -523,7 +527,7 @@ For how to optimize reading and inserting using the S3 function, see the [dedica
 
 ### S3 storage tuning {#s3-storage-tuning}
 
-Internally, the ClickHouse merge tree uses two primary storage formats: [`Wide` and `Compact`](/core/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage). While the current implementation uses the default behavior of ClickHouse (controlled through the settings `min_bytes_for_wide_part` and `min_rows_for_wide_part`), we expect behavior to diverge for S3 in the future releases, e.g., a larger default value of `min_bytes_for_wide_part` encouraging a more `Compact` format and thus fewer files. You may now wish to tune these settings when using exclusively S3 storage.
+Internally, the ClickHouse merge tree uses two primary storage formats: [`Wide` and `Compact`](/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage). While the current implementation uses the default behavior of ClickHouse (controlled through the settings `min_bytes_for_wide_part` and `min_rows_for_wide_part`), we expect behavior to diverge for S3 in the future releases, e.g., a larger default value of `min_bytes_for_wide_part` encouraging a more `Compact` format and thus fewer files. You may now wish to tune these settings when using exclusively S3 storage.
 
 ## S3 backed MergeTree {#s3-backed-mergetree}
 
@@ -567,7 +571,7 @@ To utilize an S3 bucket as a disk, we must first declare it within the ClickHous
 
 ```
 
-A complete list of settings relevant to this disk declaration can be found [here](/core/reference/engines/table-engines/mergetree-family/mergetree#table_engine-mergetree-s3). Note that credentials can be managed here using the same approaches described in [Managing credentials](#managing-credentials), i.e., the use_environment_credentials can be set to true in the above settings block to use IAM roles.
+A complete list of settings relevant to this disk declaration can be found [here](/reference/engines/table-engines/mergetree-family/mergetree#table_engine-mergetree-s3). Note that credentials can be managed here using the same approaches described in [Managing credentials](#managing-credentials), i.e., the use_environment_credentials can be set to true in the above settings block to use IAM roles.
 
 ### Creating a storage policy {#creating-a-storage-policy}
 
@@ -675,7 +679,7 @@ Replication with S3 disks can be accomplished by using the `ReplicatedMergeTree`
 
 The following notes cover the implementation of S3 interactions with ClickHouse. Whilst generally only informative, it may help the readers when [Optimizing for Performance](#s3-optimizing-performance):
 
-* By default, the maximum number of query processing threads used by any stage of the query processing pipeline is equal to the number of cores. Some stages are more parallelizable than others, so this value provides an upper bound.  Multiple query stages may execute at once since data is streamed from the disk. The exact number of threads used for a query may thus exceed this. Modify through the setting [max_threads](/core/reference/settings/session-settings#max_threads).
+* By default, the maximum number of query processing threads used by any stage of the query processing pipeline is equal to the number of cores. Some stages are more parallelizable than others, so this value provides an upper bound.  Multiple query stages may execute at once since data is streamed from the disk. The exact number of threads used for a query may thus exceed this. Modify through the setting [max_threads](/reference/settings/session-settings#max_threads).
 * Reads on S3 are asynchronous by default. This behavior is determined by setting `remote_filesystem_read_method`, set to the value `threadpool` by default. When serving a request, ClickHouse reads granules in stripes. Each of these stripes potentially contain many columns. A thread will read the columns for their granules one by one. Rather than doing this synchronously, a prefetch is made for all columns before waiting for the data. This offers significant performance improvements over synchronous waits on each column. You won't need to change this setting in most cases - see [Optimizing for Performance](#s3-optimizing-performance).
 * Writes are performed in parallel, with a maximum of 100 concurrent file writing threads. `max_insert_delayed_streams_for_parallel_write`, which has a default value of 1000,  controls the number of S3 blobs written in parallel. Since a buffer is required for each file being written (~1MB), this effectively limits the memory consumption of an INSERT. It may be appropriate to lower this value in low server memory scenarios.
 
@@ -726,7 +730,7 @@ vim /etc/clickhouse-server/config.d/storage_config.xml
 The tags `s3_disk` and `s3_cache` within the `<disks>` tag are arbitrary labels. These can be set to something else but the same label must be used in the `<disk>` tab under the `<policies>` tab to reference the disk.
 The `<S3_main>` tag is also arbitrary and is the name of the policy which will be used as the identifier storage target when creating resources in ClickHouse.
 
-The configuration shown above is for ClickHouse version 22.8 or higher, if you're using an older version please see the [storing data](/core/concepts/features/configuration/server-config/storing-data#using-local-cache) docs.
+The configuration shown above is for ClickHouse version 22.8 or higher, if you're using an older version please see the [storing data](/concepts/features/configuration/server-config/storing-data#using-local-cache) docs.
 
 For more information about using S3:
 Integrations Guide: [S3 Backed MergeTree](#s3-backed-mergetree)
@@ -823,7 +827,7 @@ ClickHouse tables are replicated across the two servers, and therefore across th
 ### Install software {#install-software}
 
 #### ClickHouse server nodes {#clickhouse-server-nodes}
-Refer to the [installation instructions](/core/get-started/setup/install) when performing the deployment steps on the ClickHouse server nodes.
+Refer to the [installation instructions](/get-started/setup/install) when performing the deployment steps on the ClickHouse server nodes.
 
 #### Deploy ClickHouse {#deploy-clickhouse}
 
@@ -835,7 +839,7 @@ Place `chnode1` in one AWS region, and `chnode2` in a second.
 
 Deploy ClickHouse Keeper on three hosts, in the sample configurations these are named `keepernode1`, `keepernode2`, and `keepernode3`.  `keepernode1` can be deployed in the same region as `chnode1`, `keepernode2` with `chnode2`, and `keepernode3` in either region but a different availability zone from the ClickHouse node in that region.
 
-Refer to the [installation instructions](/core/get-started/setup/install) when performing the deployment steps on the ClickHouse Keeper nodes.
+Refer to the [installation instructions](/get-started/setup/install) when performing the deployment steps on the ClickHouse Keeper nodes.
 
 ### Create S3 buckets {#create-s3-buckets}
 
@@ -1017,7 +1021,7 @@ ClickHouse Keeper is responsible for coordinating the replication of data across
 
 ### Configure networking {#configure-networking}
 
-See the [network ports](/core/concepts/features/security/network-ports) list when you configure the security settings in AWS so that your servers can communicate with each other, and you can communicate with them.
+See the [network ports](/concepts/features/security/network-ports) list when you configure the security settings in AWS so that your servers can communicate with each other, and you can communicate with them.
 
 All three servers must listen for network connections so that they can communicate between the servers and with S3.  By default, ClickHouse listens only on the loopback address, so this must be changed.  This is configured in `/etc/clickhouse-server/config.d/`.  Here is a sample that configures ClickHouse and ClickHouse Keeper to listen on all IP v4 interfaces.  see the documentation or the default configuration file `/etc/clickhouse/config.xml` for more information.
 
@@ -1139,7 +1143,7 @@ When you added the [cluster configuration](#define-a-cluster) a single shard rep
   1 row in set. Elapsed: 0.012 sec.
   ```
 <Note>
-  You can customize the zookeeper path `'clickhouse/tables/{uuid}/{shard}` shown above by setting `default_replica_path` and `default_replica_name`.  The docs are [here](/core/reference/settings/server-settings/settings#default_replica_path).
+  You can customize the zookeeper path `'clickhouse/tables/{uuid}/{shard}` shown above by setting `default_replica_path` and `default_replica_name`.  The docs are [here](/reference/settings/server-settings/settings#default_replica_path).
 </Note>
 
 ### Testing {#testing-1}
@@ -1283,17 +1287,21 @@ it also requires specifying bucket region in the config:
 
 It is possible to store a backup on the disk we created above:
 
-``` sql
+```sql
 BACKUP TABLE t TO Disk('s3_express', 't.zip')
+```
 
+```response
 ┌─id───────────────────────────────────┬─status─────────┐
 │ c61f65ac-0d76-4390-8317-504a30ba7595 │ BACKUP_CREATED │
 └──────────────────────────────────────┴────────────────┘
 ```
 
-``` sql
+```sql
 RESTORE TABLE t AS t_restored FROM Disk('s3_express', 't.zip')
+```
 
+```response
 ┌─id───────────────────────────────────┬─status───┐
 │ 4870e829-8d76-4171-ae59-cffaf58dea04 │ RESTORED │
 └──────────────────────────────────────┴──────────┘

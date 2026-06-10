@@ -1,0 +1,175 @@
+---
+slug: /use-cases/observability/clickstack/mcp
+title: 'ClickStack MCPサーバー'
+sidebarTitle: 'MCPサーバー'
+description: 'Model Context Protocol（MCP）サーバーを使用して、AIアシスタントをClickStackに接続します'
+doc_type: 'guide'
+keywords: ['ClickStack', 'MCP', 'Model Context Protocol', 'AI', 'オブザーバビリティ', 'HyperDX', 'Claude', 'Cursor']
+---
+
+import { Image } from "/snippets/components/Image.jsx";
+
+ClickStack には、AIアシスタントがオブザーバビリティデータを操作できる組み込みの [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) サーバーが含まれています。接続すると、AIアシスタントは自然言語ですべて操作でき、ログ、トレース、メトリクスのクエリ実行、ダッシュボードやアラートの管理、データソースの確認、保存済み検索の利用が可能です。
+
+これにより、[Claude Code](https://docs.anthropic.com/en/docs/claude-code)、[Cursor](https://www.cursor.com/)、または任意の MCP 対応クライアントを使って、開発環境を離れることなく、インシデントの調査、ダッシュボードの作成、オブザーバビリティ環境の管理を行えます。
+
+<div id="availability">
+  ## 提供状況
+</div>
+
+MCPサーバーは、以下の ClickStack のデプロイ形態で利用できます。
+
+| Deployment                                        | Status  |
+| ------------------------------------------------- | ------- |
+| **Open Source ClickStack**                        | 利用可能    |
+| **BYOC (Bring Your Own Cloud)**                   | 利用可能    |
+| **Managed ClickStack**                            | 近日提供予定  |
+| **HyperDX v1** ([hyperdx.io](https://hyperdx.io)) | サポート対象外 |
+
+<Info>
+  **Managed ClickStack**
+
+  Managed ClickStack 向けの MCPサーバーサポートは現在鋭意開発中で、まもなく利用可能になる予定です。このページの手順は、Open Source および BYOC のデプロイメントに適用されます。
+</Info>
+
+<div id="prerequisites">
+  ## 前提条件
+</div>
+
+MCPクライアント を接続する前に、以下が必要です。
+
+* 稼働中の ClickStack インスタンス (セットアップ方法については [デプロイメント](/ja/clickstack/deployment/overview) を参照してください)
+* **Personal API Access Key** — HyperDX の **Team Settings → API Keys → Personal API Access Key** で確認できます
+
+<Image img="/images/clickstack/api-key-personal.png" alt="Team Settings 内の Personal API Access Key" size="md" border />
+
+<Note>
+  Personal API Access Key は、Team Settings にある **インジェスト API key** とは異なります。インジェスト API key は、OpenTelemetry Collector に送信されるテレメトリー データの認証に使用されます。
+</Note>
+
+<div id="endpoint">
+  ## エンドポイント
+</div>
+
+MCPサーバーは、ClickStack のフロントエンドURLの `/api/mcp` パスで利用できます。
+
+たとえば、デフォルトのローカルデプロイメントでは次のようになります。
+
+デフォルト設定を変更している場合は、`localhost:8080` をご利用のインスタンスのホスト名とポートに置き換えてください。
+
+<Note>
+  このページの例では、フロントエンドアプリのURL (デフォルトではポート `8080`) を使用しています。MCPサーバーには、バックエンド経由で `<BACKEND_URL>/mcp` に直接アクセスすることもできますが、すべてのデプロイメントでバックエンドが公開されているわけではないため、このドキュメントではフロントエンドのパスを使用しています。
+</Note>
+
+MCPサーバーは、**Bearer token** 認証で **Streamable HTTP** トランスポートを使用します。
+
+<div id="connecting-a-client">
+  ## MCPクライアント の接続
+</div>
+
+以下の例では、一般的な MCPクライアント の設定方法を紹介します。`<YOUR_CLICKSTACK_URL>` はご利用のインスタンスの URL (例: `http://localhost:8080`) に、`<YOUR_API_KEY>` はお使いの Personal API Access Key に置き換えてください。
+
+<div id="claude-code">
+  ### Claude code
+</div>
+
+```shell
+claude mcp add --transport http hyperdx <YOUR_CLICKSTACK_URL>/api/mcp \
+  --header "Authorization: Bearer <YOUR_API_KEY>"
+```
+
+<div id="cursor">
+  ### Cursor
+</div>
+
+プロジェクトの `.cursor/mcp.json` または Cursor のグローバル設定に、以下を追加します。
+
+```json
+{
+  "mcpServers": {
+    "hyperdx": {
+      "url": "<YOUR_CLICKSTACK_URL>/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+<div id="opencode">
+  ### OpenCode
+</div>
+
+`opencode.json` の設定に以下を追加します。
+
+```json
+{
+  "mcp": {
+    "hyperdx": {
+      "type": "http",
+      "url": "<YOUR_CLICKSTACK_URL>/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+<div id="other-clients">
+  ### その他のクライアント
+</div>
+
+**Streamable HTTP** トランスポートに対応した MCPクライアント であれば接続できます。次のように設定してください。
+
+* **URL:** `<YOUR_CLICKSTACK_URL>/api/mcp`
+* **ヘッダー:** `Authorization: Bearer <YOUR_API_KEY>`
+
+<div id="capabilities">
+  ## MCP でできること
+</div>
+
+接続すると、AIアシスタントは ClickStack の主要な領域にわたるさまざまなツールを利用できるようになります。具体的には次のとおりです。
+
+* **データのクエリ** — ClickStack のクエリビルダー、検索構文、または生の SQL を使用して、ログ、トレース、メトリクスを検索・集計できます。
+* **データソース** — 利用可能なデータソース、データベース接続、カラムスキーマ、属性キーを一覧表示できます。
+* **ダッシュボード** — タイルを含むダッシュボードの作成、更新、削除、確認ができます。
+* **アラート** — 評価履歴を含むアラートの作成、更新、確認ができます。
+* **保存済み検索** — 再利用可能な保存済み検索定義の作成、更新、確認ができます。
+* **Webhooks** — アラート通知に使用できる webhook の宛先を一覧表示できます。
+* **チーム** — 現在のユーザーが所属しているチームを一覧表示し、アクティブなチームを特定できます。
+
+利用できるツールの内容は、今後拡張される可能性があります。MCP client は接続時に利用可能なツールを自動的に検出します。
+
+<div id="multi-team">
+  ## 複数チームでの利用
+</div>
+
+デフォルトでは、MCP リクエストはプライマリ チームのコンテキストで処理されます。複数のチームに所属している場合は、`Authorization` ヘッダーに加えて、チーム ID を設定した `x-hdx-team` ヘッダーを渡すことで、特定のチームを対象にできます。このヘッダーを省略すると、プライマリ チームが使用されます。所属していないチームを指定した場合、リクエストは `401` エラーで拒否されます。
+
+アクセス可能なチームと現在アクティブなチームを確認するには、MCPクライアント のチーム一覧ツールを使用してください。
+
+<div id="troubleshooting">
+  ## トラブルシューティング
+</div>
+
+<Accordion title="403 の authentication error が発生する">
+  * **Personal API Access Key** を使用していることを確認してください (インジェスト API key ではありません) 。
+  * `Authorization` ヘッダーに、`Bearer` トークンとしてキーが含まれていることを確認してください。
+  * ClickStack インスタンスが稼働中で、設定した URL でアクセス可能であることを確認してください。
+</Accordion>
+
+<Accordion title="レート制限に達している">
+  MCPサーバーでは、ユーザーごとに**1 分あたり 600 リクエスト**のレート制限が適用されます。この制限を超えると、リクエストは一時的に拒否されます。リクエスト頻度を下げるか、しばらく待ってから再試行してください。
+</Accordion>
+
+<Accordion title="x-hdx-team ヘッダーを指定すると 401 エラーが発生する">
+  チーム ID が正しいこと、およびご利用のユーザーアカウントがそのチームのメンバーであることを確認してください。
+</Accordion>
+
+<Accordion title="MCPサーバーに接続できない">
+  * 使用している MCPクライアントが **Streamable HTTP** トランスポートをサポートしていることを確認してください。stdio トランスポートのみをサポートする古いクライアントは動作しません。
+  * ClickStack をローカルで実行している場合は、設定した URL でアプリにアクセスできることを確認してください (デフォルトは `http://localhost:8080` です) 。
+  * ロードバランサーまたはリバースプロキシの背後で BYOC デプロイメントを実行している場合は、`/api/mcp` パスがブロックまたは書き換えされていないことを確認してください。
+</Accordion>

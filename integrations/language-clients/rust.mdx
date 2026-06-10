@@ -16,8 +16,8 @@ The official Rust client for connecting to ClickHouse, originally developed by [
 
 * Uses `serde` for encoding/decoding rows.
 * Supports `serde` attributes: `skip_serializing`, `skip_deserializing`, `rename`.
-* Uses [`RowBinary`](/core/reference/formats/RowBinary/RowBinary) format over the HTTP transport.
-  * There are plans to switch to [`Native`](/core/reference/formats/Native) over TCP.
+* Uses [`RowBinary`](/reference/formats/RowBinary/RowBinary) format over the HTTP transport.
+  * There are plans to switch to [`Native`](/reference/formats/Native) over TCP.
 * Supports TLS (via `native-tls` and `rustls-tls` features).
 * Supports compression and decompression (LZ4).
 * Provides APIs for selecting or inserting data, executing DDLs, and client-side batching.
@@ -48,10 +48,10 @@ See also: [crates.io page](https://crates.io/crates/clickhouse).
 * `uuid` — adds `serde::uuid` to work with [uuid](https://docs.rs/uuid) crate.
 * `time` — adds `serde::time` to work with [time](https://docs.rs/time) crate.
 
-:::important
+<Warning>
 When connecting to ClickHouse via an `HTTPS` url, either the `native-tls` or `rustls-tls` feature should be enabled.
 If both are enabled, the `rustls-tls` feature will take precedence.
-:::
+</Warning>
 
 ## ClickHouse versions compatibility {#clickhouse-versions-compatibility}
 
@@ -95,9 +95,9 @@ HTTPS works with either `rustls-tls` or `native-tls` cargo features.
 
 Then, create client as usual. In this example, the environment variables are used to store the connection details:
 
-:::important
+<Warning>
 The URL should include both protocol and port, e.g. `https://instance.clickhouse.cloud:8443`.
-:::
+</Warning>
 
 ```rust
 fn read_env_var(key: &str) -> String {
@@ -142,7 +142,7 @@ while let Some(row) = cursor.next().await? { .. }
 * Convenient `fetch_one::<Row>()` and `fetch_all::<Row>()` methods can be used to get a first row or all rows, correspondingly.
 * `sql::Identifier` can be used to bind table names.
 
-NB: as the entire response is streamed, cursors can return an error even after producing some rows. If this happens in your use case, you could try `query(...).with_option("wait_end_of_query", "1")` in order to enable response buffering on the server-side. [More details](/core/concepts/features/interfaces/http#response-buffering). The `buffer_size` option can be useful, too.
+NB: as the entire response is streamed, cursors can return an error even after producing some rows. If this happens in your use case, you could try `query(...).with_option("wait_end_of_query", "1")` in order to enable response buffering on the server-side. [More details](/concepts/features/interfaces/http#response-buffering). The `buffer_size` option can be useful, too.
 
 <Warning>
 Use `wait_end_of_query` with caution when selecting rows, as it can will to higher memory consumption on the server side and will likely decrease the overall performance.
@@ -172,7 +172,7 @@ insert.end().await?;
 
 ### Async insert (server-side batching) {#async-insert-server-side-batching}
 
-You could use [ClickHouse asynchronous inserts](/core/concepts/features/operations/insert/asyncinserts) to avoid client-side batching of the incoming data. This can be done by simply providing the `async_insert` option to the `insert` method (or even to the `Client` instance itself, so that it will affect all the `insert` calls).
+You could use [ClickHouse asynchronous inserts](/concepts/features/operations/insert/asyncinserts) to avoid client-side batching of the incoming data. This can be done by simply providing the `async_insert` option to the `insert` method (or even to the `Client` instance itself, so that it will affect all the `insert` calls).
 
 ```rust
 let client = Client::default()
@@ -243,7 +243,7 @@ client
 
 ### ClickHouse settings {#clickhouse-settings}
 
-You can apply various [ClickHouse settings](/core/reference/settings/session-settings) using the `with_option` method. For example:
+You can apply various [ClickHouse settings](/reference/settings/session-settings) using the `with_option` method. For example:
 
 ```rust
 let numbers = client

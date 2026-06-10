@@ -1,0 +1,48 @@
+---
+title: 'Privilégio do BYOC'
+slug: /cloud/reference/byoc/reference/privilege
+sidebarTitle: 'Privilégio'
+keywords: ['BYOC', 'nuvem', 'bring your own cloud', 'privilégio']
+description: 'Implante o ClickHouse na sua própria infraestrutura de nuvem'
+doc_type: 'reference'
+---
+
+<div id="aws-iam-roles">
+  ## Funções do IAM da AWS
+</div>
+
+<div id="bootstrap-iam-role">
+  ### Função do IAM Bootstrap
+</div>
+
+A função do IAM Bootstrap tem as seguintes permissões:
+
+* **Operações de EC2 e VPC**: Necessárias para configurar VPCs e clusters do EKS.
+* **Operações de S3 (por exemplo, `s3:CreateBucket`)**: Necessárias para criar buckets para o armazenamento BYOC do ClickHouse.
+* **Operações de IAM (por exemplo, `iam:CreatePolicy`)**: Necessárias para que os controladores criem funções adicionais (consulte a próxima seção para mais detalhes).
+* **Operações de EKS**: Limitadas a recursos com nomes que começam com o prefixo `clickhouse-cloud`.
+
+<div id="additional-iam-roles-created-by-the-controller">
+  ### Funções adicionais do IAM criadas pelo controlador
+</div>
+
+Além da `ClickHouseManagementRole` criada via CloudFormation, o controlador criará várias outras funções.
+
+Essas funções são assumidas por aplicações executadas no cluster EKS do cliente:
+
+* **Função do State Exporter**
+  * Componente do ClickHouse que reporta informações sobre a saúde do serviço ao ClickHouse Cloud.
+  * Requer permissão para gravar em uma fila do SQS pertencente ao ClickHouse Cloud.
+* **Controlador de balanceador de carga**
+  * Controlador padrão de load balancer da AWS.
+  * Controlador EBS CSI para gerenciar volumes dos serviços do ClickHouse.
+* **External-DNS**
+  * Propaga configurações de DNS para o Route 53.
+* **Cert-Manager**
+  * Provisiona certificados TLS para domínios de serviço BYOC.
+* **Cluster Autoscaler**
+  * Ajusta o tamanho do grupo de nós conforme necessário.
+
+As funções **K8s-control-plane** e **k8s-worker** destinam-se a ser assumidas por serviços do AWS EKS.
+
+Por fim, **`data-plane-mgmt`** permite que um componente do plano de controle do ClickHouse Cloud faça a reconciliação dos recursos personalizados necessários, como `ClickHouseCluster` e o Istio Virtual Service/Gateway.
