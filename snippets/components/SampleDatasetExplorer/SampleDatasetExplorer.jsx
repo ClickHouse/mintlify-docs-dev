@@ -12,7 +12,7 @@
 export const SampleDatasetExplorer = ({ categories }) => {
   const ACCENT = '#FAFF69';
 
-  // Each category: id, title (also baked into the banner image), an icon used for
+  // Each category: id, title (shown beneath the banner image), an icon used for
   // its child cards, the two banner images, and the child dataset pages.
   const CATEGORIES = [
     {
@@ -137,24 +137,32 @@ export const SampleDatasetExplorer = ({ categories }) => {
         .dark .sde-root .sde-img-dark { display: none; }
         .dark .sde-root .sde-img-light { display: block; }
         .sde-tile {
-          position: relative;
           display: block;
           width: 100%;
           padding: 0;
           border: none;
           background: transparent;
-          border-radius: 0.9rem;
-          overflow: hidden;
+          text-align: left;
           cursor: pointer;
           animation: sde-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-          transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+          transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
         }
-        .sde-tile:hover {
-          transform: translateY(-4px) scale(1.015);
-          box-shadow: 0 12px 28px rgba(0,0,0,0.22);
-        }
+        .sde-tile:hover { transform: translateY(-4px) scale(1.015); }
         .sde-tile:active { transform: translateY(-1px) scale(0.995); }
+        /* Border matches the HeroCard cards on index.mdx:
+           border-[#e5e7eb] dark:border-[#3c3c3c], 8px radius */
+        .sde-tile-media {
+          display: block;
+          position: relative;
+          aspect-ratio: 4 / 3;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+          transition: box-shadow 0.25s ease;
+        }
+        .dark .sde-root .sde-tile-media { border-color: #3c3c3c; }
+        .sde-tile:hover .sde-tile-media { box-shadow: 0 12px 28px rgba(0,0,0,0.22); }
         .sde-tile img {
           width: 100%;
           height: 100%;
@@ -163,21 +171,33 @@ export const SampleDatasetExplorer = ({ categories }) => {
           transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .sde-tile:hover img { transform: scale(1.04); }
-        /* hover hint overlay */
+        /* hover hint: translucent strip along the bottom of the image */
         .sde-tile-hint {
           position: absolute;
-          inset: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
           display: flex;
-          align-items: flex-end;
+          align-items: center;
           justify-content: space-between;
           gap: 8px;
-          padding: 12px 14px;
-          background: linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0) 55%);
+          padding: 10px 14px;
+          background: rgba(0,0,0,0.45);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
           opacity: 0;
           transition: opacity 0.25s ease;
           pointer-events: none;
         }
         .sde-tile:hover .sde-tile-hint { opacity: 1; }
+        .sde-tile-title {
+          display: block;
+          margin-top: 0.65rem;
+          font-size: 0.95rem;
+          font-weight: 600;
+          line-height: 1.3;
+          color: inherit;
+        }
         .sde-count {
           font-size: 0.78rem;
           font-weight: 600;
@@ -207,13 +227,11 @@ export const SampleDatasetExplorer = ({ categories }) => {
           transition: all 0.2s ease;
         }
         .sde-back:hover { border-color: ${ACCENT}; }
-        .sde-detail-banner {
-          width: 100%;
-          max-height: 220px;
-          object-fit: cover;
-          border-radius: 0.9rem;
-          margin: 0 0 1.5rem 0;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        .sde-detail-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          line-height: 1.3;
+          margin: 0 0 1.25rem 0;
           animation: sde-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
         }
       `}} />
@@ -226,22 +244,25 @@ export const SampleDatasetExplorer = ({ categories }) => {
                 key={cat.id}
                 type="button"
                 className="sde-tile"
-                style={{ animationDelay: `${i * 60}ms`, aspectRatio: '4 / 3' }}
+                style={{ animationDelay: `${i * 60}ms` }}
                 onClick={() => setSelectedId(cat.id)}
                 aria-label={`Explore ${cat.title} datasets`}
               >
-                <Banner cat={cat} />
-                <span className="sde-tile-hint">
-                  <span className="sde-count">
-                    {cat.datasets.length} dataset{cat.datasets.length === 1 ? '' : 's'}
-                  </span>
-                  <span className="sde-explore">
-                    Explore
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                <span className="sde-tile-media">
+                  <Banner cat={cat} />
+                  <span className="sde-tile-hint">
+                    <span className="sde-count">
+                      {cat.datasets.length} dataset{cat.datasets.length === 1 ? '' : 's'}
+                    </span>
+                    <span className="sde-explore">
+                      Explore
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
                   </span>
                 </span>
+                <span className="sde-tile-title">{cat.title}</span>
               </button>
             ))}
           </div>
@@ -257,7 +278,7 @@ export const SampleDatasetExplorer = ({ categories }) => {
             </button>
           </div>
 
-          <Banner cat={selected} className="sde-detail-banner" />
+          <h2 className="sde-detail-title">{selected.title}</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {selected.datasets.map((ds, i) => (
