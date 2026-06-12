@@ -3,7 +3,8 @@
 
   // ── Desktop tab navigation ────────────────────────────────────────────────
   var TAB_URLS = {
-    'Database':     '/',
+    'Home':         '/',
+    'Database':     '/get-started/about/intro',
     'Solutions':    '/products/cloud/getting-started/cloud-get-started',
     'Integrations': '/integrations/home',
   };
