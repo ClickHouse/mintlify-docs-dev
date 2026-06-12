@@ -14,8 +14,9 @@
   // pushState from before this script runs, which would bypass a wrapper.
   //
   // Back/forward (popstate) is deliberately left alone so the browser and
-  // router can restore the previous scroll position, and hash navigations are
-  // skipped so deep links still land on their anchor.
+  // router can restore the previous scroll position. Cross-page hash links
+  // (/page#anchor) scroll to the anchor once the new page has rendered it,
+  // since the banner bug breaks that scroll too.
   var lastPath = window.location.pathname;
   var traversed = false;
 
@@ -25,13 +26,33 @@
     }
   });
 
+  // The new page renders some frames after the path changes, so poll for the
+  // anchor target before scrolling to it; if it never appears (bad anchor),
+  // fall back to the top rather than keeping the old page's position.
+  function scrollToAnchor(hash, framesLeft) {
+    var id;
+    try { id = decodeURIComponent(hash.slice(1)); } catch (e) { id = hash.slice(1); }
+    var el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView();
+      return;
+    }
+    if (framesLeft > 0 && window.location.hash === hash) {
+      window.requestAnimationFrame(function () { scrollToAnchor(hash, framesLeft - 1); });
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }
+
   function watch() {
     var path = window.location.pathname;
     if (path !== lastPath) {
       lastPath = path;
       if (traversed) {
         traversed = false;
-      } else if (!window.location.hash) {
+      } else if (window.location.hash) {
+        scrollToAnchor(window.location.hash, 180);
+      } else {
         window.scrollTo(0, 0);
       }
     }
