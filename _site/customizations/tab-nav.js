@@ -65,18 +65,102 @@
     });
   }
 
+  // ── Logo theme sync ──────────────────────────────────────────────────────
+  function updateLogoTheme() {
+    var light = document.getElementById('ch-hp-logo-light');
+    var dark = document.getElementById('ch-hp-logo-dark');
+    if (!light || !dark) return;
+    var isDark = document.documentElement.classList.contains('dark');
+    light.style.display = isDark ? 'none' : 'block';
+    dark.style.display = isDark ? 'block' : 'none';
+  }
+
+  // ── Homepage sidebar hiding ───────────────────────────────────────────────
+  function applyHomepageClass() {
+    if (window.location.pathname === '/') {
+      document.documentElement.classList.add('ch-homepage');
+    } else {
+      document.documentElement.classList.remove('ch-homepage');
+    }
+  }
+
+  // ── Homepage: inject logo + theme toggle into navbar ──────────────────────
+  var LOGO_ID = 'ch-homepage-logo';
+  var TOGGLE_ID = 'ch-homepage-toggle';
+
+  function setupHomepageNavbar() {
+    var isHome = window.location.pathname === '/';
+    var navbar = document.getElementById('navbar-transition-maple');
+    if (!navbar) return;
+
+    if (!isHome) {
+      // Restore theme toggle to sidebar before removing wrapper
+      var toggleWrapper = document.getElementById(TOGGLE_ID);
+      if (toggleWrapper) {
+        var btn = toggleWrapper.querySelector('button[aria-label="Toggle dark mode"]');
+        var sidebar = document.getElementById('sidebar');
+        if (btn && sidebar) sidebar.appendChild(btn);
+        toggleWrapper.parentNode.removeChild(toggleWrapper);
+      }
+      var logo = document.getElementById(LOGO_ID);
+      if (logo) logo.parentNode.removeChild(logo);
+      return;
+    }
+
+    // Inject logo at left of navbar
+    if (!document.getElementById(LOGO_ID)) {
+      var logoLink = document.createElement('a');
+      logoLink.id = LOGO_ID;
+      logoLink.href = '/';
+      logoLink.style.cssText = 'display:flex;align-items:center;flex-shrink:0;text-decoration:none;';
+      logoLink.innerHTML = '<img src="/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs" style="height:2rem;">'
+        + '<img src="/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs" style="height:2rem;">';
+      navbar.insertBefore(logoLink, navbar.firstChild);
+      updateLogoTheme();
+    }
+
+    // Move theme toggle from sidebar to navbar — insert after logo, before tabs.
+    // margin-right: auto pushes all tabs + right-side controls to the right.
+    if (!document.getElementById(TOGGLE_ID)) {
+      var sidebarToggle = document.querySelector('#sidebar button[aria-label="Toggle dark mode"]');
+      if (sidebarToggle) {
+        var wrapper = document.createElement('div');
+        wrapper.id = TOGGLE_ID;
+        wrapper.style.cssText = 'display:flex;align-items:center;flex-shrink:0;margin-left:0.75rem;margin-right:auto;';
+        sidebarToggle.parentNode.removeChild(sidebarToggle);
+        wrapper.appendChild(sidebarToggle);
+        // Insert as second child (right after the logo)
+        var logoEl = document.getElementById(LOGO_ID);
+        if (logoEl && logoEl.nextSibling) {
+          navbar.insertBefore(wrapper, logoEl.nextSibling);
+        } else {
+          navbar.appendChild(wrapper);
+        }
+      }
+    }
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
   function init() {
+    applyHomepageClass();
+    setupHomepageNavbar();
     patchTabButtons();
     styleDropdownHeaders();
 
     var observer = new MutationObserver(function () {
+      applyHomepageClass();
+      setupHomepageNavbar();
+      updateLogoTheme();
       patchTabButtons();
       styleDropdownHeaders();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
     window.addEventListener('resize', patchTabButtons);
+    window.addEventListener('popstate', function () {
+      applyHomepageClass();
+      setupHomepageNavbar();
+    });
   }
 
   if (document.readyState === 'loading') {
