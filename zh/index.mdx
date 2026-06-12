@@ -33,29 +33,42 @@ export const FullWidthDivider = ({ style }) => {
     return <hr ref={ref} className="ch-usecase-divider" style={{ border: 'none', ...style }} />;
 };
 
-export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, body, href, links, icon, showArrow, arrowBottom, extraStyle }) => {
+export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, body, href, links, icon, showArrow, arrowBottom, extraStyle, logo, logoInvert, overlayImg, fullWidthImage, imageHeight = 'h-48' }) => {
     const darkFilename = darkFilenameProp || (filename ? filename.replace('-light.', '-dark.') : null);
-    const cardClassName = `ch-hero-card ${arrowBottom ? 'flex flex-col' : 'block'} p-4 rounded-lg no-underline bg-[#f9f9f9] border border-[#e5e7eb] text-inherit`;
+    const cardClassName = `ch-hero-card relative ${arrowBottom ? 'flex flex-col' : 'block'} p-4 rounded-lg no-underline bg-[#f9f9f9] border border-[#e5e7eb] text-inherit${fullWidthImage ? ' overflow-hidden' : ''}`;
 
     const content = (
         <>
+            {logo && (
+                <div className="absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-md bg-white dark:bg-white/10 shadow-sm border border-[#e5e7eb] dark:border-white/10">
+                    <img src={`/images/${logo}`} alt="" className={`w-5 h-5 object-contain${logoInvert ? ' ch-logo-invert' : ''}`} />
+                </div>
+            )}
             {icon ? (
                 <div className="mb-6">
                     {icon}
                 </div>
             ) : filename ? (
-                <>
+                <div className={`${overlayImg ? 'relative mb-12' : ''}${fullWidthImage ? ' -mx-4 -mt-4' : ''}`}>
                     <img
                         src={`/images/${filename}`}
                         alt={title}
-                        className="block dark:hidden w-full h-48 object-cover rounded-lg border border-[#d1d5db] pointer-events-none"
+                        className={`block dark:hidden w-full ${imageHeight} object-cover pointer-events-none${fullWidthImage ? '' : ' rounded-lg border border-[#d1d5db]'}`}
                     />
                     <img
                         src={`/images/${darkFilename}`}
                         alt={title}
-                        className="hidden dark:block w-full h-48 object-cover rounded-lg pointer-events-none"
+                        className={`hidden dark:block w-full ${imageHeight} object-cover pointer-events-none${fullWidthImage ? '' : ' rounded-lg'}`}
                     />
-                </>
+                    {overlayImg && (
+                        <img
+                            src={`/images/${overlayImg}`}
+                            alt=""
+                            className="absolute right-4 bottom-0 translate-y-[40%] w-[46%] rounded-xl pointer-events-none z-20"
+                            style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.18)' }}
+                        />
+                    )}
+                </div>
             ) : null}
             <h3 className={`text-[#111827] dark:text-white text-lg font-semibold leading-[1.3] ${(icon || !filename) ? 'mt-0' : 'mt-5'}`}>
                 {title}
@@ -238,14 +251,14 @@ export const McpSetup = () => {
           </svg>
       }
         links={[
-          { label: "What is ClickHouse?", href: "/get-started/about/intro" },
-          { label: "Setup/Install", href: "/get-started/setup/cloud" },
-          { label: "Explore quickstarts", href: "/get-started/quickstarts/home" },
-          { label: "Migration guides", href: "/get-started/migrate/overview" },
-          { label: "ClickHouse fundamentals", href: "/concepts/core-concepts/index" },
-          { label: "Concepts (features)", href: "/concepts/features/index" },
-          { label: "Best practices", href: "/concepts/best-practices/index" },
-          { label: "Sample datasets", href: "/get-started/sample-datasets/index" }
+          { label: "什么是 ClickHouse？", href: "/get-started/about/intro" },
+          { label: "安装与设置", href: "/get-started/setup/cloud" },
+          { label: "浏览快速入门", href: "/get-started/quickstarts/home" },
+          { label: "迁移指南", href: "/get-started/migrate/overview" },
+          { label: "ClickHouse 基础", href: "/concepts/core-concepts/index" },
+          { label: "概念（特性）", href: "/concepts/features/index" },
+          { label: "最佳实践", href: "/concepts/best-practices/index" },
+          { label: "示例数据集", href: "/get-started/sample-datasets/index" }
       ]}
       />
 
@@ -274,14 +287,14 @@ export const McpSetup = () => {
           </svg>
       }
         links={[
-          { label: "SQL reference", href: "/reference/statements" },
-          { label: "Session settings", href: "/reference/settings/session-settings" },
-          { label: "Server settings", href: "/reference/settings/server-settings/settings" },
-          { label: "Functions", href: "/reference/functions/regular-functions/overview" },
-          { label: "Engines", href: "/reference/engines/engines" },
-          { label: "System tables", href: "/reference/system-tables" },
-          { label: "Formats", href: "/reference/formats/index" },
-          { label: "Data types", href: "/reference/data-types/index" }
+          { label: "SQL 参考", href: "/reference/statements" },
+          { label: "会话设置", href: "/reference/settings/session-settings" },
+          { label: "服务器设置", href: "/reference/settings/server-settings/settings" },
+          { label: "函数", href: "/reference/functions/regular-functions/overview" },
+          { label: "引擎", href: "/reference/engines/engines" },
+          { label: "系统表", href: "/reference/system-tables" },
+          { label: "格式", href: "/reference/formats/index" },
+          { label: "数据类型", href: "/reference/data-types/index" }
       ]}
       />
 
@@ -325,18 +338,20 @@ export const McpSetup = () => {
     <p className="text-sm text-gray-500 dark:text-zinc-500 mb-6">浏览 ClickHouse 产品与集成，涵盖从托管 Cloud 服务到开源项目的完整生态。</p>
 
     <div className="space-y-4 mt-6">
-      {/* 第 1 行：ClickHouse Cloud（col-span-2）+ 3 个纵向排列的卡片（col-span-1） */}
+      {/* 第 1 行：ClickHouse Cloud（col-span-2）+ 3 张纵向堆叠的卡片（col-span-1） */}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
         <div className="col-span-2">
           <HeroCard
-            filename="product-cloud-light.png"
+            filename="thumbnail-cloud-base.webp"
+            fullWidthImage
+            imageHeight="h-[72px]"
             title="ClickHouse Cloud"
             href="/zh/products/cloud/getting-started/intro"
             extraStyle={{ height: '100%' }}
             body={<>
                 <p className="text-[#6b7280] dark:text-[#a1a1aa] mt-2 text-sm leading-[1.6]">
-                    本部分介绍 ClickHouse 如何让数据仓库更快速、更简单且更可预测。你无需再与脆弱的管道和缓慢的查询引擎周旋，而是可以在几分钟内（而非几周）将来自应用、服务和工具的数据集中到一起。随后，你就可以在同一平台上构建实时仪表盘、触发告警、分析历史趋势，并打造事件驱动型产品。
+                    本部分介绍 ClickHouse 如何让数据仓库更快速、更简单且更可预测。你无需再与脆弱的管道和缓慢的查询引擎周旋，而是可以在几分钟内（而非几周）将来自应用、服务和工具的数据集中起来。随后，你就可以在同一平台上构建实时仪表盘、触发告警、分析历史趋势，并打造事件驱动型产品。
                 </p>
             </>}
             links={[
@@ -361,11 +376,11 @@ export const McpSetup = () => {
       {/* 第 2 行：3 个等宽卡片 */}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <HeroCard filename="product-langfuse-light.png" title="LangFuse" description="面向可观测性、指标、评估和提示词管理的开源 LLM 工程平台。" href="https://langfuse.com/docs" showArrow />
+        <HeroCard filename="thumbnail-langfuse-light.png" title="LangFuse" description="面向可观测性、指标、评估和提示词管理的开源 LLM 工程平台。" href="https://langfuse.com/docs" showArrow />
 
-        <HeroCard filename="product-cloud-light.png" title="Kubernetes Operator" description="在 Kubernetes 上自动化部署、配置和管理 ClickHouse 与 ClickHouse Keeper 集群。" href="/zh/products/kubernetes-operator/overview" showArrow />
+        <HeroCard filename="thumbnail-kubernetes-light.png" title="Kubernetes Operator" description="在 Kubernetes 上自动化部署、配置和管理 ClickHouse 与 ClickHouse Keeper 集群。" href="/zh/products/kubernetes-operator/overview" showArrow />
 
-        <HeroCard filename="product-chdb-light.png" title="chDB" description="快速、可靠且可扩展的进程内数据库。在进程内体验 ClickHouse 的强大能力。" href="/zh/products/chdb" showArrow />
+        <HeroCard filename="thumbnail-chdb-light.png" title="chDB" description="快速、可靠且可扩展的进程内数据库。在进程内体验 ClickHouse 的强大能力。" href="/zh/products/chdb" showArrow />
       </div>
     </div>
 
