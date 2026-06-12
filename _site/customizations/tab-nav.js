@@ -77,8 +77,17 @@
   }
 
   // ── Homepage sidebar hiding ───────────────────────────────────────────────
+  // Each locale has its own homepage at /<locale> (e.g. /es, /ja); treat those
+  // the same as the English homepage at /.
+  var HOMEPAGE_LOCALES = ['es', 'ja', 'ko', 'pt-BR', 'ru', 'zh'];
+
+  function isHomePath() {
+    var path = window.location.pathname.replace(/\/+$/, '') || '/';
+    return path === '/' || HOMEPAGE_LOCALES.indexOf(path.slice(1)) !== -1;
+  }
+
   function applyHomepageClass() {
-    if (window.location.pathname === '/') {
+    if (isHomePath()) {
       document.documentElement.classList.add('ch-homepage');
     } else {
       document.documentElement.classList.remove('ch-homepage');
@@ -89,8 +98,24 @@
   var LOGO_ID = 'ch-homepage-logo';
   var TOGGLE_ID = 'ch-homepage-toggle';
 
+  function findSidebarThemeToggle() {
+    var btn = document.querySelector('#sidebar button[aria-label="Toggle dark mode"]');
+    if (btn) return btn;
+    // Localized UIs translate the aria-label (e.g. "다크 모드 전환"), so fall
+    // back to the toggle's shape: the only sidebar pill button holding the
+    // sun + moon icons.
+    var candidates = document.querySelectorAll('#sidebar button');
+    for (var i = 0; i < candidates.length; i++) {
+      if (/rounded-full/.test(candidates[i].className)
+          && candidates[i].querySelectorAll('svg').length >= 2) {
+        return candidates[i];
+      }
+    }
+    return null;
+  }
+
   function setupHomepageNavbar() {
-    var isHome = window.location.pathname === '/';
+    var isHome = isHomePath();
     var navbar = document.getElementById('navbar-transition-maple');
     if (!navbar) return;
 
@@ -98,7 +123,7 @@
       // Restore theme toggle to sidebar before removing wrapper
       var toggleWrapper = document.getElementById(TOGGLE_ID);
       if (toggleWrapper) {
-        var btn = toggleWrapper.querySelector('button[aria-label="Toggle dark mode"]');
+        var btn = toggleWrapper.querySelector('button');
         var sidebar = document.getElementById('sidebar');
         if (btn && sidebar) sidebar.appendChild(btn);
         toggleWrapper.parentNode.removeChild(toggleWrapper);
@@ -123,7 +148,7 @@
     // Move theme toggle from sidebar to navbar — insert after logo, before tabs.
     // margin-right: auto pushes all tabs + right-side controls to the right.
     if (!document.getElementById(TOGGLE_ID)) {
-      var sidebarToggle = document.querySelector('#sidebar button[aria-label="Toggle dark mode"]');
+      var sidebarToggle = findSidebarThemeToggle();
       if (sidebarToggle) {
         var wrapper = document.createElement('div');
         wrapper.id = TOGGLE_ID;
