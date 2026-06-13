@@ -156,7 +156,7 @@ INSERT INTO posts_updateable SELECT
         ParentId,
         CommunityOwnedDate,
         ClosedDate
-FROM posts_updateable --seleccionar 100 filas aleatorias
+FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0
 LIMIT 5000
 
@@ -191,14 +191,14 @@ INSERT INTO posts_updateable SELECT
         ParentId,
         CommunityOwnedDate,
         ClosedDate
-FROM posts_updateable --seleccionar 100 filas aleatorias
+FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0 AND AnswerCount > 0
 LIMIT 1000
 
 0 rows in set. Elapsed: 0.166 sec. Processed 135.53 thousand rows, 212.65 MB (816.30 thousand rows/s., 1.28 GB/s.)
 ```
 
-El resultado de las operaciones anteriores será de 16.000 filas, es decir, 10.000 + 5000 + 1000. Sin embargo, el total correcto aquí es que, en realidad, deberíamos tener solo 1000 filas menos que nuestro total original, es decir, 10.000 - 1000 = 9000.
+El resultado de las operaciones anteriores será de 16.000 filas, es decir, 10.000 + 5000 + 1000. En realidad, deberíamos tener solo 1000 filas menos que nuestro total original, es decir, 10.000 - 1000 = 9000.
 
 ```sql
 SELECT count()
@@ -210,7 +210,7 @@ FROM posts_updateable
 1 row in set. Elapsed: 0.002 sec.
 ```
 
-Aquí, los resultados variarán en función de las fusiones que se hayan realizado. Podemos ver que el total es distinto porque tenemos filas duplicadas. Aplicar `FINAL` a la tabla devuelve el resultado correcto.
+Los resultados variarán en función de las fusiones que se hayan realizado. Podemos ver que el total difiere debido a las filas duplicadas. Aplicar `FINAL` a la tabla devuelve el resultado correcto.
 
 ```sql
 SELECT count()
@@ -359,11 +359,11 @@ Como se explica en Aprovechamiento de particiones con ReplacingMergeTree, recome
   ### Ajuste de las fusiones para mejorar el rendimiento de las consultas
 </div>
 
-De forma predeterminada, min&#95;age&#95;to&#95;force&#95;merge&#95;seconds y min&#95;age&#95;to&#95;force&#95;merge&#95;on&#95;partition&#95;only se establecen en 0 y false, respectivamente, lo que desactiva estas funciones. Con esta configuración, ClickHouse aplicará el comportamiento de fusión estándar sin forzar fusiones en función de la antigüedad de la partición.
+De forma predeterminada, `min_age_to_force_merge_seconds` y `min_age_to_force_merge_on_partition_only` se establecen en 0 y false, respectivamente, lo que desactiva estas funciones. Con esta configuración, ClickHouse aplicará el comportamiento de fusión estándar sin forzar fusiones en función de la antigüedad de la partición.
 
-Si se especifica un valor para min&#95;age&#95;to&#95;force&#95;merge&#95;seconds, ClickHouse ignorará las heurísticas de fusión habituales para las partes con una antigüedad superior al período especificado. Aunque, en general, esto solo resulta eficaz si el objetivo es minimizar el número total de partes, puede mejorar el rendimiento de las consultas en ReplacingMergeTree al reducir la cantidad de partes que deben fusionarse en tiempo de consulta.
+Si se especifica un valor para `min_age_to_force_merge_seconds`, ClickHouse ignorará las heurísticas de fusión habituales para las partes con una antigüedad superior al período especificado. Aunque, en general, esto solo resulta eficaz si el objetivo es minimizar el número total de partes, puede mejorar el rendimiento de las consultas en ReplacingMergeTree al reducir la cantidad de partes que deben fusionarse en tiempo de consulta.
 
-Este comportamiento puede ajustarse aún más estableciendo min&#95;age&#95;to&#95;force&#95;merge&#95;on&#95;partition&#95;only=true, lo que exige que todas las partes de la partición sean más antiguas que min&#95;age&#95;to&#95;force&#95;merge&#95;seconds para aplicar una fusión agresiva. Esta configuración permite que, con el tiempo, las particiones más antiguas se fusionen hasta quedar en una sola parte, lo que consolida los datos y mantiene el rendimiento de las consultas.
+Este comportamiento puede ajustarse aún más estableciendo `min_age_to_force_merge_on_partition_only=true`, lo que exige que todas las partes de la partición sean más antiguas que `min_age_to_force_merge_seconds` para aplicar una fusión agresiva. Esta configuración permite que, con el tiempo, las particiones más antiguas se fusionen hasta quedar en una sola parte, lo que consolida los datos y mantiene el rendimiento de las consultas.
 
 <div id="recommended-settings">
   ### Ajustes recomendados
@@ -373,6 +373,6 @@ Este comportamiento puede ajustarse aún más estableciendo min&#95;age&#95;to&#
   Ajustar el comportamiento de las fusiones es una operación avanzada. Recomendamos consultar con el soporte de ClickHouse antes de habilitar estos ajustes en cargas de trabajo de producción.
 </Warning>
 
-En la mayoría de los casos, se prefiere establecer `min_age_to_force_merge_seconds` en un valor bajo, significativamente menor que el período de la partición. Esto minimiza el número de partes y evita fusiones innecesarias en tiempo de consulta con el operador FINAL.
+En la mayoría de los casos, se prefiere establecer `min_age_to_force_merge_seconds` en un valor bajo, significativamente menor que el período de la partición. Esto minimiza el número de partes y evita fusiones innecesarias en tiempo de consulta con el operador `FINAL`.
 
 Por ejemplo, considere una partición mensual que ya se ha fusionado en una sola parte. Si una pequeña inserción aislada crea una nueva parte dentro de esta partición, el rendimiento de la consulta puede verse afectado porque ClickHouse debe leer varias partes hasta que se complete la fusión. Establecer `min_age_to_force_merge_seconds` puede garantizar que estas partes se fusionen de forma agresiva, evitando una degradación del rendimiento de la consulta.

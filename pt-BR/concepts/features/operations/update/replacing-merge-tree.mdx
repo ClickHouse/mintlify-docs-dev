@@ -1,10 +1,10 @@
 ---
 slug: /guides/replacing-merge-tree
-title: 'Trabalhando com o mecanismo ReplacingMergeTree'
-description: 'Guia sobre como usar o mecanismo ReplacingMergeTree no ClickHouse'
+title: 'Trabalhando com o motor ReplacingMergeTree'
+description: 'Guia sobre como usar o motor ReplacingMergeTree no ClickHouse'
 keywords: ['replacingmergetree', 'inserções', 'desduplicação']
 doc_type: 'guide'
-sidebarTitle: 'Trabalhando com o mecanismo ReplacingMergeTree'
+sidebarTitle: 'Trabalhando com o motor ReplacingMergeTree'
 ---
 
 import { Image } from "/snippets/components/Image.jsx";
@@ -156,7 +156,7 @@ INSERT INTO posts_updateable SELECT
         ParentId,
         CommunityOwnedDate,
         ClosedDate
-FROM posts_updateable --selecionar 100 linhas aleatórias
+FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0
 LIMIT 5000
 
@@ -191,14 +191,14 @@ INSERT INTO posts_updateable SELECT
         ParentId,
         CommunityOwnedDate,
         ClosedDate
-FROM posts_updateable --selecionar 100 linhas aleatórias
+FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0 AND AnswerCount > 0
 LIMIT 1000
 
 0 rows in set. Elapsed: 0.166 sec. Processed 135.53 thousand rows, 212.65 MB (816.30 thousand rows/s., 1.28 GB/s.)
 ```
 
-O resultado das operações acima será de 16.000 linhas, ou seja, 10.000 + 5.000 + 1.000. O total correto aqui é que, na realidade, deveríamos ter apenas 1.000 linhas a menos do que o total original, ou seja, 10.000 - 1.000 = 9.000.
+O resultado das operações acima será de 16.000 linhas, ou seja, 10.000 + 5.000 + 1.000. Na realidade, deveríamos ter apenas 1.000 linhas a menos do que o total original, ou seja, 10.000 - 1.000 = 9.000.
 
 ```sql
 SELECT count()
@@ -207,10 +207,10 @@ FROM posts_updateable
 ┌─count()─┐
 │   10000 │
 └─────────┘
-1 linha no conjunto. Elapsed: 0.002 sec.
+1 row in set. Elapsed: 0.002 sec.
 ```
 
-Seus resultados vão variar aqui dependendo das mesclagens que já ocorreram. Podemos ver que o total aqui é diferente porque temos linhas duplicadas. Aplicar `FINAL` à tabela retorna o resultado correto.
+Seus resultados vão variar dependendo das mesclagens que já ocorreram. Podemos ver que o total é diferente por causa de linhas duplicadas. Aplicar `FINAL` à tabela retorna o resultado correto.
 
 ```sql
 SELECT count()
@@ -359,11 +359,11 @@ Como discutido em Exploiting Partitions with ReplacingMergeTree, recomendamos o 
   ### Ajustando mesclagens para melhorar o desempenho das consultas
 </div>
 
-Por padrão, min&#95;age&#95;to&#95;force&#95;merge&#95;seconds e min&#95;age&#95;to&#95;force&#95;merge&#95;on&#95;partition&#95;only são definidos como 0 e false, respectivamente, o que desativa esses recursos. Nessa configuração, o ClickHouse aplicará o comportamento padrão de mesclagem, sem forçar mesclagens com base na idade da partição.
+Por padrão, `min_age_to_force_merge_seconds` e `min_age_to_force_merge_on_partition_only` são definidos como 0 e false, respectivamente, o que desativa esses recursos. Nessa configuração, o ClickHouse aplicará o comportamento padrão de mesclagem, sem forçar mesclagens com base na idade da partição.
 
-Se um valor for especificado para min&#95;age&#95;to&#95;force&#95;merge&#95;seconds, o ClickHouse ignorará as heurísticas normais de mesclagem para partes mais antigas do que o período especificado. Embora isso geralmente só seja eficaz quando o objetivo é minimizar o número total de partes, pode melhorar o desempenho das consultas no ReplacingMergeTree ao reduzir o número de partes que precisam ser mescladas no momento da consulta.
+Se um valor for especificado para `min_age_to_force_merge_seconds`, o ClickHouse ignorará as heurísticas normais de mesclagem para partes mais antigas do que o período especificado. Embora isso geralmente só seja eficaz quando o objetivo é minimizar o número total de partes, pode melhorar o desempenho das consultas no ReplacingMergeTree ao reduzir o número de partes que precisam ser mescladas no momento da consulta.
 
-Esse comportamento pode ser ajustado ainda mais definindo min&#95;age&#95;to&#95;force&#95;merge&#95;on&#95;partition&#95;only=true, o que exige que todas as partes da partição sejam mais antigas do que min&#95;age&#95;to&#95;force&#95;merge&#95;seconds para que ocorra uma mesclagem agressiva. Essa configuração permite que partições mais antigas sejam gradualmente mescladas até se tornarem uma única parte, o que consolida os dados e mantém o desempenho das consultas.
+Esse comportamento pode ser ajustado ainda mais definindo `min_age_to_force_merge_on_partition_only=true`, o que exige que todas as partes da partição sejam mais antigas do que `min_age_to_force_merge_seconds` para que ocorra uma mesclagem agressiva. Essa configuração permite que partições mais antigas sejam gradualmente mescladas até se tornarem uma única parte, o que consolida os dados e mantém o desempenho das consultas.
 
 <div id="recommended-settings">
   ### Configurações recomendadas
@@ -373,6 +373,6 @@ Esse comportamento pode ser ajustado ainda mais definindo min&#95;age&#95;to&#95
   Ajustar o comportamento de mesclagem é uma operação avançada. Recomendamos consultar o suporte do ClickHouse antes de ativar essas configurações em cargas de trabalho de produção.
 </Warning>
 
-Na maioria dos casos, é preferível definir min&#95;age&#95;to&#95;force&#95;merge&#95;seconds com um valor baixo — significativamente menor que o período da partição. Isso minimiza o número de partes e evita mesclagens desnecessárias no momento da consulta com o operador FINAL.
+Na maioria dos casos, é preferível definir `min_age_to_force_merge_seconds` com um valor baixo — significativamente menor que o período da partição. Isso minimiza o número de partes e evita mesclagens desnecessárias no momento da consulta com o operador `FINAL`.
 
-Por exemplo, considere uma partição mensal que já tenha sido mesclada em uma única parte. Se um insert pequeno e isolado criar uma nova parte nessa partição, o desempenho da consulta pode ser prejudicado, porque o ClickHouse precisará ler várias partes até que a mesclagem seja concluída. Definir min&#95;age&#95;to&#95;force&#95;merge&#95;seconds pode garantir que essas partes sejam mescladas de forma agressiva, evitando a degradação do desempenho da consulta.
+Por exemplo, considere uma partição mensal que já tenha sido mesclada em uma única parte. Se um `insert` pequeno e isolado criar uma nova parte nessa partição, o desempenho da consulta pode ser prejudicado, porque o ClickHouse precisará ler várias partes até que a mesclagem seja concluída. Definir `min_age_to_force_merge_seconds` pode garantir que essas partes sejam mescladas de forma agressiva, evitando a degradação do desempenho da consulta.
