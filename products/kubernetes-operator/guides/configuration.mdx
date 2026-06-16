@@ -87,6 +87,35 @@ spec:
 Operator can modify existing PVC only if the underlying storage class supports volume expansion.
 </Note>
 
+## Cluster domain {#cluster-domain}
+
+`spec.clusterDomain` sets the Kubernetes DNS suffix the operator uses when it builds
+the fully-qualified pod host names it writes into the ClickHouse server
+configuration. It defaults to `cluster.local` and exists on both
+`ClickHouseCluster` and `KeeperCluster`.
+
+```yaml
+spec:
+  clusterDomain: cluster.local   # default; override only for a custom domain
+```
+
+The operator addresses every pod through the headless Service as
+`<pod>.<headless-service>.<namespace>.svc.<clusterDomain>`. That suffix flows into
+two parts of the generated configuration:
+
+- On a `ClickHouseCluster`, its value is used for the replica host names in
+  `remote_servers` (cross-replica and `Distributed` queries).
+- On a `KeeperCluster`, its value builds the Keeper node host names that
+  ClickHouse uses for coordination.
+
+<Note>
+Only override this when your cluster's `kubelet` runs with a `--cluster-domain`
+other than `cluster.local`. If the value does not match the real cluster domain,
+ClickHouse cannot resolve the Keeper and replica host names — coordination and
+`Distributed` queries fail with DNS resolution errors. Set the **same** value on the
+`ClickHouseCluster` and the `KeeperCluster` it references.
+</Note>
+
 ## Pod configuration {#pod-configuration}
 
 ### Automatic topology spread and affinity {#automatic-topology-spread-and-affinity}
