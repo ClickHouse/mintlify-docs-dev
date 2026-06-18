@@ -33,29 +33,42 @@ export const FullWidthDivider = ({ style }) => {
     return <hr ref={ref} className="ch-usecase-divider" style={{ border: 'none', ...style }} />;
 };
 
-export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, body, href, links, icon, showArrow, arrowBottom, extraStyle }) => {
+export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, body, href, links, icon, showArrow, arrowBottom, extraStyle, logo, logoInvert, overlayImg, fullWidthImage, imageHeight = 'h-48' }) => {
     const darkFilename = darkFilenameProp || (filename ? filename.replace('-light.', '-dark.') : null);
-    const cardClassName = `ch-hero-card ${arrowBottom ? 'flex flex-col' : 'block'} p-4 rounded-lg no-underline bg-[#f9f9f9] border border-[#e5e7eb] text-inherit`;
+    const cardClassName = `ch-hero-card relative ${arrowBottom ? 'flex flex-col' : 'block'} p-4 rounded-lg no-underline bg-[#f9f9f9] border border-[#e5e7eb] text-inherit${fullWidthImage ? ' overflow-hidden' : ''}`;
 
     const content = (
         <>
+            {logo && (
+                <div className="absolute top-3 right-3 z-10 flex items-center justify-center w-8 h-8 rounded-md bg-white dark:bg-white/10 shadow-sm border border-[#e5e7eb] dark:border-white/10">
+                    <img src={`/images/${logo}`} alt="" className={`w-5 h-5 object-contain${logoInvert ? ' ch-logo-invert' : ''}`} />
+                </div>
+            )}
             {icon ? (
                 <div className="mb-6">
                     {icon}
                 </div>
             ) : filename ? (
-                <>
+                <div className={`${overlayImg ? 'relative mb-12' : ''}${fullWidthImage ? ' -mx-4 -mt-4' : ''}`}>
                     <img
                         src={`/images/${filename}`}
                         alt={title}
-                        className="block dark:hidden w-full h-48 object-cover rounded-lg border border-[#d1d5db] pointer-events-none"
+                        className={`block dark:hidden w-full ${imageHeight} object-cover pointer-events-none${fullWidthImage ? '' : ' rounded-lg border border-[#d1d5db]'}`}
                     />
                     <img
                         src={`/images/${darkFilename}`}
                         alt={title}
-                        className="hidden dark:block w-full h-48 object-cover rounded-lg pointer-events-none"
+                        className={`hidden dark:block w-full ${imageHeight} object-cover pointer-events-none${fullWidthImage ? '' : ' rounded-lg'}`}
                     />
-                </>
+                    {overlayImg && (
+                        <img
+                            src={`/images/${overlayImg}`}
+                            alt=""
+                            className="absolute right-4 bottom-0 translate-y-[40%] w-[46%] rounded-xl pointer-events-none z-20"
+                            style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.18)' }}
+                        />
+                    )}
+                </div>
             ) : null}
             <h3 className={`text-[#111827] dark:text-white text-lg font-semibold leading-[1.3] ${(icon || !filename) ? 'mt-0' : 'mt-5'}`}>
                 {title}
@@ -117,11 +130,22 @@ export const McpLink = () => {
             onClick={handleClick}
             className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-500 hover:text-gray-900 dark:hover:text-[#fdff75] transition-colors no-underline"
         >
-            <svg fill="currentColor" fillRule="evenodd" height="13" width="13" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="shrink-0">
-                <path d="M15.688 2.343a2.588 2.588 0 00-3.61 0l-9.626 9.44a.863.863 0 01-1.203 0 .823.823 0 010-1.18l9.626-9.44a4.313 4.313 0 016.016 0 4.116 4.116 0 011.204 3.54 4.3 4.3 0 013.609 1.18l.05.05a4.115 4.115 0 010 5.9l-8.706 8.537a.274.274 0 000 .393l1.788 1.754a.823.823 0 010 1.18.863.863 0 01-1.203 0l-1.788-1.753a1.92 1.92 0 010-2.754l8.706-8.538a2.47 2.47 0 000-3.54l-.05-.049a2.588 2.588 0 00-3.607-.003l-7.172 7.034-.002.002-.098.097a.863.863 0 01-1.204 0 .823.823 0 010-1.18l7.273-7.133a2.47 2.47 0 00-.003-3.537z"/>
-                <path d="M14.485 4.703a.823.823 0 000-1.18.863.863 0 00-1.204 0l-7.119 6.982a4.115 4.115 0 000 5.9 4.314 4.314 0 006.016 0l7.12-6.982a.823.823 0 000-1.18.863.863 0 00-1.204 0l-7.119 6.982a2.588 2.588 0 01-3.61 0 2.47 2.47 0 010-3.54l7.12-6.982z"/>
-            </svg>
-            Set up docs MCP server
+            <span
+                aria-hidden="true"
+                className="shrink-0"
+                style={{
+                    width: 13,
+                    height: 13,
+                    backgroundColor: 'currentColor',
+                    WebkitMaskImage: 'url(/images/icons/icon-mcp.svg)',
+                    maskImage: 'url(/images/icons/icon-mcp.svg)',
+                    WebkitMaskSize: 'contain',
+                    maskSize: 'contain',
+                    WebkitMaskRepeat: 'no-repeat',
+                    maskRepeat: 'no-repeat',
+                }}
+            />
+            Настройте MCP Server для документации
         </a>
     );
 };
@@ -159,9 +183,20 @@ export const McpSetup = () => {
 
 <style>
   {`
-        .ch-goal-icon { color: #374151; }
-        .dark .ch-goal-icon { color: #FAFF69; }
-        `}
+          .ch-goal-icon { color: #374151; }
+          .dark .ch-goal-icon { color: #FAFF69; }
+          /* Скрыть боковую панель сразу на главной странице (чтобы избежать мерцания) */
+          #sidebar { display: none !important; }
+          /* Растянуть панель навигации на всю ширину, так как боковая панель скрыта */
+          #navbar-transition-maple {
+            width: 100vw !important;
+            left: 0 !important;
+            margin-left: 0 !important;
+            /* Соответствует собственному правому отступу панели навигации (3rem) */
+            padding-left: 3rem !important;
+            justify-content: flex-start !important;
+          }
+          `}
 </style>
 
 <div className="relative">
@@ -228,14 +263,14 @@ export const McpSetup = () => {
           </svg>
       }
         links={[
-          { label: "What is ClickHouse?", href: "/get-started/about/intro" },
-          { label: "Setup/Install", href: "/get-started/setup/cloud" },
-          { label: "Explore quickstarts", href: "/get-started/quickstarts/home" },
-          { label: "Migration guides", href: "/get-started/migrate/overview" },
-          { label: "ClickHouse fundamentals", href: "/concepts/core-concepts/index" },
-          { label: "Concepts (features)", href: "/concepts/features/index" },
-          { label: "Best practices", href: "/concepts/best-practices/index" },
-          { label: "Sample datasets", href: "/get-started/sample-datasets/index" }
+          { label: "Что такое ClickHouse?", href: "/get-started/about/intro" },
+          { label: "Установка и настройка", href: "/get-started/setup/cloud" },
+          { label: "Быстрый старт", href: "/get-started/quickstarts/home" },
+          { label: "Руководства по миграции", href: "/get-started/migrate/overview" },
+          { label: "Основы ClickHouse", href: "/concepts/core-concepts/index" },
+          { label: "Концепции (возможности)", href: "/concepts/features/index" },
+          { label: "Лучшие практики", href: "/concepts/best-practices/index" },
+          { label: "Примеры наборов данных", href: "/get-started/sample-datasets/index" }
       ]}
       />
 
@@ -264,14 +299,14 @@ export const McpSetup = () => {
           </svg>
       }
         links={[
-          { label: "SQL reference", href: "/reference/statements" },
-          { label: "Session settings", href: "/reference/settings/session-settings" },
-          { label: "Server settings", href: "/reference/settings/server-settings/settings" },
-          { label: "Functions", href: "/reference/functions/regular-functions/overview" },
-          { label: "Engines", href: "/reference/engines/engines" },
-          { label: "System tables", href: "/reference/system-tables" },
-          { label: "Formats", href: "/reference/formats/index" },
-          { label: "Data types", href: "/reference/data-types/index" }
+          { label: "Справочник SQL", href: "/reference/statements" },
+          { label: "Настройки сеанса", href: "/reference/settings/session-settings" },
+          { label: "Настройки сервера", href: "/reference/settings/server-settings/settings" },
+          { label: "Функции", href: "/reference/functions/regular-functions/overview" },
+          { label: "Движки", href: "/reference/engines/engines" },
+          { label: "Системные таблицы", href: "/reference/system-tables" },
+          { label: "Форматы", href: "/reference/formats/index" },
+          { label: "Типы данных", href: "/reference/data-types/index" }
       ]}
       />
 
@@ -320,7 +355,9 @@ export const McpSetup = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
         <div className="col-span-2">
           <HeroCard
-            filename="product-cloud-light.png"
+            filename="thumbnail-cloud-base.webp"
+            fullWidthImage
+            imageHeight="h-[72px]"
             title="ClickHouse Cloud"
             href="/ru/products/cloud/getting-started/intro"
             extraStyle={{ height: '100%' }}
@@ -340,22 +377,22 @@ export const McpSetup = () => {
         </div>
 
         <div className="flex flex-col gap-4">
-          <HeroCard title="ClickStack" description="Универсальный стек обсервабилити на базе ClickHouse, который обеспечивает молниеносно быстрые запросы и мощные агрегации по журналам, метрикам, трассировкам, воспроизведениям сеансов и ошибкам." href="/ru/clickstack/overview" extraStyle={{ flex: 1 }} showArrow arrowBottom />
+          <HeroCard logo="logo-ch.svg" logoInvert title="ClickStack" description="Универсальный стек обсервабилити на базе ClickHouse, который обеспечивает молниеносно быстрые запросы и мощные агрегации по журналам, метрикам, трассировкам, воспроизведениям сеансов и ошибкам." href="/ru/clickstack/overview" extraStyle={{ flex: 1 }} showArrow arrowBottom />
 
-          <HeroCard title="Managed Postgres" description="Быстрый, масштабируемый сервис Postgres корпоративного уровня, нативно интегрированный с ClickHouse. Легко объединяйте Postgres для транзакций и ClickHouse для аналитики." href="/ru/products/managed-postgres/overview" extraStyle={{ flex: 1 }} showArrow arrowBottom />
+          <HeroCard logo="logo-postgres.svg" title="Managed Postgres" description="Быстрый, масштабируемый сервис Postgres корпоративного уровня, нативно интегрированный с ClickHouse. Легко объединяйте Postgres для транзакций и ClickHouse для аналитики." href="/ru/products/managed-postgres/overview" extraStyle={{ flex: 1 }} showArrow arrowBottom />
 
-          <HeroCard title="Интеграции" description="Более 100 интеграций, чтобы подключить любимые инструменты и сервисы к ClickHouse." href="/ru/integrations/home" extraStyle={{ flex: 1 }} showArrow arrowBottom />
+          <HeroCard logo="logo-integration.svg" logoInvert title="Интеграции" description="Более 100 интеграций, чтобы подключить любимые инструменты и сервисы к ClickHouse." href="/ru/integrations/home" extraStyle={{ flex: 1 }} showArrow arrowBottom />
         </div>
       </div>
 
       {/* Строка 2: 3 одинаковые карточки */}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <HeroCard filename="product-langfuse-light.png" title="LangFuse" description="Платформа LLM-инжиниринга с открытым исходным кодом для обсервабилити, метрик, оценивания и управления промптами." href="https://langfuse.com/docs" showArrow />
+        <HeroCard filename="thumbnail-langfuse-light.png" title="LangFuse" description="Платформа LLM-инжиниринга с открытым исходным кодом для обсервабилити, метрик, оценивания и управления промптами." href="https://langfuse.com/docs" showArrow />
 
-        <HeroCard filename="product-cloud-light.png" title="Оператор Kubernetes" description="Автоматизирует развертывание, настройку и управление кластерами ClickHouse и ClickHouse Keeper в Kubernetes." href="/ru/products/kubernetes-operator/overview" showArrow />
+        <HeroCard filename="thumbnail-kubernetes-light.png" title="Оператор Kubernetes" description="Автоматизирует развертывание, настройку и управление кластерами ClickHouse и ClickHouse Keeper в Kubernetes." href="/ru/products/kubernetes-operator/overview" showArrow />
 
-        <HeroCard filename="product-chdb-light.png" title="chDB" description="Быстрая, надежная и масштабируемая встраиваемая база данных. Оцените мощь ClickHouse прямо в приложении." href="/ru/products/chdb" showArrow />
+        <HeroCard filename="thumbnail-chdb-light.png" title="chDB" description="Быстрая, надежная и масштабируемая встраиваемая база данных. Оцените мощь ClickHouse прямо в приложении." href="/ru/products/chdb" showArrow />
       </div>
     </div>
 

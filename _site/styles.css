@@ -4,15 +4,15 @@
    the gutter is already reserved — zero it out. */
 /* Hero cards on the home page */
 .ch-hero-card {
-    transition: background-color 0.12s ease, border-color 0.12s ease !important;
+    transition: border-color 0.12s ease !important;
 }
 .dark .ch-hero-card {
     background-color: #191919 !important;
     border-color: #2B2B2B !important;
 }
-.ch-hero-card:hover {
-    background-color: #f0f0f0 !important;
-    border-color: #d1d5db !important;
+/* Light mode: darken stroke only, no background change */
+html:not(.dark) .ch-hero-card:hover {
+    border-color: #9ca3af !important;
 }
 .dark .ch-hero-card:hover {
     background-color: #272727 !important;
@@ -27,8 +27,8 @@
     border-top-color: #2B2B2B !important;
 }
 /* Use case card arrows */
-.ch-usecase-arrow {
-    color: #000000;
+html:not(.dark) .ch-usecase-arrow {
+    color: #2563eb;
 }
 .dark .ch-usecase-arrow {
     color: #FCFF74;
@@ -222,34 +222,118 @@ html:not(.dark) .pagination-prev:hover {
     color: #E6E7E9 !important;
 }
 
-/* Previous/Next pagination widget container (#pagination). Reduce corner radius
-   and increase contrast so the pill stands out from the page background. */
+/* Previous/Next pagination (#pagination): restyle the maple pill bar into
+   two bordered cards matching the home-page hero cards (.ch-hero-card above;
+   colors duplicated because the hero card's base colors live in Tailwind
+   utilities in index.mdx). CSS-only on top of Mintlify's own markup, so the
+   Previous card shows just the chevron + label — maple's markup doesn't
+   include the previous page's title. */
 #pagination {
-    border-radius: 8px !important;
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    background: none !important;
+    padding: 0 !important;
 }
-#pagination .rounded-xl {
-    border-radius: 6px !important;
+
+@media (min-width: 1024px) {
+    #pagination {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    /* Next-only pages keep their card in the right column */
+    #pagination > a:first-child:has(svg.lucide-chevron-right) {
+        grid-column: 2;
+    }
 }
-html:not(.dark) #pagination {
-    background-color: #e5e7eb !important;
+
+/* Card chrome */
+#pagination > a {
+    background-color: #f9f9f9;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem !important;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
 }
-.dark #pagination,
-:is(.dark) #pagination {
-    background-color: rgba(255, 255, 255, 0.06) !important;
+
+.dark #pagination > a,
+:is(.dark) #pagination > a {
+    background-color: #191919;
+    border-color: #2B2B2B;
 }
-/* "Previous" / "Next" labels and their chevrons: dark in light, white in dark. */
-html:not(.dark) #pagination .font-medium.tracking-tight,
-html:not(.dark) #pagination svg.lucide-chevron-left,
-html:not(.dark) #pagination svg.lucide-chevron-right {
-    color: #111 !important;
+
+#pagination > a:hover {
+    background-color: #f0f0f0;
+    border-color: #d1d5db;
 }
+
+.dark #pagination > a:hover,
+:is(.dark) #pagination > a:hover {
+    background-color: #272727;
+    border-color: #535353;
+}
+
+/* Previous card: keep chevron + label together on the left (maple's
+   justify-between would otherwise spread them across the card) */
+#pagination > a:has(svg.lucide-chevron-left) {
+    justify-content: flex-start !important;
+}
+
+/* Next card: drop the pill-era inner background, fixed height, divider and
+   description, and stack the title over the label row, right-aligned. */
+#pagination > a:has(svg.lucide-chevron-right) > div {
+    height: auto !important;
+    background: none !important;
+    box-shadow: none !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+}
+
+#pagination > a:has(svg.lucide-chevron-right) > div > div {
+    padding: 0 !important;
+}
+
+#pagination > a:has(svg.lucide-chevron-right) > div > div:last-child {
+    margin-top: 0.25rem;
+}
+
+#pagination .font-semibold {
+    font-size: 1rem;
+    color: #111827 !important;
+}
+
+.dark #pagination .font-semibold,
+:is(.dark) #pagination .font-semibold {
+    color: #fff !important;
+}
+
+/* Description and vertical divider have no place in the card layout */
+#pagination .truncate,
+#pagination .w-px {
+    display: none !important;
+}
+
+/* "Previous" / "Next" labels and their chevrons */
+#pagination .font-medium.tracking-tight {
+    color: #6b7280 !important;
+}
+
 .dark #pagination .font-medium.tracking-tight,
+:is(.dark) #pagination .font-medium.tracking-tight {
+    color: #a1a1aa !important;
+}
+
+#pagination svg.lucide-chevron-left,
+#pagination svg.lucide-chevron-right {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: #6b7280 !important;
+}
+
 .dark #pagination svg.lucide-chevron-left,
 .dark #pagination svg.lucide-chevron-right,
-:is(.dark) #pagination .font-medium.tracking-tight,
 :is(.dark) #pagination svg.lucide-chevron-left,
 :is(.dark) #pagination svg.lucide-chevron-right {
-    color: #fff !important;
+    color: #a1a1aa !important;
 }
 
 /* "Copy page" split-button group: make the resting state clearly visible
@@ -279,24 +363,36 @@ html:not(.dark) #pagination svg.lucide-chevron-right {
 }
 
 /* "Was this page helpful?" feedback toolbar buttons (Yes / No / Suggest edits /
-   Raise issue). Mintlify styles them dark:bg-codeblock/50, which is nearly the page
-   background, so they all but vanish in dark mode. Lift the background and border
-   for contrast (matches the Copy-page button treatment above). */
+   Raise issue). Same chrome as the pagination cards / home-page hero cards
+   (.ch-hero-card colors). Doesn't render in `mint dev` — verify on a hosted
+   deployment. */
+.feedback-toolbar button,
+.feedback-toolbar a {
+    background-color: #f9f9f9 !important;
+    border-color: #e5e7eb !important;
+    border-radius: 0.5rem !important;
+    color: #6b7280 !important;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.feedback-toolbar button:hover,
+.feedback-toolbar a:hover {
+    background-color: #f0f0f0 !important;
+    border-color: #d1d5db !important;
+}
 .dark .feedback-toolbar button,
 .dark .feedback-toolbar a,
 :is(.dark) .feedback-toolbar button,
 :is(.dark) .feedback-toolbar a {
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    color: rgb(209, 213, 219) !important;
+    background-color: #191919 !important;
+    border-color: #2B2B2B !important;
+    color: #a1a1aa !important;
 }
 .dark .feedback-toolbar button:hover,
 .dark .feedback-toolbar a:hover,
 :is(.dark) .feedback-toolbar button:hover,
 :is(.dark) .feedback-toolbar a:hover {
-    background-color: rgba(255, 255, 255, 0.14) !important;
-    border-color: rgba(255, 255, 255, 0.32) !important;
-    color: rgb(243, 244, 246) !important;
+    background-color: #272727 !important;
+    border-color: #535353 !important;
 }
 
 /* Override code block background border radius */
@@ -851,6 +947,13 @@ html.dark .dark\:bg-primary-light,
     background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
+/* Light mode: darken border on hover, no background change */
+html:not(.dark) .card:hover {
+    background-color: #f7f7f7 !important;
+    border-color: #9ca3af !important;
+    transition: border-color 0.12s ease !important;
+}
+
 /* Override card hover border color in dark mode */
 .dark .card:hover,
 :is(.dark) .card:hover {
@@ -882,7 +985,8 @@ li[data-title][id="/integrations/language-clients"] > button svg.transition-tran
 li[data-title][id="/integrations/language-clients/js"] > button svg.transition-transform,
 li[data-title][id="/integrations/language-clients/csharp/overview"] > button svg.transition-transform,
 li[data-title][id="/integrations/language-clients/rust"] > button svg.transition-transform,
-li[data-title][id="/integrations/language-clients/cpp"] > button svg.transition-transform {
+li[data-title][id="/integrations/language-clients/cpp"] > button svg.transition-transform,
+li[data-title][id="/integrations/language-clients/c"] > button svg.transition-transform{
     display: none !important;
 }
 
@@ -1778,6 +1882,65 @@ h5#sidebar-title {
     }
 }
 
+/* ============================================
+   Homepage: no sidebar
+   ============================================ */
+
+/* Hide the sidebar on the homepage.
+   data-current-path is set by Mintlify via a blocking <head> script, so this
+   fires before any browser paint — preventing the sidebar flash on load. */
+html[data-current-path="/"] #sidebar,
+html[data-current-path="/es"] #sidebar,
+html[data-current-path="/ja"] #sidebar,
+html[data-current-path="/ko"] #sidebar,
+html[data-current-path="/pt-BR"] #sidebar,
+html[data-current-path="/ru"] #sidebar,
+html[data-current-path="/zh"] #sidebar,
+html.ch-homepage #sidebar {
+    display: none !important;
+}
+
+/* Navbar: full width when sidebar is hidden */
+html[data-current-path="/"] #navbar-transition-maple,
+html[data-current-path="/es"] #navbar-transition-maple,
+html[data-current-path="/ja"] #navbar-transition-maple,
+html[data-current-path="/ko"] #navbar-transition-maple,
+html[data-current-path="/pt-BR"] #navbar-transition-maple,
+html[data-current-path="/ru"] #navbar-transition-maple,
+html[data-current-path="/zh"] #navbar-transition-maple,
+html.ch-homepage #navbar-transition-maple {
+    width: 100vw !important;
+    left: 0 !important;
+    margin-left: 0 !important;
+    /* Match the navbar's own right padding (3rem) so the logo sits as far
+       from the left edge as the right-side controls do from the right. */
+    padding-left: 3rem !important;
+    justify-content: flex-start !important;
+}
+
+/* Stretch content to use the full viewport on homepage */
+@media (min-width: 1024px) {
+    html.ch-homepage #content-container {
+        margin-left: 0 !important;
+        padding-left: max(2rem, calc((100vw - 1000px) / 2)) !important;
+        padding-right: max(2rem, calc((100vw - 1000px) / 2)) !important;
+    }
+    html.ch-homepage #ch-custom-footer {
+        padding-left: max(2rem, calc((100vw - 1000px) / 2)) !important;
+        padding-right: max(2rem, calc((100vw - 1000px) / 2)) !important;
+    }
+}
+
+/* ============================================
+   Card corner logos
+   ============================================ */
+
+/* White SVG logos (ch, integration) need inversion in light mode
+   so they're visible on the white badge background */
+html:not(.dark) .ch-logo-invert {
+    filter: invert(1);
+}
+
 /* Landing page (mode: "custom"): match content-page side gutters
    so the homepage's left gap from the sidebar equals the right gap from the viewport. */
 @media (min-width: 1024px) {
@@ -1792,7 +1955,10 @@ h5#sidebar-title {
     #ch-custom-footer {
         padding-left: max(calc(19rem + 2rem), calc((100vw - 19rem - 1104px) / 2 + 19rem)) !important;
     }
-    html[data-page-mode="custom"] #ch-custom-footer {
+    /* :not(.ch-homepage): the homepage hides the sidebar and centers its
+       content, so it gets symmetric padding from the html.ch-homepage rule
+       above — don't let this sidebar-offset rule override its right edge. */
+    html[data-page-mode="custom"]:not(.ch-homepage) #ch-custom-footer {
         padding-right: max(2rem, calc((100vw - 19rem - 1104px) / 2)) !important;
     }
 }
@@ -2099,46 +2265,12 @@ html:not(.dark) [data-callout-type] [data-component-part="callout-content"] code
 /* Warning - Orange */
 .dark [data-callout-type="warning"],
 :is(.dark) [data-callout-type="warning"] {
-    background-color: #ffedd8;
+    background-color: rgb(100% 46.667% 16.078% / 0.2);
 }
 
 .dark [data-callout-type="warning"] [data-component-part="callout-content"],
 :is(.dark) [data-callout-type="warning"] [data-component-part="callout-content"] {
-    color: #000000 !important;
-}
-
-/* Inline code inside the dark-mode warning callout — needs a darker grey
-   tint so it stays visible against the cream background. */
-.dark [data-callout-type="warning"] [data-component-part="callout-content"] code:not(pre code),
-:is(.dark) [data-callout-type="warning"] [data-component-part="callout-content"] code:not(pre code) {
-    background-color: rgba(0, 0, 0, 0.15) !important;
-    color: #000000 !important;
-    border: 1px solid rgba(0, 0, 0, 0.18);
-}
-
-/* List items inside the dark-mode warning callout — prose-invert overrides
-   the callout-content color rule for li elements specifically, making bullet
-   text white-on-cream and invisible. Force them to match the callout text. */
-.dark [data-callout-type="warning"] [data-component-part="callout-content"] ul li,
-:is(.dark) [data-callout-type="warning"] [data-component-part="callout-content"] ul li,
-.dark [data-callout-type="warning"] [data-component-part="callout-content"] ol li,
-:is(.dark) [data-callout-type="warning"] [data-component-part="callout-content"] ol li {
-    color: #000000 !important;
-}
-
-/* Links inside the dark-mode warning callout — without this they pick up the
-   page's primary yellow (.dark .prose a:not(.card):not(.card *), which is
-   !important), and the yellow is invisible against the cream background.
-   Selector needs higher specificity than that rule to win. */
-html.dark .prose [data-callout-type="warning"] [data-component-part="callout-content"] a,
-html:is(.dark) .prose [data-callout-type="warning"] [data-component-part="callout-content"] a {
-    color: #a33c00 !important;
-}
-
-html.dark .prose [data-callout-type="warning"] [data-component-part="callout-content"] a:hover,
-html:is(.dark) .prose [data-callout-type="warning"] [data-component-part="callout-content"] a:hover {
-    color: #6b2700 !important;
-    text-decoration: underline !important;
+    color: #ffb88f !important;
 }
 
 .dark [data-callout-type="warning"] [data-component-part="callout-icon"],
@@ -2353,6 +2485,16 @@ html.dark #banner a,
    Goal Card Link Hover
    ============================================ */
 
+/* Light mode: links and arrows inside cards are blue */
+html:not(.dark) .goal-card-link {
+    color: #2563eb !important;
+}
+
+/* Light mode: links inside standard Mintlify cards are blue */
+html:not(.dark) .card a {
+    color: #2563eb !important;
+}
+
 .goal-card-link:hover span {
     text-decoration: underline;
 }
@@ -2415,54 +2557,66 @@ html.dark #banner a,
     margin-top: -4px !important;
 }
 /* ============================================
-   Callout: left-bar icon style
+   Callout: Click UI-style inline icon
    ============================================
-   Restyle Note/Tip/Warning/Info/Danger so the icon sits inside a solid
-   colored bar on the left, content fills the rest. Overrides the default
-   horizontal flex layout from the Mintlify theme. */
+   Matches the Click UI Alert component — tinted background, inline icon
+   colored with the state accent, no left bar. */
 
 [data-callout-type] {
-    position: relative !important;
-    padding: 0.75rem 1rem 0.75rem 4rem !important;
-    border-radius: 6px !important;
+    padding: 0.75rem !important;
+    border-radius: 0.25rem !important;
     overflow: hidden !important;
     border: none !important;
 }
 
+/* Icon: inline in the flex row, not an absolute bar */
 [data-callout-type] [data-component-part="callout-icon"] {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    width: 3rem !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    width: 1.25rem !important;
+    min-width: 1.25rem !important;
+    height: 1.25rem !important;
     margin: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background-color: #9ca3af; /* default neutral; overridden per type below */
+    align-self: flex-start !important;
+    background-color: transparent !important;
+    padding-top: 0.125rem !important;
 }
 
 [data-callout-type] [data-component-part="callout-icon"] svg {
     width: 1.25rem !important;
     height: 1.25rem !important;
-    color: #fff !important;
+    /* color is set per-state in the light/dark blocks above */
 }
 
 [data-callout-type] [data-component-part="callout-content"] {
     padding-left: 0 !important;
 }
 
-/* Per-type bar colors (light + dark share the same accent).
-   `!important` is required to override earlier per-type rules in this file
-   that set the icon background to transparent. */
-[data-callout-type="note"] [data-component-part="callout-icon"] { background-color: #6b7280 !important; }
-[data-callout-type="info"] [data-component-part="callout-icon"] { background-color: #3b82f6 !important; }
-[data-callout-type="tip"] [data-component-part="callout-icon"],
-[data-callout-type="success"] [data-component-part="callout-icon"],
-[data-callout-type="check"] [data-component-part="callout-icon"] { background-color: #10b981 !important; }
-[data-callout-type="warning"] [data-component-part="callout-icon"] { background-color: #f59e0b !important; }
-[data-callout-type="danger"] [data-component-part="callout-icon"],
-[data-callout-type="error"] [data-component-part="callout-icon"] { background-color: #ef4444 !important; }
+/* ============================================
+   Callout links: inherit accent color, underline
+   ============================================ */
+
+html:not(.dark) .prose [data-callout-type] [data-component-part="callout-content"] a,
+html.dark .prose [data-callout-type] [data-component-part="callout-content"] a {
+    color: inherit !important;
+    text-decoration: underline !important;
+    text-decoration-thickness: 2px !important;
+    text-underline-offset: 2px !important;
+}
+
+html:not(.dark) .prose [data-callout-type] [data-component-part="callout-content"] a:hover {
+    filter: brightness(0.6) !important;
+    text-decoration-thickness: 2px !important;
+    text-underline-offset: 2px !important;
+}
+
+html.dark .prose [data-callout-type] [data-component-part="callout-content"] a:hover {
+    filter: brightness(1.4) !important;
+    text-decoration-thickness: 2px !important;
+    text-underline-offset: 2px !important;
+}
 
 /* ============================================
    Code-snippet "Report incorrect code" popover
@@ -2525,4 +2679,19 @@ html.dark #banner a,
 :is(.dark) .code-snippet-feedback-popover-content textarea:focus-visible {
     border-color: #fdff75 !important;
     box-shadow: 0 0 0 2px rgba(253, 255, 117, 0.25) !important;
+}
+
+/* Language picker: prepend a translate icon (images/icons/icon-language-picker.svg)
+   to the navbar locale dropdown trigger. The trigger is `flex items-center
+   gap-2`, so a ::before pseudo-element slots in left of the label with
+   correct spacing for free. The icon is applied as an alpha mask over a
+   currentColor fill so it tracks the button's light/dark text color. */
+button#localization-select-trigger::before {
+    content: "";
+    width: 1.1em;
+    height: 1.1em;
+    flex-shrink: 0;
+    background-color: currentColor;
+    -webkit-mask: url("/images/icons/icon-language-picker.svg") no-repeat center / contain;
+    mask: url("/images/icons/icon-language-picker.svg") no-repeat center / contain;
 }

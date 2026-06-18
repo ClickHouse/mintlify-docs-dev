@@ -3,10 +3,26 @@
 
   // ── Desktop tab navigation ────────────────────────────────────────────────
   var TAB_URLS = {
-    'Database':     '/',
+    'Home':         '/',
+    'Database':     '/get-started/about/intro',
     'Solutions':    '/products/cloud/getting-started/cloud-get-started',
     'Integrations': '/integrations/home',
   };
+
+  // Locales with their own page tree; each has a localized homepage at
+  // /<locale> and mirrors the English paths beneath it.
+  var LOCALES = ['es', 'ja', 'ko', 'pt-BR', 'ru', 'zh'];
+
+  function currentLocale() {
+    var seg = window.location.pathname.split('/')[1] || '';
+    return LOCALES.indexOf(seg) !== -1 ? seg : '';
+  }
+
+  // Keep navigation within the active locale: '/' -> '/es', '/x/y' -> '/es/x/y'.
+  function localizeUrl(url) {
+    var locale = currentLocale();
+    return locale ? '/' + locale + (url === '/' ? '' : url) : url;
+  }
 
   function patchTabButtons() {
     // Only run on desktop
@@ -25,14 +41,14 @@
       el.dataset.tabNavAttached = '1';
 
       if (el.tagName === 'A') {
-        el.setAttribute('href', url);
+        el.setAttribute('href', localizeUrl(url));
         return;
       }
 
       labelDiv.style.cursor = 'pointer';
       labelDiv.addEventListener('click', function (e) {
         e.stopPropagation();
-        window.location.href = url;
+        window.location.href = localizeUrl(url);
       });
     });
   }
@@ -65,18 +81,128 @@
     });
   }
 
+  // ── Logo theme sync ──────────────────────────────────────────────────────
+  function updateLogoTheme() {
+    var light = document.getElementById('ch-hp-logo-light');
+    var dark = document.getElementById('ch-hp-logo-dark');
+    if (!light || !dark) return;
+    var isDark = document.documentElement.classList.contains('dark');
+    light.style.display = isDark ? 'none' : 'block';
+    dark.style.display = isDark ? 'block' : 'none';
+  }
+
+  // ── Homepage sidebar hiding ───────────────────────────────────────────────
+  // Each locale has its own homepage at /<locale> (e.g. /es, /ja); treat those
+  // the same as the English homepage at /.
+  function isHomePath() {
+    var path = window.location.pathname.replace(/\/+$/, '') || '/';
+    return path === '/' || LOCALES.indexOf(path.slice(1)) !== -1;
+  }
+
+  function applyHomepageClass() {
+    if (isHomePath()) {
+      document.documentElement.classList.add('ch-homepage');
+    } else {
+      document.documentElement.classList.remove('ch-homepage');
+    }
+  }
+
+  // ── Homepage: inject logo + theme toggle into navbar ──────────────────────
+  var LOGO_ID = 'ch-homepage-logo';
+  var TOGGLE_ID = 'ch-homepage-toggle';
+
+  function findSidebarThemeToggle() {
+    var btn = document.querySelector('#sidebar button[aria-label="Toggle dark mode"]');
+    if (btn) return btn;
+    // Localized UIs translate the aria-label (e.g. "다크 모드 전환"), so fall
+    // back to the toggle's shape: the only sidebar pill button holding the
+    // sun + moon icons.
+    var candidates = document.querySelectorAll('#sidebar button');
+    for (var i = 0; i < candidates.length; i++) {
+      if (/rounded-full/.test(candidates[i].className)
+          && candidates[i].querySelectorAll('svg').length >= 2) {
+        return candidates[i];
+      }
+    }
+    return null;
+  }
+
+  function setupHomepageNavbar() {
+    var isHome = isHomePath();
+    var navbar = document.getElementById('navbar-transition-maple');
+    if (!navbar) return;
+
+    if (!isHome) {
+      // Restore theme toggle to sidebar before removing wrapper
+      var toggleWrapper = document.getElementById(TOGGLE_ID);
+      if (toggleWrapper) {
+        var btn = toggleWrapper.querySelector('button');
+        var sidebar = document.getElementById('sidebar');
+        if (btn && sidebar) sidebar.appendChild(btn);
+        toggleWrapper.parentNode.removeChild(toggleWrapper);
+      }
+      var logo = document.getElementById(LOGO_ID);
+      if (logo) logo.parentNode.removeChild(logo);
+      return;
+    }
+
+    // Inject logo at left of navbar; link to the active locale's homepage
+    var existingLogo = document.getElementById(LOGO_ID);
+    if (existingLogo) {
+      existingLogo.setAttribute('href', localizeUrl('/'));
+    } else {
+      var logoLink = document.createElement('a');
+      logoLink.id = LOGO_ID;
+      logoLink.href = localizeUrl('/');
+      logoLink.style.cssText = 'display:flex;align-items:center;flex-shrink:0;text-decoration:none;';
+      logoLink.innerHTML = '<img src="/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs" style="height:2rem;">'
+        + '<img src="/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs" style="height:2rem;">';
+      navbar.insertBefore(logoLink, navbar.firstChild);
+      updateLogoTheme();
+    }
+
+    // Move theme toggle from sidebar to navbar — insert after logo, before tabs.
+    // margin-right: auto pushes all tabs + right-side controls to the right.
+    if (!document.getElementById(TOGGLE_ID)) {
+      var sidebarToggle = findSidebarThemeToggle();
+      if (sidebarToggle) {
+        var wrapper = document.createElement('div');
+        wrapper.id = TOGGLE_ID;
+        wrapper.style.cssText = 'display:flex;align-items:center;flex-shrink:0;margin-left:0.75rem;margin-right:auto;';
+        sidebarToggle.parentNode.removeChild(sidebarToggle);
+        wrapper.appendChild(sidebarToggle);
+        // Insert as second child (right after the logo)
+        var logoEl = document.getElementById(LOGO_ID);
+        if (logoEl && logoEl.nextSibling) {
+          navbar.insertBefore(wrapper, logoEl.nextSibling);
+        } else {
+          navbar.appendChild(wrapper);
+        }
+      }
+    }
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
   function init() {
+    applyHomepageClass();
+    setupHomepageNavbar();
     patchTabButtons();
     styleDropdownHeaders();
 
     var observer = new MutationObserver(function () {
+      applyHomepageClass();
+      setupHomepageNavbar();
+      updateLogoTheme();
       patchTabButtons();
       styleDropdownHeaders();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
     window.addEventListener('resize', patchTabButtons);
+    window.addEventListener('popstate', function () {
+      applyHomepageClass();
+      setupHomepageNavbar();
+    });
   }
 
   if (document.readyState === 'loading') {
