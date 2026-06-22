@@ -7,10 +7,6 @@ keywords: ['managed postgres', 'local development', 'docker', 'postgresql', 'see
 doc_type: 'guide'
 ---
 
-import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
-
-<BetaBadge/>
-
 Managed Postgres is built on standard PostgreSQL and works with the existing PostgreSQL ecosystem. For most development tasks, you can develop and test against a local PostgreSQL instance running in Docker rather than a cloud deployment.
 
 This approach provides a fast feedback loop, simplifies onboarding, reduces dependencies on shared infrastructure, and lets you experiment safely without impacting production systems.
@@ -24,7 +20,7 @@ The goal isn't to replicate production exactly. Instead, create a reproducible l
 
 Because Managed Postgres is standard PostgreSQL, existing migration frameworks, schema management tools, and data seeding approaches work without modification.
 
-## Example development flow {#example-development-flow}
+## Example development flow <a id="example-development-flow"></a>
 
 A typical local development workflow looks like:
 
@@ -40,13 +36,13 @@ graph LR
 
 Managed Postgres fits into existing PostgreSQL development workflows. By developing against a local PostgreSQL instance, teams can iterate quickly, maintain reproducible environments, and gain confidence that applications behave consistently when deployed to Managed Postgres.
 
-## Run PostgreSQL locally with Docker {#run-postgresql-locally-with-docker}
+## Run PostgreSQL locally with Docker <a id="run-postgresql-locally-with-docker"></a>
 
 The simplest way to create a local development environment is to run PostgreSQL in Docker.
 
 Choose a PostgreSQL version that matches your Managed Postgres deployment:
 
-```yaml docker-compose.yml
+```yaml title="docker-compose.yml"
 services:
   postgres:
     image: postgres:18
@@ -82,11 +78,11 @@ psql -h localhost -U postgres -p 15432 -d app
 
 At this point PostgreSQL is running locally but doesn't yet contain the application schema or any development data.
 
-## Apply the application schema {#apply-the-application-schema}
+## Apply the application schema <a id="apply-the-application-schema"></a>
 
 There's no single required approach for creating the schema in a local environment. Most organizations already have an established schema management workflow that can be reused unchanged.
 
-### Application migrations {#application-migrations}
+### Application migrations <a id="application-migrations"></a>
 
 Many teams use the same migration framework that runs in staging and production environments — tools like Flyway, Liquibase, Rails migrations, Django migrations, Prisma migrations, or Alembic.
 
@@ -100,7 +96,7 @@ npm run migrate
 rails db:migrate
 ```
 
-### Schema-only PostgreSQL dumps {#schema-only-postgresql-dumps}
+### Schema-only PostgreSQL dumps <a id="schema-only-postgresql-dumps"></a>
 
 A schema-only PostgreSQL export can reproduce an existing database structure. This is useful for onboarding, investigating schema behavior, validating compatibility, or quickly bootstrapping development environments.
 
@@ -128,13 +124,13 @@ psql \
   -f schema.sql
 ```
 
-### Checked-in SQL definitions {#checked-in-sql-definitions}
+### Checked-in SQL definitions <a id="checked-in-sql-definitions"></a>
 
 Some teams maintain schema definitions directly in source control as SQL files. These can be applied directly to a local PostgreSQL instance during environment setup.
 
 Regardless of the approach, the important outcome is that schema creation is automated, reproducible, and derived from version-controlled definitions.
 
-## Populate representative development data {#populate-representative-development-data}
+## Populate representative development data <a id="populate-representative-development-data"></a>
 
 Once the schema exists, populate the database with representative development data.
 
@@ -142,7 +138,7 @@ For most development workflows, synthetic datasets generated through seed script
 
 A common approach for SaaS applications is to generate data for a small number of sample tenants and create realistic relationships between users, products, orders, and other business entities.
 
-### Example multi-tenant schema {#example-multi-tenant-schema}
+### Example multi-tenant schema <a id="example-multi-tenant-schema"></a>
 
 The following schema represents a simplified multi-tenant SaaS application:
 
@@ -193,7 +189,7 @@ CREATE TABLE audit_logs (
 );
 ```
 
-### Generate sample data {#generate-sample-data}
+### Generate sample data <a id="generate-sample-data"></a>
 
 Install dependencies:
 
@@ -203,7 +199,7 @@ pip install faker psycopg2-binary
 
 Create a file named `seed.py`:
 
-```python seed.py
+```python title="seed.py"
 import random
 import uuid
 
@@ -379,7 +375,7 @@ The resulting dataset contains:
 
 This dataset is large enough to exercise common application workflows, tenant isolation logic, reporting queries, and relational integrity checks while remaining lightweight for local development and testing.
 
-## PostgreSQL + ClickHouse development environment {#postgresql-clickhouse-development-environment}
+## PostgreSQL + ClickHouse development environment <a id="postgresql-clickhouse-development-environment"></a>
 
 The examples above focus on local PostgreSQL development. If you want to test the complete PostgreSQL-to-ClickHouse architecture locally, you can run the open-source PostgreSQL + ClickHouse stack.
 

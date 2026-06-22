@@ -8,13 +8,13 @@ doc_type: 'reference'
 
 The MySQL engine allows you to perform `SELECT` and `INSERT` queries on data that is stored on a remote MySQL server.
 
-## Creating a table {#creating-a-table}
+## Creating a table <a id="creating-a-table"></a>
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 (
-    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1] [TTL expr1],
-    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2] [TTL expr2],
+    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1],
+    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2],
     ...
 ) ENGINE = MySQL({host:port, database, table, user, password[, replace_query, on_duplicate_clause] | named_collection[, option=value [,..]]})
 SETTINGS
@@ -23,7 +23,8 @@ SETTINGS
     [ connection_wait_timeout=5, ]
     [ connection_auto_close=true, ]
     [ connect_timeout=10, ]
-    [ read_write_timeout=300 ]
+    [ read_write_timeout=300, ]
+    [ enable_compression=false ]
 ;
 ```
 
@@ -59,7 +60,7 @@ Supports multiple replicas that must be listed by `|`. For example:
 CREATE TABLE test_replicas (id UInt32, name String, age UInt32, money UInt32) ENGINE = MySQL(`mysql{2|3|4}:3306`, 'clickhouse', 'test_replicas', 'root', 'clickhouse');
 ```
 
-## Usage example {#usage-example}
+## Usage example <a id="usage-example"></a>
 
 Create table in MySQL:
 
@@ -124,11 +125,11 @@ SELECT * FROM mysql_table
 └────────────────┴────────┘
 ```
 
-## Settings {#mysql-settings}
+## Settings <a id="mysql-settings"></a>
 
 Default settings are not very efficient, since they do not even reuse connections. These settings allow you to increase the number of queries run by the server per second.
 
-### `connection_auto_close` {#connection-auto-close}
+### `connection_auto_close` <a id="connection-auto-close"></a>
 
 Allows to automatically close the connection after query execution, i.e. disable connection reuse.
 
@@ -139,7 +140,7 @@ Possible values:
 
 Default value: `1`.
 
-### `connection_max_tries` {#connection-max-tries}
+### `connection_max_tries` <a id="connection-max-tries"></a>
 
 Sets the number of retries for pool with failover.
 
@@ -150,7 +151,7 @@ Possible values:
 
 Default value: `3`.
 
-### `connection_pool_size` {#connection-pool-size}
+### `connection_pool_size` <a id="connection-pool-size"></a>
 
 Size of connection pool (if all connections are in use, the query will wait until some connection will be freed).
 
@@ -160,7 +161,7 @@ Possible values:
 
 Default value: `16`.
 
-### `connection_wait_timeout` {#connection-wait-timeout}
+### `connection_wait_timeout` <a id="connection-wait-timeout"></a>
 
 Timeout (in seconds) for waiting for free connection (in case of there is already connection_pool_size active connections), 0 - do not wait.
 
@@ -170,7 +171,7 @@ Possible values:
 
 Default value: `5`.
 
-### `connect_timeout` {#connect-timeout}
+### `connect_timeout` <a id="connect-timeout"></a>
 
 Connect timeout (in seconds).
 
@@ -180,7 +181,7 @@ Possible values:
 
 Default value: `10`.
 
-### `read_write_timeout` {#read-write-timeout}
+### `read_write_timeout` <a id="read-write-timeout"></a>
 
 Read/write timeout (in seconds).
 
@@ -190,7 +191,36 @@ Possible values:
 
 Default value: `300`.
 
-## See also {#see-also}
+### `enable_compression` <a id="enable-compression"></a>
+
+Enables compression for the MySQL protocol connection.
+
+Default value: `false`.
+
+This setting applies to:
+
+- the `MySQL` table engine;
+- the `MySQL` database engine;
+- the `mysql` table function;
+- named collections used by MySQL integrations.
+
+When enabled, ClickHouse requests compression for the connection.
+
+Example:
+
+```sql
+CREATE TABLE mysql_engine_compression
+(
+    id UInt32,
+    name String,
+    age UInt32,
+    money UInt32
+)
+ENGINE = MySQL('mysql80:3306', 'clickhouse', 'test_table', 'root', 'password')
+SETTINGS enable_compression = 1;
+```
+
+## See also <a id="see-also"></a>
 
 - [The mysql table function](/reference/functions/table-functions/mysql)
 - [Using MySQL as a dictionary source](/reference/statements/create/dictionary/sources/mysql)

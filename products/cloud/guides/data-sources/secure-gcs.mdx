@@ -11,7 +11,7 @@ import { Image } from "/snippets/components/Image.jsx";
 
 This guide demonstrates how to securely authenticate with Google Cloud Storage (GCS) and access your data from ClickHouse Cloud.
 
-## Introduction {#introduction}
+## Introduction <a id="introduction"></a>
 
 ClickHouse Cloud connects to GCS using HMAC (Hash-based Message Authentication Code) keys associated with a Google Cloud service account.
 This approach provides secure access to your GCS buckets without embedding credentials directly in your queries.
@@ -25,18 +25,18 @@ How it works:
 
 This approach allows you to manage all access to GCS buckets through IAM policies on the service account, making it easier to grant or revoke access without modifying individual bucket policies.
 
-## Prerequisites {#prerequisites}
+## Prerequisites <a id="prerequisites"></a>
 
 For following this guide you will need:
 - An active ClickHouse Cloud service
 - A Google Cloud project with Cloud Storage enabled
 - Permissions to create service accounts and generate HMAC keys in your GCP project
 
-## Setup {#setup}
+## Setup <a id="setup"></a>
 
 <Steps>
 <Step>
-### Create a Google Cloud service account {#create-gcs-account}
+### Create a Google Cloud service account <a id="create-gcs-account"></a>
 
 1. In the Google Cloud Console, navigate to IAM & Admin → Service Accounts
 
@@ -75,11 +75,11 @@ Make note of the service account email address:
 <Image img="/images/cloud/guides/accessing-data/GCS/note_service_account_email.png" size="md" alt=""/>
 </Step>
 <Step>
-### Grant bucket access to the service account {#grant-bucket-access-to-service-account}
+### Grant bucket access to the service account <a id="grant-bucket-access-to-service-account"></a>
 
 You can grant access at either the project level or individual bucket level.
 
-#### Option 1: Grant access to specific buckets (recommended) {#option-1}
+#### Option 1: Grant access to specific buckets (recommended) <a id="option-1"></a>
 
 1. Navigate to `Cloud Storage` → `Buckets`
 2. Click on the bucket you want to grant access to
@@ -92,7 +92,7 @@ You can grant access at either the project level or individual bucket level.
 7. Click `Save`
 8. Repeat for any additional buckets
 
-#### Option 2: Grant project-level access {#option-2}
+#### Option 2: Grant project-level access <a id="option-2"></a>
 
 1. Navigate to `IAM & Admin` → `IAM`
 2. Click `Grant access`
@@ -107,7 +107,7 @@ Grant access only to the specific buckets that ClickHouse needs to access, rathe
 </Warning>
 </Step>
 <Step>
-### Generate HMAC keys for the service account {#generate-hmac-keys-for-service-account}
+### Generate HMAC keys for the service account <a id="generate-hmac-keys-for-service-account"></a>
 
 Navigate to `Cloud Storage` → `Settings` → `Interoperability`:
 
@@ -135,15 +135,15 @@ Access Key: GOOG1EF4YBJVNFQ2YGCP3SLV4Y7CMFHW7HPC6EO7RITLJDDQ75639JK56SQVD
 Secret: nFy6DFRr4sM9OnV6BG4FtWVPR25JfqpmcdZ6w9nV
 ```
 
-<Warning>
+<Danger>
 **Important**
 
 Store these credentials securely.
 The secret can't be retrieved again after this screen is closed.
 You will need to generate new keys if you lose the secret.
-</Warning>
+</Danger>
 
-## Use HMAC keys with ClickHouse Cloud {#use-hmac-keys-with-clickhouse-cloud}
+## Use HMAC keys with ClickHouse Cloud <a id="use-hmac-keys-with-clickhouse-cloud"></a>
 
 Now you can use the HMAC credentials to access GCS from ClickHouse Cloud.
 For this, use the GCS table function:
@@ -170,7 +170,7 @@ FROM gcs(
 );
 ```
 
-## HMAC authentication in ClickPipes for GCS {#hmac-authentication-clickpipes-for-gcs}
+## HMAC authentication in ClickPipes for GCS <a id="hmac-authentication-clickpipes-for-gcs"></a>
 
 ClickPipes uses HMAC (Hash-based Message Authentication Code) keys to authenticate with Google Cloud Storage.
 
@@ -192,9 +192,9 @@ The HMAC keys must be associated with a service account that has the `roles/stor
 </Step>
 </Steps>
 
-## Best practices {#best-practices}
+## Best practices <a id="best-practices"></a>
 
-### Use separate service accounts for different environments {#separate-service-accounts}
+### Use separate service accounts for different environments <a id="separate-service-accounts"></a>
 
 Create separate service accounts for development, staging, and production environments. For example:
 - `clickhouse-gcs-dev@project.iam.gserviceaccount.com`
@@ -203,14 +203,14 @@ Create separate service accounts for development, staging, and production enviro
 
 This allows you to easily revoke access for a specific environment without affecting others.
 
-### Apply least-privilege access {#apply-least-privilege-access}
+### Apply least-privilege access <a id="apply-least-privilege-access"></a>
 
 Grant only the minimum required permissions:
 - Use **Storage Object Viewer** for read-only access
 - Grant access to specific buckets rather than project-wide
 - Consider using bucket-level conditions to restrict access to specific paths
 
-### Rotate HMAC keys regularly {#rotate-hmac-keys}
+### Rotate HMAC keys regularly <a id="rotate-hmac-keys"></a>
 
 Implement a key rotation schedule:
 
@@ -223,7 +223,7 @@ Implement a key rotation schedule:
 Google Cloud doesn't enforce HMAC key expiration, so you must implement your own rotation policy.
 </Tip>
 
-### Monitor access with Cloud Audit Logs {#monitor-access}
+### Monitor access with Cloud Audit Logs <a id="monitor-access"></a>
 
 Enable and monitor Cloud Audit Logs for Cloud Storage:
 

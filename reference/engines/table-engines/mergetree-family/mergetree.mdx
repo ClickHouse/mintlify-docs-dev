@@ -29,7 +29,7 @@ Main features of `MergeTree`-family table engines.
 Despite a similar name, the [Merge](/reference/engines/table-engines/special/merge) engine is different from `*MergeTree` engines.
 </Note>
 
-## Creating tables {#table_engine-mergetree-creating-a-table}
+## Creating tables <a id="table_engine-mergetree-creating-a-table"></a>
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -56,37 +56,37 @@ ORDER BY expr
 
 For a detailed description of the parameters, see the [CREATE TABLE](/reference/statements/create/table) statement
 
-### Query clauses {#mergetree-query-clauses}
+### Query clauses <a id="mergetree-query-clauses"></a>
 
-#### ENGINE {#engine}
+#### ENGINE <a id="engine"></a>
 
 `ENGINE` — Name and parameters of the engine. `ENGINE = MergeTree()`. The `MergeTree` engine has no parameters.
 
-#### ORDER BY {#order_by}
+#### ORDER BY <a id="order_by"></a>
 
 `ORDER BY` — The sorting key.
 
 A tuple of column names or arbitrary expressions. Example: `ORDER BY (CounterID + 1, EventDate)`.
 
-If no primary key is defined (i.e. `PRIMARY KEY` was not specified), ClickHouse uses the the sorting key as primary key.
+If no primary key is defined (i.e. `PRIMARY KEY` was not specified), ClickHouse uses the sorting key as primary key.
 
 If no sorting is required, you can use syntax `ORDER BY tuple()`.
 Alternatively, if setting `create_table_empty_primary_key_by_default` is enabled, `ORDER BY ()` is implicitly added to `CREATE TABLE` statements. See [Selecting a Primary Key](#selecting-a-primary-key).
 
-#### PARTITION BY {#partition-by}
+#### PARTITION BY <a id="partition-by"></a>
 
 `PARTITION BY` — The [partitioning key](/reference/engines/table-engines/mergetree-family/custom-partitioning-key). Optional. In most cases, you don't need a partition key, and if you do need to partition, generally you do not need a partition key more granular than by month. Partitioning does not speed up queries (in contrast to the ORDER BY expression). You should never use too granular partitioning. Don't partition your data by client identifiers or names (instead, make client identifier or name the first column in the ORDER BY expression).
 
 For partitioning by month, use the `toYYYYMM(date_column)` expression, where `date_column` is a column with a date of the type [Date](/reference/data-types/date). The partition names here have the `"YYYYMM"` format.
 
-#### PRIMARY KEY {#primary-key}
+#### PRIMARY KEY <a id="primary-key"></a>
 
 `PRIMARY KEY` — The primary key if it [differs from the sorting key](#choosing-a-primary-key-that-differs-from-the-sorting-key). Optional.
 
 Specifying a sorting key (using `ORDER BY` clause) implicitly specifies a primary key.
 It is usually not necessary to specify the primary key in addition to the sorting key.
 
-#### SAMPLE BY {#sample-by}
+#### SAMPLE BY <a id="sample-by"></a>
 
 `SAMPLE BY` — A sampling expression. Optional.
 
@@ -95,7 +95,7 @@ The sampling expression must result in an unsigned integer.
 
 Example: `SAMPLE BY intHash32(UserID) ORDER BY (CounterID, EventDate, intHash32(UserID))`.
 
-####  TTL {#ttl}
+####  TTL <a id="ttl"></a>
 
 `TTL` — A list of rules that specify the storage duration of rows and the logic of automatic parts movement [between disks and volumes](#table_engine-mergetree-multiple-volumes). Optional.
 
@@ -105,7 +105,7 @@ Type of the rule `DELETE|TO DISK 'xxx'|TO VOLUME 'xxx'|GROUP BY` specifies an ac
 
 For more details, see [TTL for columns and tables](#table_engine-mergetree-ttl)
 
-#### SETTINGS {#settings}
+#### SETTINGS <a id="settings"></a>
 
 See [MergeTree Settings](/reference/settings/merge-tree-settings).
 
@@ -154,7 +154,7 @@ MergeTree(EventDate, intHash32(UserID), (CounterID, EventDate, intHash32(UserID)
 The `MergeTree` engine is configured in the same way as in the example above for the main engine configuration method.
 </details>
 
-## Data storage {#mergetree-data-storage}
+## Data storage <a id="mergetree-data-storage"></a>
 
 A table consists of data parts sorted by primary key.
 
@@ -170,7 +170,7 @@ Each data part is logically divided into granules. A granule is the smallest ind
 
 The granule size is restricted by the `index_granularity` and `index_granularity_bytes` settings of the table engine. The number of rows in a granule lays in the `[1, index_granularity]` range, depending on the size of the rows. The size of a granule can exceed `index_granularity_bytes` if the size of a single row is greater than the value of the setting. In this case, the size of the granule equals the size of the row.
 
-## Primary Keys and Indexes in Queries {#primary-keys-and-indexes-in-queries}
+## Primary Keys and Indexes in Queries <a id="primary-keys-and-indexes-in-queries"></a>
 
 Take the `(CounterID, Date)` primary key as an example. In this case, the sorting and index can be illustrated as follows:
 
@@ -199,7 +199,7 @@ ClickHouse does not require a unique primary key. You can insert multiple rows w
 
 You can use `Nullable`-typed expressions in the `PRIMARY KEY` and `ORDER BY` clauses but it is strongly discouraged. To allow this feature, turn on the [allow_nullable_key](/reference/settings/merge-tree-settings#allow_nullable_key) setting. The [NULLS_LAST](/reference/statements/select/order-by#sorting-of-special-values) principle applies for `NULL` values in the `ORDER BY` clause.
 
-### Selecting a primary key {#selecting-a-primary-key}
+### Selecting a primary key <a id="selecting-a-primary-key"></a>
 
 The number of columns in the primary key is not explicitly limited. Depending on the data structure, you can include more or fewer columns in the primary key. This may:
 
@@ -224,7 +224,7 @@ You can create a table without a primary key using the `ORDER BY tuple()` syntax
 
 To select data in the initial order, use [single-threaded](/reference/settings/session-settings#max_threads) `SELECT` queries.
 
-### Choosing a primary key that differs from the sorting key {#choosing-a-primary-key-that-differs-from-the-sorting-key}
+### Choosing a primary key that differs from the sorting key <a id="choosing-a-primary-key-that-differs-from-the-sorting-key"></a>
 
 It is possible to specify a primary key (an expression with values that are written in the index file for each mark) that is different from the sorting key (an expression for sorting the rows in data parts). In this case the primary key expression tuple must be a prefix of the sorting key expression tuple.
 
@@ -233,9 +233,9 @@ This feature is helpful when using the [SummingMergeTree](/reference/engines/tab
 
 In this case it makes sense to leave only a few columns in the primary key that will provide efficient range scans and add the remaining dimension columns to the sorting key tuple.
 
-[ALTER](/reference/statements/alter) of the sorting key is a lightweight operation because when a new column is simultaneously added to the table and to the sorting key, existing data parts do not need to be changed. Since the old sorting key is a prefix of the new sorting key and there is no data in the newly added column, the data is sorted by both the old and new sorting keys at the moment of table modification.
+[ALTER](/reference/statements/alter/index) of the sorting key is a lightweight operation because when a new column is simultaneously added to the table and to the sorting key, existing data parts do not need to be changed. Since the old sorting key is a prefix of the new sorting key and there is no data in the newly added column, the data is sorted by both the old and new sorting keys at the moment of table modification.
 
-### Use of indexes and partitions in queries {#use-of-indexes-and-partitions-in-queries}
+### Use of indexes and partitions in queries <a id="use-of-indexes-and-partitions-in-queries"></a>
 
 For `SELECT` queries, ClickHouse analyzes whether an index can be used. An index can be used if the `WHERE/PREWHERE` clause has an expression (as one of the conjunction elements, or entirely) that represents an equality or inequality comparison operation, or if it has `IN` or `LIKE` with a fixed prefix on columns or expressions that are in the primary key or partitioning key, or on certain partially repetitive functions of these columns, or logical relationships of these expressions.
 
@@ -281,7 +281,7 @@ To check whether ClickHouse can use the index when running a query, use the sett
 
 The key for partitioning by month allows reading only those data blocks which contain dates from the proper range. In this case, the data block may contain data for many dates (up to an entire month). Within a block, data is sorted by primary key, which might not contain the date as the first column. Because of this, using a query with only a date condition that does not specify the primary key prefix will cause more data to be read than for a single date.
 
-### Use of index for deterministic expressions in primary keys {#use-of-index-for-deterministic-expressions-in-primary-keys}
+### Use of index for deterministic expressions in primary keys <a id="use-of-index-for-deterministic-expressions-in-primary-keys"></a>
 
 The primary key can contain expressions, not only column names. These expressions are not limited to simple function chains: they can be arbitrary expression trees (for example, nested functions and composite expressions), as long as they are deterministic.
 
@@ -325,7 +325,7 @@ SELECT * FROM table WHERE p NOT IN ('abc', '12345');
 SELECT * FROM table WHERE NOT has(['abc', '12345'], p);
 ```
 
-### Use of index for partially-monotonic primary keys {#use-of-index-for-partially-monotonic-primary-keys}
+### Use of index for partially-monotonic primary keys <a id="use-of-index-for-partially-monotonic-primary-keys"></a>
 
 Consider, for example, the days of the month. They form a [monotonic sequence](https://en.wikipedia.org/wiki/Monotonic_function) for one month, but not monotonic for more extended periods. This is a partially-monotonic sequence. If a user creates the table with partially-monotonic primary key, ClickHouse creates a sparse index as usual. When a user selects data from this kind of table, ClickHouse analyzes the query conditions. If the user wants to get data between two marks of the index and both these marks fall within one month, ClickHouse can use the index in this particular case because it can calculate the distance between the parameters of a query and index marks.
 
@@ -333,7 +333,7 @@ ClickHouse cannot use an index if the values of the primary key in the query par
 
 ClickHouse uses this logic not only for days of the month sequences, but for any primary key that represents a partially-monotonic sequence.
 
-### Data skipping indexes {#table_engine-mergetree-data_skipping-indexes}
+### Data skipping indexes <a id="table_engine-mergetree-data_skipping-indexes"></a>
 
 The index declaration is in the columns section of the `CREATE` query.
 
@@ -390,7 +390,7 @@ INDEX nested_1_index col.nested_col1 TYPE bloom_filter
 INDEX nested_2_index col.nested_col2 TYPE bloom_filter
 ```
 
-### Skip Index Types {#skip-index-types}
+### Skip Index Types <a id="skip-index-types"></a>
 
 The `MergeTree` table engine supports the following types of skip indexes.
 For more information on how skip indexes can be used for performance optimization
@@ -404,7 +404,7 @@ see ["Understanding ClickHouse data skipping indexes"](/concepts/features/perfor
 - [`text`](#text) index
 - [`vector_similarity`](#vector-similarity) index
 
-#### MinMax skip index {#minmax}
+#### MinMax skip index <a id="minmax"></a>
 
 For each index granule, the minimum and maximum values of an expression are stored.
 (If the expression is of type `tuple`, it stores the minimum and maximum for each tuple element.)
@@ -413,7 +413,7 @@ For each index granule, the minimum and maximum values of an expression are stor
 minmax
 ```
 
-#### Set {#set}
+#### Set <a id="set"></a>
 
 For each index granule at most `max_rows` many unique values of the specified expression are stored.
 `max_rows = 0` means "store all unique values".
@@ -422,7 +422,7 @@ For each index granule at most `max_rows` many unique values of the specified ex
 set(max_rows)
 ```
 
-#### Bloom filter {#bloom-filter}
+#### Bloom filter <a id="bloom-filter"></a>
 
 For each index granule stores a [bloom filter](https://en.wikipedia.org/wiki/Bloom_filter) for the specified columns.
 
@@ -458,7 +458,7 @@ For the `Map` data type, the client can specify if the index should be created f
 For the [`JSON`](/reference/data-types/newjson) data type, a bloom filter index can be created on the set of paths using the [`JSONAllPaths`](/reference/functions/regular-functions/json-functions#JSONAllPaths) function. This allows skipping granules where a queried JSON path is absent. See [Data skipping indexes for JSON](/reference/data-types/newjson#data-skipping-indexes-for-json) for details.
 </Info>
 
-#### N-gram bloom filter *(Deprecated)* {#n-gram-bloom-filter}
+#### N-gram bloom filter *(Deprecated)* <a id="n-gram-bloom-filter"></a>
 
 <Note>
 With general availability (GA) of the `text` index starting from ClickHouse version 26.2, the `ngrambf_v1` index is no longer recommended for full text search.
@@ -530,7 +530,7 @@ SELECT bfEstimateFunctions(4300, bfEstimateBmSize(4300, 0.0001)) as number_of_ha
 Of course, you can also use those functions to estimate parameters for other conditions.
 The functions above refer to the bloom filter calculator [here](https://hur.st/bloomfilter).
 
-#### Token bloom filter {#token-bloom-filter}
+#### Token bloom filter <a id="token-bloom-filter"></a>
 
 <Note>
 With general availability (GA) of the `text` index starting from ClickHouse version 26.2, the `tokenbf_v1` index is no longer recommended for full text search.
@@ -542,7 +542,7 @@ See page ["Full-text search with text indexes"](/reference/engines/table-engines
 tokenbf_v1(size_of_bloom_filter_in_bytes, number_of_hash_functions, random_seed)
 ```
 
-#### Sparse grams bloom filter {#sparse-grams-bloom-filter}
+#### Sparse grams bloom filter <a id="sparse-grams-bloom-filter"></a>
 
 The sparse grams bloom filter is similar to `ngrambf_v1` but uses [sparse grams tokens](/reference/functions/regular-functions/string-functions#sparseGrams) instead of ngrams.
 
@@ -550,15 +550,15 @@ The sparse grams bloom filter is similar to `ngrambf_v1` but uses [sparse grams 
 sparse_grams(min_ngram_length, max_ngram_length, min_cutoff_length, size_of_bloom_filter_in_bytes, number_of_hash_functions, random_seed)
 ```
 
-### Text index {#text}
+### Text index <a id="text"></a>
 
 Builds an inverted index over tokenized string data, enabling efficient and deterministic full-text search. See [here](/reference/engines/table-engines/mergetree-family/textindexes) for details.
 
-#### Vector similarity {#vector-similarity}
+#### Vector similarity <a id="vector-similarity"></a>
 
 Supports approximate nearest neighbor search, see [here](/reference/engines/table-engines/mergetree-family/annindexes) for details.
 
-### Functions support {#functions-support}
+### Functions support <a id="functions-support"></a>
 
 Conditions in the `WHERE` clause contains calls of the functions that operate with columns. If the column is a part of an index, ClickHouse tries to use this index when performing the functions. ClickHouse supports different subsets of functions for using indexes.
 
@@ -573,7 +573,9 @@ Indexes of type `set` can be utilized by all functions. The other index types ar
 | [match](/reference/functions/regular-functions/string-search-functions#match)                                                            | ✗           | ✗      | ✔          | ✔          | ✗            | ✔            | ✔    |
 | [startsWith](/reference/functions/regular-functions/string-functions#startsWith)                                                         | ✔           | ✔      | ✔          | ✔          | ✗            | ✔            | ✔    |
 | [endsWith](/reference/functions/regular-functions/string-functions#endsWith)                                                             | ✗           | ✗      | ✔          | ✔          | ✗            | ✔            | ✔    |
-| [multiSearchAny](/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                          | ✗           | ✗      | ✔          | ✗          | ✗            | ✗            | ✗    |
+| [multiSearchAny](/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                          | ✗           | ✗      | ✔          | ✗          | ✗            | ✗            | ✔    |
+| [multiSearchAnyUTF8](/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8)                                  | ✗           | ✗      | ✗          | ✗          | ✗            | ✗            | ✔    |
+| [multiMatchAny](/reference/functions/regular-functions/string-search-functions#multiMatchAny)                                            | ✗           | ✗      | ✗          | ✗          | ✗            | ✗            | ✔    |
 | [in](/reference/functions/regular-functions/in-functions)                                                                                    | ✔           | ✔      | ✔          | ✔          | ✔            | ✔            | ✔    |
 | [notIn](/reference/functions/regular-functions/in-functions)                                                                                 | ✔           | ✔      | ✔          | ✔          | ✔            | ✔            | ✗    |
 | [less (`<`)](/reference/functions/regular-functions/comparison-functions#less)                                                           | ✔           | ✔      | ✗          | ✗          | ✗            | ✗            | ✗    |
@@ -620,7 +622,7 @@ For example:
   - `NOT startsWith(s, 'test')`
 </Note>
 
-## Projections {#projections}
+## Projections <a id="projections"></a>
 Projections are like [materialized views](/reference/statements/create/view) but defined in part-level. It provides consistency guarantees along with automatic usage in queries.
 
 <Note>
@@ -629,7 +631,7 @@ When you are implementing projections you should also consider the [force_optimi
 
 Projections are not supported in the `SELECT` statements with the [FINAL](/reference/statements/select/from#final-modifier) modifier.
 
-### Projection query {#projection-query}
+### Projection query <a id="projection-query"></a>
 A projection query is what defines a projection. It implicitly selects data from the parent table.
 **Syntax**
 
@@ -639,14 +641,14 @@ SELECT <column list expr> [GROUP BY] <group keys expr> [ORDER BY] <expr>
 
 Projections can be modified or dropped with the [ALTER](/reference/statements/alter/projection) statement.
 
-### Projection indexes {#projection-index}
+### Projection indexes <a id="projection-index"></a>
 
 Projection indexes extend the projection subsystem by providing a lightweight and explicit way to define projection-level indexes.
 Externally, a projection index is still a projection, but with simplified syntax and clearer intent: it defines an expression which is dedicated to filtering, rather than serving materialized data.
 Internally, a projection index does not materialize the original table in permuted row order like a regular projection.
 Instead, the permutation is stored in the form of a numeric permutation column `_part_offset`, i.e. `SELECT _part_offset ORDER BY <index_expr>`.
 
-#### Syntax {#projection-index-syntax}
+#### Syntax <a id="projection-index-syntax"></a>
 
 ```sql
 PROJECTION <name> INDEX <index_expr> TYPE <index_type>
@@ -667,7 +669,7 @@ ENGINE = MergeTree
 ORDER BY id;
 ```
 
-#### Index types {#projection-index-types}
+#### Index types <a id="projection-index-types"></a>
 
 Currently supported:
 
@@ -675,21 +677,21 @@ Currently supported:
 
 The framework allows adding more index types in the future.
 
-### Projection storage {#projection-storage}
+### Projection storage <a id="projection-storage"></a>
 Projections are stored inside the part directory. It's similar to an index but contains a subdirectory that stores an anonymous `MergeTree` table's part. The table is induced by the definition query of the projection. If there is a `GROUP BY` clause, the underlying storage engine becomes [AggregatingMergeTree](/reference/engines/table-engines/mergetree-family/aggregatingmergetree), and all aggregate functions are converted to `AggregateFunction`. If there is an `ORDER BY` clause, the `MergeTree` table uses it as its primary key expression. During the merge process the projection part is merged via its storage's merge routine. The checksum of the parent table's part is combined with the projection's part. Other maintenance jobs are similar to skip indices.
 
-### Query analysis {#projection-query-analysis}
+### Query analysis <a id="projection-query-analysis"></a>
 1. Check if the projection can be used to answer the given query, that is, it generates the same answer as querying the base table.
 2. Select the best feasible match, which contains the least granules to read.
 3. The query pipeline which uses projections will be different from the one that uses the original parts. If the projection is absent in some parts, we can add the pipeline to "project" it on the fly.
 
-## Concurrent data access {#concurrent-data-access}
+## Concurrent data access <a id="concurrent-data-access"></a>
 
 For concurrent table access, we use multi-versioning. In other words, when a table is simultaneously read and updated, data is read from a set of parts that is current at the time of the query. There are no lengthy locks. Inserts do not get in the way of read operations.
 
 Reading from a table is automatically parallelized.
 
-## TTL for columns and tables {#table_engine-mergetree-ttl}
+## TTL for columns and tables <a id="table_engine-mergetree-ttl"></a>
 
 Determines the lifetime of values.
 
@@ -714,14 +716,14 @@ TTL time_column
 TTL time_column + interval
 ```
 
-To define `interval`, use [time interval](/reference/operators#operators-for-working-with-dates-and-times) operators, for example:
+To define `interval`, use [time interval](/reference/operators/index#operators-for-working-with-dates-and-times) operators, for example:
 
 ```sql
 TTL date_time + INTERVAL 1 MONTH
 TTL date_time + INTERVAL 15 HOUR
 ```
 
-### Column TTL {#mergetree-column-ttl}
+### Column TTL <a id="mergetree-column-ttl"></a>
 
 When the values in the column expire, ClickHouse replaces them with the default values for the column data type. If all the column values in the data part expire, ClickHouse deletes this column from the data part in a filesystem.
 
@@ -729,7 +731,7 @@ The `TTL` clause can't be used for key columns.
 
 **Examples**
 
-#### Creating a table with `TTL`: {#creating-a-table-with-ttl}
+#### Creating a table with `TTL`: <a id="creating-a-table-with-ttl"></a>
 
 ```sql
 CREATE TABLE tab
@@ -744,7 +746,7 @@ PARTITION BY toYYYYMM(d)
 ORDER BY d;
 ```
 
-#### Adding TTL to a column of an existing table {#adding-ttl-to-a-column-of-an-existing-table}
+#### Adding TTL to a column of an existing table <a id="adding-ttl-to-a-column-of-an-existing-table"></a>
 
 ```sql
 ALTER TABLE tab
@@ -752,7 +754,7 @@ ALTER TABLE tab
     c String TTL d + INTERVAL 1 DAY;
 ```
 
-#### Altering TTL of the column {#altering-ttl-of-the-column}
+#### Altering TTL of the column <a id="altering-ttl-of-the-column"></a>
 
 ```sql
 ALTER TABLE tab
@@ -760,7 +762,7 @@ ALTER TABLE tab
     c String TTL d + INTERVAL 1 MONTH;
 ```
 
-### Table TTL {#mergetree-table-ttl}
+### Table TTL <a id="mergetree-table-ttl"></a>
 
 Table can have an expression for removal of expired rows, and multiple expressions for automatic move of parts between [disks or volumes](#table_engine-mergetree-multiple-volumes). When rows in the table expire, ClickHouse deletes all corresponding rows. For parts moving or recompressing, all rows of a part must satisfy the `TTL` expression criteria.
 
@@ -790,7 +792,7 @@ If a column is not part of the `GROUP BY` expression and is not set explicitly i
 
 **Examples**
 
-#### Creating a table with `TTL`: {#creating-a-table-with-ttl-1}
+#### Creating a table with `TTL`: <a id="creating-a-table-with-ttl-1"></a>
 
 ```sql
 CREATE TABLE tab
@@ -806,7 +808,7 @@ TTL d + INTERVAL 1 MONTH DELETE,
     d + INTERVAL 2 WEEK TO DISK 'bbb';
 ```
 
-#### Altering `TTL` of the table: {#altering-ttl-of-the-table}
+#### Altering `TTL` of the table: <a id="altering-ttl-of-the-table"></a>
 
 ```sql
 ALTER TABLE tab
@@ -827,7 +829,7 @@ ORDER BY d
 TTL d + INTERVAL 1 MONTH DELETE WHERE toDayOfWeek(d) = 1;
 ```
 
-#### Creating a table, where expired rows are recompressed: {#creating-a-table-where-expired-rows-are-recompressed}
+#### Creating a table, where expired rows are recompressed: <a id="creating-a-table-where-expired-rows-are-recompressed"></a>
 
 ```sql
 CREATE TABLE table_for_recompression
@@ -858,7 +860,7 @@ ORDER BY (k1, k2)
 TTL d + INTERVAL 1 MONTH GROUP BY k1, k2 SET x = max(x), y = min(y);
 ```
 
-### Removing expired data {#mergetree-removing-expired-data}
+### Removing expired data <a id="mergetree-removing-expired-data"></a>
 
 Data with an expired `TTL` is removed when ClickHouse merges data parts.
 
@@ -870,7 +872,7 @@ If you perform the `SELECT` query between merges, you may get expired data. To a
 
 - [ttl_only_drop_parts](/reference/settings/merge-tree-settings#ttl_only_drop_parts) setting
 
-## Disk types {#disk-types}
+## Disk types <a id="disk-types"></a>
 
 In addition to local block devices, ClickHouse supports these storage types:
 - [`s3` for S3 and MinIO](#table_engine-mergetree-s3)
@@ -882,9 +884,9 @@ In addition to local block devices, ClickHouse supports these storage types:
 - [`s3_plain` for backups to S3](/concepts/features/backup-restore/local-disk)
 - [`s3_plain_rewritable` for immutable, non-replicated tables in S3](/concepts/features/configuration/server-config/storing-data#s3-plain-rewritable-storage)
 
-## Using multiple block devices for data storage {#table_engine-mergetree-multiple-volumes}
+## Using multiple block devices for data storage <a id="table_engine-mergetree-multiple-volumes"></a>
 
-### Introduction {#introduction}
+### Introduction <a id="introduction"></a>
 
 `MergeTree` family table engines can store data on multiple block devices. For example, it can be useful when the data of a certain table are implicitly split into "hot" and "cold". The most recent data is regularly requested but requires only a small amount of space. On the contrary, the fat-tailed historical data is requested rarely. If several disks are available, the "hot" data may be located on fast disks (for example, NVMe SSDs or in memory), while the "cold" data - on relatively slow ones (for example, HDD).
 
@@ -892,7 +894,7 @@ This applies to all disk types, including S3 and other object storage disks. For
 
 Data part is the minimum movable unit for `MergeTree`-engine tables. The data belonging to one part are stored on one disk. Data parts can be moved between disks in the background (according to user settings) as well as by means of the [ALTER](/reference/statements/alter/partition) queries.
 
-### Terms {#terms}
+### Terms <a id="terms"></a>
 
 - Disk — Block device mounted to the filesystem.
 - Default disk — Disk that stores the path specified in the [path](/reference/settings/server-settings/settings#path) server setting.
@@ -901,7 +903,7 @@ Data part is the minimum movable unit for `MergeTree`-engine tables. The data be
 
 The names given to the described entities can be found in the system tables, [system.storage_policies](/reference/system-tables/storage_policies) and [system.disks](/reference/system-tables/disks). To apply one of the configured storage policies for a table, use the `storage_policy` setting of `MergeTree`-engine family tables.
 
-### Configuration {#table_engine-mergetree-multiple-volumes_configure}
+### Configuration <a id="table_engine-mergetree-multiple-volumes_configure"></a>
 
 Disks, volumes and storage policies should be declared inside the `<storage_configuration>` tag either in a file in the `config.d` directory.
 
@@ -1060,12 +1062,12 @@ You could change storage policy after table creation with [ALTER TABLE ... MODIF
 
 The number of threads performing background moves of data parts can be changed by [background_move_pool_size](/reference/settings/server-settings/settings#background_move_pool_size) setting.
 
-### Details {#details}
+### Details <a id="details"></a>
 
 In the case of `MergeTree` tables, data is getting to disk in different ways:
 
 - As a result of an insert (`INSERT` query).
-- During background merges and [mutations](/reference/statements/alter#mutations).
+- During background merges and [mutations](/reference/statements/alter/index#mutations).
 - When downloading from another replica.
 - As a result of partition freezing [ALTER TABLE ... FREEZE PARTITION](/reference/statements/alter/partition#freeze-partition).
 
@@ -1088,7 +1090,7 @@ During this time, they are not moved to other volumes or disks. Therefore, until
 
 User can assign new big parts to different disks of a [JBOD](https://en.wikipedia.org/wiki/Non-RAID_drive_architectures) volume in a balanced way using the [min_bytes_to_rebalance_partition_over_jbod](/reference/settings/merge-tree-settings#min_bytes_to_rebalance_partition_over_jbod) setting.
 
-## Using external storage for data storage {#table_engine-mergetree-s3}
+## Using external storage for data storage <a id="table_engine-mergetree-s3"></a>
 
 [MergeTree](/reference/engines/table-engines/mergetree-family/mergetree) family table engines can store data to `S3`, `AzureBlobStorage`, `HDFS` using a disk with types `s3`, `azure_blob_storage`, `hdfs` accordingly. See [configuring external storage options](/concepts/features/configuration/server-config/storing-data#configuring-external-storage) for more details.
 
@@ -1136,7 +1138,7 @@ Configuration markup:
 
 Also see [configuring external storage options](/concepts/features/configuration/server-config/storing-data#configuring-external-storage).
 
-### Using S3 disks with multiple volumes {#s3-multiple-volumes}
+### Using S3 disks with multiple volumes <a id="s3-multiple-volumes"></a>
 
 S3 (and other object storage) disks can be used in multi-disk and multi-volume storage policies the same way as local disks. This allows you to spread data across multiple S3 buckets within a single volume (JBOD-style), or set up tiered storage policies with S3 volumes.
 
@@ -1215,7 +1217,7 @@ It is possible to set up non-replicated MergeTree tables with a one-writer, many
 ClickHouse versions 22.3 through 22.7 use a different cache configuration, see [using local cache](/concepts/features/configuration/server-config/storing-data#using-local-cache) if you are using one of those versions.
 </Info>
 
-## Virtual columns {#virtual-columns}
+## Virtual columns <a id="virtual-columns"></a>
 
 - `_part` — Name of a part.
 - `_part_index` — Sequential index of the part in the query result.
@@ -1231,7 +1233,7 @@ ClickHouse versions 22.3 through 22.7 use a different cache configuration, see [
 - `_block_offset` — Original number of row in block that was assigned at insert, persisted on merges when setting `enable_block_offset_column` is enabled.
 - `_disk_name` — Disk name used for the storage.
 
-## Column statistics {#column-statistics}
+## Column statistics <a id="column-statistics"></a>
 
 <CloudNotSupportedBadge/>
 
@@ -1257,10 +1259,10 @@ ALTER TABLE tab DROP STATISTICS a;
 These lightweight statistics aggregate information about distribution of values in columns. Statistics are stored in every part and updated when every insert comes.
 They can be used for prewhere optimization only if we enable `set use_statistics = 1`.
 
-#### Part Pruning with Statistics {#part-pruning-with-statistics}
+#### Part Pruning with Statistics <a id="part-pruning-with-statistics"></a>
 
 When `use_statistics_for_part_pruning` is enabled, statistics can be used for part pruning.
-Currently, `MinMax` and `NullCount` statistics support part pruning. When MinMax statistics are defined on a column, ClickHouse tracks the minimum and maximum values for that column in each part. When NullCount statistics are defined on a `Nullable` column, ClickHouse tracks the number of NULL values in each part, enabling pruning based on `IS NULL` / `IS NOT NULL` predicates and improving range filter pruning accuracy for columns with NULL values.
+Currently, only `MinMax` and `Basic` statistics support part pruning. When such statistics are defined on a column, ClickHouse tracks the minimum and maximum values for that column in each part.
 Part pruning allows to skip reading entire data parts when the query filter condition cannot match any rows in that part.
 
 **Example:**
@@ -1291,7 +1293,18 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
 -- The output will show "Parts: 1/2" indicating one part was pruned
 ```
 
-### Available types of column statistics {#available-types-of-column-statistics}
+### Available types of column statistics <a id="available-types-of-column-statistics"></a>
+
+- `Basic`
+
+    A compact bundle of single-value summaries derived from a column. Depending on the column type, the following pieces are populated:
+  - for any column whose values are represented by a number (integers, floats, `Decimal*`, `Date*`, `DateTime*`, `Enum*`, `IPv4`, ...): the minimum and maximum value, which allow to estimate the selectivity of range filters and enable part pruning;
+  - for `String` and `FixedString` columns: the total byte length of non-`NULL` values (from which the average string length can be derived);
+  - for `Nullable` and `LowCardinality(Nullable)` columns: the count of `NULL` values, which the optimizer uses to discount `NULL` rows from selectivity estimates.
+
+    A single `Basic` statistic can populate several of these at once — for example on a `Nullable(UInt32)` column it tracks both numeric min/max and the null count. Compared to `MinMax`, `Basic` additionally works on `String` / `FixedString` columns and can be declared on `Nullable` wrappers of types like `UUID` or `IPv6` purely to track the null count.
+
+    Syntax: `basic`
 
 - `MinMax`
 
@@ -1311,39 +1324,39 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
 
     Syntax: `uniq`
 
-- `NullCount`
-
-    Tracks the number of `NULL` values in `Nullable` columns. Used for accurate selectivity estimation of `IS NULL`/`IS NOT NULL` predicates in PREWHERE optimization and enables part pruning based on NULL presence.
-
-    Syntax: `nullcount`
-
 - `CountMin`
 
     [CountMin](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch) sketches which provide an approximate count of the frequency of each value in a column.
 
     Syntax `countmin`
 
-### Supported data types {#supported-data-types}
+### Supported data types <a id="supported-data-types"></a>
 
-|           | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | String or FixedString | Nullable(*) / LowCardinality(Nullable(*)) |
-|-----------|----------------------------------------------------|-----------------------|--------------------------------------------------|
-| CountMin  | ✔                                                  | ✔                     | ✗                                                |
-| MinMax    | ✔                                                  | ✗                     | ✔                                                |
-| NullCount | ✗                                                  | ✗                     | ✔                                                |
-| TDigest   | ✔                                                  | ✗                     | ✔                                                |
-| Uniq      | ✔                                                  | ✔                     | ✔                                                |
+|           | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | IPv4 | String or FixedString |
+|-----------|----------------------------------------------------|------|-----------------------|
+| Basic     | ✔                                                  | ✔    | ✔                     |
+| CountMin  | ✔                                                  | ✔    | ✔                     |
+| MinMax    | ✔                                                  | ✔    | ✗                     |
+| TDigest   | ✔                                                  | ✗    | ✗                     |
+| Uniq      | ✔                                                  | ✔    | ✔                     |
 
-### Supported operations {#supported-operations}
+All of the above also accept `Nullable` and `LowCardinality(Nullable)` wrappers of the listed types. `Basic` may additionally be declared on `Nullable` wrappers of types like `UUID` or `IPv6` purely to track the null count.
 
-|           | Equality filters (==) | Range filters (`>, >=, <, <=`) | `IS NULL` / `IS NOT NULL` |
-|-----------|-----------------------|------------------------------|----------------------------|
-| CountMin  | ✔                     | ✗                            | ✗                          |
-| MinMax    | ✗                     | ✔                            | ✗                          |
-| NullCount | ✗                     | ✗                            | ✔                          |
-| TDigest   | ✗                     | ✔                            | ✗                          |
-| Uniq      | ✔                     | ✗                            | ✗                          |
+### Supported operations <a id="supported-operations"></a>
 
-## Column-level settings {#column-level-settings}
+|           | Equality filters (==) | Range filters (`>, >=, <, <=`) |
+|-----------|-----------------------|--------------------------------|
+| Basic     | ✗                     | ✔ (numeric columns only)       |
+| CountMin  | ✔                     | ✗                              |
+| MinMax    | ✗                     | ✔ (numeric columns only)       |
+| TDigest   | ✗                     | ✔ (numeric columns only)       |
+| Uniq      | ✔                     | ✗                              |
+
+For `Basic` on `String` / `FixedString` columns the statistic only records the total
+non-NULL byte length (used to estimate average string length) and the null count;
+range filters and part pruning are not driven by it.
+
+## Column-level settings <a id="column-level-settings"></a>
 
 Certain MergeTree settings can be overridden at column level:
 

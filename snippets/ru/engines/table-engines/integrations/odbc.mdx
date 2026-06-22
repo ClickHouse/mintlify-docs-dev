@@ -1,22 +1,21 @@
 ---
-description: 'Позволяет ClickHouse подключаться к внешним базам данных через ODBC.'
+description: 'Allows ClickHouse to connect to external databases via ODBC.'
 sidebarTitle: 'ODBC'
 slug: /engines/table-engines/integrations/odbc
-title: 'Движок таблицы ODBC'
+title: 'ODBC table engine'
 doc_type: 'reference'
 ---
 
-<CloudNotSupportedBadge />
 
-Позволяет ClickHouse подключаться к внешним базам данных через [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity).
+<CloudNotSupportedBadge/>
 
-Для безопасной работы с ODBC-подключениями ClickHouse использует отдельную программу `clickhouse-odbc-bridge`. Если драйвер ODBC загружается напрямую из `clickhouse-server`, проблемы с драйвером могут привести к аварийному завершению работы сервера ClickHouse. При необходимости ClickHouse автоматически запускает `clickhouse-odbc-bridge`. Программа моста ODBC устанавливается из того же пакета, что и `clickhouse-server`.
+Allows ClickHouse to connect to external databases via [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity).
 
-Этот движок поддерживает тип данных [Nullable](/ru/reference/data-types/nullable).
+To safely implement ODBC connections, ClickHouse uses a separate program `clickhouse-odbc-bridge`. If the ODBC driver is loaded directly from `clickhouse-server`, driver problems can crash the ClickHouse server. ClickHouse automatically starts `clickhouse-odbc-bridge` when it is required. The ODBC bridge program is installed from the same package as the `clickhouse-server`.
 
-<div id="creating-a-table">
-  ## Создание таблицы
-</div>
+This engine supports the [Nullable](../../../sql-reference/data-types/nullable.md){/* MIGRATE: unresolved relative link */} data type.
+
+## Creating a table <a id="creating-a-table"></a>
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -28,33 +27,31 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 ENGINE = ODBC(datasource, external_database, external_table)
 ```
 
-См. подробное описание запроса [CREATE TABLE](/ru/reference/statements/create/table).
+See a detailed description of the [CREATE TABLE](/sql-reference/statements/create/table){/* MIGRATE: unknown slug */} query.
 
-Структура таблицы может отличаться от структуры исходной таблицы:
+The table structure can differ from the source table structure:
 
-* Имена столбцов должны совпадать с именами в исходной таблице, но можно использовать только часть из них и в любом порядке.
-* Типы столбцов могут отличаться от типов в исходной таблице. ClickHouse пытается [преобразовать](/ru/reference/functions/regular-functions/type-conversion-functions#CAST) значения в типы данных ClickHouse.
-* Настройка [external&#95;table&#95;functions&#95;use&#95;nulls](/ru/reference/settings/session-settings#external_table_functions_use_nulls) определяет, как обрабатывать столбцы с типом Nullable. Значение по умолчанию: 1. Если установлено значение 0, табличная функция не создает столбцы с типом Nullable и вместо null вставляет значения по умолчанию. Это также применимо к значениям NULL внутри массивов.
+- Column names should be the same as in the source table, but you can use just some of these columns and in any order.
+- Column types may differ from those in the source table. ClickHouse tries to [cast](/sql-reference/functions/type-conversion-functions#CAST){/* MIGRATE: unknown slug */} values to the ClickHouse data types.
+- The [external_table_functions_use_nulls](/operations/settings/settings#external_table_functions_use_nulls){/* MIGRATE: unknown slug */} setting defines how to handle Nullable columns. Default value: 1. If 0, the table function does not make Nullable columns and inserts default values instead of nulls. This is also applicable for NULL values inside arrays.
 
-**Параметры движка**
+**Engine Parameters**
 
-* `datasource` — имя раздела с настройками подключения в файле `odbc.ini`.
-* `external_database` — имя базы данных во внешней СУБД.
-* `external_table` — имя таблицы в `external_database`.
+- `datasource` — Name of the section with connection settings in the `odbc.ini` file.
+- `external_database` — Name of a database in an external DBMS.
+- `external_table` — Name of a table in the `external_database`.
 
-Эти параметры также можно передавать с помощью [именованных коллекций](/ru/concepts/features/configuration/server-config/named-collections).
+These parameters can also be passed using [named collections](/operations/named-collections.md){/* MIGRATE: unknown slug */}.
 
-<div id="usage-example">
-  ## Пример использования
-</div>
+## Usage example <a id="usage-example"></a>
 
-**Получение данных из локально установленного MySQL через ODBC**
+**Retrieving data from the local MySQL installation via ODBC**
 
-Этот пример протестирован на Ubuntu Linux 18.04 и сервере MySQL 5.7.
+This example is checked for Ubuntu Linux 18.04 and MySQL server 5.7.
 
-Убедитесь, что установлены `unixODBC` и MySQL Connector.
+Ensure that unixODBC and MySQL Connector are installed.
 
-По умолчанию (если ClickHouse установлен из пакетов) ClickHouse запускается от имени пользователя `clickhouse`. Поэтому вам нужно создать и настроить этого пользователя на сервере MySQL.
+By default (if installed from packages), ClickHouse starts as user `clickhouse`. Thus, you need to create and configure this user in the MySQL server.
 
 ```bash
 $ sudo mysql
@@ -65,7 +62,7 @@ mysql> CREATE USER 'clickhouse'@'localhost' IDENTIFIED BY 'clickhouse';
 mysql> GRANT ALL PRIVILEGES ON *.* TO 'clickhouse'@'localhost' WITH GRANT OPTION;
 ```
 
-Затем настройте соединение в `/etc/odbc.ini`.
+Then configure the connection in `/etc/odbc.ini`.
 
 ```bash
 $ cat /etc/odbc.ini
@@ -78,7 +75,7 @@ USER = clickhouse
 PASSWORD = clickhouse
 ```
 
-Вы можете проверить соединение с помощью утилиты `isql`, входящей в состав unixODBC.
+You can check the connection using the `isql` utility from the unixODBC installation.
 
 ```bash
 $ isql -v mysqlconn
@@ -88,7 +85,7 @@ $ isql -v mysqlconn
 ...
 ```
 
-Таблица в MySQL:
+Table in MySQL:
 
 ```text
 mysql> CREATE DATABASE test;
@@ -114,7 +111,7 @@ mysql> select * from test.test;
 1 row in set (0,00 sec)
 ```
 
-Таблица в ClickHouse, которая получает данные из таблицы MySQL:
+Table in ClickHouse, retrieving data from the MySQL table:
 
 ```sql
 CREATE TABLE odbc_t
@@ -135,9 +132,7 @@ SELECT * FROM odbc_t
 └────────┴────────────────┘
 ```
 
-<div id="see-also">
-  ## См. также
-</div>
+## See also <a id="see-also"></a>
 
-* [ODBC-словари](/ru/reference/statements/create/dictionary/sources/odbc)
-* [Табличная функция ODBC](/ru/reference/functions/table-functions/odbc)
+- [ODBC dictionaries](/sql-reference/statements/create/dictionary/sources/odbc){/* MIGRATE: unknown slug */}
+- [ODBC table function](../../../sql-reference/table-functions/odbc.md){/* MIGRATE: unresolved relative link */}

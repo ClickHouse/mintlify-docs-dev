@@ -11,7 +11,7 @@ import { RunnableCode } from "/snippets/components/RunnableCode/RunnableCode.jsx
 
 > In this guide, you'll learn how to use arrays in ClickHouse along with some of the most commonly used [array functions](/reference/functions/regular-functions/array-functions).
 
-## Introduction to arrays {#array-basics}
+## Introduction to arrays <a id="array-basics"></a>
 
 An array is an in-memory data structure which groups together values.
 We call these _elements_ of the array, and each element can be referred to by an index, which indicates the position of the element in this grouping.
@@ -32,7 +32,9 @@ For example, you can create an array of numbers:
 
 ```sql
 SELECT array(1, 2, 3) AS numeric_array
+```
 
+```response
 ┌─numeric_array─┐
 │ [1,2,3]       │
 └───────────────┘
@@ -42,7 +44,9 @@ Or an array of strings:
 
 ```sql
 SELECT array('hello', 'world') AS string_array
+```
 
+```response
 ┌─string_array──────┐
 │ ['hello','world'] │
 └───────────────────┘
@@ -52,7 +56,9 @@ Or an array of nested types such as [tuples](/reference/data-types/tuple):
 
 ```sql
 SELECT array(tuple(1, 2), tuple(3, 4))
+```
 
+```response
 ┌─[(1, 2), (3, 4)]─┐
 │ [(1,2),(3,4)]    │
 └──────────────────┘
@@ -77,7 +83,9 @@ For example, if you create an array of integers and floats, a super-type of floa
 
 ```sql
 SELECT [1::UInt8, 2.5::Float32, 3::UInt8] AS mixed_array, toTypeName([1, 2.5, 3]) AS array_type;
+```
 
+```response
 ┌─mixed_array─┬─array_type─────┐
 │ [1,2.5,3]   │ Array(Float64) │
 └─────────────┴────────────────┘
@@ -129,7 +137,9 @@ For example, given an array, you can select the first element of an array by wri
 ```sql
 WITH array('hello', 'world') AS string_array
 SELECT string_array[1];
+```
 
+```response
 ┌─arrayElement⋯g_array, 1)─┐
 │ hello                    │
 └──────────────────────────┘
@@ -141,7 +151,9 @@ In this way, you can select elements relative to the last element:
 ```sql
 WITH array('hello', 'world') AS string_array
 SELECT string_array[-1];
+```
 
+```response
 ┌─arrayElement⋯g_array, -1)─┐
 │ world                     │
 └───────────────────────────┘
@@ -154,25 +166,29 @@ In the example below, an empty string is returned as this is the default value f
 ```sql
 WITH ['hello', 'world', 'arrays are great aren\'t they?'] AS string_array
 SELECT string_array[0]
+```
 
+```response
 ┌─arrayElement⋯g_array, 0)─┐
 │                          │
 └──────────────────────────┘
 ```
 
-## Array functions {#array-functions}
+## Array functions <a id="array-functions"></a>
 
 ClickHouse offers a host of useful functions which operate on arrays.
 In this section, we'll look at some of the most useful ones, starting from the simplest and working up in complexity.
 
-### length, arrayEnumerate, indexOf, has* functions {#length-arrayEnumerate-indexOf-has-functions}
+### length, arrayEnumerate, indexOf, has* functions <a id="length-arrayEnumerate-indexOf-has-functions"></a>
 
 The `length` function is used to return the number of elements in the array:
 
 ```sql
 WITH array('learning', 'ClickHouse', 'arrays') AS string_array
 SELECT length(string_array);
+```
 
+```response
 ┌─length(string_array)─┐
 │                    3 │
 └──────────────────────┘
@@ -183,7 +199,9 @@ You can also use the [`arrayEnumerate`](/reference/functions/regular-functions/a
 ```sql
 WITH array('learning', 'ClickHouse', 'arrays') AS string_array
 SELECT arrayEnumerate(string_array);
+```
 
+```response
 ┌─arrayEnumerate(string_array)─┐
 │ [1,2,3]                      │
 └──────────────────────────────┘
@@ -193,7 +211,9 @@ If you want to find the index of a particular value, you can use the `indexOf` f
 
 ```sql
 SELECT indexOf([4, 2, 8, 8, 9], 8);
+```
 
+```response
 ┌─indexOf([4, 2, 8, 8, 9], 8)─┐
 │                           3 │
 └─────────────────────────────┘
@@ -226,7 +246,7 @@ hasAll_true:  1
 hasAll_false: 0
 ```
 
-## Exploring flight data with array functions {#exploring-flight-data-with-array-functions}
+## Exploring flight data with array functions <a id="exploring-flight-data-with-array-functions"></a>
 
 So far, the examples have been pretty simple.
 The utility of arrays really shows itself when used on a real-world dataset.
@@ -241,7 +261,7 @@ otherwise complex queries.
 Click the "play" button below to run the queries directly in the docs and see the result live.
 </Tip>
 
-### groupArray {#grouparray}
+### groupArray <a id="grouparray"></a>
 
 There are many columns in this dataset, but we will focus on a subset of the columns.
 Run the query below to see what our data looks like:
@@ -311,7 +331,7 @@ FROM busy_airports
 ORDER BY outward_flights DESC
 ```
 </RunnableCode>
-### arrayMap and arrayZip {#arraymap}
+### arrayMap and arrayZip <a id="arraymap"></a>
 
 We saw in the previous query that Denver International Airport was the airport with the most outward flights for our particular chosen day.
 Let's take a look at how many of those flights were on-time, delayed by 15-30 minutes or delayed by more than 30 minutes.
@@ -345,7 +365,7 @@ In the above query, the `arrayMap` function takes a single-element array `[DepDe
 Then the first element of the resulting array is extracted with `[DepDelayMinutes][1]`.
 The [`arrayZip`](/reference/functions/regular-functions/array-functions#arrayZip) function combines the `Tail_Number` array and the `statuses` array into a single array.
 
-### arrayFilter {#arrayfilter}
+### arrayFilter <a id="arrayfilter"></a>
 
 Next we'll look only at the number of flights that were delayed by 30 minutes or more, for airports `DEN`, `ATL` and `DFW`:
 
@@ -369,7 +389,7 @@ This lambda function itself takes the delay in minutes (d) and returns `1` if th
 d -> d >= 30
 ```
 
-### arraySort and arrayIntersect {#arraysort-and-arrayintersect}
+### arraySort and arrayIntersect <a id="arraysort-and-arrayintersect"></a>
 
 Next, we'll figure out which pairs of major US airports serve the most common destinations with the help of the [`arraySort`](/reference/functions/regular-functions/array-functions#arraySort) and [`arrayIntersect`](/reference/functions/regular-functions/array-functions#arrayIntersect) functions.
 `arraySort` takes an array and sorts the elements in ascending order by default, although you can also pass a lambda function to it to define the sorting order.
@@ -414,7 +434,7 @@ Without this, you'd get both JFK-LAX and LAX-JFK as separate results, which woul
 Finally, the query sorts the results to show which airport pairs have the highest number of shared destinations and returns just the top 10.
 This reveals which major hubs have the most overlapping route networks, which could indicate competitive markets where multiple airlines are serving the same city pairs, or hubs that serve similar geographic regions and could potentially be used as alternative connection points for travelers.
 
-### arrayReduce {#arrayReduce}
+### arrayReduce <a id="arrayReduce"></a>
 
 While we're looking at delays, let's use yet another higher-order array function, `arrayReduce`, to find the average and maximum delay
 for each route from Denver International Airport:
@@ -438,7 +458,7 @@ ORDER BY avg_delay DESC
 In the example above, we used `arrayReduce` to find the average and maximum delays for various outward flights from `DEN`.
 `arrayReduce` applies an aggregate function, specified in the first parameter to the function, to the elements of the provided array, specified in the second parameter of the function.
 
-### arrayJoin {#arrayJoin}
+### arrayJoin <a id="arrayJoin"></a>
 
 Regular functions in ClickHouse have the property that they return the same number of rows than they receive.
 There is however, one interesting and unique function that breaks this rule, which is worth learning about - the `arrayJoin` function.
@@ -501,7 +521,7 @@ GROUP BY ALL
 ORDER BY flightsDelayed DESC
 ```
 </RunnableCode>
-## Next steps {#next-steps}
+## Next steps <a id="next-steps"></a>
 
 Congratulations! You've learned how to work with arrays in ClickHouse, from basic array creation and indexing to powerful functions like `groupArray`, `arrayFilter`, `arrayMap`, `arrayReduce`, and `arrayJoin`.
 To continue your learning journey, explore the complete array functions reference to discover additional functions like `arrayFlatten`, `arrayReverse`, and `arrayDistinct`.

@@ -9,7 +9,7 @@ doc_type: 'guide'
 
 DataStore can execute operations using different backends. This guide explains how to configure and optimize engine selection.
 
-## Available Engines {#engines}
+## Available Engines <a id="engines"></a>
 
 | Engine | Description | Best For |
 |--------|-------------|----------|
@@ -17,9 +17,9 @@ DataStore can execute operations using different backends. This guide explains h
 | `chdb` | Forces all operations through ClickHouse SQL | Large datasets, aggregations |
 | `pandas` | Forces all operations through pandas | Compatibility testing, pandas-specific features |
 
-## Setting the Engine {#setting}
+## Setting the Engine <a id="setting"></a>
 
-### Global Configuration {#global}
+### Global Configuration <a id="global"></a>
 
 ```python
 from chdb.datastore.config import config
@@ -35,7 +35,7 @@ config.use_chdb()     # Force ClickHouse
 config.use_pandas()   # Force pandas
 ```
 
-### Checking Current Engine {#checking}
+### Checking Current Engine <a id="checking"></a>
 
 ```python
 print(config.execution_engine)  # 'auto', 'chdb', or 'pandas'
@@ -43,11 +43,11 @@ print(config.execution_engine)  # 'auto', 'chdb', or 'pandas'
 
 ---
 
-## Auto Mode {#auto-mode}
+## Auto Mode <a id="auto-mode"></a>
 
 In `auto` mode (default), DataStore selects the optimal engine for each operation:
 
-### Operations Executed in chDB {#auto-chdb}
+### Operations Executed in chDB <a id="auto-chdb"></a>
 
 - SQL-compatible filtering (`filter()`, `where()`)
 - Column selection (`select()`)
@@ -57,14 +57,14 @@ In `auto` mode (default), DataStore selects the optimal engine for each operatio
 - Distinct (`distinct()`, `drop_duplicates()`)
 - Limiting (`limit()`, `head()`, `tail()`)
 
-### Operations Executed in pandas {#auto-pandas}
+### Operations Executed in pandas <a id="auto-pandas"></a>
 
 - Custom apply functions (`apply(custom_func)`)
 - Complex pivot tables with custom aggregations
 - Operations not expressible in SQL
 - When input is already a pandas DataFrame
 
-### Example {#auto-example}
+### Example <a id="auto-example"></a>
 
 ```python
 from chdb import datastore as pd
@@ -87,7 +87,7 @@ result = ds.apply(lambda row: complex_calculation(row), axis=1)
 
 ---
 
-## chDB Mode {#chdb-mode}
+## chDB Mode <a id="chdb-mode"></a>
 
 Force all operations through ClickHouse SQL:
 
@@ -95,14 +95,14 @@ Force all operations through ClickHouse SQL:
 config.use_chdb()
 ```
 
-### When to Use {#chdb-when}
+### When to Use <a id="chdb-when"></a>
 
 - Processing large datasets (millions of rows)
 - Heavy aggregation workloads
 - When you want maximum SQL optimization
 - Consistent behavior across all operations
 
-### Performance Characteristics {#chdb-performance}
+### Performance Characteristics <a id="chdb-performance"></a>
 
 | Operation Type | Performance |
 |----------------|-------------|
@@ -111,14 +111,14 @@ config.use_chdb()
 | Sorting | Very Good |
 | Simple Single Filters | Good (slight overhead) |
 
-### Limitations {#chdb-limitations}
+### Limitations <a id="chdb-limitations"></a>
 
 - Custom Python functions may not be supported
 - Some pandas-specific features require conversion
 
 ---
 
-## pandas Mode {#pandas-mode}
+## pandas Mode <a id="pandas-mode"></a>
 
 Force all operations through pandas:
 
@@ -126,14 +126,14 @@ Force all operations through pandas:
 config.use_pandas()
 ```
 
-### When to Use {#pandas-when}
+### When to Use <a id="pandas-when"></a>
 
 - Compatibility testing with pandas
 - Using pandas-specific features
 - Debugging pandas-related issues
 - When data is already in pandas format
 
-### Performance Characteristics {#pandas-performance}
+### Performance Characteristics <a id="pandas-performance"></a>
 
 | Operation Type | Performance |
 |----------------|-------------|
@@ -144,7 +144,7 @@ config.use_pandas()
 
 ---
 
-## Cross-DataStore Engine {#cross-datastore}
+## Cross-DataStore Engine <a id="cross-datastore"></a>
 
 Configure the engine for operations that combine columns from different DataStores:
 
@@ -155,7 +155,7 @@ config.set_cross_datastore_engine('chdb')
 config.set_cross_datastore_engine('pandas')
 ```
 
-### Example {#cross-example}
+### Example <a id="cross-example"></a>
 
 ```python
 ds1 = pd.read_csv("sales.csv")
@@ -168,9 +168,9 @@ result = ds1.join(ds2, on='product_id')
 
 ---
 
-## Engine Selection Logic {#selection-logic}
+## Engine Selection Logic <a id="selection-logic"></a>
 
-### Auto Mode Decision Tree {#decision-tree}
+### Auto Mode Decision Tree <a id="decision-tree"></a>
 
 ```text
 Operation requested
@@ -186,7 +186,7 @@ Operation requested
            └─ Use cross_datastore_engine setting
 ```
 
-### Function-Level Override {#function-override}
+### Function-Level Override <a id="function-override"></a>
 
 Some functions can have their engine explicitly configured:
 
@@ -202,7 +202,7 @@ See [Function Config](/products/chdb/configuration/function-config) for details.
 
 ---
 
-## Performance Comparison {#performance-comparison}
+## Performance Comparison <a id="performance-comparison"></a>
 
 Benchmark results on 10M rows:
 
@@ -222,15 +222,15 @@ Benchmark results on 10M rows:
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices <a id="best-practices"></a>
 
-### 1. Start with Auto Mode {#start-with-auto-mode}
+### 1. Start with Auto Mode <a id="start-with-auto-mode"></a>
 
 ```python
 config.use_auto()  # Let DataStore decide
 ```
 
-### 2. Profile Before Forcing {#profile-before-forcing}
+### 2. Profile Before Forcing <a id="profile-before-forcing"></a>
 
 ```python
 config.enable_profiling()
@@ -238,7 +238,7 @@ config.enable_profiling()
 # Check profiler report to see where time is spent
 ```
 
-### 3. Force Engine for Specific Workloads {#force-engine-for-specific-workloads}
+### 3. Force Engine for Specific Workloads <a id="force-engine-for-specific-workloads"></a>
 
 ```python
 # For heavy aggregation workloads
@@ -248,7 +248,7 @@ config.use_chdb()
 config.use_pandas()
 ```
 
-### 4. Use explain() to Understand Execution {#use-explain-to-understand-execution}
+### 4. Use explain() to Understand Execution <a id="use-explain-to-understand-execution"></a>
 
 ```python
 ds = pd.read_csv("data.csv")
@@ -260,9 +260,9 @@ query.explain()
 
 ---
 
-## Troubleshooting {#troubleshooting}
+## Troubleshooting <a id="troubleshooting"></a>
 
-### Issue: Operation slower than expected {#issue-operation-slower}
+### Issue: Operation slower than expected <a id="issue-operation-slower"></a>
 
 ```python
 # Check current engine
@@ -275,7 +275,7 @@ config.enable_debug()
 config.use_chdb()  # or config.use_pandas()
 ```
 
-### Issue: Unsupported operation in chdb mode {#issue-unsupported-operation}
+### Issue: Unsupported operation in chdb mode <a id="issue-unsupported-operation"></a>
 
 ```python
 # Some pandas operations aren't supported in SQL
@@ -287,7 +287,7 @@ df = ds.to_df()
 result = df.some_pandas_specific_operation()
 ```
 
-### Issue: Memory issues with large data {#issue-memory-issues}
+### Issue: Memory issues with large data <a id="issue-memory-issues"></a>
 
 ```python
 # Use chdb engine to avoid loading all data into memory

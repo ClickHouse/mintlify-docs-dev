@@ -7,44 +7,44 @@ sidebarTitle: '25.10'
 doc_type: 'changelog'
 ---
 
-## Backward incompatible changes {#backward-incompatible-changes}
+## Backward incompatible changes <a id="backward-incompatible-changes"></a>
 
-### Data format and schema changes {#data-format-and-schema-changes}
+### Data format and schema changes <a id="data-format-and-schema-changes"></a>
 
 * Changed default `schema_inference_make_columns_nullable` setting to respect column `Nullable`-ness information from Parquet/ORC/Arrow metadata, instead of making everything Nullable. No change for text formats. [#71499](https://github.com/ClickHouse/ClickHouse/pull/71499) ([Michael Kolupaev](https://github.com/al13n321)).
 
-### Query and function changes {#query-and-function-changes}
+### Query and function changes <a id="query-and-function-changes"></a>
 
 * Query result cache now ignores the `log_comment` setting, so that changing only the `log_comment` on a query no longer forces a cache miss. There is a small chance users intentionally segmented their cache by varying `log_comment`. This change alters that behavior and is therefore backward incompatible. Please use setting `query_cache_tag` for this purpose. [#79878](https://github.com/ClickHouse/ClickHouse/pull/79878) ([filimonov](https://github.com/filimonov)).
 * In previous versions, queries with table functions named the same way as the implementation functions for operators were formatted inconsistently. Closes [#81601](https://github.com/ClickHouse/ClickHouse/issues/81601). Closes [#81977](https://github.com/ClickHouse/ClickHouse/issues/81977). Closes [#82834](https://github.com/ClickHouse/ClickHouse/issues/82834). Closes [#82835](https://github.com/ClickHouse/ClickHouse/issues/82835). EXPLAIN SYNTAX queries will not format operators - the new behavior better reflects the purpose of explaining syntax. `clickhouse-format`, `formatQuery`, and similar will not format functions as operators if the query contained them in a functional form. [#82825](https://github.com/ClickHouse/ClickHouse/pull/82825) ([Alexey Milovidov](https://github.com/alexey-milovidov)).
 * Disable nonsensical binary operations with IPv4/IPv6: Plus / minus of a IPv4/IPv6 with a non integer type is disabled. Before it would allow operations with floating types and throw logical errors with some other types (such as DateTime). [#86336](https://github.com/ClickHouse/ClickHouse/pull/86336) ([Raúl Marín](https://github.com/Algunenano)).
 * Renamed functions `searchAny` and `searchAll` to `hasAnyTokens` and `hasAllTokens` for better consistency with existing function `hasToken`. [#88109](https://github.com/ClickHouse/ClickHouse/pull/88109) ([Robert Schulze](https://github.com/rschu1ze)).
 
-### Data type changes {#data-type-changes}
+### Data type changes <a id="data-type-changes"></a>
 
 * Forbid using the Dynamic type in JOIN keys. It could lead to unexpected results when Dynamic type is compared to a non-Dynamic type. It's better to cast a Dynamic column to the required type. [#86358](https://github.com/ClickHouse/ClickHouse/pull/86358) ([Pavel Kruglov](https://github.com/Avogar)).
 
-### Storage and index changes {#storage-and-index-changes}
+### Storage and index changes <a id="storage-and-index-changes"></a>
 
 * Deprecate setting `allow_dynamic_metadata_for_data_lakes`. Now all iceberg tables try to fetch up-to-date table schema from storage before executing of each query. [#86366](https://github.com/ClickHouse/ClickHouse/pull/86366) ([Daniil Ivanik](https://github.com/divanik)).
 * The inverted text index was reworked from scratch to be scalable for datasets that don't fit into RAM. [#86485](https://github.com/ClickHouse/ClickHouse/pull/86485) ([Anton Popov](https://github.com/CurtizJ)).
 * The `storage_metadata_write_full_object_key` server setting is turned on by default, and can no longer be turned off. [#87335](https://github.com/ClickHouse/ClickHouse/pull/87335) ([Sema Checherinda](https://github.com/CheSema)).
 * Remove `cache_hits_threshold` from the filesystem cache. `cache_hits_threshold` was added before the SLRU cache policy was added, and it is not necessary to support both. [#88344](https://github.com/ClickHouse/ClickHouse/pull/88344) ([Kseniia Sumarokova](https://github.com/kssenii)).
 
-### Settings and configuration changes {#settings-and-configuration-changes}
+### Settings and configuration changes <a id="settings-and-configuration-changes"></a>
 
 * Decrease `replicated_deduplication_window_seconds` from 1 week down to one hour in order to store less znode on zookeeper when insertion rate is low. [#87414](https://github.com/ClickHouse/ClickHouse/pull/87414) ([Sema Checherinda](https://github.com/CheSema)).
 * Rename setting `query_plan_use_new_logical_join_step` to `query_plan_use_logical_join_step`. [#87679](https://github.com/ClickHouse/ClickHouse/pull/87679) ([Vladimir Cherkasov](https://github.com/vdimir)).
 * The new syntax allows tokenizer parameter to be more expressive. [#87997](https://github.com/ClickHouse/ClickHouse/pull/87997) ([Elmi Ahmadov](https://github.com/ahmadov)).
 * Two slight changes to how `min_free_disk_ratio_to_perform_insert` and `min_free_disk_bytes_to_perform_insert` settings work: use unreserved instead of available bytes to determine if an insert should be rejected. This is probably not crucial if the reservations for background merges and mutations are small compared to the configured thresholds, but it seems more correct. - Don't apply these settings to system tables. The reasoning for this is that we still want tables like `query_log` to be updated. This helps a lot with debugging. Data written to system tables is usually small compared to actual data, so they should be able to continue for much longer with a reasonable `min_free_disk_ratio_to_perform_insert` threshold. [#88468](https://github.com/ClickHouse/ClickHouse/pull/88468) ([c-end](https://github.com/c-end)).
 
-### Keeper changes {#keeper-changes}
+### Keeper changes <a id="keeper-changes"></a>
 
 * Enable async mode for Keeper's internal replication. Keeper will preserve the same behavior as before with possible performance improvements. If you are updating from a version older than 23.9, you need to either update first to 23.9+ and than to 25.10+. You can also set `keeper_server.coordination_settings.async_replication` to 0 before update and enable it after update is done. [#88515](https://github.com/ClickHouse/ClickHouse/pull/88515) ([Antonio Andelic](https://github.com/antonio2368)).
 
-## New features {#new-feature}
+## New features <a id="new-feature"></a>
 
-### Functions {#functions}
+### Functions <a id="functions"></a>
 
 * Add `naiveBayesClassifier` function to classify text using Naive Bayes based on ngrams. [#78700](https://github.com/ClickHouse/ClickHouse/pull/78700) ([Nihal Z. Miaji](https://github.com/nihalzp)).
 * Added function `arrayExcept` that subtracts one array as a set from another. [#82368](https://github.com/ClickHouse/ClickHouse/pull/82368) ([Joanna Hulboj](https://github.com/jh0x)).
@@ -55,7 +55,7 @@ doc_type: 'changelog'
 * Aggregate function `quantilePrometheusHistogram`, which accepts the upper bounds and cumulative values of histogram buckets as arguments, and performs a linear interpolation between the upper and lower bounds of the bucket in which the quantile position is found. Behaves similarly to the PromQL `histogram_quantile()` function on classic histograms. [#86294](https://github.com/ClickHouse/ClickHouse/pull/86294) ([Stephen Chi](https://github.com/stephchi0)).
 * Added optimized case-insensitive variants of `startsWith` and `endsWith` functions: `startsWithCaseInsensitive`, `endsWithCaseInsensitive`, `startsWithCaseInsensitiveUTF8`, and `endsWithCaseInsensitiveUTF8`. [#87374](https://github.com/ClickHouse/ClickHouse/pull/87374) ([Guang Zhao](https://github.com/zheguang)).
 
-### System tables {#system-tables}
+### System tables <a id="system-tables"></a>
 
 * Add a new system table `database_replicas` with information about database replicas. [#83408](https://github.com/ClickHouse/ClickHouse/pull/83408) ([Konstantin Morozov](https://github.com/k-morozov)).
 * Adds a new `system.aggregated_zookeeper_log` table. The table contains statistics (e.g. number of operations, average latency, errors) of ZooKeeper operations grouped by session id, parent path and operation type, and periodically flushed to disk. [#85102](https://github.com/ClickHouse/ClickHouse/pull/85102) ([Miсhael Stetsyuk](https://github.com/mstetsyuk)).
@@ -63,57 +63,57 @@ doc_type: 'changelog'
 * Add warnings for cpu and memory to `system.warnings` table. [#86838](https://github.com/ClickHouse/ClickHouse/pull/86838) ([Bharat Nallan](https://github.com/bharatnc)).
 * System table for delta lake metadata files. [#87263](https://github.com/ClickHouse/ClickHouse/pull/87263) ([scanhex12](https://github.com/scanhex12)).
 
-### Table engines and storage {#table-engines-and-storage}
+### Table engines and storage <a id="table-engines-and-storage"></a>
 
 * Support table engine Alias. [#76569](https://github.com/ClickHouse/ClickHouse/pull/76569) ([RinChanNOW](https://github.com/RinChanNOWWW)).
 * You can now use NATS JetStream to consume messages by specifying the new settings of `nats_stream` and `nats_consumer` for the NATS engine. [#84799](https://github.com/ClickHouse/ClickHouse/pull/84799) ([Dmitry Novikov](https://github.com/dmitry-sles-novikov)).
 * Iceberg and delta lake tables with disk configuration. This allows to specify user tables with an existing disk. Add setting `allowed_disks_for_table_engines` which allows specific disks to use for Iceberg. Example: ``` CREATE TABLE test ENGINE = Iceberg('path/inside/disk') SETTING datalake_disk_name = '<some_user_disk>'; ``` ### Documentation entry for user-facing changes. [#86778](https://github.com/ClickHouse/ClickHouse/pull/86778) ([scanhex12](https://github.com/scanhex12)).
 * Add a new table setting `min_level_for_wide_part` that allows specifying the minimum level for a part to be created as a wide part. [#88179](https://github.com/ClickHouse/ClickHouse/pull/88179) ([Christoph Wurm](https://github.com/cwurm)).
 
-### Iceberg and data lakes {#iceberg-and-data-lakes}
+### Iceberg and data lakes <a id="iceberg-and-data-lakes"></a>
 
 * Add support for querying Apache Paimon in ClickHouse. This integration would enable ClickHouse users to directly interact with Paimon's data lake storage. [#84423](https://github.com/ClickHouse/ClickHouse/pull/84423) ([JIaQi](https://github.com/JiaQiTang98)).
 * `ALTER UPDATE` for Iceberg table engine. [#86059](https://github.com/ClickHouse/ClickHouse/pull/86059) ([scanhex12](https://github.com/scanhex12)).
 
-### Indexes and statistics {#indexes-and-statistics}
+### Indexes and statistics <a id="indexes-and-statistics"></a>
 
 * New sparse_gram bloom filter index useful for finding long substrings. [#79985](https://github.com/ClickHouse/ClickHouse/pull/79985) ([scanhex12](https://github.com/scanhex12)).
 * Added an ability to automatically create statistics on all suitable columns in `MergeTree` tables. Added table-level setting `auto_statistics_types` which stores comma-separated types of statistics to create (e.g. `auto_statistics_types = 'minmax, uniq, countmin'`). [#87241](https://github.com/ClickHouse/ClickHouse/pull/87241) ([Anton Popov](https://github.com/CurtizJ)).
 
-### SQL and query features {#sql-and-query-features}
+### SQL and query features <a id="sql-and-query-features"></a>
 
 * Added `LIMIT BY ALL` syntax support. Similar to `GROUP BY ALL` and `ORDER BY ALL`, `LIMIT BY ALL` automatically expands to use all non-aggregate expressions from the SELECT clause as LIMIT BY keys. For example, `SELECT id, name, count(*) FROM table GROUP BY id LIMIT 1 BY ALL` is equivalent to `SELECT id, name, count(*) FROM table GROUP BY id LIMIT 1 BY id, name`. This feature simplifies queries when you want to limit by all selected non-aggregate columns without explicitly listing them. Closes [#59152](https://github.com/ClickHouse/ClickHouse/issues/59152). [#84079](https://github.com/ClickHouse/ClickHouse/pull/84079) ([Surya Kant Ranjan](https://github.com/iit2009046)).
 * Treat a bare setting name in query setting as equal to `1` (e.g. `SELECT ... SETTINGS use_query_cache` is equivalent to `use_query_cache = 1`). [#85800](https://github.com/ClickHouse/ClickHouse/pull/85800) ([thraeka](https://github.com/thraeka)).
 * Allows users to create temporary views with the same syntax as temporary tables. [#86432](https://github.com/ClickHouse/ClickHouse/pull/86432) ([Aly Kafoury](https://github.com/AlyHKafoury)).
 * Add support for negative `LIMIT` and negative `OFFSET`. Closes [#28913](https://github.com/ClickHouse/ClickHouse/issues/28913). [#88411](https://github.com/ClickHouse/ClickHouse/pull/88411) ([Nihal Z. Miaji](https://github.com/nihalzp)).
 
-### Client and CLI features {#client-and-cli-features}
+### Client and CLI features <a id="client-and-cli-features"></a>
 
 * Access ClickHouse Cloud instances using Cloud credentials with `--login`. [#82753](https://github.com/ClickHouse/ClickHouse/pull/82753) ([Krishna Mannem](https://github.com/kcmannem)).
 * Add `--semicolons_inline` option to format queries so that semicolons are placed on the last line instead of on a new line. [#88018](https://github.com/ClickHouse/ClickHouse/pull/88018) ([Jan Rada](https://github.com/ZelvaMan)).
 
-### Server configuration and workload management {#server-configuration-and-workload-management}
+### Server configuration and workload management <a id="server-configuration-and-workload-management"></a>
 
 * New configuration options: `logger.startupLevel` & `logger.shutdownLevel` allow for overriding the log level during the startup & shutdown of Clickhouse respectively. [#85967](https://github.com/ClickHouse/ClickHouse/pull/85967) ([Lennard Eijsackers](https://github.com/Blokje5)).
 * Adds a way to provide `WORKLOAD` and `RESOURCE` definitions in SQL using the server configuration "resources_and_workloads" section. [#87430](https://github.com/ClickHouse/ClickHouse/pull/87430) ([Sergei Trifonov](https://github.com/serxa)).
 
-### System commands {#system-commands}
+### System commands <a id="system-commands"></a>
 
 * Add `SYSTEM RECONNECT ZOOKEEPER` command to force zookeeper disconnect and reconnect (https://github.com/ClickHouse/ClickHouse/issues/87317). [#87318](https://github.com/ClickHouse/ClickHouse/pull/87318) ([Pradeep Chhetri](https://github.com/chhetripradeep)).
 * Limit the number of named collections through setting `max_named_collection_num_to_warn` and `max_named_collection_num_to_throw`. Add new metric `NamedCollection` and error `TOO_MANY_NAMED_COLLECTIONS`. [#87343](https://github.com/ClickHouse/ClickHouse/pull/87343) ([Pablo Marcos](https://github.com/pamarcos)).
 
-### Keeper {#keeper}
+### Keeper <a id="keeper"></a>
 
 * Add recursive variants of `cp`-`cpr` and `mv`-`mvr` commands in Keeper client. [#88570](https://github.com/ClickHouse/ClickHouse/pull/88570) ([Mikhail Artemenko](https://github.com/Michicosun)).
 
-## Experimental features {#experimental-features}
+## Experimental features <a id="experimental-features"></a>
 
 * Functions `searchAll` and `searchAny` now work on top of columns without text columns. In those cases, they use the default tokenizer. [#87722](https://github.com/ClickHouse/ClickHouse/pull/87722) ([Jimmy Aguilar Mena](https://github.com/Ergus)).
 * Implement `QBit` data type that stores vectors in bit-sliced format and `L2DistanceTransposed` function that allows approximate vector search where precision-speed trade-off is controlled by a parameter. [#87922](https://github.com/ClickHouse/ClickHouse/pull/87922) ([Raufs Dunamalijevs](https://github.com/rienath)).
 
-## Performance improvements {#performance-improvements}
+## Performance improvements <a id="performance-improvements"></a>
 
-### Query execution and optimization {#query-execution-and-optimization}
+### Query execution and optimization <a id="query-execution-and-optimization"></a>
 
 * Improved query performance by refactoring the order and integration of Query Condition Cache (QCC) with index analysis. QCC filtering is now applied before primary key and skip index analysis, reducing unnecessary index computation. Index analysis has been extended to support multiple range filters, and its filtering results are now stored back into the QCC. This significantly speeds up queries where index analysis dominates execution time—especially those relying on skip indexes (e.g. vector or inverted indexes). [#82380](https://github.com/ClickHouse/ClickHouse/pull/82380) ([Amos Bird](https://github.com/amosbird)).
 * A bunch of micro-optimizations to speed up small queries. [#83096](https://github.com/ClickHouse/ClickHouse/pull/83096) ([Raúl Marín](https://github.com/Algunenano)).
@@ -121,7 +121,7 @@ doc_type: 'changelog'
 * Improve pre where optimization for conditions like `func(primary_column) = 'xx'` and `column in (xxx)`. [#85529](https://github.com/ClickHouse/ClickHouse/pull/85529) ([李扬](https://github.com/taiyang-li)).
 * Avoid full scan for `system.tables` with filter by `uuid` (Can be useful if you have only UUID from logs or zookeeper path). [#88379](https://github.com/ClickHouse/ClickHouse/pull/88379) ([Azat Khuzhin](https://github.com/azat)).
 
-### JOIN optimizations {#join-optimizations}
+### JOIN optimizations <a id="join-optimizations"></a>
 
 * Provides a logic regarding pushing down the disjunction JOIN predicates. Example: in TPC-H Q7 for a condition on 2 tables n1 and n2 like `(n1.n_name = 'FRANCE' AND n2.n_name = 'GERMANY') OR (n1.n_name = 'GERMANY' AND n2.n_name = 'FRANCE')` we extract separate partial filters for each table `n1.n_name = 'FRANCE' OR n1.n_name = 'GERMANY'` for n1 and `n2.n_name = 'GERMANY' OR n2.n_name = 'FRANCE'` for n2. [#84735](https://github.com/ClickHouse/ClickHouse/pull/84735) ([Yarik Briukhovetskyi](https://github.com/yariks5s)).
 * Implemented rewriting of JOIN: 1. Convert `LEFT ANY JOIN` and `RIGHT ANY JOIN` to `SEMI`/`ANTI` JOIN if the filter condition is always false for matched or non-matched rows. This optimization is controlled by a new setting `query_plan_convert_any_join_to_semi_or_anti_join`. 2. Convert `FULL ALL JOIN` to `LEFT ALL` or `RIGHT ALL` JOIN if the filter condition is always false for non-matched rows from one side. [#86028](https://github.com/ClickHouse/ClickHouse/pull/86028) ([Dmitry Novik](https://github.com/novikd)).
@@ -130,13 +130,13 @@ doc_type: 'changelog'
 * Skip runtime hash table statistics recalculation during join optimization. Added new profile events `JoinOptimizeMicroseconds` and `QueryPlanOptimizeMicroseconds`. [#87683](https://github.com/ClickHouse/ClickHouse/pull/87683) ([Vladimir Cherkasov](https://github.com/vdimir)).
 * Inline `AddedColumns::appendFromBlock` for slightly better join performance in some cases. [#88455](https://github.com/ClickHouse/ClickHouse/pull/88455) ([Nikita Taranov](https://github.com/nickitat)).
 
-### String and function optimizations {#string-and-function-optimizations}
+### String and function optimizations <a id="string-and-function-optimizations"></a>
 
 * Improve the performance of case sensitive string search (operations such as filtering, e.g. `WHERE URL LIKE '%google%'`) by using the [StringZilla](https://github.com/ashvardanian/StringZilla) library, using SIMD CPU instructions when available. [#84161](https://github.com/ClickHouse/ClickHouse/pull/84161) ([Raúl Marín](https://github.com/Algunenano)).
 * Improves performance of `LIKE` with prefix or suffix by using the new default setting `optimize_rewrite_like_perfect_affix`. [#85920](https://github.com/ClickHouse/ClickHouse/pull/85920) ([Guang Zhao](https://github.com/zheguang)).
 * Improved performance of functions `tokens`, `hasAllTokens`, `hasAnyTokens`. [#88416](https://github.com/ClickHouse/ClickHouse/pull/88416) ([Anton Popov](https://github.com/CurtizJ)).
 
-### MergeTree and storage optimizations {#mergetree-and-storage-optimizations}
+### MergeTree and storage optimizations <a id="mergetree-and-storage-optimizations"></a>
 
 * Add optional `.size` subcolumn serialization for top-level String columns in MergeTree tables to improve compression and enable efficient subcolumn access. Introduce new MergeTree settings for serialization version control and expression optimization for empty strings. [#82850](https://github.com/ClickHouse/ClickHouse/pull/82850) ([Amos Bird](https://github.com/amosbird)).
 * Reduce memory allocation and memory copy when select from an aggregating merge tree table with FINAL when the table has columns with type `SimpleAggregateFunction(anyLast)`. [#84428](https://github.com/ClickHouse/ClickHouse/pull/84428) ([Duc Canh Le](https://github.com/canhld94)).
@@ -146,28 +146,28 @@ doc_type: 'changelog'
 * Enable saving marks in cache and avoid direct IO for the MergeTreeLazy reader. [#87989](https://github.com/ClickHouse/ClickHouse/pull/87989) ([Nikita Taranov](https://github.com/nickitat)).
 * SELECT query with `FINAL` clause on.a `ReplacingMergeTree` table with the `is_deleted` column now executes faster because of improved parallelization from 2 existing optimizations : 1) `do_not_merge_across_partitions_select_final` optimization for partitions of the table that have only a single `part` 2) Split other selected ranges of the table into `intersecting / non-intersecting` and only intersecting ranges have to pass through FINAL merging transform. [#88090](https://github.com/ClickHouse/ClickHouse/pull/88090) ([Shankar Iyer](https://github.com/shankar-iyer)).
 
-### Aggregation and GROUP BY optimizations {#aggregation-and-group-by-optimizations}
+### Aggregation and GROUP BY optimizations <a id="aggregation-and-group-by-optimizations"></a>
 
 * Fix performance degradation caused by a large serialized key while grouping by multiple string/number columns. Close https://github.com/ClickHouse/ClickHouse/pull/83884#issuecomment-3187972297 cc @mkmkme . It is a follow-up of https://github.com/ClickHouse/ClickHouse/pull/83884. [#85924](https://github.com/ClickHouse/ClickHouse/pull/85924) ([李扬](https://github.com/taiyang-li)).
 * RadixSort: Help the compiler use SIMD and the CPU do better prefetching. Uses dynamic dispatch to use software prefetching with Intel CPUs only. Continues the work by @taiyang-li in https://github.com/ClickHouse/ClickHouse/pull/77029. [#86378](https://github.com/ClickHouse/ClickHouse/pull/86378) ([Raúl Marín](https://github.com/Algunenano)).
 
-### Index and text search optimizations {#index-and-text-search-optimizations}
+### Index and text search optimizations <a id="index-and-text-search-optimizations"></a>
 
 * Improved performance of building text index for documents that contain mostly non-frequent tokens. [#87546](https://github.com/ClickHouse/ClickHouse/pull/87546) ([Anton Popov](https://github.com/CurtizJ)).
 
-### Data lake optimizations {#data-lake-optimizations}
+### Data lake optimizations <a id="data-lake-optimizations"></a>
 
 * Read in order for Iceberg. [#88454](https://github.com/ClickHouse/ClickHouse/pull/88454) ([scanhex12](https://github.com/scanhex12)).
 
-### Internal optimizations {#internal-optimizations}
+### Internal optimizations <a id="internal-optimizations"></a>
 
 * Improvements to DB::SharedMutex. [#87491](https://github.com/ClickHouse/ClickHouse/pull/87491) ([Raúl Marín](https://github.com/Algunenano)).
 * Speed up the common case of Field destructor. [#87631](https://github.com/ClickHouse/ClickHouse/pull/87631) ([Raúl Marín](https://github.com/Algunenano)).
 * Reduce the impact of not using fail points. [#88196](https://github.com/ClickHouse/ClickHouse/pull/88196) ([Raúl Marín](https://github.com/Algunenano)).
 
-## Improvements {#improvements}
+## Improvements <a id="improvements"></a>
 
-### Query optimization and execution {#query-optimization-and-execution}
+### Query optimization and execution <a id="query-optimization-and-execution"></a>
 
 * `mannWhitneyUTest` no longer throws an exception when both samples contain only identical values. Now returns a valid result, consistent with SciPy. This closes: [#79814](https://github.com/ClickHouse/ClickHouse/issues/79814). [#80009](https://github.com/ClickHouse/ClickHouse/pull/80009) ([DeanNeaht](https://github.com/DeanNeaht)).
 * Added experimental join order optimization that can automatically reorder JOINs for better performance (controlled by `query_plan_optimize_join_order_limit` setting). Note that the join order optimization currently has limited statistics support and primarily relies on row count estimates from storage engines - more sophisticated statistics collection and cardinality estimation will be added in future releases. **If you encounter issues with JOIN queries after upgrading**, you can temporarily disable the new implementation by setting `SET query_plan_use_new_logical_join_step = 0` and report the issue for investigation. **Note about resolution of identifiers from USING clause**: Changed resolving of the coalesced column from `OUTER JOIN ... USING` clause to be more consistent: previously, when selecting both the USING column and qualified columns (`a, t1.a, t2.a`) in a OUTER JOIN, the USING column would incorrectly be resolved to `t1.a`, showing 0/NULL for rows from the right table with no left match. Now identifiers from USING clause are always resolved to the coalesced column, while qualified identifiers resolve to the non-coalesced columns, regardless of which other identifiers are present in the query. For example: ```sql SELECT a, t1.a, t2.a FROM (SELECT 1 as a WHERE 0) t1 FULL JOIN (SELECT 2 as a) t2 USING (a) -- Before: a=0, t1.a=0, t2.a=2 (incorrect - 'a' resolved to t1.a) -- After: a=2, t1.a=0, t2.a=2 (correct - 'a' is coalesced). [#80848](https://github.com/ClickHouse/ClickHouse/pull/80848) ([Vladimir Cherkasov](https://github.com/vdimir)).
@@ -302,7 +302,7 @@ doc_type: 'changelog'
 * Check credentials in the Web UI only on pasting, rather than on every key press. This avoids a problem with misconfigured LDAP servers. This closes [#85777](https://github.com/ClickHouse/ClickHouse/issues/85777). [#88769](https://github.com/ClickHouse/ClickHouse/pull/88769) ([Alexey Milovidov](https://github.com/alexey-milovidov)).
 * Limit exception message length when a constraint is violated. In previous versions, you could get a very long exception message when a very long string was inserted, and it ended up being written in the query_log. Closes [#87032](https://github.com/ClickHouse/ClickHouse/issues/87032). [#88801](https://github.com/ClickHouse/ClickHouse/pull/88801) ([Alexey Milovidov](https://github.com/alexey-milovidov)).
 
-#### Bug fix (user-visible misbehavior in an official stable release) {#bug-fix}
+#### Bug fix (user-visible misbehavior in an official stable release) <a id="bug-fix"></a>
 
 * The results of alter queries are only validated on the initiator node for replicated databases and internally replicated tables. This will fix situations where an already committed alter query could get stuck on other nodes. [#83849](https://github.com/ClickHouse/ClickHouse/pull/83849) ([János Benjamin Antal](https://github.com/antaljanosbenjamin)).
 * Limit the number of tasks of each type in `BackgroundSchedulePool`. Avoid situations when all slots are occupied by task of one type, while other tasks are starving. Also avoids deadlocks when tasks wait for each other. This is controlled by `background_schedule_pool_max_parallel_tasks_per_type_ratio` server setting. [#84008](https://github.com/ClickHouse/ClickHouse/pull/84008) ([Alexander Tokmakov](https://github.com/tavplubix)).

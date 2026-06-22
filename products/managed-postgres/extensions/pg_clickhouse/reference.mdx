@@ -7,13 +7,13 @@ doc_type: 'reference'
 keywords: ['PostgreSQL', 'Postgres', 'FDW', 'foreign data wrapper', 'pg_clickhouse', 'extension']
 ---
 
-## Description {#description}
+## Description <a id="description"></a>
 
 pg_clickhouse is a PostgreSQL extension that enables remote query execution
 on ClickHouse databases, including a [foreign data wrapper]. It supports
 PostgreSQL 13 and higher and ClickHouse 23 and higher.
 
-## Getting started {#getting-started}
+## Getting started <a id="getting-started"></a>
 
 The simplest way to try pg_clickhouse is the [Docker image], which contains
 the standard PostgreSQL Docker image with the pg_clickhouse and [re2][re2
@@ -28,7 +28,7 @@ docker exec -it pg_clickhouse psql -U postgres
 See the [tutorial](/products/managed-postgres/extensions/pg_clickhouse/tutorial) to get started importing ClickHouse tables and
 pushing down queries.
 
-## Usage {#usage}
+## Usage <a id="usage"></a>
 
 ```sql
 CREATE EXTENSION pg_clickhouse;
@@ -40,7 +40,7 @@ CREATE SCHEMA taxi;
 IMPORT FOREIGN SCHEMA taxi FROM SERVER taxi_srv INTO taxi;
 ```
 
-## Versioning policy {#versioning-policy}
+## Versioning policy <a id="versioning-policy"></a>
 
 pg_clickhouse adheres to [Semantic Versioning] for its public releases.
 
@@ -68,11 +68,11 @@ be accompanied by SQL upgrade scripts, and all existing database that contain
 the extension must run `ALTER EXTENSION pg_clickhouse UPDATE` to benefit from
 the upgrade.
 
-## DDL SQL reference {#ddl-sql-reference}
+## DDL SQL reference <a id="ddl-sql-reference"></a>
 
 The following SQL [DDL] expressions use pg_clickhouse.
 
-### CREATE EXTENSION {#create-extension}
+### CREATE EXTENSION <a id="create-extension"></a>
 
 Use [CREATE EXTENSION] to add pg_clickhouse to a database:
 
@@ -87,7 +87,7 @@ CREATE SCHEMA ch;
 CREATE EXTENSION pg_clickhouse WITH SCHEMA ch;
 ```
 
-### ALTER EXTENSION {#alter-extension}
+### ALTER EXTENSION <a id="alter-extension"></a>
 
 Use [ALTER EXTENSION] to change pg_clickhouse. Examples:
 
@@ -104,7 +104,7 @@ Use [ALTER EXTENSION] to change pg_clickhouse. Examples:
     ALTER EXTENSION pg_clickhouse SET SCHEMA ch;
     ```
 
-### DROP EXTENSION {#drop-extension}
+### DROP EXTENSION <a id="drop-extension"></a>
 
 Use [DROP EXTENSION] to remove pg_clickhouse from a database:
 
@@ -119,7 +119,7 @@ the `CASCADE` clause to drop them, too:
 DROP EXTENSION pg_clickhouse CASCADE;
 ```
 
-### CREATE SERVER {#create-server}
+### CREATE SERVER <a id="create-server"></a>
 
 Use [CREATE SERVER] to create a foreign server that connects to a ClickHouse
 server. Example:
@@ -132,22 +132,34 @@ CREATE SERVER taxi_srv FOREIGN DATA WRAPPER clickhouse_fdw
 The supported options are:
 
 * `driver`: The ClickHouse connection driver to use, either "binary" or
-    "http". **Required.**
+  "http". **Required.**
+* `compression`: Native-protocol compression for the "binary" driver, one of
+  "none", "lz4", or "zstd". Defaults to "lz4". Ignored by the "http" driver.
 * `dbname`: The ClickHouse database to use upon connecting. Defaults to
-    "default".
+  "default".
 * `fetch_size`: Approximate batch size in bytes for HTTP streaming. Batches
   split on row boundaries. Defaults to `50000000` (50 MB). `0` disables
   streaming and buffers the full response. Foreign tables can override this
   value.
 * `host`: The host name of the ClickHouse server. Defaults to "localhost";
 * `port`: The port to connect to on the ClickHouse server. Defaults as
-    follows:
+  follows:
   * 9440 if `driver` is "binary" and `host` is a ClickHouse Cloud host
   * 9004 if `driver` is "binary" and `host` isn't a ClickHouse Cloud host
   * 8443 if `driver` is "http" and `host` is a ClickHouse Cloud host
   * 8123 if `driver` is "http" and `host` isn't a ClickHouse Cloud host
+* `min_tls_version`: Minimum TLS protocol version to negotiate on connections
+  that use TLS. One of `TLSv1`, `TLSv1.1`, `TLSv1.2`, or `TLSv1.3`. Defaults
+  to the TLS library's own minimum. Applies to both drivers.
+* `secure`: Controls TLS for the connection. One of:
+  * `auto` (default): use TLS when `host` is a ClickHouse Cloud host or
+    `port` is a secure port; plaintext otherwise.
+  * `on` (or `true`/`yes`/`1`): always use TLS. Defaults `port` to 8443
+    ("http") or 9440 ("binary").
+  * `off` (or `false`/`no`/`0`): never use TLS. Defaults `port` to 8123
+    ("http") or 9000 ("binary").
 
-### ALTER SERVER {#alter-server}
+### ALTER SERVER <a id="alter-server"></a>
 
 Use [ALTER SERVER] to change a foreign server. Example:
 
@@ -157,7 +169,7 @@ ALTER SERVER taxi_srv OPTIONS (SET driver 'http');
 
 The options are the same as for [CREATE SERVER](#create-server).
 
-### DROP SERVER {#drop-server}
+### DROP SERVER <a id="drop-server"></a>
 
 Use [DROP SERVER] to remove a foreign server:
 
@@ -172,7 +184,7 @@ also drop those dependencies:
 DROP SERVER taxi_srv CASCADE;
 ```
 
-### CREATE USER MAPPING {#create-user-mapping}
+### CREATE USER MAPPING <a id="create-user-mapping"></a>
 
 Use [CREATE USER MAPPING] to map a PostgreSQL user to a ClickHouse user. For
 example, to map the current PostgreSQL user to the remote ClickHouse user when
@@ -188,7 +200,7 @@ The supported options are:
 * `user`: The name of the ClickHouse user. Defaults to "default".
 * `password`: The password of the ClickHouse user.
 
-### ALTER USER MAPPING {#alter-user-mapping}
+### ALTER USER MAPPING <a id="alter-user-mapping"></a>
 
 Use [ALTER USER MAPPING] to change the definition of a user mapping:
 
@@ -199,7 +211,7 @@ ALTER USER MAPPING FOR CURRENT_USER SERVER taxi_srv
 
 The options are the same as for [CREATE USER MAPPING](#create-user-mapping).
 
-### DROP USER MAPPING {#drop-user-mapping}
+### DROP USER MAPPING <a id="drop-user-mapping"></a>
 
 Use [DROP USER MAPPING] to remove a user mapping:
 
@@ -207,7 +219,7 @@ Use [DROP USER MAPPING] to remove a user mapping:
 DROP USER MAPPING FOR CURRENT_USER SERVER taxi_srv;
 ```
 
-### IMPORT FOREIGN SCHEMA {#import-foreign-schema}
+### IMPORT FOREIGN SCHEMA <a id="import-foreign-schema"></a>
 
 Use [IMPORT FOREIGN SCHEMA] to import all the tables defines in a ClickHouse
 database as foreign tables into a PostgreSQL schema:
@@ -280,7 +292,7 @@ FOREIGN TABLE](#create-foreign-table).
  case-insensitive) names, use [CREATE FOREIGN TABLE](#create-foreign-table).
 </Tip>
 
-### CREATE FOREIGN TABLE {#create-foreign-table}
+### CREATE FOREIGN TABLE <a id="create-foreign-table"></a>
 
 Use [CREATE FOREIGN TABLE] to create a foreign table that can query data from
 a ClickHouse database:
@@ -346,7 +358,7 @@ type of each column. The supported column options are:
   ClickHouse type passed to the function and specify the name of the
   aggregate function via the appropriate column option.
 
-### ALTER FOREIGN TABLE {#alter-foreign-table}
+### ALTER FOREIGN TABLE <a id="alter-foreign-table"></a>
 
 Use [ALTER FOREIGN TABLE] to change the definition of a foreign table:
 
@@ -357,7 +369,7 @@ ALTER TABLE table ALTER COLUMN b OPTIONS (SET AggregateFunction 'count');
 The supported table and column options are the same as for [CREATE FOREIGN
 TABLE].
 
-### DROP FOREIGN TABLE {#drop-foreign-table}
+### DROP FOREIGN TABLE <a id="drop-foreign-table"></a>
 
 Use [DROP FOREIGN TABLE] to remove a foreign table:
 
@@ -372,7 +384,7 @@ Use the `CASCADE` clause to drop them, too:
 DROP FOREIGN TABLE acts CASCADE;
 ```
 
-## DML SQL reference {#dml-sql-reference}
+## DML SQL reference <a id="dml-sql-reference"></a>
 
 The SQL [DML] expressions below may use pg_clickhouse. Examples depend on
 these ClickHouse tables:
@@ -399,7 +411,7 @@ CREATE TABLE nodes (
   PRIMARY KEY node_id;
 ```
 
-### EXPLAIN {#explain}
+### EXPLAIN <a id="explain"></a>
 
 The [EXPLAIN] command works as expected, but the `VERBOSE` option triggers the
 ClickHouse "Remote SQL" query to be emitted:
@@ -421,7 +433,7 @@ try=# EXPLAIN (VERBOSE)
 This query pushes down to ClickHouse via a "Foreign Scan" plan node, the
 remote SQL.
 
-### SELECT {#select}
+### SELECT <a id="select"></a>
 
 Use the [SELECT] statement to execute queries on pg_clickhouse tables just
 like any other tables:
@@ -563,7 +575,7 @@ try=# EXPLAIN (ANALYZE, VERBOSE)
  the number of rows that must be pulled back into Postgres from 1000 (all of
  them) to just 8, one for each node.
 
-### PREPARE, EXECUTE, DEALLOCATE {#prepare-execute-deallocate}
+### PREPARE, EXECUTE, DEALLOCATE <a id="prepare-execute-deallocate"></a>
 
  As of v0.1.2, pg_clickhouse supports parameterized queries, mainly created
  by the [PREPARE] command:
@@ -638,7 +650,7 @@ try=# DEALLOCATE avg_durations_between_dates;
 DEALLOCATE
 ```
 
-### INSERT {#insert}
+### INSERT <a id="insert"></a>
 
 Use the [INSERT] command to insert values into a remote ClickHouse table:
 
@@ -651,7 +663,7 @@ VALUES (9,  'Augustin Gamarra', 'us-west-2', 'amd64', 'Linux')
 INSERT 0 3
 ```
 
-### COPY {#copy}
+### COPY <a id="copy"></a>
 
 Use the [COPY] command to insert a batch of rows into a remote ClickHouse
 table:
@@ -671,7 +683,7 @@ try=# COPY logs FROM stdin CSV;
 > insert API. Thus [COPY] currently uses [INSERT](#insert) statements to
 > insert records. This will be improved in a future release.
 
-### LOAD {#load}
+### LOAD <a id="load"></a>
 
 Use [LOAD] to load the pg_clickhouse shared library:
 
@@ -687,11 +699,11 @@ tables, etc.) are used.
 The one time it may be useful to [LOAD] pg_clickhouse is to [SET](#set)
 pg_clickhouse parameters before executing queries that depend on them.
 
-### SET {#set}
+### SET <a id="set"></a>
 
 Use [SET] to set the pg_clickhouse custom configuration parameters.
 
-#### `pg_clickhouse.session_settings` {#pg_clickhousesession_settings}
+#### `pg_clickhouse.session_settings` <a id="pg_clickhousesession_settings"></a>
 
 The `pg_clickhouse.session_settings` parameter configures [ClickHouse
 settings] to be set on subsequent queries. Example:
@@ -759,7 +771,7 @@ Note that pg_clickhouse must be loaded before setting
 `pg_clickhouse.session_settings`; either use [shared library preloading] or
 simply use one of the objects in the extension to ensure it loads.
 
-#### `pg_clickhouse.pushdown_regex` {#pg_clickhousepushdown_regex}
+#### `pg_clickhouse.pushdown_regex` <a id="pg_clickhousepushdown_regex"></a>
 
 The `pg_clickhouse.pushdown_regex` parameter controls whether pg_clickhouse
 pushes down regular expression functions and operators. It does so by default;
@@ -771,7 +783,7 @@ SET pg_clickhouse.pushdown_regex = 'false';
 
 See [Regular Expressions](#regular-expressions) for details.
 
-### ALTER ROLE {#alter-role}
+### ALTER ROLE <a id="alter-role"></a>
 
 Use [ALTER ROLE]'s `SET` command to [preload](#preloading) pg_clickhouse
 and/or [SET](#set) its parameters for specific roles:
@@ -795,12 +807,12 @@ try=# ALTER ROLE CURRENT_USER RESET pg_clickhouse.session_settings;
 ALTER ROLE
 ```
 
-## Preloading {#preloading}
+## Preloading <a id="preloading"></a>
 
 If every or nearly every Postgres connection needs to use pg_clickhouse,
 consider using [shared library preloading] to automatically load it:
 
-### `session_preload_libraries` {#session_preload_libraries}
+### `session_preload_libraries` <a id="session_preload_libraries"></a>
 
 Loads the shared library for every new connection to PostgreSQL:
 
@@ -812,7 +824,7 @@ Useful to take advantage of updates without restarting the server: just
 reconnect. May also be set for specific users or roles via [ALTER
 ROLE](#alter-role).
 
-### `shared_preload_libraries` {#shared_preload_libraries}
+### `shared_preload_libraries` <a id="shared_preload_libraries"></a>
 
 Loads the shared library into the PostgreSQL parent process at startup time:
 
@@ -823,7 +835,7 @@ shared_preload_libraries = pg_clickhouse
 Useful to save memory and load overhead for every session, but requires the
 cluster to be restart when the library is updated.
 
-## Data types {#data-types}
+## Data types <a id="data-types"></a>
 
 pg_clickhouse maps the following ClickHouse data types to PostgreSQL data
 types. [IMPORT FOREIGN SCHEMA](#import-foreign-schema) uses the first type in
@@ -855,7 +867,7 @@ the PostgreSQL column when importing columns; additional types may be used in
 
 Additional notes and details follow.
 
-### BYTEA {#bytea}
+### BYTEA <a id="bytea"></a>
 
 ClickHouse does not provide the equivalent of the PostgreSQL [BYTEA] type, but
 allows any bytes to be stored in [String] type. In general ClickHouse strings
@@ -974,13 +986,13 @@ As a rule, only use [TEXT] columns for encoded strings and use [BYTEA] columns
 only for binary data, and never switch between them.
 </Tip>
 
-## Function and operator reference {#function-and-operator-reference}
+## Function and operator reference <a id="function-and-operator-reference"></a>
 
-### Functions {#functions}
+### Functions <a id="functions"></a>
 
 These functions provide the interface to query a ClickHouse database.
 
-#### `clickhouse_raw_query` {#clickhouse_raw_query}
+#### `clickhouse_raw_query` <a id="clickhouse_raw_query"></a>
 
 ```sql
 SELECT clickhouse_raw_query(
@@ -1026,7 +1038,7 @@ SELECT clickhouse_raw_query(
 (1 row)
 ```
 
-### Pushdown functions {#pushdown-functions}
+### Pushdown functions <a id="pushdown-functions"></a>
 
 `pg_clickhouse` pushes down a subset of the PostgreSQL builtin functions used
 in conditionals (`HAVING` and `WHERE` clauses). That subset maps to ClickHouse
@@ -1094,6 +1106,10 @@ equivalents as follows:
 * `reverse(bytea)`: [reverse](/reference/functions/regular-functions/string-functions#reverse)
 * `strpos`: [positionUTF8](/reference/functions/regular-functions/string-search-functions#positionutf8)
 * `regexp_like`: [match](/reference/functions/regular-functions/string-search-functions#match)
+* `regexp_match`: [extractGroups](/reference/functions/regular-functions/string-search-functions#extractGroups)
+  if the regular expression contains parenthesized subexpressions; otherwise
+  [extractAll](/reference/functions/regular-functions/string-search-functions#extractAll)
+  sliced with [arraySlice](/reference/functions/regular-functions/array-functions#arraySlice).
 * `regexp_replace`: [replaceRegexpOne](/reference/functions/regular-functions/string-replace-functions#replaceRegexpOne) or [replaceRegexpOne](/reference/functions/regular-functions/string-replace-functions#replaceRegexpAll) when the `g` flag is present
 * `regexp_split_to_array`: [splitByRegexp](/reference/functions/regular-functions/splitting-merging-functions#splitByRegexp)
 * `md5`: [MD5](/reference/functions/regular-functions/hash-functions#MD5)
@@ -1129,7 +1145,7 @@ equivalents as follows:
 * `CURRENT_ROLE`: Passed as value from PostgreSQL function.
 * `SESSION_USER`: Passed as value from PostgreSQL function.
 
-### Pushdown operators {#pushdown-operators}
+### Pushdown operators <a id="pushdown-operators"></a>
 
 * Array slice (`arr[L:U]`): [arraySlice](/reference/functions/regular-functions/array-functions#arraySlice)
 * `@>` (array contains): [hasAll](/reference/functions/regular-functions/array-functions#hasAll)
@@ -1142,7 +1158,7 @@ equivalents as follows:
 * `->>` (JSON/JSONB extract element as text): [sub-column syntax](/reference/data-types/newjson#reading-json-paths-as-sub-columns)
 * `->` (JSON/JSONB extract): [toJSONString](/reference/functions/regular-functions/json-functions#toJSONString) + [sub-column syntax](/reference/data-types/newjson#reading-json-paths-as-sub-columns)
 
-### Custom functions {#custom-functions}
+### Custom functions <a id="custom-functions"></a>
 
 These custom functions created by `pg_clickhouse` provide foreign query
 pushdown for select ClickHouse functions with no PostgreSQL equivalents. If
@@ -1150,12 +1166,12 @@ any of these functions can't be pushed down they will raise an exception.
 
 * [dictGet](/reference/functions/regular-functions/ext-dict-functions#dictget-dictgetordefault-dictgetornull)
 
-### Extension pushdown {#extension-pushdown}
+### Extension pushdown <a id="extension-pushdown"></a>
 
 pg_clickhouse recognizes functions from select core and third-party
 extensions, pushing them down to their ClickHouse equivalents.
 
-#### re2 {#re2}
+#### re2 <a id="re2"></a>
 
 All [re2 extension] functions push down 1:1 to ClickHouse:
 
@@ -1172,20 +1188,20 @@ All [re2 extension] functions push down 1:1 to ClickHouse:
 * `re2multimatchanyindex` → [multiMatchAnyIndex](/reference/functions/regular-functions/string-search-functions#multiMatchAnyIndex)
 * `re2multimatchallindices` → [multiMatchAllIndices](/reference/functions/regular-functions/string-search-functions#multiMatchAllIndices)
 
-#### intarray {#intarray}
+#### intarray <a id="intarray"></a>
 
 One [intarray] function pushes down to ClickHouse:
 
 *   `idx` → [indexOf](/reference/functions/regular-functions/array-functions#indexOf)
 
-#### fuzzystrmatch {#fuzzystrmatch}
+#### fuzzystrmatch <a id="fuzzystrmatch"></a>
 
 Two [fuzzystrmatch] functions push down to ClickHouse:
 
 *   `soundex`: [soundex](/reference/functions/regular-functions/string-functions#soundex)
 *   `levenshtein` (2-arg): [editDistanceUTF8](/reference/functions/regular-functions/string-functions#editDistanceUTF8)
 
-### Pushdown casts {#pushdown-casts}
+### Pushdown casts <a id="pushdown-casts"></a>
 
 pg_clickhouse pushes down casts such as `CAST(x AS bigint)` for compatible
 data types. For incompatible types the pushdown will fail; if `x` in this
@@ -1201,7 +1217,7 @@ pushed down.
 * [toUInt64](/reference/functions/regular-functions/type-conversion-functions#touint64)
 * [toUInt128](/reference/functions/regular-functions/type-conversion-functions#touint128)
 
-### Pushdown aggregates {#pushdown-aggregates}
+### Pushdown aggregates <a id="pushdown-aggregates"></a>
 
 These PostgreSQL aggregate functions pushdown to ClickHouse.
 
@@ -1218,7 +1234,7 @@ These PostgreSQL aggregate functions pushdown to ClickHouse.
 * [string_agg](/reference/functions/aggregate-functions/groupConcat)
 * [sum](/reference/functions/aggregate-functions/sum)
 
-### Custom aggregates {#custom-aggregates}
+### Custom aggregates <a id="custom-aggregates"></a>
 
 These custom aggregate functions created by `pg_clickhouse` provide foreign
 query pushdown for select ClickHouse aggregate functions with no PostgreSQL
@@ -1236,7 +1252,7 @@ an exception.
 * [quantile](/reference/functions/aggregate-functions/quantile)
 * [quantileExact](/reference/functions/aggregate-functions/quantileExact)
 
-### Pushdown ordered set aggregates {#pushdown-ordered-set-aggregates}
+### Pushdown ordered set aggregates <a id="pushdown-ordered-set-aggregates"></a>
 
 These [ordered-set aggregate functions] map to ClickHouse [Parametric
 aggregate functions] by passing their *direct argument* as a parameter and
@@ -1259,32 +1275,32 @@ aren't supported and will raise an error.
 * `quantile(double)`: [quantile](/reference/functions/aggregate-functions/quantile)
 * `quantileExact(double)`: [quantileExact](/reference/functions/aggregate-functions/quantileExact)
 
-### Pushdown window functions {#pushdown-window-functions}
+### Pushdown window functions <a id="pushdown-window-functions"></a>
 
 These PostgreSQL [window functions] push down to ClickHouse with `OVER
 (PARTITION BY ... ORDER BY ...)` clauses, including frame specifications where
 applicable.
 
-* [row_number](/reference/functions/window-functions#row_number)
-* [rank](/reference/functions/window-functions#rank)
-* [dense_rank](/reference/functions/window-functions#dense_rank)
-* [ntile](/reference/functions/window-functions#ntile)
-* [cume_dist](/reference/functions/window-functions#cume_dist)
-* [percent_rank](/reference/functions/window-functions#percent_rank)
-* [lead](/reference/functions/window-functions#lead)
-* [lag](/reference/functions/window-functions#lag)
-* [first_value](/reference/functions/window-functions#first_value)
-* [last_value](/reference/functions/window-functions#last_value)
-* [nth_value](/reference/functions/window-functions#nth_value)
+* [row_number](/reference/functions/window-functions/index#row_number)
+* [rank](/reference/functions/window-functions/index#rank)
+* [dense_rank](/reference/functions/window-functions/index#dense_rank)
+* [ntile](/reference/functions/window-functions/index#ntile)
+* [cume_dist](/reference/functions/window-functions/index#cume_dist)
+* [percent_rank](/reference/functions/window-functions/index#percent_rank)
+* [lead](/reference/functions/window-functions/index#lead)
+* [lag](/reference/functions/window-functions/index#lag)
+* [first_value](/reference/functions/window-functions/index#first_value)
+* [last_value](/reference/functions/window-functions/index#last_value)
+* [nth_value](/reference/functions/window-functions/index#nth_value)
 * `min` / `max` (with `OVER` clause)
 
 Ranking functions (`row_number`, `rank`, `dense_rank`, `ntile`, `cume_dist`,
 `percent_rank`) omit their frame clause during pushdown because ClickHouse
 rejects frame specifications on these functions.
 
-## Compatibility notes {#compatibility-notes}
+## Compatibility notes <a id="compatibility-notes"></a>
 
-### Regular expressions {#regular-expressions}
+### Regular expressions <a id="regular-expressions"></a>
 
 While pg_clickhouse pushes down regular expressions to ClickHouse equivalents
 when [pg_clickhouse.pushdown_regex](#pg_clickhousepushdown_regex) is true (the
@@ -1297,7 +1313,7 @@ aware of the differences between the two and how pg_clickhouse handles them.
   `WHERE` clause) and POSIX when it will be evaluated by Postgres (e.g., in a
   `SELECT` clause).
 
-* pg_clickhouse pushes down the Postgres [Regex flags] by prepending them to
+* pg_clickhouse pushes down the [Postgres flags] by prepending them to
   ClickHouse regular expression inside `(?)`. For example:
 
     ``` sql
@@ -1307,28 +1323,54 @@ aware of the differences between the two and how pg_clickhouse handles them.
   Becomes
 
     ```sql
-    match(val, concat('(?i-s)', '^VAL\\d'))
+    match(val, concat('(?i)', '^VAL\\d'))
     ```
-
-  Note the inclusion of `-s`; this aligns the behavior with Postgres regular
-  expressions by disabling `s`, which ClickHouse enables by default.
-  pg_clickhouse will not include `-s` if the flags in the Postgres function
-  call include `s`. Unfortunately, this behavior breaks the compatibility of
-  some regular expression in Postgres 24 and earlier.
 
 * The only flags both support, and therefore can be used when evaluated by
   ClickHouse, are:
 
-  * `i`: case-insensitive
-  * `m`: multi-line mode:
-  * `s`: let `.` match `\n`
-  * `p`: partial newline-sensitive matching (treated the same as `s`)
-  * `t`: tight syntax (the default, removed by pg_clickhouse)
+    | Flag | As    | Notes                                                          |
+    | ---- | ----- | -------------------------------------------------------------- |
+    | `i`  | `i`   | case-insensitive matching                                      |
+    | `m`  | `m-s` | `^` and `$` match begin/end line in addition to begin/end text |
+    | `n`  | `m-s` | Postgres alias for `m`                                         |
+    | `p`  | `-s`  | don't let `.` and `[^x]` match `\n`                            |
+    | `s`  | `s`   | let `.` and `[^x]` match `\n`                                  |
+    | `t`  |       | tight syntax, ignored                                          |
+    | `w`  | `m`   | inverse partial newline-sensitive matching                     |
 
-  RE2 supports only these flags; don't use any other [Postgres flags]
+  RE2 supports only these flags; don't use any other [Postgres flags].
 
-* Any other flags passed to regular expression functions will cause the
-  function not to be pushed down.
+* This table summarizes the affects of the various flags (and no flag, which
+  is the same as `s`) when matching newlines and line endings. Note that in
+  Postgres, `m` and `p` prevent negated character classes (`[^xyz]`) from
+  matching a newline, while the ClickHouse equivalents do not. Otherwise,
+  the behaviors are the same in ClickHouse as in Postgres:
+
+    | Pattern applied to `a\nb` | Postgres | ClickHouse | Same? |
+    | ------------------------- | :------: | :--------: | :---: |
+    | `a.b`                     | true     | true       |   ✔︎   |
+    | `a[^x]b`                  | true     | true       |   ✔︎   |
+    | `a$`                      | false    | false      |   ✔︎   |
+    | **`s` Flag**              |          |            |       |
+    | `(?s)a.b`                 | true     | true       |   ✔︎   |
+    | `(?s)a[^x]b`              | true     | true       |   ✔︎   |
+    | `(?s)a$`                  | false    | false      |   ✔︎   |
+    | **`m` Flag**              |          |            |       |
+    | `(?m)a.b`                 | false    | false      |   ✔︎   |
+    | `(?m)a[^x]b`              | true     | false      |   ✘   |
+    | `(?m)a$`                  | true     | true       |   ✔︎   |
+    | **`p` Flag**              |          |            |       |
+    | `(?p)a.b`                 | false    | false      |   ✔︎   |
+    | `(?p)a[^x]b`              | true     | false      |   ✘   |
+    | `(?p)a$`                  | false    | false      |   ✔︎   |
+    | **`w` Flag**              |          |            |       |
+    | `(?w)a.b`                 | true     | true       |   ✔   |
+    | `(?w)a[^x]b`              | true     | true       |   ✔   |
+    | `(?w)a$`                  | true     | true       |   ✔   |
+
+* Any other flags passed to regular expression functions will prevent
+  pushdown of the function.
 
 * The exception is `regexp_replace()`, which also supports the `g` flag. When
   `g` is set, pg_clickhouse uses `replaceRegexpAll()` instead of
@@ -1338,13 +1380,22 @@ aware of the differences between the two and how pg_clickhouse handles them.
   refer to the entire match, while in ClickHouse supports `\0` for the entire
   match. Be sure to use `\0` when the function pushes down to ClickHouse.
 
+* Postgres `regexp_match` returns `NULL` when there are no matches, while
+  the expressions it pushes down to return an empty array. Use `COALESCE()`
+  to return an empty array instead of `NULL` to compare return values
+  compatibly. For example:
+
+    ```sql
+    SELECT * FROM events WHERE COALESCE(regexp_match(msg, '^ERR'), '{}');
+    ```
+
 To avoid all ambiguity, consider setting
 [pg_clickhouse.pushdown_regex](#pg_clickhousepushdown_regex) to prevent
 Postgres regular expression from pushing down to ClickHouse, and using the
 [re2 extension], for which pg_clickhouse supports [direct pushdown](#re2) of
 ClickHouse-compatible [RE2] regular expressions.
 
-### `to_char()` {#to_char}
+### `to_char()` <a id="to_char"></a>
 
 PostgreSQL [`to_char()`] for `timestamp` and `timestamp with time zone`
 pushes down to ClickHouse [formatDateTime] only when the format argument
@@ -1358,7 +1409,7 @@ Two-argument `to_char()` forms over `numeric`, `interval`, and other
 non-timestamp types never push down; ClickHouse [formatDateTime] only
 formats date-time values.
 
-#### Translated keywords {#translated-keywords}
+#### Translated keywords <a id="translated-keywords"></a>
 
 | PostgreSQL                 | ClickHouse | Meaning                               |
 | -------------------------- | ---------- | ------------------------------------- |
@@ -1376,18 +1427,18 @@ formats date-time values.
 | `Dy`                       | `%a`       | abbreviated weekday name, e.g., `Mon` |
 | `AM`, `PM`                 | `%p`       | meridiem indicator, always uppercase  |
 
-#### Quoted text and literals {#quoted-text-and-literals}
+#### Quoted text and literals <a id="quoted-text-and-literals"></a>
 
 Text wrapped in `"..."` passes through verbatim, with any literal `%`
 doubled to `%%` to escape ClickHouse's specifier prefix. A `\"` outside
 quotes also passes through as a literal `"`. Inside `"..."`, backslash
 only escapes `"`; other backslash sequences are treated as literal text.
 
-## Authors {#authors}
+## Authors <a id="authors"></a>
 
 [David E. Wheeler](https://justatheory.com/)
 
-## Copyright {#copyright}
+## Copyright <a id="copyright"></a>
 
 Copyright (c) 2025-2026, ClickHouse
 
@@ -1424,7 +1475,7 @@ Copyright (c) 2025-2026, ClickHouse
     "PostgreSQL Docs: IMPORT FOREIGN SCHEMA"
   [CREATE FOREIGN TABLE]: https://www.postgresql.org/docs/current/sql-createforeigntable.html
     "PostgreSQL Docs: CREATE FOREIGN TABLE"
-  [table engine]: /reference/engines/table-engines
+  [table engine]: /reference/engines/table-engines/index
     "ClickHouse Docs: Table engines"
   [AggregateFunction Type]: /reference/data-types/aggregatefunction
     "ClickHouse Docs: AggregateFunction Type"
@@ -1484,9 +1535,9 @@ Copyright (c) 2025-2026, ClickHouse
     "PostgreSQL Docs: Character Types"
   [window functions]: https://www.postgresql.org/docs/current/functions-window.html
     "PostgreSQL Docs: Window Functions"
-  [POSIX Regular Expressions]: https://www.postgresql.org/docs/18/functions-matching.html#FUNCTIONS-POSIX-REGEXP
+  [POSIX Regular Expressions]: https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-POSIX-REGEXP
     "PostgreSQL Docs: POSIX Regular Expressions"
-  [Postgres flags]: https://www.postgresql.org/docs/18/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE
+  [Postgres flags]: https://www.postgresql.org/docs/current/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE
     "PostgreSQL Docs: ARE Embedded-Option Letters"
   [RE2]: https://github.com/google/re2/wiki/Syntax "RE2 Syntax"
   [re2 extension]: https://github.com/ClickHouse/pg_re2

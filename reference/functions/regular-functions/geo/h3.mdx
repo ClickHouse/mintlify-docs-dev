@@ -6,7 +6,7 @@ title: 'Functions for Working with H3 Indexes'
 doc_type: 'reference'
 ---
 
-## H3 Index {#h3-index}
+## H3 Index <a id="h3-index"></a>
 
 [H3](https://h3geo.org/) is a geographical indexing system where the Earth's surface is divided into a grid of even hexagonal cells. This system is hierarchical, i. e. each hexagon on the top level ("parent") can be split into seven even but smaller ones ("children"), and so on.
 
@@ -18,7 +18,7 @@ The H3 index is used primarily for bucketing locations and other geospatial mani
 
 The full description of the H3 system is available at [the Uber Engineering site](https://www.uber.com/blog/h3/).
 
-## h3IsValid {#h3isvalid}
+## h3IsValid <a id="h3isvalid"></a>
 
 Verifies whether the number is a valid [H3](#h3-index) index.
 
@@ -49,7 +49,7 @@ SELECT h3IsValid(630814730351855103) AS h3IsValid;
 └───────────┘
 ```
 
-## h3GetResolution {#h3getresolution}
+## h3GetResolution <a id="h3getresolution"></a>
 
 Defines the resolution of the given [H3](#h3-index) index.
 
@@ -80,7 +80,7 @@ SELECT h3GetResolution(639821929606596015) AS resolution;
 └────────────┘
 ```
 
-## h3EdgeAngle {#h3edgeangle}
+## h3EdgeAngle <a id="h3edgeangle"></a>
 
 Calculates the average length of an [H3](#h3-index) hexagon edge in grades.
 
@@ -110,7 +110,7 @@ SELECT h3EdgeAngle(10) AS edgeAngle;
 └───────────────────────┘
 ```
 
-## h3EdgeLengthM {#h3edgelengthm}
+## h3EdgeLengthM <a id="h3edgelengthm"></a>
 
 Calculates the average length of an [H3](#h3-index) hexagon edge in meters.
 
@@ -140,7 +140,7 @@ SELECT h3EdgeLengthM(15) AS edgeLengthM;
 └─────────────┘
 ```
 
-## h3EdgeLengthKm {#h3edgelengthkm}
+## h3EdgeLengthKm <a id="h3edgelengthkm"></a>
 
 Calculates the average length of an [H3](#h3-index) hexagon edge in kilometers.
 
@@ -170,7 +170,7 @@ SELECT h3EdgeLengthKm(15) AS edgeLengthKm;
 └──────────────┘
 ```
 
-## geoToH3 {#geotoh3}
+## geoToH3 <a id="geotoh3"></a>
 
 Returns [H3](#h3-index) point index `(lat, lon)` with specified resolution.
 
@@ -205,7 +205,7 @@ SELECT geoToH3(55.71290588, 37.79506683, 15) AS h3Index;
 └────────────────────┘
 ```
 
-## h3ToGeo {#h3togeo}
+## h3ToGeo <a id="h3togeo"></a>
 
 Returns the centroid latitude and longitude corresponding to the provided [H3](#h3-index) index.
 
@@ -237,7 +237,7 @@ SELECT h3ToGeo(644325524701193974) AS coordinates;
 └───────────────────────────────────────┘
 ```
 
-## h3ToGeoBoundary {#h3togeoboundary}
+## h3ToGeoBoundary <a id="h3togeoboundary"></a>
 
 Returns array of pairs `(lat, lon)`, which corresponds to the boundary of the provided H3 index.
 
@@ -267,7 +267,7 @@ SELECT h3ToGeoBoundary(644325524701193974) AS coordinates;
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## h3kRing {#h3kring}
+## h3kRing <a id="h3kring"></a>
 
  Lists all the [H3](#h3-index) hexagons in the raduis of `k` from the given hexagon in random order.
 
@@ -344,7 +344,51 @@ SELECT h3PolygonToCells([(-122.4089866999972145,37.813318999983238),(-122.354473
 └────────────────────┘
 ```
 
-## h3GetBaseCell {#h3getbasecell}
+## h3PolygonToCellsWithContainment <a id="h3polygontocellswithcontainment"></a>
+
+Returns the hexagons (at specified resolution) covering the provided geometry, either ring or (multi-)polygon, using H3 experimental containment modes.
+
+This function maps `flags` to H3 containment modes:
+
+- `0` — `CONTAINMENT_CENTER`
+- `1` — `CONTAINMENT_FULL`
+- `2` — `CONTAINMENT_OVERLAPPING`
+- `3` — `CONTAINMENT_OVERLAPPING_BBOX`
+
+**Syntax**
+
+``` sql
+h3PolygonToCellsWithContainment(geometry, resolution, flags)
+```
+
+**Arguments**
+
+- `geometry` can be one of the following [Geo Data Types](/reference/data-types/geo) or their underlying primitive types:
+  - [Ring](/reference/data-types/geo#ring)
+  - [Polygon](/reference/data-types/geo#polygon)
+  - [MultiPolygon](/reference/data-types/geo#multipolygon)
+- `resolution` — Index resolution. Range: `[0, 15]`. [UInt8](/reference/data-types/int-uint).
+- `flags` — Containment mode. Range: `[0, 3]`. Use integer literals such as `0`, `1`, `2`, and `3`, or [UInt32](/reference/data-types/int-uint) values (for example, `toUInt32(2)`). Values are passed to the H3 API as `UInt32`. Other native integer types are converted with an accurate cast.
+
+**Returned values**
+
+- Array of H3-indexes according to the selected containment mode. [Array](/reference/data-types/array)([UInt64](/reference/data-types/int-uint)).
+
+**Example**
+
+```sql title="Query"
+SELECT
+    h3PolygonToCellsWithContainment([(-122.4089866999972145, 37.813318999983238), (-122.3544736999993603, 37.7198061999978478), (-122.4798767000009008, 37.8151571999998453)], 7, 0) AS center_cells,
+    h3PolygonToCellsWithContainment([(-122.4089866999972145, 37.813318999983238), (-122.3544736999993603, 37.7198061999978478), (-122.4798767000009008, 37.8151571999998453)], 7, 2) AS overlap_cells;
+```
+
+```text title="Response"
+   ┌─center_cells───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┬─overlap_cells──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+1. │ [608692970585063423,608692970719281151,608692970752835583,608692970769612799,608692970819944447,608692971927240703,608692972027903999] │ [608692970249519103,608692970266296319,608692970585063423,608692970601840639,608692970635395071,608692970685726719,608692970719281151,608692970736058367,608692970752835583,608692970769612799,608692970786390015,608692970819944447,608692971927240703,608692971994349567,608692972027903999] │
+   └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## h3GetBaseCell <a id="h3getbasecell"></a>
 
 Returns the base cell number of the [H3](#h3-index) index.
 
@@ -374,7 +418,7 @@ SELECT h3GetBaseCell(612916788725809151) AS basecell;
 └──────────┘
 ```
 
-## h3HexAreaM2 {#h3hexaream2}
+## h3HexAreaM2 <a id="h3hexaream2"></a>
 
 Returns average hexagon area in square meters at the given resolution.
 
@@ -404,7 +448,7 @@ SELECT h3HexAreaM2(13) AS area;
 └──────┘
 ```
 
-## h3HexAreaKm2 {#h3hexareakm2}
+## h3HexAreaKm2 <a id="h3hexareakm2"></a>
 
 Returns average hexagon area in square kilometers at the given resolution.
 
@@ -434,7 +478,7 @@ SELECT h3HexAreaKm2(13) AS area;
 └───────────┘
 ```
 
-## h3IndexesAreNeighbors {#h3indexesareneighbors}
+## h3IndexesAreNeighbors <a id="h3indexesareneighbors"></a>
 
 Returns whether or not the provided [H3](#h3-index) indexes are neighbors.
 
@@ -466,7 +510,7 @@ SELECT h3IndexesAreNeighbors(617420388351344639, 617420388352655359) AS n;
 └───┘
 ```
 
-## h3ToChildren {#h3tochildren}
+## h3ToChildren <a id="h3tochildren"></a>
 
 Returns an array of child indexes for the given [H3](#h3-index) index.
 
@@ -497,7 +541,7 @@ SELECT h3ToChildren(599405990164561919, 6) AS children;
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## h3ToParent {#h3toparent}
+## h3ToParent <a id="h3toparent"></a>
 
 Returns the parent (coarser) index containing the given [H3](#h3-index) index.
 
@@ -528,7 +572,7 @@ SELECT h3ToParent(599405990164561919, 3) AS parent;
 └────────────────────┘
 ```
 
-## h3ToString {#h3tostring}
+## h3ToString <a id="h3tostring"></a>
 
 Converts the `H3Index` representation of the index to the string representation.
 
@@ -556,7 +600,7 @@ SELECT h3ToString(617420388352917503) AS h3_string;
 └─────────────────┘
 ```
 
-## stringToH3 {#stringtoh3}
+## stringToH3 <a id="stringtoh3"></a>
 
 Converts the string representation to the `H3Index` (UInt64) representation.
 
@@ -586,7 +630,7 @@ SELECT stringToH3('89184926cc3ffff') AS index;
 └────────────────────┘
 ```
 
-## h3GetResolution {#h3getresolution-1}
+## h3GetResolution <a id="h3getresolution-1"></a>
 
 Returns the resolution of the [H3](#h3-index) index.
 
@@ -616,7 +660,7 @@ SELECT h3GetResolution(617420388352917503) AS res;
 └─────┘
 ```
 
-## h3IsResClassIII {#h3isresclassiii}
+## h3IsResClassIII <a id="h3isresclassiii"></a>
 
 Returns whether [H3](#h3-index) index has a resolution with Class III orientation.
 
@@ -647,7 +691,7 @@ SELECT h3IsResClassIII(617420388352917503) AS res;
 └─────┘
 ```
 
-## h3IsPentagon {#h3ispentagon}
+## h3IsPentagon <a id="h3ispentagon"></a>
 
 Returns whether this [H3](#h3-index) index represents a pentagonal cell.
 
@@ -678,7 +722,7 @@ SELECT h3IsPentagon(644721767722457330) AS pentagon;
 └──────────┘
 ```
 
-## h3GetFaces {#h3getfaces}
+## h3GetFaces <a id="h3getfaces"></a>
 
 Returns icosahedron faces intersected by a given [H3](#h3-index) index.
 
@@ -708,7 +752,7 @@ SELECT h3GetFaces(599686042433355775) AS faces;
 └───────┘
 ```
 
-## h3CellAreaM2 {#h3cellaream2}
+## h3CellAreaM2 <a id="h3cellaream2"></a>
 
 Returns the exact area of a specific cell in square meters corresponding to the given input H3 index.
 
@@ -738,7 +782,7 @@ SELECT h3CellAreaM2(579205133326352383) AS area;
 └────────────────────┘
 ```
 
-## h3CellAreaRads2 {#h3cellarearads2}
+## h3CellAreaRads2 <a id="h3cellarearads2"></a>
 
 Returns the exact area of a specific cell in square radians corresponding to the given input H3 index.
 
@@ -768,7 +812,7 @@ SELECT h3CellAreaRads2(579205133326352383) AS area;
 └─────────────────────┘
 ```
 
-## h3ToCenterChild {#h3tocenterchild}
+## h3ToCenterChild <a id="h3tocenterchild"></a>
 
 Returns the center child (finer) [H3](#h3-index) index contained by given [H3](#h3-index) at the given resolution.
 
@@ -799,7 +843,7 @@ SELECT h3ToCenterChild(577023702256844799,1) AS centerToChild;
 └────────────────────┘
 ```
 
-## h3ExactEdgeLengthM {#h3exactedgelengthm}
+## h3ExactEdgeLengthM <a id="h3exactedgelengthm"></a>
 
 Returns the exact edge length of the unidirectional edge represented by the input h3 index in meters.
 
@@ -829,7 +873,7 @@ SELECT h3ExactEdgeLengthM(1310277011704381439) AS exactEdgeLengthM;;
 └────────────────────┘
 ```
 
-## h3ExactEdgeLengthKm {#h3exactedgelengthkm}
+## h3ExactEdgeLengthKm <a id="h3exactedgelengthkm"></a>
 
 Returns the exact edge length of the unidirectional edge represented by the input h3 index in kilometers.
 
@@ -859,7 +903,7 @@ SELECT h3ExactEdgeLengthKm(1310277011704381439) AS exactEdgeLengthKm;;
 └────────────────────┘
 ```
 
-## h3ExactEdgeLengthRads {#h3exactedgelengthrads}
+## h3ExactEdgeLengthRads <a id="h3exactedgelengthrads"></a>
 
 Returns the exact edge length of the unidirectional edge represented by the input h3 index in radians.
 
@@ -889,7 +933,7 @@ SELECT h3ExactEdgeLengthRads(1310277011704381439) AS exactEdgeLengthRads;;
 └──────────────────────┘
 ```
 
-## h3NumHexagons {#h3numhexagons}
+## h3NumHexagons <a id="h3numhexagons"></a>
 
 Returns the number of unique H3 indices at the given resolution.
 
@@ -919,7 +963,7 @@ SELECT h3NumHexagons(3) AS numHexagons;
 └─────────────┘
 ```
 
-## h3PointDistM {#h3pointdistm}
+## h3PointDistM <a id="h3pointdistm"></a>
 
 Returns the "great circle" or "haversine" distance between pairs of GeoCoord points (latitude/longitude) pairs in meters.
 
@@ -950,7 +994,7 @@ SELECT h3PointDistM(-10.0 ,0.0, 10.0, 0.0) AS h3PointDistM;
 └───────────────────┘
 ```
 
-## h3PointDistKm {#h3pointdistkm}
+## h3PointDistKm <a id="h3pointdistkm"></a>
 
 Returns the "great circle" or "haversine" distance between pairs of GeoCoord points (latitude/longitude) pairs in kilometers.
 
@@ -981,7 +1025,7 @@ SELECT h3PointDistKm(-10.0 ,0.0, 10.0, 0.0) AS h3PointDistKm;
 └───────────────────┘
 ```
 
-## h3PointDistRads {#h3pointdistrads}
+## h3PointDistRads <a id="h3pointdistrads"></a>
 
 Returns the "great circle" or "haversine" distance between pairs of GeoCoord points (latitude/longitude) pairs in radians.
 
@@ -1012,7 +1056,7 @@ SELECT h3PointDistRads(-10.0 ,0.0, 10.0, 0.0) AS h3PointDistRads;
 └────────────────────┘
 ```
 
-## h3GetRes0Indexes {#h3getres0indexes}
+## h3GetRes0Indexes <a id="h3getres0indexes"></a>
 
 Returns an array of all the resolution 0 H3 indexes.
 
@@ -1038,7 +1082,7 @@ SELECT h3GetRes0Indexes AS indexes ;
 └─────────────────────────────────────────────┘
 ```
 
-## h3GetPentagonIndexes {#h3getpentagonindexes}
+## h3GetPentagonIndexes <a id="h3getpentagonindexes"></a>
 
 Returns all the pentagon H3 indexes at the specified resolution.
 
@@ -1068,7 +1112,7 @@ SELECT h3GetPentagonIndexes(3) AS indexes;
 └────────────────────────────────────────────────────────────────┘
 ```
 
-## h3Line {#h3line}
+## h3Line <a id="h3line"></a>
 
 Returns the line of indices between the two indices that are provided.
 
@@ -1099,7 +1143,7 @@ Array of h3 indexes representing the line of indices between the two provided in
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## h3Distance {#h3distance}
+## h3Distance <a id="h3distance"></a>
 
 Returns the distance in grid cells between the two indices that are provided.
 
@@ -1132,7 +1176,7 @@ Returns a negative number if finding the distance fails.
 └──────────┘
 ```
 
-## h3HexRing {#h3hexring}
+## h3HexRing <a id="h3hexring"></a>
 
 Returns the indexes of the hexagonal ring centered at the provided origin h3Index and length k.
 
@@ -1165,7 +1209,7 @@ h3HexRing(index, k)
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## h3GetUnidirectionalEdge {#h3getunidirectionaledge}
+## h3GetUnidirectionalEdge <a id="h3getunidirectionaledge"></a>
 
 Returns a unidirectional edge H3 index based on the provided origin and destination and returns 0 on error.
 
@@ -1196,7 +1240,7 @@ h3GetUnidirectionalEdge(originIndex, destinationIndex)
 └─────────────────────┘
 ```
 
-## h3UnidirectionalEdgeIsValid {#h3unidirectionaledgeisvalid}
+## h3UnidirectionalEdgeIsValid <a id="h3unidirectionaledgeisvalid"></a>
 
 Determines if the provided H3Index is a valid unidirectional edge index. Returns 1 if it's a unidirectional edge and 0 otherwise.
 
@@ -1227,7 +1271,7 @@ h3UnidirectionalEdgeisValid(index)
 └────────────┘
 ```
 
-## h3GetOriginIndexFromUnidirectionalEdge {#h3getoriginindexfromunidirectionaledge}
+## h3GetOriginIndexFromUnidirectionalEdge <a id="h3getoriginindexfromunidirectionaledge"></a>
 
 Returns the origin hexagon index from the unidirectional edge H3Index.
 
@@ -1257,7 +1301,7 @@ h3GetOriginIndexFromUnidirectionalEdge(edge)
 └────────────────────┘
 ```
 
-## h3GetDestinationIndexFromUnidirectionalEdge {#h3getdestinationindexfromunidirectionaledge}
+## h3GetDestinationIndexFromUnidirectionalEdge <a id="h3getdestinationindexfromunidirectionaledge"></a>
 
 Returns the destination hexagon index from the unidirectional edge H3Index.
 
@@ -1287,7 +1331,7 @@ h3GetDestinationIndexFromUnidirectionalEdge(edge)
 └────────────────────┘
 ```
 
-## h3GetIndexesFromUnidirectionalEdge {#h3getindexesfromunidirectionaledge}
+## h3GetIndexesFromUnidirectionalEdge <a id="h3getindexesfromunidirectionaledge"></a>
 
 Returns the origin and destination hexagon indexes from the given unidirectional edge H3Index.
 
@@ -1322,7 +1366,7 @@ Returns `(0,0)` if the provided input is not valid.
 └─────────────────────────────────────────┘
 ```
 
-## h3GetUnidirectionalEdgesFromHexagon {#h3getunidirectionaledgesfromhexagon}
+## h3GetUnidirectionalEdgesFromHexagon <a id="h3getunidirectionaledgesfromhexagon"></a>
 
 Provides all of the unidirectional edges from the provided H3Index.
 
@@ -1352,7 +1396,7 @@ Array of h3 indexes representing each unidirectional edge. [Array](/reference/da
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## h3GetUnidirectionalEdgeBoundary {#h3getunidirectionaledgeboundary}
+## h3GetUnidirectionalEdgeBoundary <a id="h3getunidirectionaledgeboundary"></a>
 
 Returns the coordinates defining the unidirectional edge.
 

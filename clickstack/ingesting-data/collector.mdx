@@ -20,7 +20,7 @@ import ExtendingConfig from '/snippets/_extending_config.mdx';
 
 This page includes details on configuring the official ClickStack OpenTelemetry (OTel) collector.
 
-## Collector roles {#collector-roles}
+## Collector roles <a id="collector-roles"></a>
 
 OpenTelemetry collectors can be deployed in two principal roles:
 
@@ -32,7 +32,7 @@ OpenTelemetry collectors can be deployed in two principal roles:
 
 Users deploying OTel collectors in the agent role will typically use the [default contrib distribution of the collector](https://github.com/open-telemetry/opentelemetry-collector-contrib) and not the ClickStack version but are free to use other OTLP compatible technologies such as [Fluentd](https://www.fluentd.org/) and [Vector](https://vector.dev/).
 
-## Deploying the collector {#configuring-the-collector}
+## Deploying the collector <a id="configuring-the-collector"></a>
 <br/>
 <Tabs>
 
@@ -116,9 +116,9 @@ For details on retrieving your Managed ClickStack credentials, see [here](/produ
 You should use a user with the [appropriate credentials](/clickstack/ingesting-data/collector#creating-an-ingestion-user) in production.
 </Info>
 
-### Modifying configuration {#modifying-otel-collector-configuration-managed}
+### Modifying configuration <a id="modifying-otel-collector-configuration-managed"></a>
 
-#### Configuring Managed ClickStack instance {#configuring-managed-clickstack}
+#### Configuring Managed ClickStack instance <a id="configuring-managed-clickstack"></a>
 
 The OpenTelemetry collector can be configured to use a Managed ClickStack instance via the environment variables `CLICKHOUSE_ENDPOINT`, `CLICKHOUSE_USER` and `CLICKHOUSE_PASSWORD`. How these are set depends on your deployment method:
 
@@ -165,7 +165,7 @@ docker run -e CLICKHOUSE_ENDPOINT=${CLICKHOUSE_ENDPOINT} -e CLICKHOUSE_USER=defa
 
 <ExtendingConfig/>
 
-#### Docker Compose {#docker-compose-otel-managed}
+#### Docker Compose <a id="docker-compose-otel-managed"></a>
 
 With Docker Compose, modify the collector configuration using the same environment variables as above:
 
@@ -286,9 +286,9 @@ The target ClickHouse instance is configured via the environment variables `CLIC
 You should use a user with the [appropriate credentials](/clickstack/ingesting-data/collector#creating-an-ingestion-user) in production.
 </Info>
 
-### Modifying configuration {#modifying-otel-collector-configuration}
+### Modifying configuration <a id="modifying-otel-collector-configuration"></a>
 
-#### Configuring ClickHouse instance {#configuring-clickhouse-instance}
+#### Configuring ClickHouse instance <a id="configuring-clickhouse-instance"></a>
 
 The OpenTelemetry collector can be configured to use a ClickHouse instance via the environment variables `OPAMP_SERVER_URL`, `CLICKHOUSE_ENDPOINT`, `CLICKHOUSE_USER` and `CLICKHOUSE_PASSWORD`. How these are set depends on your deployment method:
 
@@ -338,7 +338,7 @@ docker run -e OPAMP_SERVER_URL=${OPAMP_SERVER_URL} -e CLICKHOUSE_ENDPOINT=${CLIC
 
 <ExtendingConfig/>
 
-#### Docker Compose {#docker-compose-otel}
+#### Docker Compose <a id="docker-compose-otel"></a>
 
 With Docker Compose, modify the collector configuration using the same environment variables as above:
 
@@ -366,7 +366,7 @@ With Docker Compose, modify the collector configuration using the same environme
 
 </Tabs>
 
-## Securing the collector {#securing-the-collector}
+## Securing the collector <a id="securing-the-collector"></a>
 
 <Tabs>
 
@@ -431,7 +431,7 @@ We additionally recommend:
 - Create a dedicated user for ingestion with limited permissions - see below.
 - Enabling TLS for the OTLP endpoint, ensuring encrypted communication between SDKs/agents and the collector. This can be configured via [custom collector configuration](#extending-collector-config).
 
-### Creating an ingestion user {#creating-an-ingestion-user}
+### Creating an ingestion user <a id="creating-an-ingestion-user"></a>
 
 We recommend creating a dedicated database and user for the OTel collector for ingestion into Managed ClickStack. This should have the ability to create and insert into the [tables created and used by ClickStack](/clickstack/ingesting-data/schemas). 
 
@@ -459,7 +459,7 @@ To further secure your deployment, we recommend:
 - Create a dedicated user for ingestion with limited permissions - see below.
 - Enabling TLS for the OTLP endpoint, ensuring encrypted communication between SDKs/agents and the collector. This can be configured via [custom collector configuration](#extending-collector-config).
 
-### Creating an ingestion user {#creating-an-ingestion-user-oss}
+### Creating an ingestion user <a id="creating-an-ingestion-user-oss"></a>
 
 We recommend creating a dedicated database and user for the OTel collector for ingestion into ClickHouse. This should have the ability to create and insert into the [tables created and used by ClickStack](/clickstack/ingesting-data/schemas). 
 
@@ -474,7 +474,7 @@ This assumes the collector has been configured to use the database `otel`. This 
 </Tab>
 </Tabs>
 
-## Processing - filtering, transforming, and enriching {#processing-filtering-transforming-enriching}
+## Processing - filtering, transforming, and enriching <a id="processing-filtering-transforming-enriching"></a>
 
 Users will invariably want to filter, transform, and enrich event messages during ingestion. Since the configuration for the ClickStack connector can't be modified, we recommend users who need further event filtering and processing either:
 
@@ -497,7 +497,7 @@ OpenTelemetry supports the following processing and filtering features you can l
 
 We recommend users avoid doing excessive event processing using operators or [transform processors](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/transformprocessor/README.md). These can incur considerable memory and CPU overhead, especially JSON parsing.  It is possible to do all processing in ClickHouse at insert time with materialized views and columns with some exceptions - specifically, context-aware enrichment e.g. adding of k8s metadata. For more details, see [Extracting structure with SQL](/guides/use-cases/observability/build-your-own/schema-design#extracting-structure-with-sql).
 
-### Example {#example-processing}
+### Example <a id="example-processing"></a>
 
 The following configuration shows collection of this [unstructured log file](https://datasets-documentation.s3.eu-west-3.amazonaws.com/http_logs/access-unstructured.log.gz). This configuration could be used by a collector in the agent role sending data to the ClickStack gateway.
 
@@ -554,11 +554,11 @@ Note the need to include an [authorization header containing your ingestion API 
 
 For more advanced configuration, we suggest the [OpenTelemetry collector documentation](https://opentelemetry.io/docs/collector/).
 
-## Optimizing inserts {#optimizing-inserts}
+## Optimizing inserts <a id="optimizing-inserts"></a>
 
 In order to achieve high insert performance while obtaining strong consistency guarantees, you should adhere to simple rules when inserting Observability data into ClickHouse via the ClickStack collector. With the correct configuration of the OTel collector, the following rules should be straightforward to follow. This also avoids [common issues](https://clickhouse.com/blog/common-getting-started-issues-with-clickhouse) users encounter when using ClickHouse for the first time.
 
-### Batching {#batching}
+### Batching <a id="batching"></a>
 
 By default, each insert sent to ClickHouse causes ClickHouse to immediately create a part of storage containing the data from the insert together with other metadata that needs to be stored. Therefore sending a smaller amount of inserts that each contain more data, compared to sending a larger amount of inserts that each contain less data, will reduce the number of writes required. We recommend inserting data in fairly large batches of at least 1,000 rows at a time. Further details [here](https://clickhouse.com/blog/asynchronous-data-inserts-in-clickhouse#data-needs-to-be-batched-for-optimal-performance).
 
@@ -571,7 +571,7 @@ From the collector's perspective, (1) and (2) can be hard to distinguish. Howeve
 
 For this reason, the ClickStack distribution of the OTel collector uses the [batch processor](https://github.com/open-telemetry/opentelemetry-collector/blob/main/processor/batchprocessor/README.md). This ensures inserts are sent as consistent batches of rows satisfying the above requirements. If a collector is expected to have high throughput (events per second), and at least 10,000 events can be sent in each insert, this is usually the only batching required in the pipeline. Values up to 100,000 can be used if memory allows. In this case the collector will flush batches before the batch processor's `timeout` is reached, ensuring the end-to-end latency of the pipeline remains low and batches are of a consistent size.
 
-### Use asynchronous inserts {#use-asynchronous-inserts}
+### Use asynchronous inserts <a id="use-asynchronous-inserts"></a>
 
 Typically, users are forced to send smaller batches when the throughput of a collector is low, and yet they still expect data to reach ClickHouse within a minimum end-to-end latency. In this case, small batches are sent when the `timeout` of the batch processor expires. This can cause problems and is when asynchronous inserts are required. This issue is rare if you're sending data to the ClickStack collector acting as a Gateway - by acting as aggregators, they alleviate this problem - see [Collector roles](#collector-roles).
 
@@ -595,7 +595,7 @@ Finally, the previous deduplication behavior associated with synchronous inserts
 
 Full details on configuring this feature can be found on this [docs page](/concepts/features/operations/insert/asyncinserts#enabling-asynchronous-inserts), or with a deep dive [blog post](https://clickhouse.com/blog/asynchronous-data-inserts-in-clickhouse).
 
-## Scaling {#scaling}
+## Scaling <a id="scaling"></a>
 
 The ClickStack OTel collector acts a Gateway instance - see [Collector roles](#collector-roles). These provide a standalone service, typically per data center or per region. These receive events from applications (or other collectors in the agent role) via a single OTLP endpoint. Typically a set of collector instances are deployed, with an out-of-the-box load balancer used to distribute the load amongst them.
 
@@ -603,7 +603,7 @@ The ClickStack OTel collector acts a Gateway instance - see [Collector roles](#c
 
 The objective of this architecture is to offload computationally intensive processing from the agents, thereby minimizing their resource usage. These ClickStack gateways can perform transformation tasks that would otherwise need to be done by agents. Furthermore, by aggregating events from many agents, the gateways can ensure large batches are sent to ClickHouse - allowing efficient insertion. These gateway collectors can easily be scaled as more agents and SDK sources are added and event throughput increases. 
 
-### Adding Kafka {#adding-kafka}
+### Adding Kafka <a id="adding-kafka"></a>
 
 Readers may notice the above architectures don't use Kafka as a message queue.
 
@@ -623,7 +623,7 @@ In this case, OTel agents can be configured to send data to Kafka via the [Kafka
 The ClickStack OpenTelemetry collector distribution can be configured with Kafka using [custom collector configuration](#extending-collector-config).
 </Info>
 
-## Estimating resources {#estimating-resources}
+## Estimating resources <a id="estimating-resources"></a>
 
 Resource requirements for the OTel collector will depend on the event throughput, the size of messages and amount of processing performed. The OpenTelemetry project maintains [benchmarks users](https://opentelemetry.io/docs/collector/benchmarks/) can use to estimate resource requirements.
 
@@ -637,8 +637,15 @@ For agent instances responsible for shipping events to a gateway, and only setti
 | 5k/second    | 0.5 CPU, 0.5GiB             |
 | 10k/second   | 1 CPU, 1GiB                 |
 
-## Schema choice: Map vs JSON {#schema-choice}
+## Schema choice: Map vs JSON <a id="schema-choice"></a>
 
 The ClickStack collector creates tables that store attributes as `Map(LowCardinality(String), String)` columns by default. This is the recommended schema for observability workloads. A `JSON`-typed schema is available in beta for evaluation on workloads with a small, stable attribute key-set.
 
 For the full comparison, when each is appropriate, the env vars required to enable the JSON-typed schema, and the migration walkthrough, see [Map vs JSON type](/clickstack/ingesting-data/schema/map-vs-json).
+
+<!-- anchors from _extending_config.mdx -->
+<a id="extending-collector-config"></a>
+<a id="configuration-structure"></a>
+<!-- anchors from _extending_config.mdx -->
+<a id="extending-collector-config"></a>
+<a id="configuration-structure"></a>

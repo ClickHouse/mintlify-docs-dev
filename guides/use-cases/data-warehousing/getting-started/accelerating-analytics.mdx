@@ -20,7 +20,7 @@ MergeTree offers several advantages over reading open table formats directly:
 
 This guide shows how to load data from a catalog into a MergeTree table using `INSERT INTO SELECT` for faster analytics.
 
-## Connect to the catalog {#connect-catalog}
+## Connect to the catalog <a id="connect-catalog"></a>
 
 We'll use the same Unity Catalog connection from the [previous guide](/guides/use-cases/data-warehousing/getting-started/connecting-catalogs), connecting via the Iceberg REST endpoint:
 
@@ -33,7 +33,7 @@ SETTINGS catalog_type = 'rest', catalog_credential = '<client-id>:<client-secret
 oauth_server_uri = 'https://<workspace-id>.cloud.databricks.com/oidc/v1/token', auth_scope = 'all-apis,sql';
 ```
 
-### List tables {#list-tables}
+### List tables <a id="list-tables"></a>
 
 ```sql
 SHOW TABLES FROM unity
@@ -46,7 +46,7 @@ SHOW TABLES FROM unity
 └────────────────────────────────────────────────────┘
 ```
 
-### Explore the schema {#explore-schema}
+### Explore the schema <a id="explore-schema"></a>
 
 ```sql
 SHOW CREATE TABLE unity.`icebench.single_day_log`
@@ -91,7 +91,7 @@ FROM unity.`icebench.single_day_log`
 1 row in set. Elapsed: 1.265 sec.
 ```
 
-## Query over the data lake table {#query-lakehouse}
+## Query over the data lake table <a id="query-lakehouse"></a>
 
 Let's run a query that filters logs by thread name and instance type, searches the message text for errors, and groups results by logger:
 
@@ -123,9 +123,9 @@ Peak memory usage: 4.35 GiB.
 
 The query takes nearly **9 seconds** because ClickHouse must perform a full table scan across all Parquet files in object storage. Performance could be improved with partitioning, but columns like `logger_name` may be too high cardinality to partition effectively. We also have no indices such as [Text indices](/reference/engines/table-engines/mergetree-family/mergetree#text) to further prune data. This is where MergeTree excels.
 
-## Load data into MergeTree {#load-data}
+## Load data into MergeTree <a id="load-data"></a>
 
-### Create an optimized table {#create-table}
+### Create an optimized table <a id="create-table"></a>
 
 We create a MergeTree table with some effort to optimize the schema. Notice a few key differences from the Iceberg schema:
 
@@ -164,7 +164,7 @@ ENGINE = MergeTree
 ORDER BY (instance_type, thread_name, toStartOfMinute(event_time))
 ```
 
-### Insert data from the catalog {#insert-data}
+### Insert data from the catalog <a id="insert-data"></a>
 
 Use `INSERT INTO SELECT` to load the ~300m from the data lake table into our ClickHouse table:
 
@@ -177,7 +177,7 @@ INSERT INTO single_day_log SELECT * FROM icebench.`icebench.single_day_log`
 Peak memory usage: 18.62 GiB.
 ```
 
-## Re-execute the query {#reexecute-query}
+## Re-execute the query <a id="reexecute-query"></a>
 
 If we now run the same query against the MergeTree table we see performance improves dramatically:
 

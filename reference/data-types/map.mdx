@@ -11,7 +11,7 @@ Data type `Map(K, V)` stores key-value pairs.
 Unlike other databases, maps are not unique in ClickHouse, i.e. a map can contain two elements with the same key.
 (The reason for that is that maps are internally implemented as `Array(Tuple(K, V))`.)
 
-You can use use syntax `m[k]` to obtain the value for key `k` in map `m`.
+You can use syntax `m[k]` to obtain the value for key `k` in map `m`.
 Also, `m[k]` scans the map, i.e. the runtime of the operation is linear in the size of the map.
 
 **Parameters**
@@ -58,7 +58,7 @@ SELECT m['key1'] FROM tab;
 └─────────────────────────┘
 ```
 
-## Converting Tuple to Map {#converting-tuple-to-map}
+## Converting Tuple to Map <a id="converting-tuple-to-map"></a>
 
 Values of type `Tuple()` can be cast to values of type `Map()` using function [CAST](/reference/functions/regular-functions/type-conversion-functions#CAST):
 
@@ -74,7 +74,7 @@ SELECT CAST(([1, 2, 3], ['Ready', 'Steady', 'Go']), 'Map(UInt8, String)') AS map
 └───────────────────────────────┘
 ```
 
-## Reading subcolumns of Map {#reading-subcolumns-of-map}
+## Reading subcolumns of Map <a id="reading-subcolumns-of-map"></a>
 
 To avoid reading the entire map, you can use subcolumns `keys` and `values` in some cases.
 
@@ -98,7 +98,7 @@ SELECT m.values FROM tab; -- same as mapValues(m)
 └──────────┘
 ```
 
-## Bucketed Map Serialization in MergeTree {#bucketed-map-serialization}
+## Bucketed Map Serialization in MergeTree <a id="bucketed-map-serialization"></a>
 
 By default, a `Map` column in MergeTree is stored as a single `Array(Tuple(K, V))` stream.
 Reading a single key with `m['key']` requires scanning the entire column — every key-value pair for every row — even if only one key is needed.
@@ -107,7 +107,7 @@ For maps with many distinct keys this becomes a bottleneck.
 Bucketed serialization (`with_buckets`) splits the key-value pairs into multiple independent substreams (buckets) by hashing the key.
 When a query accesses `m['key']`, only the bucket that contains that key is read from disk, skipping all other buckets.
 
-### Enabling Bucketed Serialization {#enabling-bucketed-serialization}
+### Enabling Bucketed Serialization <a id="enabling-bucketed-serialization"></a>
 
 ```sql
 CREATE TABLE tab (id UInt64, m Map(String, UInt64))
@@ -130,7 +130,7 @@ SETTINGS
     map_buckets_strategy = 'sqrt';
 ```
 
-### How It Works {#how-it-works}
+### How It Works <a id="how-it-works"></a>
 
 When a data part is written with `with_buckets` serialization:
 
@@ -151,7 +151,7 @@ The order of keys within a map value may differ from the original insertion orde
 
 The bucket count can vary between parts. When parts with different bucket counts are merged, the new part's bucket count is recalculated from the merged statistics. Parts with `basic` and `with_buckets` serialization can coexist in the same table and are merged transparently.
 
-### Settings {#bucketed-map-settings}
+### Settings <a id="bucketed-map-settings"></a>
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -162,7 +162,7 @@ The bucket count can vary between parts. When parts with different bucket counts
 | `map_buckets_coefficient` | `1.0` | Multiplier for `sqrt` and `linear` strategies. Ignored when strategy is `constant`. |
 | `map_buckets_min_avg_size` | `32` | Minimum average keys per row to enable bucketing. If the average is below this threshold, a single bucket is used regardless of other settings. Set to `0` to disable the threshold. |
 
-### Performance Trade-offs {#performance-trade-offs}
+### Performance Trade-offs <a id="performance-trade-offs"></a>
 
 The following table summarizes the performance impact of `with_buckets` compared to `basic` serialization at various map sizes (10 to 10,000 keys per row). The bucket count was determined by the `sqrt` strategy capped at 32. The exact numbers depend on key/value types, data distribution, and hardware.
 
@@ -174,7 +174,7 @@ The following table summarizes the performance impact of `with_buckets` compared
 | **Full map scan** (`SELECT m`) | ~2x slower | ~2x slower | ~2x slower | ~2x slower | Must read and reassemble all buckets. |
 | **INSERT** | 1.5–2.5x slower | 1.5–2.5x slower | 1.5–2.5x slower | 1.5–2.5x slower | Overhead of hashing keys and writing to multiple substreams. |
 
-### Recommendations {#recommendations}
+### Recommendations <a id="recommendations"></a>
 
 - **Small maps (< 32 keys on average):** Keep `basic` serialization. The overhead of bucketing is not justified for small maps. The default `map_buckets_min_avg_size = 32` enforces this automatically.
 - **Medium maps (32–100 keys):** Use `with_buckets` with `sqrt` strategy if queries frequently access individual keys. The speedup is 4–8x for single-key lookups.
@@ -182,11 +182,11 @@ The following table summarizes the performance impact of `with_buckets` compared
 - **Full map scans dominate the workload:** Keep `basic`. Bucketed serialization adds ~2x overhead for full scans.
 - **Mixed workload (some key lookups, some full scans):** Use `with_buckets` with zero-level parts set to `basic`. The `PREWHERE` optimization reads only the relevant bucket for the filter, then reads the full map only for matching rows, giving a significant net speedup.
 
-### Alternative Approaches {#map-alternatives}
+### Alternative Approaches <a id="map-alternatives"></a>
 
 If bucketed `Map` serialization does not fit your use case, there are two alternative approaches for improving key-level access performance:
 
-#### Using the JSON Data Type {#using-the-json-data-type}
+#### Using the JSON Data Type <a id="using-the-json-data-type"></a>
 
 The [JSON](/reference/data-types/newjson) data type stores each frequent path as a separate dynamic subcolumn. Paths that exceed the `max_dynamic_paths` limit go into a [shared data structure](/reference/data-types/newjson#shared-data-structure), which can use `advanced` serialization for optimized single-path reads. See the [blog post](https://clickhouse.com/blog/json-data-type-gets-even-better) for a detailed overview of the `advanced` serialization.
 
@@ -201,7 +201,7 @@ The [JSON](/reference/data-types/newjson) data type stores each frequent path as
 
 Use `JSON` when different keys need different value types, when the set of keys varies significantly across rows, or when frequently accessed keys are known in advance and can be declared as typed paths for direct subcolumn access.
 
-#### Manual Sharding into Multiple Map Columns {#manual-sharding-into-multiple-map-columns}
+#### Manual Sharding into Multiple Map Columns <a id="manual-sharding-into-multiple-map-columns"></a>
 
 You can manually split a single `Map` into multiple columns by key hash at the application level:
 
@@ -233,6 +233,6 @@ Manual sharding is beneficial when vertical merges are important for reducing me
 - [CAST()](/reference/functions/regular-functions/type-conversion-functions#CAST) function
 - [-Map combinator for Map datatype](/reference/functions/aggregate-functions/combinators#-map)
 
-## Related content {#related-content}
+## Related content <a id="related-content"></a>
 
 - Blog: [Building an Observability Solution with ClickHouse - Part 2 - Traces](https://clickhouse.com/blog/storing-traces-and-spans-open-telemetry-in-clickhouse)

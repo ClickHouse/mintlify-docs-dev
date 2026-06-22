@@ -7,9 +7,9 @@ doc_type: 'guide'
 keywords: ['fivetran', 'clickhouse destination', 'technical reference']
 ---
 
-## Setup details {#setup-details}
+## Setup details <a id="setup-details"></a>
 
-### User and role management {#user-and-role-management}
+### User and role management <a id="user-and-role-management"></a>
 
 Consider not using the `default` user; instead, create a dedicated one to use it with this Fivetran
 destination only. The following commands, executed with the `default` user, will create a new `fivetran_user` with the
@@ -30,7 +30,7 @@ REVOKE ALL ON default.* FROM fivetran_user;
 
 You can execute these statements in the ClickHouse SQL console.
 
-### Advanced configuration {#advanced-configuration}
+### Advanced configuration <a id="advanced-configuration"></a>
 
 The ClickHouse Cloud destination supports an optional JSON configuration file for advanced use cases. This file allows you to fine-tune destination behavior by overriding the default settings that control batch sizes, parallelism, connection pools, and request timeouts.
 
@@ -75,7 +75,7 @@ Example:
 }
 ```
 
-## Type transformation mapping {#type-mapping}
+## Type transformation mapping <a id="type-mapping"></a>
 
 The Fivetran ClickHouse destination maps [Fivetran data types](https://fivetran.com/docs/destinations#datatypes) to ClickHouse types as follows:
 
@@ -102,7 +102,7 @@ The Fivetran ClickHouse destination maps [Fivetran data types](https://fivetran.
 \*\* NOTE: Issue to track the support for LOCALTIME type: [clickhouse-fivetran-destination #15](https://github.com/ClickHouse/clickhouse-fivetran-destination/issues/15).
 </Note>
 
-### Date and time value ranges {#date-and-time-value-ranges}
+### Date and time value ranges <a id="date-and-time-value-ranges"></a>
 
 Fivetran sources can send date and time values in the range [0001-01-01, 9999-12-31](https://fivetran.com/docs/destinations#dateandtimevaluerange).
 ClickHouse Cloud date types have narrower ranges, so values outside the supported range are silently clamped to the nearest boundary:
@@ -117,7 +117,7 @@ ClickHouse Cloud date types have narrower ranges, so values outside the supporte
 ClickHouse itself supports DateTime64 with precision \<= 9 up to 2299-12-31 23:59:59.
 - The LOCALDATETIME upper bound is also limited to 2262-04-11 23:47:16 due to a [known bug](https://github.com/ClickHouse/clickhouse-go/issues/1311) in the Go ClickHouse driver, where `time.Time.UnixNano()` is called for all DateTime64 precisions before scaling, causing int64 overflow for dates beyond 2262 even at precision 0.
 
-## Destination tables {#table-structure}
+## Destination tables <a id="table-structure"></a>
 
 The ClickHouse Cloud destination uses
 [Replacing](/reference/engines/table-engines/mergetree-family/replacingmergetree) engine type of
@@ -132,7 +132,7 @@ The table structure varies depending on the Fivetran
 [sync mode](https://fivetran.com/docs/using-fivetran/features#deletedrowhandling)
 configured for the connector: **soft delete** (default) or **history mode** (SCD Type 2).
 
-### Soft delete mode {#soft-delete-mode}
+### Soft delete mode <a id="soft-delete-mode"></a>
 
 In soft delete mode, every destination table includes the following metadata columns:
 
@@ -142,7 +142,7 @@ In soft delete mode, every destination table includes the following metadata col
 | `_fivetran_deleted` | `Bool` | Soft delete marker. Set to `true` when the source record is deleted. |
 | `_fivetran_id` | `String` | Auto-generated unique identifier. Only present when the source table has no primary keys. |
 
-#### Single primary key in the source table {#single-pk}
+#### Single primary key in the source table <a id="single-pk"></a>
 
 For example, source table `users` has a primary key column `id` (`INT`) and a regular column `name` (`STRING`).
 The destination table will be defined as follows:
@@ -161,7 +161,7 @@ SETTINGS index_granularity = 8192
 
 In this case, the `id` column is chosen as a table sorting key.
 
-#### Multiple primary keys in the source table {#multiple-pks}
+#### Multiple primary keys in the source table <a id="multiple-pks"></a>
 
 If the source table has multiple primary keys, they are used in order of their appearance in the Fivetran source table
 definition.
@@ -184,7 +184,7 @@ SETTINGS index_granularity = 8192
 
 In this case, `id` and `name` columns are chosen as table sorting keys.
 
-#### No primary keys in the source table {#no-pks}
+#### No primary keys in the source table <a id="no-pks"></a>
 
 If the source table has no primary keys, a unique identifier will be added by Fivetran as a `_fivetran_id` column.
 Consider an `events` table that only has the `event` (`STRING`) and `timestamp` (`LOCALDATETIME`) columns in the source.
@@ -205,7 +205,7 @@ SETTINGS index_granularity = 8192
 
 Since `_fivetran_id` is unique and there are no other primary key options, it is used as a table sorting key.
 
-### History mode (SCD Type 2) {#history-mode}
+### History mode (SCD Type 2) <a id="history-mode"></a>
 
 When [history mode](https://fivetran.com/docs/using-fivetran/features#historymode) is enabled,
 the destination preserves every version of each record rather than overwriting previous values.
@@ -229,7 +229,7 @@ When a record is updated:
 - The previous version's `_fivetran_end` is set to the new version's `_fivetran_start` minus one nanosecond, and `_fivetran_active` is set to `false`.
 - The new version is inserted with `_fivetran_active` set to `true` and `_fivetran_end` set to `2262-04-11 23:47:16.000000000` (the maximum `DateTime64(9)` value).
 
-#### Single primary key in the source table {#history-single-pk}
+#### Single primary key in the source table <a id="history-single-pk"></a>
 
 For example, source table `users` has a primary key column `id` (`INT`) and regular columns `name` (`STRING`) and `status` (`STRING`).
 The destination table in history mode will be defined as follows:
@@ -262,7 +262,7 @@ After a few syncs, the table might contain the following data:
 Record `id=1` has two versions: the original (`name 1`, inactive) and the updated one (`name 11`, active).
 Record `id=2` has only one version, which is currently active.
 
-#### Multiple primary keys in the source table {#history-multiple-pks}
+#### Multiple primary keys in the source table <a id="history-multiple-pks"></a>
 
 If the source table has multiple primary keys, they are all included in the `ORDER BY` together with `_fivetran_start` as the last element.
 
@@ -286,7 +286,7 @@ SETTINGS index_granularity = 8192
 
 In this case, `id`, `name`, and `_fivetran_start` form the compound sorting key.
 
-#### No primary keys in the source table {#history-no-pks}
+#### No primary keys in the source table <a id="history-no-pks"></a>
 
 If the source table has no primary keys, a unique identifier will be added by Fivetran as a `_fivetran_id` column,
 and `_fivetran_start` is appended to the sorting key.
@@ -310,7 +310,7 @@ SETTINGS index_granularity = 8192
 
 Since `_fivetran_id` and `_fivetran_start` form the compound sorting key.
 
-### Selecting the latest version of the data without duplicates {#selecting-latest-version}
+### Selecting the latest version of the data without duplicates <a id="selecting-latest-version"></a>
 
 `SharedReplacingMergeTree` performs background data deduplication
 [only during merges at an unknown time](/reference/engines/table-engines/mergetree-family/replacingmergetree).
@@ -324,7 +324,7 @@ LIMIT 1000
 
 Check out the [optimizing reading queries](/integrations/connectors/data-ingestion/etl-tools/fivetran/troubleshooting#optimizing-reading-queries)" section in the troubleshooting guide for query optimization tips.
 
-## Retries on network failures {#retries-on-network-failures}
+## Retries on network failures <a id="retries-on-network-failures"></a>
 
 The ClickHouse Cloud destination retries transient network errors using the exponential backoff algorithm.
 This is safe even when the destination inserts the data, as any potential duplicates are handled by

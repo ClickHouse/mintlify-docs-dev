@@ -9,14 +9,14 @@ doc_type: 'guide'
 
 DataStore has two compatibility modes that control whether output is shaped for pandas compatibility or optimized for raw SQL performance.
 
-## Overview {#overview}
+## Overview <a id="overview"></a>
 
 | Mode | `compat_mode` value | Description |
 |------|---------------------|-------------|
 | **Pandas** (default) | `"pandas"` | Full pandas behavior compatibility. Row order preserved, MultiIndex, set_index, dtype corrections, stable sort tiebreakers, `-If`/`isNaN` wrappers. |
 | **Performance** | `"performance"` | SQL-first execution. All pandas compatibility overhead removed. Maximum throughput, but results may differ structurally from pandas. |
 
-### What Performance Mode Disables {#what-it-disables}
+### What Performance Mode Disables <a id="what-it-disables"></a>
 
 | Overhead | Pandas mode behavior | Performance mode behavior |
 |----------|---------------------|--------------------------|
@@ -37,9 +37,9 @@ DataStore has two compatibility modes that control whether output is shaped for 
 
 ---
 
-## Enabling Performance Mode {#enabling}
+## Enabling Performance Mode <a id="enabling"></a>
 
-### Using config object {#using-config}
+### Using config object <a id="using-config"></a>
 
 ```python
 from chdb.datastore.config import config
@@ -54,7 +54,7 @@ config.use_pandas_compat()
 print(config.compat_mode)  # 'pandas' or 'performance'
 ```
 
-### Using module-level functions {#using-functions}
+### Using module-level functions <a id="using-functions"></a>
 
 ```python
 from chdb.datastore.config import set_compat_mode, CompatMode, is_performance_mode
@@ -69,7 +69,7 @@ print(is_performance_mode())  # True
 set_compat_mode(CompatMode.PANDAS)
 ```
 
-### Using convenience imports {#using-imports}
+### Using convenience imports <a id="using-imports"></a>
 
 ```python
 from chdb import use_performance_mode, use_pandas_compat
@@ -85,7 +85,7 @@ Setting performance mode automatically sets the execution engine to `chdb`. You 
 
 ---
 
-## When to Use Performance Mode {#when-to-use}
+## When to Use Performance Mode <a id="when-to-use"></a>
 
 **Use performance mode when:**
 - Processing large datasets (hundreds of thousands to millions of rows)
@@ -102,9 +102,9 @@ Setting performance mode automatically sets the execution engine to `chdb`. You 
 
 ---
 
-## Behavior Differences {#behavior-differences}
+## Behavior Differences <a id="behavior-differences"></a>
 
-### Row Order {#row-order}
+### Row Order <a id="row-order"></a>
 
 In performance mode, row order is **not guaranteed** for any operation. This includes:
 
@@ -127,7 +127,7 @@ result = ds.groupby("region")["revenue"].sum()
 result = ds.groupby("region")["revenue"].sum().sort_values()
 ```
 
-### GroupBy Results {#groupby-results}
+### GroupBy Results <a id="groupby-results"></a>
 
 | Aspect | Pandas mode | Performance mode |
 |--------|------------|-----------------|
@@ -137,7 +137,7 @@ result = ds.groupby("region")["revenue"].sum().sort_values()
 | Column format | MultiIndex for multi-agg | Flat names (`col_func`) |
 | `first()`/`last()` | Deterministic (row order) | Non-deterministic (`any()`/`anyLast()`) |
 
-### Aggregation {#aggregation}
+### Aggregation <a id="aggregation"></a>
 
 ```python
 config.use_performance_mode()
@@ -148,7 +148,7 @@ config.use_performance_mode()
 result = ds.groupby("cat")["val"].sum()
 ```
 
-### Single-SQL Execution {#single-sql}
+### Single-SQL Execution <a id="single-sql"></a>
 
 In performance mode, `ColumnExpr` groupby aggregation (e.g., `ds[condition].groupby('col')['val'].sum()`) is executed as a **single SQL query** instead of the two-step process used in pandas mode:
 
@@ -167,7 +167,7 @@ This eliminates the intermediate DataFrame materialization and can significantly
 
 ---
 
-## Comparison with Execution Engine {#vs-execution-engine}
+## Comparison with Execution Engine <a id="vs-execution-engine"></a>
 
 Performance mode (`compat_mode`) and execution engine (`execution_engine`) are **independent configuration axes**:
 
@@ -188,11 +188,11 @@ config.use_performance_mode()  # Force chDB + remove pandas overhead
 
 ---
 
-## Testing with Performance Mode {#testing}
+## Testing with Performance Mode <a id="testing"></a>
 
 When writing tests for performance mode, results may differ from pandas in row order and structural format. Use these strategies:
 
-### Sort-then-compare (aggregations, filters) {#sort-then-compare}
+### Sort-then-compare (aggregations, filters) <a id="sort-then-compare"></a>
 
 ```python
 # Sort both sides by the same columns before comparing
@@ -204,7 +204,7 @@ pd_sorted = pd_result.sort_index()
 np.testing.assert_array_equal(ds_sorted.values, pd_sorted.values)
 ```
 
-### Value-range check (first/last) {#value-range-check}
+### Value-range check (first/last) <a id="value-range-check"></a>
 
 ```python
 # first() with any() returns an arbitrary element from the group
@@ -213,7 +213,7 @@ for group_key in groups:
     assert result.loc[group_key] in group_values[group_key]
 ```
 
-### Schema-and-count (LIMIT without ORDER BY) {#schema-and-count}
+### Schema-and-count (LIMIT without ORDER BY) <a id="schema-and-count"></a>
 
 ```python
 # head() without sort_values: row set is non-deterministic
@@ -224,9 +224,9 @@ assert set(result.columns) == expected_columns
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices <a id="best-practices"></a>
 
-### 1. Enable early in your script {#enable-early}
+### 1. Enable early in your script <a id="enable-early"></a>
 
 ```python
 from chdb.datastore.config import config
@@ -238,7 +238,7 @@ ds = pd.read_parquet("data.parquet")
 result = ds[ds["amount"] > 100].groupby("region")["amount"].sum()
 ```
 
-### 2. Add explicit sorting when order matters {#explicit-sort}
+### 2. Add explicit sorting when order matters <a id="explicit-sort"></a>
 
 ```python
 # For display or downstream processing that expects order
@@ -248,7 +248,7 @@ result = (ds
 )
 ```
 
-### 3. Use for batch/ETL workloads {#batch-etl}
+### 3. Use for batch/ETL workloads <a id="batch-etl"></a>
 
 ```python
 config.use_performance_mode()
@@ -262,7 +262,7 @@ summary = (ds
 summary.to_df().to_parquet("summary.parquet")
 ```
 
-### 4. Switch modes within a session {#switch-modes}
+### 4. Switch modes within a session <a id="switch-modes"></a>
 
 ```python
 # Performance mode for heavy computation
@@ -276,7 +276,7 @@ detailed = ds[ds["val"] > 100].head(10)
 
 ---
 
-## Related Documentation {#related}
+## Related Documentation <a id="related"></a>
 
 - [Execution Engine](/products/chdb/configuration/execution-engine) — Engine selection (auto/chdb/pandas)
 - [Performance Guide](/products/chdb/guides/pandas-performance) — General optimization tips

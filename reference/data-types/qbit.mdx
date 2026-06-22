@@ -19,7 +19,7 @@ column_name QBit(element_type, dimension)
 * `element_type` – the type of each vector element. The allowed types are `BFloat16`, `Float32` and `Float64`
 * `dimension` – the number of elements in each vector
 
-## Creating QBit {#creating-qbit}
+## Creating QBit <a id="creating-qbit"></a>
 
 Using the `QBit` type in table column definition:
 
@@ -36,7 +36,30 @@ SELECT vec FROM test ORDER BY id;
 └──────────────────────────┘
 ```
 
-## QBit subcolumns {#qbit-subcolumns}
+## Converting arrays to QBit <a id="converting-arrays-to-qbit"></a>
+
+Arrays convert to `QBit` when the array length matches the `QBit` dimension. The array's element type does not need to match the `QBit` element type. Any numeric element type is converted to it automatically. This lets you move an existing column of embeddings straight into a `QBit` column:
+
+```sql
+CREATE TABLE embeddings (id UInt32, embedding Array(Float32)) ENGINE = Memory;
+INSERT INTO embeddings VALUES (1, [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]), (2, [0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]);
+
+CREATE TABLE vectors (id UInt32, vec QBit(Float32, 8)) ENGINE = Memory;
+INSERT INTO vectors SELECT id, embedding FROM embeddings;
+
+SELECT * FROM vectors ORDER BY id;
+```
+
+```text
+┌─id─┬─vec───────────────────────────────┐
+│  1 │ [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8] │
+│  2 │ [0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1] │
+└────┴───────────────────────────────────┘
+```
+
+The conversion also works explicitly with `CAST`, for example `CAST(embedding AS QBit(Float32, 8))`.
+
+## QBit subcolumns <a id="qbit-subcolumns"></a>
 
 `QBit` implements a subcolumn access pattern that allows you to access individual bit planes of the stored vectors. Each bit position can be accessed using the `.N` syntax, where `N` is the bit position:
 
@@ -60,7 +83,7 @@ The number of accessible subcolumns depends on the element type:
 * `Float32`: 32 subcolumns (1-32)
 * `Float64`: 64 subcolumns (1-64)
 
-## Vector search functions {#vector-search-functions}
+## Vector search functions <a id="vector-search-functions"></a>
 
 These are the distance functions for vector similarity search that use `QBit` data type:
 

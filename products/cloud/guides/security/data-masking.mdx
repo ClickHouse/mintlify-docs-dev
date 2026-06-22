@@ -17,7 +17,7 @@ This guide shows you how you can mask data in ClickHouse using several approache
 - **Materialized columns**: Storing masked versions alongside original data
 - **Query masking rules**: Masking sensitive data in logs (ClickHouse OSS)
 
-## Use masking policies (ClickHouse Cloud) {#masking-policies}
+## Use masking policies (ClickHouse Cloud) <a id="masking-policies"></a>
 
 <Note>
 Masking policies are available in ClickHouse Cloud starting from version 25.12.
@@ -25,7 +25,7 @@ Masking policies are available in ClickHouse Cloud starting from version 25.12.
 
 The [`CREATE MASKING POLICY`](/reference/statements/create/masking-policy) statement provides a native way to dynamically mask column values for specific users or roles at query time. Unlike other approaches, masking policies don't require creating separate views or storing masked data - the transformation happens transparently when users query the table.
 
-### Basic masking policy {#basic-maasking-policy}
+### Basic masking policy <a id="basic-maasking-policy"></a>
 
 To demonstrate masking policies, let's create an `orders` table that contains customer information:
 
@@ -86,7 +86,7 @@ SELECT * FROM orders ORDER BY user_id;
 
 Users without the `masked_data_viewer` role see the original, unmasked data.
 
-### Conditional masking {#conditional-masking}
+### Conditional masking <a id="conditional-masking"></a>
 
 You can use the `WHERE` clause to apply masking only to specific rows. For example, to mask only high-value orders:
 
@@ -99,7 +99,7 @@ CREATE MASKING POLICY mask_high_value_orders ON orders
     TO masked_data_viewer;
 ```
 
-### Multiple policies with priority {#multiple-policies-with-priority}
+### Multiple policies with priority <a id="multiple-policies-with-priority"></a>
 
 When multiple masking policies apply to the same column, use the `PRIORITY` clause to control which transformation is applied. Higher priority values are applied last:
 
@@ -123,7 +123,7 @@ CREATE MASKING POLICY refined_masking ON orders
 
 In this example, for orders with `total_amount > 100`, the `refined_masking` policy (priority 10) overrides the `basic_masking` policy (priority 0) for the `name` column, while `email` continues to use the basic masking.
 
-### Hash-based masking {#hash-based-masking}
+### Hash-based masking <a id="hash-based-masking"></a>
 
 For cases where you need consistent masking (same input always produces the same masked output), use hash functions:
 
@@ -135,7 +135,7 @@ CREATE MASKING POLICY hash_sensitive_data ON orders
     TO masked_data_viewer;
 ```
 
-### Managing masking policies {#managing-masking-policies}
+### Managing masking policies <a id="managing-masking-policies"></a>
 
 View all masking policies:
 
@@ -159,7 +159,7 @@ CREATE OR REPLACE MASKING POLICY mask_pii_data ON orders
 
 For more details, see the [CREATE MASKING POLICY](/reference/statements/create/masking-policy) documentation.
 
-## Use string replacement functions {#using-string-functions}
+## Use string replacement functions <a id="using-string-functions"></a>
 
 For basic data masking use cases, the `replace` family of functions offers a convenient way to mask data:
 
@@ -221,7 +221,7 @@ In the query above `\3` is used to substitute the third capture group into the r
 └──────────────────┘
 ```
 
-## Create masked `VIEW`s {#masked-views}
+## Create masked `VIEW`s <a id="masked-views"></a>
 
 A [`VIEW`](/reference/statements/create/view) can be used in conjunction with the aforementioned string functions to apply transformations to columns containing sensitive data, before they're presented to the user. 
 In this way, the original data remains unchanged, and users querying the view see only the masked data.
@@ -319,7 +319,7 @@ GRANT masked_orders_viewer TO your_user;
 This ensures that users with the `masked_orders_viewer` role are only able to see
 the masked data from the view and not the original unmasked data from the table.
 
-## Use `MATERIALIZED` columns and column-level access restrictions {#materialized-ephemeral-column-restrictions}
+## Use `MATERIALIZED` columns and column-level access restrictions <a id="materialized-ephemeral-column-restrictions"></a>
 
 In cases where you don't want to create a separate view, you can store masked versions of your data alongside the original data.
 To do so, you can use [materialized columns](/reference/statements/create/table#materialized).
@@ -461,7 +461,7 @@ ORDER BY user_id ASC
    └─────────┴──────────────┴────────────┴──────────────┴────────────────────┴──────────────┴───────────────────────────┘
 ```
 
-## Use query masking rules for log data {#use-query-masking-rules}
+## Use query masking rules for log data <a id="use-query-masking-rules"></a>
 
 For users of ClickHouse OSS wishing to mask log data specifically, you can make use of [query masking rules](/reference/settings/server-settings/settings#query_masking_rules) (log masking) to mask data.
 

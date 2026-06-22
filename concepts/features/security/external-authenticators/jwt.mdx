@@ -14,7 +14,7 @@ ClickHouse can authenticate users using JSON Web Tokens (JWTs). Unlike other ext
 
 This makes JWT authentication fundamentally different from password-based or certificate-based methods: there is no `CREATE USER ... IDENTIFIED WITH jwt` statement, and attempting it raises an exception. JWT users are fully managed by the token lifecycle.
 
-## Overview {#overview}
+## Overview <a id="overview"></a>
 
 The authentication flow works as follows:
 
@@ -24,9 +24,9 @@ The authentication flow works as follows:
 4. An ephemeral user is created in memory with access rights derived from the `clickhouse:grants` and `clickhouse:roles` token claims, intersected with a permission limit.
 5. When the token expires, a background garbage collection task removes the user.
 
-## Token claims {#token-claims}
+## Token claims <a id="token-claims"></a>
 
-### Required claims {#required-claims}
+### Required claims <a id="required-claims"></a>
 
 Every JWT presented to ClickHouse must contain the following claims:
 
@@ -47,14 +47,14 @@ The `kid` (key ID) header claim is also required when JWKS-based key resolution 
 While static-key providers accept any of `HS256`, `RS256`, or `ES256`, JWKS-based providers only accept JWKs whose `kty` is `RSA` (i.e., tokens signed with `RS256`). Tokens signed with HMAC (`HS256`) or EC (`ES256`) keys cannot be verified against a JWKS endpoint and will be rejected.
 </Info>
 
-### Other recognized claims {#other-recognized-claims}
+### Other recognized claims <a id="other-recognized-claims"></a>
 
 | Claim | Description |
 |---|---|
 | `nbf` | Not-before time. This claim is not required, but if present, tokens are rejected before this time. |
 | `jti` | Reserved. Accepted in tokens but not currently validated or used. |
 
-### Optional claims {#optional-claims}
+### Optional claims <a id="optional-claims"></a>
 
 | Claim | Default name | Description |
 |---|---|---|
@@ -62,7 +62,7 @@ While static-key providers accept any of `HS256`, `RS256`, or `ES256`, JWKS-base
 | Roles | `clickhouse:roles` | A JSON array of role names to assign, e.g. `["analyst", "reader"]`. |
 The default claim names can be remapped to custom claim names if your identity provider uses different naming conventions.
 
-### Example token header and payload {#example-token-header-and-payload}
+### Example token header and payload <a id="example-token-header-and-payload"></a>
 
 ```json
 {
@@ -83,11 +83,11 @@ The default claim names can be remapped to custom claim names if your identity p
 }
 ```
 
-## Ephemeral user behavior {#ephemeral-user-behavior}
+## Ephemeral user behavior <a id="ephemeral-user-behavior"></a>
 
 JWT users differ from regular ClickHouse users in several important ways.
 
-### Identity and naming {#identity-and-naming}
+### Identity and naming <a id="identity-and-naming"></a>
 
 Each JWT user receives a deterministic UUID computed from the `iss`, `sub`, and `aud` claims. This UUID is **stable** across logins. A user who logs in multiple times with different tokens (but the same issuer, subject, and audience) always gets the same UUID.
 
@@ -99,7 +99,7 @@ JWT::<issuer>::<audience>::<subject>::<claims_hash>
 
 The `<claims_hash>` portion changes whenever the `clickhouse:roles` or `clickhouse:grants` claims change. This means that tokens with different role or grant sets produce different usernames even for the same identity.
 
-### Access rights {#access-rights}
+### Access rights <a id="access-rights"></a>
 
 Effective access rights are computed as:
 
@@ -109,17 +109,17 @@ effective_rights = permission_limit ∩ (token_grants ∪ token_roles)
 
 Where `permission_limit` is the set of access rights held by a reference role or user configured as the upper bound. Rights requested by the token that exceed the limit are silently dropped.
 
-### Token freshness {#token-freshness}
+### Token freshness <a id="token-freshness"></a>
 
 ClickHouse tracks the `iat` (issued-at) claim of the most recently authenticated token for each stable identity. If a token with an `iat` equal to or older than the stored value is presented, the server reuses the existing ephemeral user without re-evaluating claims. This prevents older tokens from downgrading a user's permissions.
 
-### Lifetime and garbage collection {#lifetime-and-garbage-collection}
+### Lifetime and garbage collection <a id="lifetime-and-garbage-collection"></a>
 
 Ephemeral users are created when a token is first authenticated and removed by a background garbage collection task after `valid_until` (derived from `exp`) passes. The GC interval is controlled by the `gc_interval` parameter (default: 5 minutes).
 
 Between GC runs, expired users may still be visible in `system.users` but can no longer authenticate.
 
-### Persistent access assignments {#persistent-access-assignments}
+### Persistent access assignments <a id="persistent-access-assignments"></a>
 
 Because the UUID is stable, you can assign settings profiles, quotas, row policies, and column masking policies to a JWT user using SQL statements. These assignments persist in the access control storage (on disk or in ZooKeeper) and survive token expiry and re-authentication.
 
@@ -135,7 +135,7 @@ The username and UUID for a given identity can be found in the `name` and `id` c
 
 Note that `ALTER USER` does not work on JWT users directly, as they are read-only. To assign settings profiles, quotas, or policies, use the `ALTER SETTINGS PROFILE`, `ALTER QUOTA`, or `ALTER ROW POLICY` statements as shown above.
 
-## Differences from regular users {#differences-from-regular-users}
+## Differences from regular users <a id="differences-from-regular-users"></a>
 
 | Feature | JWT users | Regular users |
 |---|---|---|
@@ -153,7 +153,7 @@ Note that `ALTER USER` does not work on JWT users directly, as they are read-onl
 | Quotas and row policies | Assignable by UUID (persistent) | Directly configurable |
 | Default roles | Not configurable | Configurable |
 
-## SQL SECURITY DEFINER views {#sql-security-definer-views}
+## SQL SECURITY DEFINER views <a id="sql-security-definer-views"></a>
 
 When an ephemeral JWT user creates a view with `SQL SECURITY DEFINER`, the server automatically creates a persistent shadow copy of the user to serve as the view's definer. This shadow user:
 
@@ -163,9 +163,9 @@ When an ephemeral JWT user creates a view with `SQL SECURITY DEFINER`, the serve
 
 This ensures that the view continues to function after the ephemeral user's token expires and the original user is garbage-collected.
 
-## Client usage {#client-usage}
+## Client usage <a id="client-usage"></a>
 
-### Passing a token directly {#passing-token-directly}
+### Passing a token directly <a id="passing-token-directly"></a>
 
 Use the `--jwt` flag with `clickhouse-client` to authenticate with a pre-obtained token:
 
@@ -177,7 +177,7 @@ clickhouse-client --host your-instance.clickhouse.cloud --secure --jwt '<your_jw
 The `--jwt` flag is mutually exclusive with `--user`. When `--jwt` is specified, the username is derived from the token.
 </Note>
 
-### HTTP interface {#http-interface}
+### HTTP interface <a id="http-interface"></a>
 
 Send the token as a Bearer token in the `Authorization` header:
 
@@ -190,7 +190,7 @@ curl -H 'Authorization: Bearer <your_jwt_token>' \
 Always send JWTs over HTTPS. A Bearer token sent over plain HTTP is exposed to anyone on the network path and is equivalent to leaking the credential.
 </Warning>
 
-### OAuth2 device code login {#oauth2-device-code-login}
+### OAuth2 device code login <a id="oauth2-device-code-login"></a>
 
 The `clickhouse-client` supports an interactive OAuth2 device code flow via the `--login` flag. For ClickHouse Cloud endpoints, the client automatically performs token exchange to obtain a ClickHouse-specific JWT. Tokens are refreshed transparently during the session. When a new token is obtained, the client reconnects automatically.
 
@@ -198,7 +198,7 @@ The `clickhouse-client` supports an interactive OAuth2 device code flow via the 
 clickhouse-client --host your-instance.clickhouse.cloud --login
 ```
 
-## ClickHouse Cloud built-in JWT authenticator {#clickhouse-cloud-built-in}
+## ClickHouse Cloud built-in JWT authenticator <a id="clickhouse-cloud-built-in"></a>
 
 Every ClickHouse Cloud service comes with a predefined JWT authenticator that is used by SQL Console and the `clickhouse-client` `--login` flow. This authenticator is configured with:
 
@@ -212,11 +212,11 @@ The built-in authenticator has a permission limit set to the `default_role` role
 
 You do not need to configure anything to use this authenticator. It is provisioned automatically when the service is created.
 
-## Interserver communication {#interserver-communication}
+## Interserver communication <a id="interserver-communication"></a>
 
 When a query is forwarded to another shard or replica, the JWT token is included in the interserver protocol. The remote node re-authenticates the token independently, creating its own ephemeral user.
 
-## Troubleshooting {#troubleshooting}
+## Troubleshooting <a id="troubleshooting"></a>
 
 - **No access rights granted:** The referenced role or user may lack the required grants. Ensure the roles referenced in the `clickhouse:roles` exist and include the appropriate grants.
 - **Token rejected:** Verify that `iss`, `aud`, and the signing algorithm in your token match what the JWT provider expects. If JWKS is used, ensure the token's `kid` matches a key in the provider's key set.

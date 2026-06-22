@@ -10,7 +10,7 @@ doc_type: 'guide'
 import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
 import { Image } from "/snippets/components/Image.jsx";
 
-<BetaBadge/>
+<BetaBadge link="https://clickhouse.com/cloud/postgres" galaxyTrack={true} galaxyEvent="docs.managed-postgres.query-insights-beta" />
 
 Query Insights captures per-statement telemetry from your
 [Managed Postgres](/products/managed-postgres/overview) instance and ranks every query
@@ -23,7 +23,7 @@ ClickHouse Cloud. Telemetry is normalized inside Postgres before it leaves
 the database — literals are stripped and replaced with placeholders, so the
 exact values you query never enter the telemetry stream.
 
-## Open query insights {#open}
+## Open query insights <a id="open"></a>
 
 Open your Managed Postgres instance in the cloud console and click
 **Query insights** in the left sidebar. The page is divided into four
@@ -42,7 +42,7 @@ automatically — 1-minute buckets for the last 15 minutes or hour,
 5-minute for the last day, and 1-hour for the last week or month — so the
 charts stay responsive.
 
-## Overview {#overview}
+## Overview <a id="overview"></a>
 
 The overview is a 3×2 grid of six panels:
 
@@ -62,7 +62,7 @@ latencies tracking each other closely.
 
 <Image img="/images/managed-postgres/monitoring/query-insights-overview.png" alt="Query Insights overview showing the six stats cards: queries per second, query latency percentiles, operations breakdown donut, rows returned area chart, buffer hit ratio donut at 95.2 percent, and an errors column chart" size="lg" border/>
 
-## Slow patterns {#slow-patterns}
+## Slow patterns <a id="slow-patterns"></a>
 
 When the overview points at trouble, the patterns table is where the
 investigation starts. One row per normalized query pattern, with the
@@ -71,7 +71,7 @@ the same row.
 
 <Image img="/images/managed-postgres/monitoring/query-insights-patterns.png" alt="Slow query patterns table showing one row per normalized query with Database, User, Operation, Calls, Errors, Avg latency, P95, Max latency, Total runtime, Rows returned, and Cache hit columns" size="lg" border/>
 
-### Sort by what you suspect {#sort}
+### Sort by what you suspect <a id="sort"></a>
 
 The table defaults to **Total runtime** descending — when you sort this
 way, the top pattern is usually the answer to "what is costing me the
@@ -94,7 +94,7 @@ Click the **Columns** button to toggle additional columns into view.
 The patterns table exposes 19 columns total, including the percentile
 breakdown, cache hit ratio, and per-pattern CPU time.
 
-### Narrow the table {#filters}
+### Narrow the table <a id="filters"></a>
 
 Filter the table to whichever slice of your workload you're
 investigating:
@@ -108,7 +108,7 @@ investigating:
 becomes two dropdowns. Filter values auto-populate from what your
 instance has actually run.
 
-## Recent queries {#recent-queries}
+## Recent queries <a id="recent-queries"></a>
 
 Below the patterns table, the **Recent Queries** panel lists individual
 executions in reverse chronological order — one row per executed
@@ -128,7 +128,7 @@ CPU time.
 Click any row to open the same detail flyout as the patterns table,
 scoped to that single execution's pattern.
 
-## Detail flyout {#detail}
+## Detail flyout <a id="detail"></a>
 
 Click any row in the patterns or recent queries table and the **Query
 detail** flyout opens on the right. The flyout takes every execution
@@ -153,7 +153,7 @@ The flyout is a single scrolling layout with five sections:
 
 <Image img="/images/managed-postgres/monitoring/query-insights-detail-recent.png" alt="Query detail flyout continued, showing the Query context section with database, user, operation, and application, and a Recent executions card with timestamp, OK status, server role, host id, and per-execution counters for duration, rows, cache hit, CPU, shared blocks read, and shared blocks hit" size="md" border/>
 
-### Per-execution counters {#counters}
+### Per-execution counters <a id="counters"></a>
 
 Expand a recent execution and you get the counters that pinpoint where
 the time went:
@@ -171,7 +171,7 @@ the time went:
 Everything you need to diagnose a slow pattern is in one place, on one
 screen.
 
-## Query insights API {#api}
+## Query insights API <a id="api"></a>
 
 The same telemetry is available programmatically through the
 [ClickHouse Cloud OpenAPI](/products/managed-postgres/openapi#query-insights).
@@ -182,9 +182,9 @@ endpoint, and the [detail flyout](#detail) maps to the
 endpoint, which returns one pattern's aggregate metrics together with its
 recent executions.
 
-## How it works {#how-it-works}
+## How it works <a id="how-it-works"></a>
 
-### Normalized in Postgres, before the wire {#how-normalized}
+### Normalized in Postgres, before the wire <a id="how-normalized"></a>
 
 `pg_stat_ch` hooks the parse-analyze phase, swaps each literal for a
 placeholder (`$1`, `$2`, …), and caches the resulting pattern in a
@@ -192,20 +192,20 @@ per-backend LRU keyed by `queryid`. When the executor finishes the
 statement, that cached pattern is what gets attached to the event. The
 exact statement with values never leaves the database.
 
-### Out of the way of the database {#how-overhead}
+### Out of the way of the database <a id="how-overhead"></a>
 
 The producer adds roughly 3% overhead per statement. The enqueue path
 uses a non-blocking try-lock on a shared-memory ring buffer. Under
 pressure, the extension drops events with a counter rather than
 back-pressuring Postgres.
 
-### Raw events, not aggregates {#how-raw-events}
+### Raw events, not aggregates <a id="how-raw-events"></a>
 
 `pg_stat_ch` emits one raw event per executed statement (top-level and
 nested), subject to sampling. Every percentile, ranking, and breakdown
 in the UI is a ClickHouse query against the same event stream.
 
-### Same engine our customers use {#how-engine}
+### Same engine our customers use <a id="how-engine"></a>
 
 The Insights backend is [ClickHouse Cloud](/products/cloud/getting-started/intro).
 Per-query telemetry from a busy Postgres instance is millions of rows
@@ -213,13 +213,13 @@ a day; columnar compression keeps months of per-execution detail cheap
 to retain, and sub-second aggregations over billions of rows keep the
 UI interactive as you slice across a week or a month.
 
-### Open source {#how-open-source}
+### Open source <a id="how-open-source"></a>
 
 `pg_stat_ch` is Apache 2.0. Run it against any Postgres, ship to any
 ClickHouse. Source and issues live at
 [github.com/clickhouse/pg_stat_ch](https://github.com/clickhouse/pg_stat_ch).
 
-## Related pages {#related}
+## Related pages <a id="related"></a>
 
 - [Monitoring dashboard](/products/managed-postgres/monitoring/dashboard) — built-in resource and activity charts
 - [Prometheus endpoint](/products/managed-postgres/monitoring/prometheus) — scrape host-level metrics into your own observability stack

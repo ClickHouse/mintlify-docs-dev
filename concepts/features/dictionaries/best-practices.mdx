@@ -9,9 +9,9 @@ keywords: ['dictionary', 'dictionaries', 'layout', 'dictGet', 'JOIN', 'hashed', 
 
 This page covers practical guidance for choosing the right dictionary layout, understanding when dictionaries outperform JOINs (and when they don't), and monitoring dictionary usage.
 
-For an introduction to dictionaries with worked examples, see the [main Dictionary guide](/concepts/features/dictionaries).
+For an introduction to dictionaries with worked examples, see the [main Dictionary guide](/concepts/features/dictionaries/index).
 
-## When to use dictionaries vs JOINs {#when-to-use-dictionaries-vs-joins}
+## When to use dictionaries vs JOINs <a id="when-to-use-dictionaries-vs-joins"></a>
 
 Dictionaries work best when one side of a JOIN is a lookup table that fits in memory. With a standard JOIN, ClickHouse builds a hash table from the right-hand side before probing it with the left — even if most rows are later discarded by `WHERE` filters. Although recent versions (24.12+) push filters before JOINs in many cases, this doesn't always eliminate the overhead. With a dictionary, you call `dictGet` inline, so lookups only happen on rows that already survived filtering.
 
@@ -21,7 +21,7 @@ As a rule of thumb:
 - Use dictionaries to replace JOINs against small dimension tables where the lookup key is already available.
 - Use regular columns and indexes when filtering against the looked-up value across many rows.
 
-## Choosing a layout {#choosing-a-layout}
+## Choosing a layout <a id="choosing-a-layout"></a>
 
 The `LAYOUT` clause controls the internal data structure for the dictionary. All available layouts are documented in the [layouts reference](/reference/statements/create/dictionary/layouts/overview#storing-dictionaries-in-memory).
 
@@ -35,7 +35,7 @@ When choosing a layout, use the following guidelines:
 - **`cache` / `ssd_cache`** — only cache frequently accessed keys. Useful when the full dataset doesn't fit in memory, but lookups may hit the source on cache misses. Not recommended for latency-sensitive workloads.
 - **`direct`** — queries the source for every lookup with no in-memory storage. Use when the data changes too frequently to cache or when the dictionary is too large for memory.
 
-## Monitoring dictionary usage {#monitoring-dictionary-usage}
+## Monitoring dictionary usage <a id="monitoring-dictionary-usage"></a>
 
 Track memory consumption and health via the [`system.dictionaries`](/reference/system-tables/dictionaries) table:
 

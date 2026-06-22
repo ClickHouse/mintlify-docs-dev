@@ -2,7 +2,7 @@
 description: 'Documentation for User Defined Functions (UDFs)'
 sidebarTitle: 'UDF'
 slug: /sql-reference/functions/udf
-title: UDFs User Defined Functions
+title: 'User Defined Functions (UDFs)'
 doc_type: 'reference'
 ---
 
@@ -11,13 +11,15 @@ import PrivatePreviewBadge from "/snippets/components/PrivatePreviewBadge/Privat
 import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
 import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
 
+# UDFs User Defined Functions
+
 ClickHouse supports several types of user defined functions (UDFs):
 
 - [Executable UDFs](#executable-user-defined-functions) start an external program or script (Python, Bash, etc.) and stream blocks of data to it over STDIN / STDOUT. Use them to integrate existing code or tooling without recompiling ClickHouse. They have higher per‑call overhead compared to in‑process options and are best for heavier logic or where a different runtime is required.
 - [SQL UDFs](#sql-user-defined-functions) are defined with `CREATE FUNCTION` purely in SQL. They are inlined/expanded into the query plan (no process boundary), making them lightweight and ideal for reusing expression logic or simplifying complex calculated columns.
 - [Experimental WebAssembly UDFs](#webassembly-user-defined-functions) run code compiled to WebAssembly inside a sandbox within the server process. They offer lower per‑call overhead than external executables with better isolation than native extensions, making them suitable for custom algorithms written in languages that can target WASM (e.g. C/C++/Rust).
 
-## Executable User Defined Functions {#executable-user-defined-functions}
+## Executable User Defined Functions <a id="executable-user-defined-functions"></a>
 
 <PrivatePreviewBadge/>
 
@@ -38,7 +40,7 @@ A function configuration contains the following settings:
 | `name`                        | A function name                                                                                                                                                                                                                                                                                                                                                                               | Yes       | -                     |
 | `command`                     | Script name to execute or command if `execute_direct` is false                                                                                                                                                                                                                                                                                                                                | Yes       | -                     |
 | `argument`                    | Argument description with the `type`, and optional `name` of an argument. Each argument is described in a separate setting. Specifying name is necessary if argument names are part of serialization for user defined function format like [Native](/reference/formats/Native) or [JSONEachRow](/reference/formats/JSON/JSONEachRow)                                                             | Yes       | `c` + argument_number |
-| `format`                      | A [format](/reference/formats) in which arguments are passed to the command. The command output is expected to use the same format too                                                                                                                                                                                                                                               | Yes       | -                     |
+| `format`                      | A [format](/reference/formats/index) in which arguments are passed to the command. The command output is expected to use the same format too                                                                                                                                                                                                                                               | Yes       | -                     |
 | `return_type`                 | The type of a returned value                                                                                                                                                                                                                                                                                                                                                                  | Yes       | -                     |
 | `return_name`                 | Name of returned value. Specifying return name is necessary if return name is part of serialization for user defined function format like [Native](/reference/formats/Native) or [JSONEachRow](/reference/formats/JSON/JSONEachRow)                                                                                                                                                      | Optional  | `result`              |
 | `type`                        | An executable type. If `type` is set to `executable` then single command is started. If it is set to `executable_pool` then a pool of commands is created                                                                                                                                                                                                                                     | Yes       | -                     |
@@ -56,11 +58,11 @@ A function configuration contains the following settings:
 
 The command must read arguments from `STDIN` and must output the result to `STDOUT`. The command must process arguments iteratively. That is after processing a chunk of arguments it must wait for the next chunk.
 
-## Executable User Defined Functions {#executable-user-defined-functions}
+## Executable User Defined Functions <a id="executable-user-defined-functions"></a>
 
-## Examples {#examples}
+## Examples <a id="examples"></a>
 
-### UDF from inline script {#udf-inline}
+### UDF from inline script <a id="udf-inline"></a>
 
 Create `test_function_sum` manually specifying `execute_direct` to `0` using either XML or YAML configuration.
 
@@ -124,7 +126,7 @@ SELECT test_function_sum(2, 2);
 └─────────────────────────┘
 ```
 
-### UDF from Python script {#udf-python}
+### UDF from Python script <a id="udf-python"></a>
 
 In this example we create a UDF which reads a value from `STDIN` and returns it as a string.
 
@@ -190,7 +192,7 @@ SELECT test_function_python(toUInt64(2));
 └─────────────────────────┘
 ```
 
-### Read two values from `STDIN` and return their sum as a JSON object {#udf-stdin}
+### Read two values from `STDIN` and return their sum as a JSON object <a id="udf-stdin"></a>
 
 Create `test_function_sum_json` with named arguments and format [JSONEachRow](/reference/formats/JSON/JSONEachRow) using either XML or YAML configuration.
 
@@ -267,7 +269,7 @@ SELECT test_function_sum_json(2, 2);
 └──────────────────────────────┘
 ```
 
-### Use parameters in `command` setting {#udf-parameters-in-command}
+### Use parameters in `command` setting <a id="udf-parameters-in-command"></a>
 
 Executable user defined functions can take constant parameters configured in `command` setting (this works only for user defined functions with `executable` type).
 It also requires the `execute_direct` option to ensure no shell argument expansion vulnerability.
@@ -332,7 +334,7 @@ SELECT test_function_parameter_python(1)(2);
 └──────────────────────────────────────┘
 ```
 
-### UDF from shell script {#udf-shell-script}
+### UDF from shell script <a id="udf-shell-script"></a>
 
 In this example, we create a shell script that multiplies each value by 2.
 
@@ -402,20 +404,20 @@ SELECT test_shell(number) FROM numbers(10);
     └────────────────────┘
 ```
 
-## Error Handling {#error-handling}
+## Error Handling <a id="error-handling"></a>
 
 Some functions might throw an exception if the data is invalid.
 In this case, the query is canceled and an error text is returned to the client.
 For distributed processing, when an exception occurs on one of the servers, the other servers also attempt to abort the query.
 
-## Evaluation of Argument Expressions {#evaluation-of-argument-expressions}
+## Evaluation of Argument Expressions <a id="evaluation-of-argument-expressions"></a>
 
 In almost all programming languages, one of the arguments might not be evaluated for certain operators.
 This is usually the operators `&&`, `||`, and `?:`.
 In ClickHouse, arguments of functions (operators) are always evaluated.
 This is because entire parts of columns are evaluated at once, instead of calculating each row separately.
 
-## Performing Functions for Distributed Query Processing {#performing-functions-for-distributed-query-processing}
+## Performing Functions for Distributed Query Processing <a id="performing-functions-for-distributed-query-processing"></a>
 
 For distributed query processing, as many stages of query processing as possible are performed on remote servers, and the rest of the stages (merging intermediate results and everything after that) are performed on the requestor server.
 
@@ -431,11 +433,11 @@ Another example is the `hostName` function, which returns the name of the server
 
 If a function in a query is performed on the requestor server, but you need to perform it on remote servers, you can wrap it in an 'any' aggregate function or add it to a key in `GROUP BY`.
 
-## SQL User Defined Functions {#sql-user-defined-functions}
+## SQL User Defined Functions <a id="sql-user-defined-functions"></a>
 
 Custom functions from lambda expressions can be created using the [CREATE FUNCTION](/reference/statements/create/function) statement. To delete these functions use the [DROP FUNCTION](/reference/statements/drop#drop-function) statement.
 
-## WebAssembly User Defined Functions {#webassembly-user-defined-functions}
+## WebAssembly User Defined Functions <a id="webassembly-user-defined-functions"></a>
 
 <CloudNotSupportedBadge/>
 <ExperimentalBadge/>
@@ -480,5 +482,5 @@ SELECT my_function(10, 20);
 
 Refer to the documentation on [WebAssembly User Defined Functions](/reference/functions/regular-functions/wasm_udf) for more details.
 
-## Related Content {#related-content}
+## Related Content <a id="related-content"></a>
 - [User-defined functions in ClickHouse Cloud](https://clickhouse.com/blog/user-defined-functions-clickhouse-udfs)

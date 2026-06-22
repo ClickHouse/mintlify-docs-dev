@@ -11,7 +11,7 @@ Snapshot backup is a lightweight backup mode for cloud-native table engines. Ins
 
 The lightweight path applies to [SharedMergeTree](/products/cloud/features/infrastructure/shared-merge-tree), SharedSet, and SharedJoin tables. For all other engine types — such as Log or Memory — the backup falls back to a standard copy-based backup automatically.
 
-## Create a snapshot {#create-a-snapshot}
+## Create a snapshot <a id="create-a-snapshot"></a>
 
 Snapshot backup uses the standard [`BACKUP`](/concepts/features/backup-restore/overview#syntax) command with `experimental_lightweight_snapshot = true`. The `id` setting is required — it names the snapshot and is used to reference it in unlock and observability commands:
 
@@ -56,7 +56,7 @@ TO AzureBlobStorage('DefaultEndpointsProtocol=https;AccountName=myaccount;Accoun
 SETTINGS experimental_lightweight_snapshot = true, id = 'events_snapshot_1'
 ```
 
-## Restore to the same service {#restore-to-same-service}
+## Restore to the same service <a id="restore-to-same-service"></a>
 
 Because a snapshot stores references to object storage files rather than copies of the data, restoring to a new or different ClickHouse service requires access to the original object storage. For that reason, cross-service restore is not supported via SQL — it is only available through the UI. By SQL, you can restore a snapshot to the same service from an external backup bucket using `snapshot_from_current_service = 1`. This reads objects directly via the destination disk instead of going through a remote snapshot reader:
 
@@ -76,7 +76,7 @@ FROM S3('https://my-bucket.s3.us-east-1.amazonaws.com/snapshots/events/', 'ACCES
 SETTINGS snapshot_from_current_service = 1
 ```
 
-## Unlock a snapshot {#unlock-snapshot}
+## Unlock a snapshot <a id="unlock-snapshot"></a>
 
 Each snapshot holds locks in ClickHouse Keeper that prevent the referenced object storage files from being garbage collected. After a restore completes — or when a snapshot is no longer needed — unlock it to release those locks.
 
@@ -107,9 +107,9 @@ ALTER TABLE mydb.events UNLOCK SNAPSHOT '<snapshot_id>'
 
 After unlocking, the corresponding row disappears from `system.snapshot_locks`, and parts no longer referenced by other snapshots drop out of `system.snapshot_parts`.
 
-## Observability {#observability}
+## Observability <a id="observability"></a>
 
-### system.backups {#system-backups}
+### system.backups <a id="system-backups"></a>
 
 All snapshot operations appear in [`system.backups`](/reference/system-tables/backups) alongside regular backup and restore operations. Query it with the `id` you set (or the UUID returned by the command):
 
@@ -134,7 +134,7 @@ uncompressed_size: 1073741824
 compressed_size:   0
 ```
 
-### system.snapshot_locks {#system-snapshot-locks}
+### system.snapshot_locks <a id="system-snapshot-locks"></a>
 
 `system.snapshot_locks` shows the committed snapshots currently registered in Keeper. When a snapshot is committed, a Keeper node is created at `/clickhouse/snapshot/committed/{snapshot_id}`. Before deleting any data part, the server checks whether a committed snapshot holds a lock on that part. If one does, deletion is skipped. The lock persists until you explicitly unlock the snapshot.
 
@@ -160,7 +160,7 @@ FROM system.snapshot_locks
 WHERE id = 'events_snapshot_1'
 ```
 
-### system.snapshot_parts {#system-snapshot-parts}
+### system.snapshot_parts <a id="system-snapshot-parts"></a>
 
 `system.snapshot_parts` shows the data parts currently pinned by at least one snapshot lock. For each locked part, a Keeper node exists at `/clickhouse/snapshot/{table_uuid}/{part_name}` containing the part's compressed and uncompressed size. This table reads those nodes to show which parts are currently protected from deletion.
 
@@ -215,7 +215,7 @@ WHERE (name, table_id) NOT IN (
 
 This is useful for understanding the storage overhead of holding snapshots after the original data has changed or been removed.
 
-## Server settings {#server-settings}
+## Server settings <a id="server-settings"></a>
 
 The following server configuration parameters control snapshot behavior. They are set in the server configuration file, not in SQL.
 

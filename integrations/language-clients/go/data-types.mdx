@@ -7,7 +7,7 @@ title: 'Data types'
 doc_type: 'reference'
 ---
 
-## Type conversions {#type-conversions}
+## Type conversions <a id="type-conversions"></a>
 
 The client aims to be as flexible as possible concerning accepting variable types for both insertion and marshaling of responses. In most cases, an equivalent Golang type exists for a ClickHouse column type, e.g., [UInt64](/reference/data-types/int-uint) to [uint64](https://pkg.go.dev/builtin#uint64). These logical mappings should always be supported. You may wish to utilize variable types that can be inserted into columns or used to receive a response if the conversion of either the variable or received data takes place first. The client aims to support these conversions transparently, so users don't need to convert their data to align precisely before insertion and to provide flexible marshaling at query time. This transparent conversion doesn't allow for precision loss. For example, a uint32 can't be used to receive data from a UInt64 column. Conversely, a string can be inserted into a datetime64 field provided it meets the format requirements.
 
@@ -17,9 +17,9 @@ This effort is ongoing and can be separated into insertion (`Append`/`AppendRow`
 
 The standard `database/sql` interface should support the same types as the ClickHouse API. There are a few exceptions, primarily for complex types, that are documented in the sections below. Similar to the ClickHouse API, the client aims to be as flexible as possible concerning accepting variable types for both insertion and marshaling of responses.
 
-## Complex types {#complex-types}
+## Complex types <a id="complex-types"></a>
 
-### Date/DateTime {#datedatetime}
+### Date/DateTime <a id="datedatetime"></a>
 
 The ClickHouse go client supports the `Date`, `Date32`, `DateTime`, and `DateTime64` date/datetime types. Dates can be inserted as a string in the format `2006-01-02` or using the native go `time.Time{}` or `sql.NullTime`. DateTimes also support the latter types but require strings to be passed in the format `2006-01-02 15:04:05` with an optional timezone offset e.g. `2006-01-02 15:04:05 +08:00`. `time.Time{}` and `sql.NullTime` are both supported at read time as well as any implementation of of the `sql.Scanner` interface.
 
@@ -32,7 +32,7 @@ Handling of timezone information depends on the ClickHouse type and whether the 
   * At **insert** time, the timezone of any date is considered when converting the date to a unix timestamp, i.e., it will be offset by the timezone prior to storage as a date, as Date types have no locale in ClickHouse. If this isn't specified in a string value, the local timezone will be used.
   * At **select** time, dates are scanned into `time.Time{}` or `sql.NullTime{}` instances will be returned without timezone information.
 
-### Time/Time64 types {#timetime64-types}
+### Time/Time64 types <a id="timetime64-types"></a>
 
 The `Time` and `Time64` column types store time-of-day values without a date component. Both are mapped to Go's `time.Duration`.
 
@@ -72,7 +72,7 @@ if err = conn.QueryRow(ctx, "SELECT * FROM example").Scan(&col1, &col2); err != 
 fmt.Printf("col1=%v, col2=%v\n", col1, col2)
 ```
 
-### Array {#array}
+### Array <a id="array"></a>
 
 Arrays should be inserted as slices. Typing rules for the elements are consistent with those for the [primitive type](#type-conversions), i.e., where possible elements will be converted.
 
@@ -123,7 +123,7 @@ rows.Close()
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/clickhouse_api/array.go)
 
-### Map {#map}
+### Map <a id="map"></a>
 
 Maps should be inserted as Golang maps with keys and values conforming to the type rules defined [earlier](#type-conversions).
 
@@ -179,7 +179,7 @@ When using the database/sql API, Map values require strict typing - you cannot u
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/map.go)
 </Note>
 
-### Tuples {#tuples}
+### Tuples <a id="tuples"></a>
 
 Tuples represent a group of Columns of arbitrary length. The columns can either be explicitly named or only specify a type e.g.
 
@@ -240,7 +240,7 @@ fmt.Printf("row: col1=%v, col2=%v, col3=%v\n", col1, col2, col3)
 
 Note: typed slices and maps are supported, provide the sub-columns in the named tuple are all of the same types.
 
-### Nested {#nested}
+### Nested <a id="nested"></a>
 
 A Nested field is equivalent to an Array of named Tuples. Usage depends on whether the user has set [flatten_nested](/reference/settings/session-settings#flatten_nested) to 1 or 0.
 
@@ -422,7 +422,7 @@ Note: Nested columns must have the same dimensions. For example, in the above ex
 
 Due to a more straightforward interface and official support for nesting, we recommend `flatten_nested=0`.
 
-### Geo types {#geo-types}
+### Geo types <a id="geo-types"></a>
 
 The client supports the geo types Point, Ring, LineString, Polygon, MultiPolygon, and MultiLineString. These types are represented in Go using the [github.com/paulmach/orb](https://github.com/paulmach/orb) package.
 
@@ -525,7 +525,7 @@ fmt.Printf("point=%v, ring=%v, lineString=%v, polygon=%v, mPolygon=%v, mLineStri
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/clickhouse_api/geo.go)
 
-### UUID {#uuid}
+### UUID <a id="uuid"></a>
 
 The UUID type is supported by the [github.com/google/uuid](https://github.com/google/uuid) package. You can also send and marshal a UUID as a string or any type which implements `sql.Scanner` or `Stringify`.
 
@@ -570,7 +570,7 @@ if err = conn.QueryRow(ctx, "SELECT * FROM example").Scan(&col1, &col2); err != 
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/clickhouse_api/uuid.go)
 
-### Decimal {#decimal}
+### Decimal <a id="decimal"></a>
 
 Due to Go's lack of a built-in Decimal type, we recommend using the third-party package [github.com/shopspring/decimal](https://github.com/shopspring/decimal) to work with Decimal types natively without modifying your original queries.
 
@@ -629,7 +629,7 @@ fmt.Printf("col1=%v, col2=%v, col3=%v, col4=%v, col5=%v\n", col1, col2, col3, co
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/clickhouse_api/decimal.go)
 
-### Nullable {#nullable}
+### Nullable <a id="nullable"></a>
 
 The go value of Nil represents a ClickHouse NULL. This can be used if a field is declared Nullable. At insert time, Nil can be passed for both the normal and Nullable version of a column. For the former, the default value for the type will be persisted, e.g., an empty string for string. For the nullable version, a NULL value will be stored in ClickHouse.
 
@@ -683,7 +683,7 @@ if err = conn.QueryRow(ctx, "SELECT * FROM example").Scan(&col1, &col2, &col3, &
 
 The client additionally supports the `sql.Null*` types e.g. `sql.NullInt64`. These are compatible with their equivalent ClickHouse types.
 
-### Big Ints {#big-ints}
+### Big Ints <a id="big-ints"></a>
 
 Number types larger than 64 bits are represented using the native go [big](https://pkg.go.dev/math/big) package.
 
@@ -753,7 +753,7 @@ fmt.Printf("col1=%v, col2=%v, col3=%v, col4=%v, col5=%v, col6=%v, col7=%v\n", co
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/clickhouse_api/big_int.go)
 
-### BFloat16 {#bfloat16}
+### BFloat16 <a id="bfloat16"></a>
 
 `BFloat16` is a 16-bit brain float type used in machine learning workloads. In Go, `BFloat16` values are inserted and scanned as `float32`. Nullable variants use `sql.NullFloat64`.
 
@@ -786,7 +786,7 @@ fmt.Printf("Col1: %v, Col2: %v\n", col1, col2)
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/clickhouse_api/bfloat16.go)
 
-### QBit {#qbit}
+### QBit <a id="qbit"></a>
 
 `QBit` is an experimental column type for storing vector embeddings in bit-sliced format, optimized for vector similarity search. It requires the `allow_experimental_qbit_type` setting to be enabled.
 

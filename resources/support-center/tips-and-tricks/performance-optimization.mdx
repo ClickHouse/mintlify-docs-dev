@@ -24,14 +24,14 @@ description: 'Real world examples of performance optimization strategies'
 *Having trouble with Materialized Views? Check out the [Materialized Views](/resources/support-center/tips-and-tricks/materialized-views) community insights guide.*
 *If you're experiencing slow queries and want more examples, we also have a [Query Optimization](/guides/clickhouse/performance-and-monitoring/query-optimization) guide.*
 
-## Order by cardinality (lowest to highest) {#cardinality-ordering}
+## Order by cardinality (lowest to highest) <a id="cardinality-ordering"></a>
 ClickHouse's primary index works best when low-cardinality columns come first, allowing it to skip large chunks of data efficiently. High-cardinality columns later in the key provide fine-grained sorting within those chunks. Start with columns that have few unique values (like status, category, country) and end with columns that have many unique values (like user_id, timestamp, session_id).
 
 Check out more documentation on cardinality and primary indexes:
 - [Choosing a Primary Key](/concepts/best-practices/choosing-a-primary-key)
 - [Primary indexes](/concepts/core-concepts/primary-indexes)
 
-## Time granularity matters {#time-granularity}
+## Time granularity matters <a id="time-granularity"></a>
 When using timestamps in your ORDER BY clause, consider the cardinality vs precision trade-off. Microsecond-precision timestamps create very high cardinality (nearly one unique value per row), which reduces the effectiveness of ClickHouse's sparse primary index. Rounded timestamps create lower cardinality that enables better index skipping, but you lose precision for time-based queries.
 
 ```sql runnable editable
@@ -59,7 +59,7 @@ FROM github.github_events
 WHERE created_at >= '2024-01-01';
 ```
 
-## Focus on individual queries, not averages {#focus-on-individual-queries-not-averages}
+## Focus on individual queries, not averages <a id="focus-on-individual-queries-not-averages"></a>
 
 When debugging ClickHouse performance, don't rely on average query times or overall system metrics. Instead, identify why specific queries are slow. A system can have good average performance while individual queries suffer from memory exhaustion, poor filtering, or high cardinality operations.
 
@@ -67,7 +67,7 @@ According to Alexey, CTO of ClickHouse: *"The right way is to ask yourself why t
 
 When a query is slow, don't just look at averages. Ask "Why was THIS specific query slow?" and examine the actual resource usage patterns.
 
-## Memory and row scanning {#memory-and-row-scanning}
+## Memory and row scanning <a id="memory-and-row-scanning"></a>
 
 Sentry is a developer-first error tracking platform processing billions of events daily from 4+ million developers. Their key insight: *"The cardinality of the grouping key that's going to drive memory in this particular situation"* - High cardinality aggregations kill performance through memory exhaustion, not row scanning.
 
@@ -83,7 +83,7 @@ WHERE cityHash64(user_id) % 10 = 0  -- Always same 10% of users
 
 This ensures the same users appear in every query, providing consistent results across time periods. The key insight: `cityHash64()` produces consistent hash values for the same input, so `user_id = 12345` will always hash to the same value, ensuring that user either always appears in your 10% sample or never does - no flickering between queries.
 
-## Sentry's bit mask optimization {#bit-mask-optimization}
+## Sentry's bit mask optimization <a id="bit-mask-optimization"></a>
 
 When aggregating by high-cardinality columns (like URLs), each unique value creates a separate aggregation state in memory, leading to memory exhaustion. Sentry's solution: instead of grouping by the actual URL strings, group by boolean expressions that collapse into bit masks.
 
@@ -126,7 +126,7 @@ Instead of storing every unique string in memory, you're storing the answer to q
 
 From Sentry's engineering team: "These heavy queries are more than 10x faster and our memory usage is 100x lower (and, more importantly, bounded). Our largest customers no longer see errors when searching for replays and we can now support customers of arbitrary size without running out of memory."
 
-## Video sources {#video-sources}
+## Video sources <a id="video-sources"></a>
 
 - [Lost in the Haystack - Optimizing High Cardinality Aggregations](https://www.youtube.com/watch?v=paK84-EUJCA) - Sentry's production lessons on memory optimization
 - [ClickHouse Performance Analysis](https://www.youtube.com/watch?v=lxKbvmcLngo) - Alexey Milovidov on debugging methodology

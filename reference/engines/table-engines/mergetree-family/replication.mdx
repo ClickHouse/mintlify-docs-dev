@@ -38,7 +38,7 @@ Replication works at the level of an individual table, not the entire server. A 
 
 Replication does not depend on sharding. Each shard has its own independent replication.
 
-Compressed data for `INSERT` and `ALTER` queries is replicated (for more information, see the documentation for [ALTER](/reference/statements/alter).
+Compressed data for `INSERT` and `ALTER` queries is replicated (for more information, see the documentation for [ALTER](/reference/statements/alter/index).
 
 `CREATE`, `DROP`, `ATTACH`, `DETACH` and `RENAME` queries are executed on a single server and are not replicated:
 
@@ -46,7 +46,7 @@ Compressed data for `INSERT` and `ALTER` queries is replicated (for more informa
 - The `DROP TABLE` query deletes the replica located on the server where the query is run.
 - The `RENAME` query renames the table on one of the replicas. In other words, replicated tables can have different names on different replicas.
 
-ClickHouse uses [ClickHouse Keeper](/guides/oss/deployment-and-scaling/keeper) for storing replicas meta information. It is possible to use ZooKeeper version 3.4.5 or newer, but ClickHouse Keeper is recommended.
+ClickHouse uses [ClickHouse Keeper](/guides/oss/deployment-and-scaling/keeper/index) for storing replicas meta information. It is possible to use ZooKeeper version 3.4.5 or newer, but ClickHouse Keeper is recommended.
 
 To use replication, set parameters in the [zookeeper](/reference/settings/server-settings/settings#zookeeper) server configuration section.
 
@@ -135,7 +135,7 @@ You can have any number of replicas of the same data. Based on our experiences, 
 
 The system monitors data synchronicity on replicas and is able to recover after a failure. Failover is automatic (for small differences in data) or semi-automatic (when data differs too much, which may indicate a configuration error).
 
-## Creating replicated tables {#creating-replicated-tables}
+## Creating replicated tables <a id="creating-replicated-tables"></a>
 
 <Note>
 In ClickHouse Cloud, replication is handled automatically.
@@ -145,7 +145,7 @@ Create tables using [`MergeTree`](/reference/engines/table-engines/mergetree-fam
 Avoid using `ReplicatedMergeTree` or specifying replication parameters, as replication is managed by the platform.
 </Note>
 
-### Replicated\*MergeTree parameters {#replicatedmergetree-parameters}
+### Replicated\*MergeTree parameters <a id="replicatedmergetree-parameters"></a>
 
 | Parameter       | Description                                                                  |
 |-----------------|------------------------------------------------------------------------------|
@@ -245,7 +245,7 @@ If you add a new replica after the table already contains some data on other rep
 
 To delete a replica, run `DROP TABLE`. However, only one replica is deleted – the one that resides on the server where you run the query.
 
-## Recovery after failures {#recovery-after-failures}
+## Recovery after failures <a id="recovery-after-failures"></a>
 
 If ClickHouse Keeper is unavailable when a server starts, replicated tables switch to read-only mode. The system periodically attempts to connect to ClickHouse Keeper.
 
@@ -269,7 +269,7 @@ sudo -u clickhouse touch /var/lib/clickhouse/flags/force_restore_data
 
 Then restart the server. On start, the server deletes these flags and starts recovery.
 
-## Recovery after complete data loss {#recovery-after-complete-data-loss}
+## Recovery after complete data loss <a id="recovery-after-complete-data-loss"></a>
 
 If all data and metadata disappeared from one of the servers, follow these steps for recovery:
 
@@ -284,7 +284,7 @@ An alternative recovery option is to delete information about the lost replica f
 
 There is no restriction on network bandwidth during recovery. Keep this in mind if you are restoring many replicas at once.
 
-## Converting from MergeTree to ReplicatedMergeTree {#converting-from-mergetree-to-replicatedmergetree}
+## Converting from MergeTree to ReplicatedMergeTree <a id="converting-from-mergetree-to-replicatedmergetree"></a>
 
 We use the term `MergeTree` to refer to all table engines in the `MergeTree family`, the same as for `ReplicatedMergeTree`.
 
@@ -316,7 +316,7 @@ Rename the existing MergeTree table, then create a `ReplicatedMergeTree` table w
 Move the data from the old table to the `detached` subdirectory inside the directory with the new table data (`/var/lib/clickhouse/data/db_name/table_name/`).
 Then run `ALTER TABLE ATTACH PARTITION` on one of the replicas to add these data parts to the working set.
 
-## Converting from ReplicatedMergeTree to MergeTree {#converting-from-replicatedmergetree-to-mergetree}
+## Converting from ReplicatedMergeTree to MergeTree <a id="converting-from-replicatedmergetree-to-mergetree"></a>
 
 Use [ATTACH TABLE ... AS NOT REPLICATED](/reference/statements/attach#attach-mergetree-table-as-replicatedmergetree) statement to attach detached `ReplicatedMergeTree` table as `MergeTree` on a single server.
 
@@ -329,7 +329,7 @@ If you want to get rid of a `ReplicatedMergeTree` table without launching the se
 
 After this, you can launch the server, create a `MergeTree` table, move the data to its directory, and then restart the server.
 
-## Recovery when metadata in the ClickHouse Keeper cluster is lost or damaged {#recovery-when-metadata-in-the-zookeeper-cluster-is-lost-or-damaged}
+## Recovery when metadata in the ClickHouse Keeper cluster is lost or damaged <a id="recovery-when-metadata-in-the-zookeeper-cluster-is-lost-or-damaged"></a>
 
 If the data in ClickHouse Keeper was lost or damaged, you can save data by moving it to an unreplicated table as described above.
 

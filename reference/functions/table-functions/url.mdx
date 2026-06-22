@@ -2,37 +2,39 @@
 description: 'Creates a table from the `URL` with given `format` and `structure`'
 sidebarTitle: 'url'
 slug: /sql-reference/table-functions/url
-title: url Table Function
+title: 'url'
 doc_type: 'reference'
 ---
 
 import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
 import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
 
+# url Table Function
+
 `url` function creates a table from the `URL` with given `format` and `structure`.
 
 `url` function may be used in `SELECT` and `INSERT` queries on data in [URL](/reference/engines/table-engines/special/url) tables.
 
-## Syntax {#syntax}
+## Syntax <a id="syntax"></a>
 
 ```sql
 url(URL [,format] [,structure] [,headers])
 ```
 
-## Parameters {#parameters}
+## Parameters <a id="parameters"></a>
 
 | Parameter   | Description                                                                                                                                            |
 |-------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `URL`       | Single quoted HTTP or HTTPS server address, which can accept `GET` or `POST` requests (for `SELECT` or `INSERT` queries correspondingly). Type: [String](/reference/data-types/string). |
-| `format`    | [Format](/reference/formats) of the data. Type: [String](/reference/data-types/string).                                                  |
+| `format`    | [Format](/reference/formats/index) of the data. Type: [String](/reference/data-types/string).                                                  |
 | `structure` | Table structure in `'UserID UInt64, Name String'` format. Determines column names and types. Type: [String](/reference/data-types/string).     |
 | `headers`   | Headers in `'headers('key1'='value1', 'key2'='value2')'` format. You can set headers for HTTP call.                                                  |
 
-## Returned value {#returned_value}
+## Returned value <a id="returned_value"></a>
 
 A table with the specified format and structure and with data from the defined `URL`.
 
-## Examples {#examples}
+## Examples <a id="examples"></a>
 
 Getting the first 3 lines of a table that contains columns of `String` and [UInt32](/reference/data-types/int-uint) type from HTTP-server which answers in [CSV](/reference/formats/CSV/CSV) format.
 
@@ -48,12 +50,12 @@ INSERT INTO FUNCTION url('http://127.0.0.1:8123/?query=INSERT+INTO+test_table+FO
 SELECT * FROM test_table;
 ```
 
-## Globs in URL {#globs-in-url}
+## Globs in URL <a id="globs-in-url"></a>
 
 Patterns in `{ }` are used to generate a set of shards or to specify failover addresses. Supported pattern types and examples see in the description of the [remote](/reference/functions/table-functions/remote#globs-in-addresses) function.
 Character `|` inside patterns is used to specify failover addresses. They are iterated in the same order as listed in the pattern. The number of generated addresses is limited by [glob_expansion_max_elements](/reference/settings/session-settings#glob_expansion_max_elements) setting.
 
-## Virtual Columns {#virtual-columns}
+## Virtual Columns <a id="virtual-columns"></a>
 
 - `_path` — Path to the `URL`. Type: `LowCardinality(String)`.
 - `_file` — Resource name of the `URL`. Type: `LowCardinality(String)`.
@@ -61,7 +63,7 @@ Character `|` inside patterns is used to specify failover addresses. They are it
 - `_time` — Last modified time of the file. Type: `Nullable(DateTime)`. If the time is unknown, the value is `NULL`.
 - `_headers` - HTTP response headers. Type: `Map(LowCardinality(String), LowCardinality(String))`.
 
-## use_hive_partitioning setting {#hive-style-partitioning}
+## use_hive_partitioning setting <a id="hive-style-partitioning"></a>
 
 When setting `use_hive_partitioning` is set to 1, ClickHouse will detect Hive-style partitioning in the path (`/name=value/`) and will allow to use partition columns as virtual columns in the query. These virtual columns will have the same names as in the partitioned path.
 
@@ -73,7 +75,7 @@ Use virtual column, created with Hive-style partitioning
 SELECT * FROM url('http://data/path/date=*/country=*/code=*/*.parquet') WHERE date > '2020-01-01' AND country = 'Netherlands' AND code = 42;
 ```
 
-## Resolving relative URLs {#resolving-relative-urls}
+## Resolving relative URLs <a id="resolving-relative-urls"></a>
 
 The [url_base](/reference/settings/session-settings#url_base) setting allows passing a relative URL to the `url` function. When `url_base` is set and the function argument is a relative reference, it is resolved against the base URL per [RFC 3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
@@ -94,16 +96,16 @@ SET url_base = 'https://raw.githubusercontent.com/ClickHouse/ClickHouse/master/'
 SELECT * FROM url('tests/queries/0_stateless/data_csv/data.csv', CSV) LIMIT 3;
 ```
 
-## Storage Settings {#storage-settings}
+## Storage Settings <a id="storage-settings"></a>
 
 - [engine_url_skip_empty_files](/reference/settings/session-settings#engine_url_skip_empty_files) - allows to skip empty files while reading. Disabled by default.
 - [enable_url_encoding](/reference/settings/session-settings#enable_url_encoding) - allows to enable/disable decoding/encoding path in uri. Enabled by default.
 - [url_base](/reference/settings/session-settings#url_base) - base URL for resolving relative URLs passed to the `url` function.
 
-## Permissions {#permissions}
+## Permissions <a id="permissions"></a>
 
 `url` function requires `CREATE TEMPORARY TABLE` permission. As such - it'll not work for users with [readonly](/concepts/features/configuration/settings/permissions-for-queries#readonly) = 1 setting. At least readonly = 2 is required.
 
-## Related {#related}
+## Related <a id="related"></a>
 
-- [Virtual columns](/reference/engines/table-engines#table_engines-virtual_columns)
+- [Virtual columns](/reference/engines/table-engines/index#table_engines-virtual_columns)

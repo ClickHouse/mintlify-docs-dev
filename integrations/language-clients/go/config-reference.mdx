@@ -15,7 +15,7 @@ This page documents every configurable option in `clickhouse-go` v2.x. For a gui
 Options added in `clickhouse-go` v2.35.0 or later are marked with *(Since vX.Y.Z)* next to their description. Options without a "Since" tag have been available since v2.0 and are present in every supported release.
 </Info>
 
-## How options are set {#how-options-are-set}
+## How options are set <a id="how-options-are-set"></a>
 
 Options exist at three scopes:
 
@@ -68,9 +68,9 @@ rows, err := conn.Query(ctx, "SELECT ...")
 
 ---
 
-## Connection options {#connection-options}
+## Connection options <a id="connection-options"></a>
 
-### Protocol and connection {#protocol-and-connection}
+### Protocol and connection <a id="protocol-and-connection"></a>
 
 | Option | Type | Default | DSN param | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-------------|---------------|-------------------|
@@ -80,7 +80,7 @@ rows, err := conn.Query(ctx, "SELECT ...")
 
 ---
 
-### Authentication {#authentication}
+### Authentication <a id="authentication"></a>
 
 | Option | Type | Default | DSN param | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-------------|---------------|-------------------|
@@ -97,16 +97,24 @@ GetJWT: func(ctx context.Context) (string, error) {
 
 ---
 
-### Timeouts {#timeouts}
+### Timeouts <a id="timeouts"></a>
 
 | Option | Type | Default | DSN param | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-------------|---------------|-------------------|
-| `DialTimeout` | `time.Duration` | `30s` | `dial_timeout` | Max time to establish a new connection. Also controls pool acquisition wait when `MaxOpenConns` is reached. | 5-10s on LAN, 15-30s on WAN/cloud. Never below 1s. | Too short: `"clickhouse: acquire conn timeout"` during congestion. Too long (> 60s): app hangs during outages. |
+| `DialTimeout` | `time.Duration` | `30s` | `dial_timeout` | Max time to establish a new connection. Also controls pool acquisition wait when `MaxOpenConns` is reached. | 5-10s on LAN, 15-30s on WAN/cloud, 1-2m if connecting to an idled ClickHouse Cloud service. Never below 1s. | Too short: `"clickhouse: acquire conn timeout"` during congestion, or connection failure before an idled Cloud service finishes waking. Too long (> 60s): app hangs during outages. |
 | `ReadTimeout` | `time.Duration` | `5m` (300s) | `read_timeout` | Max time to wait for a server response per read call. Applied per block, not entire query. Context deadline takes precedence. | 10-30s for short interactive queries; 5-30m for long analytical queries. | Too short: `"i/o timeout"` or `"read: connection reset by peer"` mid-query; server continues executing. Too long: dead connections not detected. |
+
+<Info>
+**ClickHouse Cloud idle services**
+
+A ClickHouse Cloud service that has been idle is paused, and wakes on the first incoming connection. Wake-up typically takes a few tens of seconds, during which the dial blocks. If `DialTimeout` is lower than the wake time, the first query after an idle period fails with a dial timeout instead of running.
+
+Set `DialTimeout` to `1m`–`2m` for clients that may be the first to reach an idled service. The tradeoff is slower failure detection during a real outage — dials block for the full timeout before erroring — so prefer scoping the higher timeout to the first connect, or use context deadlines on individual queries to cap end-to-end latency.
+</Info>
 
 ---
 
-### Connection pool {#connection-pool}
+### Connection pool <a id="connection-pool"></a>
 
 | Option | Type | Default | DSN param | API | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-----|-------------|---------------|-------------------|
@@ -129,7 +137,7 @@ See [Connection Pooling](/integrations/language-clients/go/configuration#connect
 
 ---
 
-### Standard database/sql pool settings {#sql-db-settings}
+### Standard database/sql pool settings <a id="sql-db-settings"></a>
 
 When using `clickhouse.OpenDB()` or `sql.Open("clickhouse", dsn)`, the returned `*sql.DB` supports Go's standard pool methods. `OpenDB()` auto-applies the first three from `Options`:
 
@@ -148,7 +156,7 @@ These methods are **not** available on the connection returned by `clickhouse.Op
 
 ---
 
-### Compression {#compression}
+### Compression <a id="compression"></a>
 
 | Option | Type | Default | DSN param | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-------------|---------------|-------------------|
@@ -169,7 +177,7 @@ These methods are **not** available on the connection returned by `clickhouse.Op
 
 ---
 
-### TLS {#tls}
+### TLS <a id="tls"></a>
 
 | Option | Type | Default | DSN param | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-------------|---------------|-------------------|
@@ -179,7 +187,7 @@ See [TLS](/integrations/language-clients/go/configuration#using-tls) for code ex
 
 ---
 
-### Logging {#logging}
+### Logging <a id="logging"></a>
 
 | Option | Type | Default | DSN param | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-------------|---------------|-------------------|
@@ -199,7 +207,7 @@ See [Logging](/integrations/language-clients/go/configuration#logging) for full 
 
 ---
 
-### Buffers and memory {#buffers-and-memory}
+### Buffers and memory <a id="buffers-and-memory"></a>
 
 | Option | Type | Default | DSN param | Per-query | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-----------|-------------|---------------|-------------------|
@@ -208,7 +216,7 @@ See [Logging](/integrations/language-clients/go/configuration#logging) for full 
 
 ---
 
-### HTTP-specific {#http-specific}
+### HTTP-specific <a id="http-specific"></a>
 
 <Warning>
 **Silently ignored on Native**
@@ -242,7 +250,7 @@ TransportFunc: func(t *http.Transport) (http.RoundTripper, error) {
 
 ---
 
-### Advanced connection {#advanced-connection}
+### Advanced connection <a id="advanced-connection"></a>
 
 | Option | Type | Default | DSN param | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-------------|---------------|-------------------|
@@ -251,7 +259,7 @@ TransportFunc: func(t *http.Transport) (http.RoundTripper, error) {
 
 ---
 
-### Client information {#client-information}
+### Client information <a id="client-information"></a>
 
 | Option | Type | Default | DSN param | Per-query | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-----------|-------------|---------------|-------------------|
@@ -268,7 +276,7 @@ ClientInfo: clickhouse.ClientInfo{
 
 ---
 
-### ClickHouse server settings {#server-settings}
+### ClickHouse server settings <a id="server-settings"></a>
 
 | Option | Type | Default | DSN param | Per-query | Description | Best practice | When misconfigured |
 |--------|------|---------|-----------|-----------|-------------|---------------|-------------------|
@@ -293,7 +301,7 @@ Settings: clickhouse.Settings{
 
 ---
 
-## Context-level query options {#context-options}
+## Context-level query options <a id="context-options"></a>
 
 Set per-query using `clickhouse.Context()`:
 
@@ -345,7 +353,7 @@ rows, err := conn.Query(ctx, "SELECT * FROM users WHERE id = {user_id:String}")
 
 ---
 
-## Batch options {#batch-options}
+## Batch options <a id="batch-options"></a>
 
 Passed to `PrepareBatch()`. Import: `github.com/ClickHouse/clickhouse-go/v2/lib/driver`.
 
@@ -363,9 +371,9 @@ batch, err := conn.PrepareBatch(ctx, "INSERT INTO table",
 
 ---
 
-## Quick reference tables {#quick-reference-tables}
+## Quick reference tables <a id="quick-reference-tables"></a>
 
-### Connection pool sizing recommendations {#pool-sizing}
+### Connection pool sizing recommendations <a id="pool-sizing"></a>
 
 | Application type | MaxIdleConns | MaxOpenConns | ConnMaxLifetime |
 |------------------|-------------|-------------|-----------------|
@@ -376,7 +384,7 @@ batch, err := conn.PrepareBatch(ctx, "INSERT INTO table",
 | Kubernetes deployment | 10 | 20 | 10m |
 | Serverless (Lambda) | 1 | 5 | 5m |
 
-### Timeout recommendations {#timeout-recommendations}
+### Timeout recommendations <a id="timeout-recommendations"></a>
 
 | Environment | DialTimeout | ReadTimeout |
 |-------------|------------|-------------|
@@ -386,7 +394,7 @@ batch, err := conn.PrepareBatch(ctx, "INSERT INTO table",
 | OLAP workload | 10s | 30m |
 | Realtime / OLTP | 5s | 10s |
 
-### DSN parameter quick reference {#dsn-parameters}
+### DSN parameter quick reference <a id="dsn-parameters"></a>
 
 | DSN parameter | Options field | Example |
 |---------------|--------------|---------|
@@ -413,9 +421,9 @@ batch, err := conn.PrepareBatch(ctx, "INSERT INTO table",
 
 ---
 
-## Troubleshooting {#troubleshooting}
+## Troubleshooting <a id="troubleshooting"></a>
 
-### Connection pool exhausted: "acquire conn timeout" {#acquire-conn-timeout}
+### Connection pool exhausted: "acquire conn timeout" <a id="acquire-conn-timeout"></a>
 
 **Cause:** Connection pool exhausted - all `MaxOpenConns` connections are in use and none became available within `DialTimeout`.
 
@@ -428,7 +436,7 @@ Try the following steps in order, and diagnose the root cause before tuning knob
 3. Increase `MaxOpenConns` to match observed concurrency.
 4. Increase `DialTimeout` only if bursts are expected and acquisition wait is the actual bottleneck.
 
-### Read timeout and connection reset errors {#io-timeout}
+### Read timeout and connection reset errors <a id="io-timeout"></a>
 
 **Cause:** `ReadTimeout` exceeded while waiting for a server response, or the connection was closed by the server/network.
 
@@ -437,7 +445,7 @@ Try the following steps in order, and diagnose the root cause before tuning knob
 - Use context deadlines for per-query timeout control
 - Check ClickHouse server-side `max_execution_time` limits
 
-### "Code: 516. Authentication failed" {#auth-failed}
+### "Code: 516. Authentication failed" <a id="auth-failed"></a>
 
 **Cause:** Wrong username, password, or the user doesn't exist.
 
@@ -446,7 +454,7 @@ Try the following steps in order, and diagnose the root cause before tuning knob
 - Check for URL-encoding issues with special characters in DSN passwords
 - Confirm the user has access to the specified database
 
-### TLS certificate errors {#tls-errors}
+### TLS certificate errors <a id="tls-errors"></a>
 
 | Error | Cause | Fix |
 |-------|-------|-----|
@@ -455,7 +463,7 @@ Try the following steps in order, and diagnose the root cause before tuning knob
 | `x509: certificate signed by unknown authority` | Untrusted CA | Add CA to `tls.Config.RootCAs` |
 | `connection reset by peer` | TLS/port mismatch | Use port 9440 (Native) or 8443 (HTTP) for TLS |
 
-### Gradual memory growth {#memory-growth}
+### Gradual memory growth <a id="memory-growth"></a>
 
 **Cause:** Large idle connection buffers accumulating.
 

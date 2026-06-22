@@ -10,7 +10,7 @@ keywords: ['primary index', 'indexing', 'performance', 'query optimization', 'be
 
 import { Image } from "/snippets/components/Image.jsx";
 
-## Introduction {#introduction}
+## Introduction <a id="introduction"></a>
 
 In this guide we're going to do a deep dive into ClickHouse indexing. We will illustrate and discuss in detail:
 - [how indexing in ClickHouse is different from traditional relational database management systems](#an-index-design-for-massive-data-scales)
@@ -26,7 +26,7 @@ This guide is focusing on ClickHouse sparse primary indexes.
 For ClickHouse [secondary data skipping indexes](/reference/engines/table-engines/mergetree-family/mergetree#table_engine-mergetree-data_skipping-indexes), see the [Tutorial](/concepts/features/performance/skip-indexes/skipping-indexes).
 </Note>
 
-### Data set {#data-set}
+### Data set <a id="data-set"></a>
 
 Throughout this guide we will use a sample anonymized web traffic data set.
 
@@ -40,11 +40,11 @@ With these three columns we can already formulate some typical web analytics que
 - "What are the top 10 users that most frequently clicked a specific URL?"
 - "What are the most popular times (e.g. days of the week) at which a user clicks on a specific URL?"
 
-### Test machine {#test-machine}
+### Test machine <a id="test-machine"></a>
 
 All runtime numbers given in this document are based on running ClickHouse 22.2.1 locally on a MacBook Pro with the Apple M1 Pro chip and 16GB of RAM.
 
-### A full table scan {#a-full-table-scan}
+### A full table scan <a id="a-full-table-scan"></a>
 
 In order to see how a query is executed over our data set without a primary key, we create a table (with a MergeTree table engine) by executing the following SQL DDL statement:
 
@@ -124,19 +124,19 @@ ClickHouse client's result output indicates that ClickHouse executed a full tabl
 
 To make this (way) more efficient and (much) faster, we need to use a table with a appropriate primary key. This will allow ClickHouse to automatically (based on the primary key's columns) create a sparse primary index which can then be used to significantly speed up the execution of our example query.
 
-## ClickHouse index design {#clickhouse-index-design}
+## ClickHouse index design <a id="clickhouse-index-design"></a>
 
-### An index design for massive data scales {#an-index-design-for-massive-data-scales}
+### An index design for massive data scales <a id="an-index-design-for-massive-data-scales"></a>
 
 In traditional relational database management systems, the primary index would contain one entry per table row. This would result in the primary index containing 8.87 million entries for our data set. Such an index allows the fast location of specific rows, resulting in high efficiency for lookup queries and point updates. Searching an entry in a `B(+)-Tree` data structure has an average time complexity of `O(log n)`; more precisely, `log_b n = log_2 n / log_2 b` where `b` is the branching factor of the `B(+)-Tree` and `n` is the number of indexed rows. Because `b` is typically between several hundred and several thousand, `B(+)-Trees` are very shallow structures, and few disk-seeks are required to locate records. With 8.87 million rows and a branching factor of 1000, 2.3 disk seeks are needed on average. This capability comes at a cost: additional disk and memory overheads, higher insertion costs when adding new rows to the table and entries to the index, and sometimes rebalancing of the B-Tree.
 
-Considering the challenges associated with B-Tree indexes, table engines in ClickHouse utilise a different approach. The ClickHouse [MergeTree Engine Family](/reference/engines/table-engines/mergetree-family) has been designed and optimized to handle massive data volumes. These tables are designed to receive millions of row inserts per second and store very large (100s of Petabytes) volumes of data. Data is quickly written to a table [part by part](/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage), with rules applied for merging the parts in the background. In ClickHouse each part has its own primary index. When parts are merged, then the merged part's primary indexes are also merged. At the very large scale that ClickHouse is designed for, it is paramount to be very disk and memory efficient. Therefore, instead of indexing every row, the primary index for a part has one index entry (known as a 'mark') per group of rows (called 'granule') - this technique is called **sparse index**.
+Considering the challenges associated with B-Tree indexes, table engines in ClickHouse utilise a different approach. The ClickHouse [MergeTree Engine Family](/reference/engines/table-engines/mergetree-family/index) has been designed and optimized to handle massive data volumes. These tables are designed to receive millions of row inserts per second and store very large (100s of Petabytes) volumes of data. Data is quickly written to a table [part by part](/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage), with rules applied for merging the parts in the background. In ClickHouse each part has its own primary index. When parts are merged, then the merged part's primary indexes are also merged. At the very large scale that ClickHouse is designed for, it is paramount to be very disk and memory efficient. Therefore, instead of indexing every row, the primary index for a part has one index entry (known as a 'mark') per group of rows (called 'granule') - this technique is called **sparse index**.
 
 Sparse indexing is possible because ClickHouse is storing the rows for a part on disk ordered by the primary key columns. Instead of directly locating single rows (like a B-Tree based index), the sparse primary index allows it to quickly (via a binary search over index entries) identify groups of rows that could possibly match the query. The located groups of potentially matching rows (granules) are then in parallel streamed into the ClickHouse engine in order to find the matches. This index design allows for the primary index to be small (it can, and must, completely fit into the main memory), whilst still significantly speeding up query execution times: especially for range queries that are typical in data analytics use cases.
 
 The following illustrates in detail how ClickHouse is building and using its sparse primary index. Later on in the article, we will discuss some best practices for choosing, removing, and ordering the table columns that are used to build the index (primary key columns).
 
-### A table with a primary key {#a-table-with-a-primary-key}
+### A table with a primary key <a id="a-table-with-a-primary-key"></a>
 
 Create a table that has a compound primary key with key columns UserID and URL:
 
@@ -257,7 +257,7 @@ The output of the ClickHouse client shows:
 - The table has a primary index with 1083 entries (called 'marks') and the size of the index is 96.93 KB.
 - In total, the table's data and mark files and primary index file together take 207.07 MB on disk.
 
-### Data is stored on disk ordered by primary key columns {#data-is-stored-on-disk-ordered-by-primary-key-columns}
+### Data is stored on disk ordered by primary key columns <a id="data-is-stored-on-disk-ordered-by-primary-key-columns"></a>
 
 Our table that we created above has
 - a compound [primary key](/reference/engines/table-engines/mergetree-family/mergetree#primary-keys-and-indexes-in-queries) `(UserID, URL)` and
@@ -296,7 +296,7 @@ ClickHouse is a <a href="/get-started/about/distinctive-features#true-column-ori
 - We're numbering rows starting with 0 in order to be aligned with the ClickHouse internal row numbering scheme that is also used for logging messages.
 </Note>
 
-### Data is organized into granules for parallel data processing {#data-is-organized-into-granules-for-parallel-data-processing}
+### Data is organized into granules for parallel data processing <a id="data-is-organized-into-granules-for-parallel-data-processing"></a>
 
 For data processing purposes, a table's column values are logically divided into granules.
 A granule is the smallest indivisible data set that is streamed into ClickHouse for data processing.
@@ -328,7 +328,7 @@ The first (based on physical order on disk) 8192 rows (their column values) logi
 - We're numbering granules starting with 0 in order to be aligned with the ClickHouse internal numbering scheme that is also used for logging messages.
 </Note>
 
-### The primary index has one entry per granule {#the-primary-index-has-one-entry-per-granule}
+### The primary index has one entry per granule <a id="the-primary-index-has-one-entry-per-granule"></a>
 
 The primary index is created based on the granules shown in the diagram above. This index is an uncompressed flat array file (primary.idx), containing so-called numerical index marks starting at 0.
 
@@ -355,7 +355,7 @@ In total the index has 1083 entries for our table with 8.87 million rows and 108
 
 On a self-managed ClickHouse cluster we can use the <a href="/reference/functions/table-functions/file" target="_blank">file table function</a> for inspecting the content of the primary index of our example table.
 
-For that we first need to copy the primary index file into the <a href="/reference/settings/server-settings/settings#server_configuration_parameters-user_files_path" target="_blank">user_files_path</a> of a node from the running cluster:
+For that we first need to copy the primary index file into the <a href="/reference/settings/server-settings/settings#user_files_path" target="_blank">user_files_path</a> of a node from the running cluster:
 <ul>
 <li>Step 1: Get part-path that contains the primary index file</li>
 `
@@ -430,7 +430,7 @@ The primary key entries are called index marks because each index entry is marki
 
   We will discuss the consequences of this on query execution performance in more detail later.
 
-### The primary index is used for selecting granules {#the-primary-index-is-used-for-selecting-granules}
+### The primary index is used for selecting granules <a id="the-primary-index-is-used-for-selecting-granules"></a>
 
 We can now execute our queries with support from the primary index.
 
@@ -468,7 +468,7 @@ Processed 8.19 thousand rows,
 
 The output for the ClickHouse client is now showing that instead of doing a full table scan, only 8.19 thousand rows were streamed into ClickHouse.
 
-If <a href="/reference/settings/server-settings/settings#server_configuration_parameters-logger" target="_blank">trace logging</a> is enabled then the ClickHouse server log file shows that ClickHouse was running a <a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1452" target="_blank">binary search</a> over the 1083 UserID index marks, in order to identify granules that possibly can contain rows with a UserID column value of `749927693`. This requires 19 steps with an average time complexity of `O(log2 n)`:
+If <a href="/reference/settings/server-settings/settings#logger" target="_blank">trace logging</a> is enabled then the ClickHouse server log file shows that ClickHouse was running a <a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1452" target="_blank">binary search</a> over the 1083 UserID index marks, in order to identify granules that possibly can contain rows with a UserID column value of `749927693`. This requires 19 steps with an average time complexity of `O(log2 n)`:
 ```response highlight={2,7}
 ...Executor): Key condition: (column 0 in [749927693, 749927693])
 ...Executor): Running binary search on index range for part all_1_9_2 (1083 marks)
@@ -542,7 +542,7 @@ In the **second stage (data reading)**, ClickHouse is locating the selected gran
 
 We discuss that second stage in more detail in the following section.
 
-### Mark files are used for locating granules {#mark-files-are-used-for-locating-granules}
+### Mark files are used for locating granules <a id="mark-files-are-used-for-locating-granules"></a>
 
 The following diagram illustrates a part of the primary index file for our table.
 
@@ -631,11 +631,11 @@ The diagram above shows how ClickHouse is locating the granule for the UserID.bi
 
 In parallel, ClickHouse is doing the same for granule 176 for the URL.bin data file. The two respective granules are aligned and streamed into the ClickHouse engine for further processing i.e. aggregating and counting the URL values per group for all rows where the UserID is 749.927.693, before finally outputting the 10 largest URL groups in descending count order.
 
-## Using multiple primary indexes {#using-multiple-primary-indexes}
+## Using multiple primary indexes <a id="using-multiple-primary-indexes"></a>
 
 <a name="filtering-on-key-columns-after-the-first"></a>
 
-### Secondary key columns can (not) be inefficient {#secondary-key-columns-can-not-be-inefficient}
+### Secondary key columns can (not) be inefficient <a id="secondary-key-columns-can-not-be-inefficient"></a>
 
 When a query is filtering on a column that is part of a compound key and is the first key column, [then ClickHouse is running the binary search algorithm over the key column's index marks](#the-primary-index-is-used-for-selecting-granules).
 
@@ -708,7 +708,7 @@ In order to illustrate that, we give some details about how the generic exclusio
 
 <a name="generic-exclusion-search-algorithm"></a>
 
-### Generic exclusion search algorithm {#generic-exclusion-search-algorithm}
+### Generic exclusion search algorithm <a id="generic-exclusion-search-algorithm"></a>
 
 The following is illustrating how the <a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1438" target="_blank" >ClickHouse generic exclusion search algorithm</a> works when granules are selected via a secondary column where the predecessor key column has a low(er) or high(er) cardinality.
 
@@ -758,7 +758,7 @@ The <a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/Mer
 
 In our sample data set both key columns (UserID, URL) have similar high cardinality, and, as explained, the generic exclusion search algorithm isn't very effective when the predecessor key column of the URL column has a high(er) or similar cardinality.
 
-### Note about data skipping index {#note-about-data-skipping-index}
+### Note about data skipping index <a id="note-about-data-skipping-index"></a>
 
 Because of the similarly high cardinality of UserID and URL, our [query filtering on URL](/guides/clickhouse/data-modelling/sparse-primary-indexes#secondary-key-columns-can-not-be-inefficient) also wouldn't benefit much from creating a [secondary data skipping index](/concepts/features/performance/skip-indexes/skipping-indexes) on the URL column
 of our [table with compound primary key (UserID, URL)](#a-table-with-a-primary-key).
@@ -782,7 +782,7 @@ Because of the similarly high cardinality of UserID and URL, this secondary data
 
 The specific URL value that the query is looking for (i.e. 'http://public_search') very likely is between the minimum and maximum value stored by the index for each group of granules resulting in ClickHouse being forced to select the group of granules (because they might contain rows matching the query).
 
-### A need to use multiple primary indexes {#a-need-to-use-multiple-primary-indexes}
+### A need to use multiple primary indexes <a id="a-need-to-use-multiple-primary-indexes"></a>
 
 As a consequence, if we want to significantly speed up our sample query that filters for rows with a specific URL then we need to use a primary index optimized to that query.
 
@@ -792,7 +792,7 @@ The following is showing ways for achieving that.
 
 <a name="multiple-primary-indexes"></a>
 
-### Options for creating additional primary indexes {#options-for-creating-additional-primary-indexes}
+### Options for creating additional primary indexes <a id="options-for-creating-additional-primary-indexes"></a>
 
 If we want to significantly speed up both of our sample queries - the one that  filters for rows with a specific UserID and the one that filters for rows with a specific URL - then we need to use multiple primary indexes by using one of these three options:
 
@@ -820,7 +820,7 @@ In the following we discuss this three options for creating and using multiple p
 
 <a name="multiple-primary-indexes-via-secondary-tables"></a>
 
-### Option 1: Secondary Tables {#option-1-secondary-tables}
+### Option 1: Secondary Tables <a id="option-1-secondary-tables"></a>
 
 <a name="secondary-table"></a>
 We're creating a new additional table where we switch the order of the key columns (compared to our original table) in the primary key:
@@ -969,7 +969,7 @@ Server Log:
 
 We now have two tables. Optimized for speeding up queries filtering on `UserIDs`, and speeding up queries filtering on URLs, respectively:
 
-### Option 2: Materialized Views {#option-2-materialized-views}
+### Option 2: Materialized Views <a id="option-2-materialized-views"></a>
 
 Create a [materialized view](/reference/statements/create/view) on our existing table.
 ```sql
@@ -1050,7 +1050,7 @@ The corresponding trace log in the ClickHouse server log file confirms that Clic
 ...Executor): Reading approx. 335872 rows with 4 streams
 ```
 
-### Option 3: Projections {#option-3-projections}
+### Option 3: Projections <a id="option-3-projections"></a>
 
 Create a projection on our existing table:
 ```sql
@@ -1131,7 +1131,7 @@ The corresponding trace log in the ClickHouse server log file confirms that Clic
 ...Executor): Reading approx. 319488 rows with 2 streams
 ```
 
-### Summary {#summary}
+### Summary <a id="summary"></a>
 
 The primary index of our [table with compound primary key (UserID, URL)](#a-table-with-a-primary-key) was very useful for speeding up a [query filtering on UserID](#the-primary-index-is-used-for-selecting-granules). But that index isn't providing significant help with speeding up a [query filtering on URL](/guides/clickhouse/data-modelling/sparse-primary-indexes#secondary-key-columns-can-not-be-inefficient), despite the URL column being part of the compound primary key.
 
@@ -1146,7 +1146,7 @@ However if the key columns in a compound primary key have big differences in car
 
 The higher the cardinality difference between the key columns is, the more the order of those columns in the key matters. We will demonstrate that in the next section.
 
-## Ordering key columns efficiently {#ordering-key-columns-efficiently}
+## Ordering key columns efficiently <a id="ordering-key-columns-efficiently"></a>
 
 <a name="test"></a>
 
@@ -1244,7 +1244,7 @@ The response is:
 0 rows in set. Elapsed: 95.959 sec. Processed 8.87 million rows, 15.88 GB (92.48 thousand rows/s., 165.50 MB/s.)
 ```
 
-### Efficient filtering on secondary key columns {#efficient-filtering-on-secondary-key-columns}
+### Efficient filtering on secondary key columns <a id="efficient-filtering-on-secondary-key-columns"></a>
 
 When a query is filtering on at least one column that is part of a compound key, and is the first key column, [then ClickHouse is running the binary search algorithm over the key column's index marks](#the-primary-index-is-used-for-selecting-granules).
 
@@ -1290,7 +1290,7 @@ We can see that the query execution is significantly more effective and faster o
 
 The reason for that is that the [generic exclusion search algorithm](https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1444) works most effective, when [granules](#the-primary-index-is-used-for-selecting-granules) are selected via a secondary key column where the predecessor key column has a lower cardinality. We illustrated that in detail in a [previous section](#generic-exclusion-search-algorithm) of this guide.
 
-### Optimal compression ratio of data files {#optimal-compression-ratio-of-data-files}
+### Optimal compression ratio of data files <a id="optimal-compression-ratio-of-data-files"></a>
 
 This query compares the compression ratio of the `UserID` column between the two tables that we created above:
 
@@ -1345,11 +1345,11 @@ But because the first key column `ch` has high cardinality, it is unlikely that 
 
 Therefore the `cl` values are most likely in random order and therefore have a bad locality and compression ration, respectively.
 
-### Summary {#summary-1}
+### Summary <a id="summary-1"></a>
 
 For both the efficient filtering on secondary key columns in queries and the compression ratio of a table's column data files it is beneficial to order the columns in a primary key by their cardinality in ascending order.
 
-## Identifying single rows efficiently {#identifying-single-rows-efficiently}
+## Identifying single rows efficiently <a id="identifying-single-rows-efficiently"></a>
 
 Although in general it is [not](/resources/support-center/knowledge-base/general-faqs/key-value) the best use case for ClickHouse,
 sometimes applications built on top of ClickHouse require to identify single rows of a ClickHouse table.
@@ -1362,7 +1362,7 @@ We discussed that because [a ClickHouse table's row data is stored on disk order
 
 A compromise between fastest retrieval and optimal data compression is to use a compound primary key where the UUID is the last key column, after low(er) cardinality key columns that are used to ensure a good compression ratio for some of the table's columns.
 
-### A concrete example {#a-concrete-example}
+### A concrete example <a id="a-concrete-example"></a>
 
 One concrete example is a the plaintext paste service [https://pastila.nl](https://pastila.nl) that Alexey Milovidov developed and [blogged about](https://clickhouse.com/blog/building-a-paste-service-with-clickhouse/).
 

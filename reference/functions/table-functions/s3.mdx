@@ -18,7 +18,7 @@ If you have multiple replicas in your cluster, you can use the [s3Cluster functi
 
 When using the `s3 table function` with [`INSERT INTO...SELECT`](/reference/statements/insert-into#inserting-the-results-of-select), data is read and inserted in a streaming fashion. Only a few blocks of data reside in memory while the blocks are continuously read from S3 and pushed into the destination table.
 
-## Syntax {#syntax}
+## Syntax <a id="syntax"></a>
 
 ```sql
 s3(url [, NOSIGN | access_key_id, secret_access_key, [session_token]] [,format] [,structure] [,compression_method],[,headers], [,extra_credentials], [,partition_strategy], [,partition_columns_in_data_file])
@@ -43,12 +43,12 @@ For GCS, substitute your HMAC key and HMAC secret where you see `access_key_id` 
 | `NOSIGN`                                | If this keyword is provided in place of credentials, all the requests will not be signed.                                                                                                                                                                                                                                                                                        |
 | `access_key_id` and `secret_access_key` | Keys that specify credentials to use with given endpoint. Optional.                                                                                                                                                                                                                                                                                                              |
 | `session_token`                         | Session token to use with the given keys. Optional when passing keys.                                                                                                                                                                                                                                                                                                            |
-| `format`                                | The [format](/reference/formats) of the file.                                                                                                                                                                                                                                                                                                                                |
+| `format`                                | The [format](/reference/formats/index) of the file.                                                                                                                                                                                                                                                                                                                                |
 | `structure`                             | Structure of the table. Format `'column1_name column1_type, column2_name column2_type, ...'`.                                                                                                                                                                                                                                                                                    |
 | `compression_method`                    | Parameter is optional. Supported values: `none`, `gzip` or `gz`, `brotli` or `br`, `xz` or `LZMA`, `zstd` or `zst`. By default, it will autodetect compression method by file extension.                                                                                                                                                                                         |
 | `headers`                               | Parameter is optional. Allows headers to be passed in the S3 request. Pass in the format `headers(key=value)` e.g. `headers('x-amz-request-payer' = 'requester')`.                                                                                                                                                                                                               |
-| `partition_strategy`                    | Parameter is optional. Supported values: `WILDCARD` or `HIVE`. `WILDCARD` requires a `{_partition_id}` in the path, which is replaced with the partition key. `HIVE` does not allow wildcards, assumes the path is the table root, and generates Hive-style partitioned directories with Snowflake IDs as filenames and the file format as the extension. Defaults to `WILDCARD` |
-| `partition_columns_in_data_file`        | Parameter is optional. Only used with `HIVE` partition strategy. Tells ClickHouse whether to expect partition columns to be written in the data file. Defaults `false`.                                                                                                                                                                                                          |
+| `partition_strategy`                    | Parameter is optional. Supported values: `wildcard` or `hive`. `wildcard` requires a `{_partition_id}` in the path, which is replaced with the partition key. `hive` does not allow wildcards, assumes the path is the table root, and generates Hive-style partitioned directories with Snowflake IDs as filenames and the file format as the extension. Defaults to the `file_like_engine_default_partition_strategy` setting (`wildcard` under `compatibility` settings older than `26.6`, `hive` otherwise). |
+| `partition_columns_in_data_file`        | Parameter is optional. Only used with `hive` partition strategy. Tells ClickHouse whether to expect partition columns to be written in the data file. Defaults `false`.                                                                                                                                                                                                          |
 | `extra_credentials`                     | Parameter is optional. Used to pass a `role_arn` for role-based access in ClickHouse Cloud. See [Secure S3](/products/cloud/guides/data-sources/accessing-s3-data-securely) for configuration steps. |
 | `storage_class_name`                    | Parameter is optional. Supported values: `STANDARD` or `INTELLIGENT_TIERING`. Allow to specify [AWS S3 Intelligent Tiering](https://aws.amazon.com/s3/storage-classes/intelligent-tiering/). Defaults to `STANDARD`. |
 
@@ -73,11 +73,11 @@ Arguments can also be passed using [named collections](/concepts/features/config
 | `no_sign_request`             | disabled by default.                                                                                                                                                              |
 | `expiration_window_seconds`   | default value is 120.                                                                                                                                                             |
 
-## Returned value {#returned_value}
+## Returned value <a id="returned_value"></a>
 
 A table with the specified structure for reading or writing data in the specified file.
 
-## Examples {#examples}
+## Examples <a id="examples"></a>
 
 Selecting the first 5 rows from the table from S3 file `https://datasets-documentation.s3.eu-west-3.amazonaws.com/aapl_stock.csv`:
 
@@ -130,7 +130,7 @@ FROM s3(
 ```
 </Note>
 
-## Usage {#usage}
+## Usage <a id="usage"></a>
 
 Suppose that we have several files with following URIs on S3:
 
@@ -243,17 +243,17 @@ SELECT count(*)
 FROM s3(creds, url='https://s3-object-url.csv')
 ```
 
-## Partitioned Write {#partitioned-write}
+## Partitioned Write <a id="partitioned-write"></a>
 
-### Partition Strategy {#partition-strategy}
+### Partition Strategy <a id="partition-strategy"></a>
 
 Supported for INSERT queries only.
 
-`WILDCARD` (default): Replaces the `{_partition_id}` wildcard in the file path with the actual partition key.
+`wildcard`: Replaces the `{_partition_id}` wildcard in the file path with the actual partition key. Selected by default only under `compatibility` settings older than `26.6`; otherwise the default is `hive` (see the `file_like_engine_default_partition_strategy` setting).
 
-`HIVE` implements hive style partitioning for reads & writes. It generates files using the following format: `<prefix>/<key1=val1/key2=val2...>/<snowflakeid>.<toLower(file_format)>`.
+`hive` implements hive style partitioning for reads & writes. It generates files using the following format: `<prefix>/<key1=val1/key2=val2...>/<snowflakeid>.<toLower(file_format)>`.
 
-**Example of `HIVE` partition strategy**
+**Example of `hive` partition strategy**
 
 ```sql
 INSERT INTO FUNCTION s3(s3_conn, filename='t_03363_function', format=Parquet, partition_strategy='hive') PARTITION BY (year, country) SELECT 2020 as year, 'Russia' as country, 1 as id;
@@ -267,7 +267,7 @@ SELECT _path, * FROM s3(s3_conn, filename='t_03363_function/**.parquet');
    └────────────────────────────────────────────────────────────────────────────┴────┴─────────┴──────┘
 ```
 
-**Examples of `WILDCARD` partition strategy**
+**Examples of `wildcard` partition strategy**
 
 1. Using partition ID in a key creates separate files:
 
@@ -287,7 +287,7 @@ INSERT INTO TABLE FUNCTION
 ```
 As a result, the data is written into three files in different buckets: `my_bucket_1/file.csv`, `my_bucket_10/file.csv`, and `my_bucket_20/file.csv`.
 
-## Accessing public buckets {#accessing-public-buckets}
+## Accessing public buckets <a id="accessing-public-buckets"></a>
 
 ClickHouse tries to fetch credentials from many different types of sources.
 Sometimes, it can produce problems when accessing some buckets that are public causing the client to return `403` error code.
@@ -303,7 +303,7 @@ FROM s3(
 LIMIT 5;
 ```
 
-## Using S3 credentials (ClickHouse Cloud) {#using-s3-credentials-clickhouse-cloud}
+## Using S3 credentials (ClickHouse Cloud) <a id="using-s3-credentials-clickhouse-cloud"></a>
 
 For non-public buckets, users can pass an `aws_access_key_id` and `aws_secret_access_key` to the function. For example:
 
@@ -321,9 +321,15 @@ Once configured, a `roleARN` can be passed to the s3 function via an `extra_cred
 SELECT count() FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/mta/*.tsv','CSVWithNames',extra_credentials(role_arn = 'arn:aws:iam::111111111111:role/ClickHouseAccessRole-001'))
 ```
 
+An optional `external_id` can also be supplied alongside `role_arn`. It is passed as the `ExternalId` parameter of the AWS STS `AssumeRole` call and lets the role's trust policy require a shared secret, which mitigates the [confused deputy problem](https://docs.aws.amazon.com/IAM/latest/UserGuide/confused-deputy.html). For example:
+
+```sql
+SELECT count() FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/mta/*.tsv','CSVWithNames',extra_credentials(role_arn = 'arn:aws:iam::111111111111:role/ClickHouseAccessRole-001', external_id = 'my-external-id'))
+```
+
 Further examples can be found [here](/products/cloud/guides/data-sources/accessing-s3-data-securely#access-your-s3-bucket-with-the-clickhouseaccess-role)
 
-## Working with archives {#working-with-archives}
+## Working with archives <a id="working-with-archives"></a>
 
 Suppose that we have several archive files with following URIs on S3:
 
@@ -348,18 +354,18 @@ TAR
 While ZIP and TAR archives can be accessed from any supported storage location, 7Z archives can only be read from the local filesystem where ClickHouse is installed.
 </Note>
 
-## Inserting Data {#inserting-data}
+## Inserting Data <a id="inserting-data"></a>
 
 Note that rows can only be inserted into new files. There are no merge cycles or file split operations. Once a file is written, subsequent inserts will fail. See more details [here](/integrations/connectors/data-ingestion/AWS/integrating-s3-with-clickhouse#inserting-data).
 
-## Virtual Columns {#virtual-columns}
+## Virtual Columns <a id="virtual-columns"></a>
 
 - `_path` — Path to the file. Type: `LowCardinality(String)`. In case of archive, shows path in a format: `"{path_to_archive}::{path_to_file_inside_archive}"`
 - `_file` — Name of the file. Type: `LowCardinality(String)`. In case of archive shows name of the file inside the archive.
 - `_size` — Size of the file in bytes. Type: `Nullable(UInt64)`. If the file size is unknown, the value is `NULL`. In case of archive shows uncompressed file size of the file inside the archive.
 - `_time` — Last modified time of the file. Type: `Nullable(DateTime)`. If the time is unknown, the value is `NULL`.
 
-## use_hive_partitioning setting {#hive-style-partitioning}
+## use_hive_partitioning setting <a id="hive-style-partitioning"></a>
 
 This is a hint for ClickHouse to parse hive style partitioned files upon reading time. It has no effect on writing. For symmetrical reads and writes, use the `partition_strategy` argument.
 
@@ -371,7 +377,7 @@ When setting `use_hive_partitioning` is set to 1, ClickHouse will detect Hive-st
 SELECT * FROM s3('s3://data/path/date=*/country=*/code=*/*.parquet') WHERE date > '2020-01-01' AND country = 'Netherlands' AND code = 42;
 ```
 
-## Accessing requester-pays buckets {#accessing-requester-pays-buckets}
+## Accessing requester-pays buckets <a id="accessing-requester-pays-buckets"></a>
 
 To access a requester-pays bucket, a header `x-amz-request-payer = requester` must be passed in any requests. This is achieved by passing the parameter `headers('x-amz-request-payer' = 'requester')` to the s3 function. For example:
 
@@ -389,13 +395,13 @@ FROM s3('https://coiled-datasets-rp.s3.us-east-1.amazonaws.com/1trc/measurements
 Peak memory usage: 192.27 KiB.
 ```
 
-## Storage Settings {#storage-settings}
+## Storage Settings <a id="storage-settings"></a>
 
 - [s3_truncate_on_insert](/reference/settings/session-settings#s3_truncate_on_insert) - allows to truncate file before insert into it. Disabled by default.
 - [s3_create_new_file_on_insert](/reference/settings/session-settings#s3_create_new_file_on_insert) - allows to create a new file on each insert if format has suffix. Disabled by default.
 - [s3_skip_empty_files](/reference/settings/session-settings#s3_skip_empty_files) - allows to skip empty files while reading. Enabled by default.
 
-## Nested Avro Schemas {#nested-avro-schemas}
+## Nested Avro Schemas <a id="nested-avro-schemas"></a>
 
 When reading Avro files that contain **nested records** which diverge across files (for example, some files have an extra field inside a nested object), ClickHouse may return an error such as:
 
@@ -423,7 +429,7 @@ SELECT
 FROM s3('https://bucket-name/*.avro', 'Avro')
 SETTINGS schema_inference_mode='union';
 
-## Related {#related}
+## Related <a id="related"></a>
 
 - [S3 engine](/reference/engines/table-engines/integrations/s3)
 - [Integrating S3 with ClickHouse](/integrations/connectors/data-ingestion/AWS/integrating-s3-with-clickhouse)

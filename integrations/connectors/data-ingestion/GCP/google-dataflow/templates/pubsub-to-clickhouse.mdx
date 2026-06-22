@@ -12,7 +12,7 @@ import { Image } from "/snippets/components/Image.jsx";
 The Pub/Sub to ClickHouse template is a streaming pipeline that reads JSON-encoded messages from a Pub/Sub subscription and writes them into a ClickHouse table.
 Messages that fail to parse or fail to map to the target schema are routed to a dead-letter destination: a ClickHouse table, a Pub/Sub topic, or both.
 
-## Pipeline requirements {#pipeline-requirements}
+## Pipeline requirements <a id="pipeline-requirements"></a>
 
 * The source Pub/Sub subscription must exist.
 * Messages published to the subscription must be valid JSON.
@@ -22,7 +22,7 @@ Messages that fail to parse or fail to map to the target schema are routed to a 
 * When `clickHouseDeadLetterTable` is set, the dead-letter table must already exist in ClickHouse with the schema shown in [Dead-letter handling](#dead-letter-handling).
 * When `deadLetterTopic` is set, the Pub/Sub topic must already exist.
 
-## Template parameters {#template-parameters}
+## Template parameters <a id="template-parameters"></a>
 
 <br/>
 <br/>
@@ -49,7 +49,7 @@ Messages that fail to parse or fail to map to the target schema are routed to a 
 Default values for all `ClickHouseIO` parameters can be found in [`ClickHouseIO` Apache Beam Connector](/integrations/connectors/data-ingestion/etl-tools/apache-beam#clickhouseiowrite-parameters).
 </Note>
 
-## Message format and schema mapping {#message-format-and-schema-mapping}
+## Message format and schema mapping <a id="message-format-and-schema-mapping"></a>
 
 Pub/Sub messages must be JSON objects whose top-level field names exactly match the column names of the target ClickHouse table.
 
@@ -65,7 +65,7 @@ To map incoming messages onto the target table, the pipeline performs the follow
 JSON field names must exactly match the ClickHouse column names (matching is case-sensitive). Fields in the message that do not correspond to a ClickHouse column are ignored. If a ClickHouse column has no matching field in the JSON payload, the pipeline attempts to write `NULL` for that column — which only succeeds when the column is declared as [`Nullable`](/reference/data-types/nullable). Messages that fail to parse, whose values cannot be coerced into the column type, or that would write `NULL` to a non-nullable column, are routed to the dead-letter destination.
 </Warning>
 
-### Type conversion {#type-conversion}
+### Type conversion <a id="type-conversion"></a>
 
 JSON values are coerced into the corresponding ClickHouse column type:
 
@@ -79,7 +79,7 @@ JSON values are coerced into the corresponding ClickHouse column type:
 | Integer types (`Int8`/`Int16`/`Int32`/`Int64`, `UInt8`/`UInt16`/`UInt32`/`UInt64`) | Parsed from the JSON number or its string representation.                                                                            |
 | [`String`](/reference/data-types/string)                     | Used as-is for textual fields; non-textual JSON nodes are serialized to their JSON string form.                                      |
 
-## Batching and windowing {#batching-and-windowing}
+## Batching and windowing <a id="batching-and-windowing"></a>
 
 Because the pipeline is streaming, incoming rows are accumulated into windows before being flushed to ClickHouse. The windowing strategy is selected from the parameters you provide:
 
@@ -92,11 +92,11 @@ Because the pipeline is streaming, incoming rows are accumulated into windows be
 
 Tuning these values lets you trade latency against insert efficiency. Smaller windows reduce end-to-end latency; larger windows produce fewer, larger `INSERT` batches.
 
-## Dead-letter handling {#dead-letter-handling}
+## Dead-letter handling <a id="dead-letter-handling"></a>
 
 Messages that fail JSON parsing, schema mapping, or type coercion are routed to the configured dead-letter destination(s). At least one of `clickHouseDeadLetterTable` or `deadLetterTopic` must be provided; if both are set, failed messages are sent to both.
 
-### ClickHouse dead-letter table {#clickhouse-dead-letter-table}
+### ClickHouse dead-letter table <a id="clickhouse-dead-letter-table"></a>
 
 When `clickHouseDeadLetterTable` is set, the dead-letter table must already exist with this fixed schema:
 
@@ -123,7 +123,7 @@ ORDER BY failed_at;
 Adapt the engine and `ORDER BY` clause for your deployment — use `ReplicatedMergeTree` for replicated tables, add `ON CLUSTER` for distributed setups, and adjust partitioning or TTL as needed.
 </Note>
 
-### Pub/Sub dead-letter topic {#pubsub-dead-letter-topic}
+### Pub/Sub dead-letter topic <a id="pubsub-dead-letter-topic"></a>
 
 When `deadLetterTopic` is set, each failed message is republished to the topic with:
 
@@ -133,7 +133,7 @@ When `deadLetterTopic` is set, each failed message is republished to the topic w
 
 This makes it convenient to replay failed messages once the underlying schema or producer issue has been resolved.
 
-## Running the template {#running-the-template}
+## Running the template <a id="running-the-template"></a>
 
 The Pub/Sub to ClickHouse template is available from the Google Cloud Console.
 
@@ -163,7 +163,7 @@ Sign in to your Google Cloud Console and search for Dataflow.
 
 5. Optionally customize batching (`windowSeconds`, `batchRowCount`) and `ClickHouseIO` tuning parameters, as detailed in the [Template parameters](#template-parameters) section.
 
-### Monitor the job {#monitor-the-job}
+### Monitor the job <a id="monitor-the-job"></a>
 
 Navigate to the [Dataflow Jobs tab](https://console.cloud.google.com/dataflow/jobs) in your Google Cloud Console to monitor the status of the job. You'll find the job details, including progress and any errors:
 
@@ -178,16 +178,16 @@ The template also emits the following custom metrics under the `PubSubToClickHou
 | `rows-parse-failed`     | Counter      | Messages that failed parsing or schema mapping and were routed to dead-letter. |
 | `message-payload-bytes` | Distribution | Distribution of incoming Pub/Sub message payload sizes, in bytes.            |
 
-## Troubleshooting {#troubleshooting}
+## Troubleshooting <a id="troubleshooting"></a>
 
-### Memory limit (total) exceeded error (code 241) {#code-241-dbexception-memory-limit-total-exceeded}
+### Memory limit (total) exceeded error (code 241) <a id="code-241-dbexception-memory-limit-total-exceeded"></a>
 
 This error occurs when ClickHouse runs out of memory while processing large batches of data. To resolve this issue:
 
 * Increase the instance resources: Upgrade your ClickHouse server to a larger instance with more memory to handle the data processing load.
 * Decrease the batch size: Reduce `batchRowCount` (and/or `maxInsertBlockSize`) in your Dataflow job configuration to send smaller chunks of data to ClickHouse, reducing memory consumption per batch.
 
-### All messages are going to the dead-letter destination {#all-messages-going-to-dlq}
+### All messages are going to the dead-letter destination <a id="all-messages-going-to-dlq"></a>
 
 The most common causes are:
 
@@ -197,13 +197,13 @@ The most common causes are:
 
 Inspect the `error_message` and `stack_trace` columns of the ClickHouse dead-letter table (or the `errorMessage` attribute on Pub/Sub dead-letter messages) to identify the root cause.
 
-### Pipeline starts but no rows arrive in ClickHouse {#no-rows-arriving}
+### Pipeline starts but no rows arrive in ClickHouse <a id="no-rows-arriving"></a>
 
 * Confirm the subscription is receiving messages — check the `messages-received` metric on the Dataflow job page.
 * In time-based mode (`windowSeconds` only), rows are flushed only at window boundaries. Lower `windowSeconds` to verify flushes are occurring.
 * Verify network reachability between Dataflow workers and the ClickHouse endpoint (firewall, VPC peering, or private service connect).
 
-## Template source code {#template-source-code}
+## Template source code <a id="template-source-code"></a>
 
 The template's source code is available in:
 

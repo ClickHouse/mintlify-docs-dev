@@ -9,7 +9,7 @@ doc_type: 'guide'
 
 The DataStore profiler helps you measure execution time and identify performance bottlenecks.
 
-## Quick Start {#quick-start}
+## Quick Start <a id="quick-start"></a>
 
 ```python
 from chdb import datastore as pd
@@ -34,7 +34,7 @@ profiler = get_profiler()
 print(profiler.report())
 ```
 
-## Enabling Profiling {#enabling}
+## Enabling Profiling <a id="enabling"></a>
 
 ```python
 from chdb.datastore.config import config
@@ -51,9 +51,9 @@ print(config.profiling_enabled)  # True or False
 
 ---
 
-## Profiler API {#api}
+## Profiler API <a id="api"></a>
 
-### Getting the Profiler {#get-profiler}
+### Getting the Profiler <a id="get-profiler"></a>
 
 ```python
 from chdb.datastore.config import get_profiler
@@ -61,7 +61,7 @@ from chdb.datastore.config import get_profiler
 profiler = get_profiler()
 ```
 
-### report() {#report}
+### report() <a id="report"></a>
 
 Display a performance report.
 
@@ -97,7 +97,7 @@ The report shows:
 - Hierarchical nesting of operations
 - Metadata for each step (e.g., `ops_count`, `ops`)
 
-### step() {#step}
+### step() <a id="step"></a>
 
 Manually time a code block.
 
@@ -107,7 +107,7 @@ with profiler.step("custom_operation"):
     expensive_operation()
 ```
 
-### clear() {#clear}
+### clear() <a id="clear"></a>
 
 Clear all profiling data.
 
@@ -115,7 +115,7 @@ Clear all profiling data.
 profiler.clear()
 ```
 
-### summary() {#summary}
+### summary() <a id="summary"></a>
 
 Get a dictionary of step names to durations (ms).
 
@@ -138,9 +138,9 @@ Total Execution.SQL Segment 1.Result to DataFrame: 1.74ms
 
 ---
 
-## Understanding the Report {#understanding}
+## Understanding the Report <a id="understanding"></a>
 
-### Step Names {#step-names}
+### Step Names <a id="step-names"></a>
 
 | Step Name | Description |
 |-----------|-------------|
@@ -152,13 +152,13 @@ Total Execution.SQL Segment 1.Result to DataFrame: 1.74ms
 | `Cache Check` | Checking query cache |
 | `Cache Write` | Writing results to cache |
 
-### Duration {#duration}
+### Duration <a id="duration"></a>
 
 - **Planning steps** (Query Planning): Usually fast
 - **Execution steps** (SQL Execution): Where actual work happens
 - **Transfer steps** (Result to DataFrame): Converting data to pandas
 
-### Identifying Bottlenecks {#bottlenecks}
+### Identifying Bottlenecks <a id="bottlenecks"></a>
 
 ```text
 ======================================================================
@@ -176,9 +176,9 @@ EXECUTION PROFILE
 
 ---
 
-## Profiling Patterns {#patterns}
+## Profiling Patterns <a id="patterns"></a>
 
-### Profile a Single Query {#single-query}
+### Profile a Single Query <a id="single-query"></a>
 
 ```python
 config.enable_profiling()
@@ -192,7 +192,7 @@ result = ds.filter(...).groupby(...).agg(...).to_df()
 print(profiler.report())
 ```
 
-### Profile Multiple Queries {#multiple-queries}
+### Profile Multiple Queries <a id="multiple-queries"></a>
 
 ```python
 config.enable_profiling()
@@ -210,7 +210,7 @@ with profiler.step("Query 2"):
 print(profiler.report())
 ```
 
-### Compare Approaches {#compare}
+### Compare Approaches <a id="compare"></a>
 
 ```python
 profiler = get_profiler()
@@ -236,30 +236,30 @@ print(f"Winner: {'Approach 1' if time1 < time2 else 'Approach 2'}")
 
 ---
 
-## Optimization Tips {#optimization}
+## Optimization Tips <a id="optimization"></a>
 
-### 1. Check SQL Execution Time {#check-sql}
+### 1. Check SQL Execution Time <a id="check-sql"></a>
 
 If `SQL execution` is the bottleneck:
 - Add more filters to reduce data
 - Use Parquet instead of CSV
 - Check for proper indexes (for database sources)
 
-### 2. Check I/O Time {#check-io}
+### 2. Check I/O Time <a id="check-io"></a>
 
 If `read_csv` or `read_parquet` is the bottleneck:
 - Use Parquet (columnar, compressed)
 - Read only needed columns
 - Filter at source if possible
 
-### 3. Check Data Transfer {#check-transfer}
+### 3. Check Data Transfer <a id="check-transfer"></a>
 
 If `to_df` is slow:
 - Result set may be too large
 - Add more filters or limit
 - Use `head()` for previewing
 
-### 4. Compare Engines {#compare-engines}
+### 4. Compare Engines <a id="compare-engines"></a>
 
 ```python
 from chdb.datastore.config import config
@@ -282,9 +282,9 @@ print(f"pandas: {time_pandas:.2f}ms")
 
 ---
 
-## Best Practices {#best-practices}
+## Best Practices <a id="best-practices"></a>
 
-### 1. Profile Before Optimizing {#best-practice-1}
+### 1. Profile Before Optimizing <a id="best-practice-1"></a>
 
 ```python
 # Don't guess - measure!
@@ -293,7 +293,7 @@ result = your_query.to_df()
 print(get_profiler().report())
 ```
 
-### 2. Clear Between Tests {#best-practice-2}
+### 2. Clear Between Tests <a id="best-practice-2"></a>
 
 ```python
 profiler.clear()  # Clear previous data
@@ -301,21 +301,21 @@ profiler.clear()  # Clear previous data
 print(profiler.report())
 ```
 
-### 3. Use min_duration_ms for Focus {#best-practice-3}
+### 3. Use min_duration_ms for Focus <a id="best-practice-3"></a>
 
 ```python
 # Only show operations >= 100ms
 profiler.report(min_duration_ms=100)
 ```
 
-### 4. Profile Representative Data {#best-practice-4}
+### 4. Profile Representative Data <a id="best-practice-4"></a>
 
 ```python
 # Profile with real-world data sizes
 # Small test data may not show real bottlenecks
 ```
 
-### 5. Disable in Production {#best-practice-5}
+### 5. Disable in Production <a id="best-practice-5"></a>
 
 ```python
 # Development
@@ -327,7 +327,7 @@ config.set_profiling_enabled(False)  # Avoid overhead
 
 ---
 
-## Example: Full Profiling Session {#example}
+## Example: Full Profiling Session <a id="example"></a>
 
 ```python
 from chdb import datastore as pd

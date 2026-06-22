@@ -7,41 +7,30 @@ doc_type: 'reference'
 ---
 
 Window functions let you perform calculations across a set of rows that are related to the current row.
-Some of the calculations that you can do are similar to those that can be done with an aggregate function, but a window function doesn't cause rows to be grouped into a single output - the individual rows are still returned.
+They can be used to perform calculations similar to those done with aggregate functions, but differ in that a window function doesn't cause rows to be grouped into a single output - rather, individual rows are still returned.
 
-## Standard window functions {#standard-window-functions}
+## Standard window functions <a id="standard-window-functions"></a>
 
-ClickHouse supports the standard grammar for defining windows and window functions. The table below indicates whether a feature is currently supported.
+ClickHouse supports the standard SQL grammar for windows and window functions.
+The table below shows which features are currently supported:
 
-| Feature                                                                  | Supported?                                                                                                                                                                       |
-|--------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| ad hoc window specification (`count(*) over (partition by id order by time desc)`) | ✅                                                                                                                                                                                  |
-| expressions involving window functions, e.g. `(count(*) over ()) / 2)`             | ✅                                                                                                                                                                                   |
-| `WINDOW` clause (`select ... from table window w as (partition by id)`)            | ✅                                                                                                                                                                                   |
-| `ROWS` frame                                                                       | ✅                                                                                                                                                                                   |
-| `RANGE` frame                                                                      | ✅ (the default)                                                                                                                                                                      |
-| `INTERVAL` syntax for `DateTime` `RANGE OFFSET` frame                              | ❌ (specify the number of seconds instead (`RANGE` works with any numeric type).)                                                                                                                                 |
-| `GROUPS` frame                                                                     | ❌                                                                                                                                                                               |
-| Calculating aggregate functions over a frame (`sum(value) over (order by time)`)   | ✅ (All aggregate functions are supported)                                                                                                                                                       |
-| `rank()`, `dense_rank()`, `row_number()`                                           | ✅ <br/>Alias: `denseRank()`                                                                                                                                                                                   |
-| `percent_rank()` | ✅  Efficiently computes the relative standing of a value within a partition in a dataset. This function effectively replaces the more verbose and computationally intensive manual SQL calculation expressed as `ifNull((rank() OVER(PARTITION BY x ORDER BY y) - 1) / nullif(count(1) OVER(PARTITION BY x) - 1, 0), 0)` <br/>Alias: `percentRank()`| 
-| `cume_dist()` | ✅  Computes the cumulative distribution of a value within a group of values. Returns the percentage of rows with values less than or equal to the current row's value. | 
-| `lag/lead(value, offset)`                                                          | ✅ <br/> You can also use one of the following workarounds:<br/> 1) `any(value) over (.... rows between <offset> preceding and <offset> preceding)`, or `following` for `lead` <br/> 2) `lagInFrame/leadInFrame`, which are analogous, but respect the window frame. To get behavior identical to `lag/lead`, use `rows between unbounded preceding and unbounded following`                                                                 |
-| ntile(buckets) | ✅ <br/> Specify window like, (partition by x order by y rows between unbounded preceding and unbounded following). |
+| Feature                                                                             | Supported? | Comment                                                                                                                                                                                                                                                                                                                                                                                   |
+|-------------------------------------------------------------------------------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Ad hoc window specification (`count(*) OVER (PARTITION BY id ORDER BY time DESC)`)  | ✅         |                                                                                                                                                                                                                                                                                                                                                                                           |
+| Expressions involving window functions, e.g. `(count(*) OVER ()) / 2`               | ✅         |                                                                                                                                                                                                                                                                                                                                                                                           |
+| `WINDOW` clause (`SELECT ... FROM table WINDOW w AS (PARTITION BY id)`)             | ✅         |                                                                                                                                                                                                                                                                                                                                                                                           |
+| `ROWS` frame                                                                        | ✅         |                                                                                                                                                                                                                                                                                                                                                                                           |
+| `RANGE` frame                                                                       | ✅         | Used by default when a frame is not specified explicitly (`RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`).                                                                                                                                                                                                                                                                           |
+| `INTERVAL` syntax for `DateTime` `RANGE OFFSET` frame                               | ❌         | Specify the number of seconds instead (`RANGE` works with any numeric type).                                                                                                                                                                                                                                                                                                              |
+| `GROUPS` frame                                                                      | ❌         |                                                                                                                                                                                                                                                                                                                                                                                           |
+| Calculating aggregate functions over a frame (`sum(value) OVER (ORDER BY time)`)    | ✅         | All aggregate functions are supported.                                                                                                                                                                                                                                                                                                                                                    |
+| `rank()`, `dense_rank()`/`denseRank()`, `row_number()`                              | ✅         |                                                                                                                                                                                                                                                                                                                                                                                           |
+| `percent_rank()`/`percentRank()`                                                    | ✅         | Efficiently computes the relative standing of a value within a partition. It replaces the more verbose and computationally intensive manual SQL calculation expressed as `ifNull((rank() OVER (PARTITION BY x ORDER BY y) - 1) / nullif(count(1) OVER (PARTITION BY x) - 1, 0), 0)`.                                                                                                      |
+| `cume_dist()`                                                                       | ✅         | Computes the cumulative distribution of a value within a group of values. Returns the percentage of rows with values less than or equal to the current row's value.                                                                                                                                                                                                                       |
+| `lag/lead(value, offset)`                                                           | ✅         | You can also use one of the following workarounds:<br/> 1) `any(value) OVER (... ROWS BETWEEN <offset> PRECEDING AND <offset> PRECEDING)`, or `FOLLOWING` instead of `PRECEDING` for `lead` <br/> 2) `lagInFrame/leadInFrame`, which are analogous but respect the window frame. To get behavior identical to `lag/lead`, use `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`. |
+| `ntile(buckets)`                                                                    | ✅         | Specify the window as, for example, `(PARTITION BY x ORDER BY y ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)`.                                                                                                                                                                                                                                                               |
 
-## ClickHouse-specific window functions {#clickhouse-specific-window-functions}
-
-There is also the following ClickHouse specific window function:
-
-### nonNegativeDerivative(metric_column, timestamp_column[, INTERVAL X UNITS]) {#nonnegativederivativemetric_column-timestamp_column-interval-x-units}
-
-Finds non-negative derivative for given `metric_column` by `timestamp_column`. 
-`INTERVAL` can be omitted, default is `INTERVAL 1 SECOND`.
-The computed value is the following for each row:
-- `0` for 1st row,
-- ${\text{metric}_i - \text{metric}_{i-1} \over \text{timestamp}_i - \text{timestamp}_{i-1}}  * \text{interval}$ for $i_{th}$ row.
-
-## Syntax {#syntax}
+## Syntax <a id="syntax"></a>
 
 ```text
 aggregate_function (column_name)
@@ -77,24 +66,27 @@ WINDOW window_name as ([
 └─────────────────┘  <--- UNBOUNDED FOLLOWING (END of the PARTITION)
 ```
 
-### Functions {#functions}
+## Functions usable only as window functions <a id="functions"></a>
 
-These functions can be used only as a window function.
+The following functions can only be used as window functions. Most are standard SQL functions; `lagInFrame`, `leadInFrame`, and `nonNegativeDerivative` are ClickHouse extensions.
 
-- [`row_number()`](/reference/functions/window-functions/row_number) - Number the current row within its partition starting from 1.
-- [`first_value(x)`](/reference/functions/window-functions/first_value) - Return the first value evaluated within its ordered frame.
-- [`last_value(x)`](/reference/functions/window-functions/last_value) -    Return the last value evaluated within its ordered frame.
-- [`nth_value(x, offset)`](/reference/functions/window-functions/nth_value) - Return the first non-NULL value evaluated against the nth row (offset) in its ordered frame.
-- [`rank()`](/reference/functions/window-functions/rank) - Rank the current row within its partition with gaps.
-- [`dense_rank()`](/reference/functions/window-functions/dense_rank) - Rank the current row within its partition without gaps.
-- [`lagInFrame(x)`](/reference/functions/window-functions/lagInFrame) - Return a value evaluated at the row that is at a specified physical offset row before the current row within the ordered frame.
-- [`leadInFrame(x)`](/reference/functions/window-functions/leadInFrame) - Return a value evaluated at the row that is offset rows after the current row within the ordered frame.
+| Function                                                                                              | Description                                                                                                                            |
+|-------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| [`row_number()`](/reference/functions/window-functions/row_number)                                                                     | Number the current row within its partition starting from 1.                                                                           |
+| [`first_value(x)`](/reference/functions/window-functions/first_value)                                                                  | Return the first value evaluated within its ordered frame.                                                                             |
+| [`last_value(x)`](/reference/functions/window-functions/last_value)                                                                    | Return the last value evaluated within its ordered frame.                                                                              |
+| [`nth_value(x, offset)`](/reference/functions/window-functions/nth_value)                                                              | Return the first non-NULL value evaluated against the nth row (offset) in its ordered frame.                                           |
+| [`rank()`](/reference/functions/window-functions/rank)                                                                                 | Rank the current row within its partition with gaps.                                                                                   |
+| [`dense_rank()`](/reference/functions/window-functions/dense_rank)                                                                     | Rank the current row within its partition without gaps.                                                                                |
+| [`lagInFrame(x)`](/reference/functions/window-functions/lagInFrame)                                                                    | Return a value evaluated at the row that is at a specified physical offset row before the current row within the ordered frame.        |
+| [`leadInFrame(x)`](/reference/functions/window-functions/leadInFrame)                                                                  | Return a value evaluated at the row that is offset rows after the current row within the ordered frame.                                |
+| [`nonNegativeDerivative(metric_column, timestamp_column[, INTERVAL X UNITS])`](/reference/functions/window-functions/nonNegativeDerivative) | Compute the non-negative derivative of `metric_column` with respect to `timestamp_column`. Specific to ClickHouse.               |
 
-## Examples {#examples}
+## Examples <a id="examples"></a>
 
 Let's have a look at some examples of how window functions can be used.
 
-### Numbering rows {#numbering-rows}
+### Numbering rows <a id="numbering-rows"></a>
 
 ```sql
 CREATE TABLE salaries
@@ -152,7 +144,7 @@ FROM salaries;
 └─────────────────┴────────┴─────┴──────┴───────────┘
 ```
 
-### Aggregation functions {#aggregation-functions}
+### Aggregation functions <a id="aggregation-functions"></a>
 
 Compare each player's salary to the average for their team.
 
@@ -198,7 +190,7 @@ FROM salaries;
 └─────────────────┴────────┴───────────────────────────┴─────────┴────────┘
 ```
 
-### Partitioning by column {#partitioning-by-column}
+### Partitioning by column <a id="partitioning-by-column"></a>
 
 ```sql
 CREATE TABLE wf_partition
@@ -231,7 +223,7 @@ ORDER BY
 └──────────┴───────┴───────┴──────────────┘
 ```
 
-### Frame bounding {#frame-bounding}
+### Frame bounding <a id="frame-bounding"></a>
 
 ```sql
 CREATE TABLE wf_frame
@@ -514,11 +506,11 @@ ORDER BY
 └────────────────┴──────────────┘
 ```
 
-## Real world examples {#real-world-examples}
+## Real world examples <a id="real-world-examples"></a>
 
 The following examples solve common real-world problems.
 
-### Maximum/total salary per department {#maximumtotal-salary-per-department}
+### Maximum/total salary per department <a id="maximumtotal-salary-per-department"></a>
 
 ```sql
 CREATE TABLE employees
@@ -574,7 +566,7 @@ FROM
 └────────────┴──────┴────────┴────────────────────┴──────────────────────┴──────────────────┘
 ```
 
-### Cumulative sum {#cumulative-sum}
+### Cumulative sum <a id="cumulative-sum"></a>
 
 ```sql
 CREATE TABLE warehouse
@@ -615,7 +607,7 @@ ORDER BY
 └───────┴─────────────────────┴───────┴───────────────┘
 ```
 
-### Moving / sliding average (per 3 rows) {#moving--sliding-average-per-3-rows}
+### Moving / sliding average (per 3 rows) <a id="moving--sliding-average-per-3-rows"></a>
 
 ```sql
 CREATE TABLE sensors
@@ -663,7 +655,7 @@ ORDER BY
 └──────────┴─────────────────────┴───────┴───────────────────┘
 ```
 
-### Moving / sliding average (per 10 seconds) {#moving--sliding-average-per-10-seconds}
+### Moving / sliding average (per 10 seconds) <a id="moving--sliding-average-per-10-seconds"></a>
 
 ```sql
 SELECT
@@ -689,7 +681,7 @@ ORDER BY
 └──────────┴─────────────────────┴───────┴────────────────────────────┘
 ```
 
-### Moving / sliding average (per 10 days) {#moving--sliding-average-per-10-days}
+### Moving / sliding average (per 10 days) <a id="moving--sliding-average-per-10-days"></a>
 
 Temperature is stored with second precision, but using `Range` and `ORDER BY toDate(ts)` we form a frame with the size of 10 units, and because of `toDate(ts)` the unit is a day.
 
@@ -744,15 +736,15 @@ ORDER BY
 └──────────────┴─────────────────────┴───────┴─────────────────────────┘
 ```
 
-## References {#references}
+## References <a id="references"></a>
 
-### GitHub Issues {#github-issues}
+### GitHub Issues <a id="github-issues"></a>
 
 The roadmap for the initial support of window functions is [in this issue](https://github.com/ClickHouse/ClickHouse/issues/18097).
 
 All GitHub issues related to window functions have the [comp-window-functions](https://github.com/ClickHouse/ClickHouse/labels/comp-window-functions) tag.
 
-### Tests {#tests}
+### Tests <a id="tests"></a>
 
 These tests contain the examples of the currently supported grammar:
 
@@ -760,7 +752,7 @@ https://github.com/ClickHouse/ClickHouse/blob/master/tests/performance/window_fu
 
 https://github.com/ClickHouse/ClickHouse/blob/master/tests/queries/0_stateless/01591_window_functions.sql
 
-### Postgres Docs {#postgres-docs}
+### Postgres Docs <a id="postgres-docs"></a>
 
 https://www.postgresql.org/docs/current/sql-select.html#SQL-WINDOW
 
@@ -770,7 +762,7 @@ https://www.postgresql.org/docs/devel/functions-window.html
 
 https://www.postgresql.org/docs/devel/tutorial-window.html
 
-### MySQL Docs {#mysql-docs}
+### MySQL Docs <a id="mysql-docs"></a>
 
 https://dev.mysql.com/doc/refman/8.0/en/window-function-descriptions.html
 
@@ -778,7 +770,7 @@ https://dev.mysql.com/doc/refman/8.0/en/window-functions-usage.html
 
 https://dev.mysql.com/doc/refman/8.0/en/window-functions-frames.html
 
-## Related Content {#related-content}
+## Related Content <a id="related-content"></a>
 
 - Blog: [Working with time series data in ClickHouse](https://clickhouse.com/blog/working-with-time-series-data-and-functions-ClickHouse)
 - Blog: [Window and array functions for Git commit sequences](https://clickhouse.com/blog/clickhouse-window-array-functions-git-commits)

@@ -16,14 +16,14 @@ You can sign up for the Private Preview waitlist [here](https://clickhouse.com/c
 
 This article describes the GCP IAM permissions ClickPipes requires to authenticate with Google Cloud Pub/Sub and consume data from your topics, and how to set up a service account that grants exactly those permissions.
 
-## Prerequisites {#prerequisite}
+## Prerequisites <a id="prerequisite"></a>
 
 To follow this guide, you will need:
 - An active ClickHouse Cloud service
 - A GCP project containing the Pub/Sub topic you want to ingest from
 - IAM permissions in that project to create service accounts and grant roles
 
-## Authentication model {#authentication-model}
+## Authentication model <a id="authentication-model"></a>
 
 ClickPipes for Pub/Sub authenticates with GCP using a [service account JSON key](https://cloud.google.com/iam/docs/keys-create-delete). When you create a pipe, you upload the key file; ClickPipes encrypts it at rest and uses it at runtime to:
 
@@ -34,11 +34,11 @@ ClickPipes for Pub/Sub authenticates with GCP using a [service account JSON key]
 
 There is no workload identity or inline credential paste option — the service account JSON key is the only supported authentication method today.
 
-## Required permissions {#required-permissions}
+## Required permissions <a id="required-permissions"></a>
 
 ClickPipes requires the following IAM permissions on the GCP project that owns the topic. They cover the full pipe lifecycle: discovery (topic listing, validation, sampling), subscription management, steady-state ingestion, and cleanup.
 
-### Topic access (discovery and validation) {#topic-access}
+### Topic access (discovery and validation) <a id="topic-access"></a>
 
 | Permission                          | Purpose                                                                          |
 |-------------------------------------|----------------------------------------------------------------------------------|
@@ -46,7 +46,7 @@ ClickPipes requires the following IAM permissions on the GCP project that owns t
 | `pubsub.topics.get`                 | Validate topic existence and retrieve schema settings                            |
 | `pubsub.topics.attachSubscription`  | Required on the **topic** when creating a subscription against it                |
 
-### Subscription lifecycle (discovery and ingestion) {#subscription-lifecycle}
+### Subscription lifecycle (discovery and ingestion) <a id="subscription-lifecycle"></a>
 
 | Permission                       | Purpose                                                                                            |
 |----------------------------------|----------------------------------------------------------------------------------------------------|
@@ -55,13 +55,13 @@ ClickPipes requires the following IAM permissions on the GCP project that owns t
 | `pubsub.subscriptions.delete`    | Clean up ephemeral discovery subscriptions and delete the managed subscription on pipe deletion    |
 | `pubsub.subscriptions.consume`   | `Receive()`, `Ack()`, `Nack()`, and seek-to-timestamp operations                                    |
 
-### Schema access (optional — only for native Avro/Protobuf topics) {#schema-access}
+### Schema access (optional — only for native Avro/Protobuf topics) <a id="schema-access"></a>
 
 | Permission           | Purpose                                                          |
 |----------------------|------------------------------------------------------------------|
 | `pubsub.schemas.get` | Retrieve native schema definitions from the Pub/Sub schema registry |
 
-## Predefined roles {#predefined-roles}
+## Predefined roles <a id="predefined-roles"></a>
 
 | Role                                                                                                | Sufficient? | Notes                                                                                                                                       |
 |-----------------------------------------------------------------------------------------------------|-------------|---------------------------------------------------------------------------------------------------------------------------------------------|
@@ -70,9 +70,9 @@ ClickPipes requires the following IAM permissions on the GCP project that owns t
 | [`roles/pubsub.viewer`](https://cloud.google.com/iam/docs/understanding-roles#pubsub.viewer)        | **No**      | Read-only — no subscription management or consumption.                                                                                       |
 | Custom role *(recommended)*                                                                         | Yes         | Use the seven core permissions above (plus optional `schemas.get`) for least-privilege access.                                              |
 
-## Setup {#setup}
+## Setup <a id="setup"></a>
 
-### Create a custom role (recommended) {#create-custom-role}
+### Create a custom role (recommended) <a id="create-custom-role"></a>
 
 For least-privilege access, create a custom role with exactly the permissions ClickPipes needs.
 
@@ -97,7 +97,7 @@ Append `pubsub.schemas.get` to the `--permissions` list if you ingest from topic
 
 If you prefer to skip the custom role, you can grant `roles/pubsub.editor` instead.
 
-### Create a service account {#create-service-account}
+### Create a service account <a id="create-service-account"></a>
 
 Create a dedicated service account for the ClickPipe:
 
@@ -107,7 +107,7 @@ gcloud iam service-accounts create clickpipes-pubsub \
   --display-name="ClickPipes Pub/Sub Ingestion"
 ```
 
-### Grant the role to the service account {#grant-role}
+### Grant the role to the service account <a id="grant-role"></a>
 
 Bind the role you created (or `roles/pubsub.editor`) to the service account at the project level:
 
@@ -117,7 +117,7 @@ gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
   --role="projects/YOUR_PROJECT_ID/roles/clickpipes.pubsub.ingestion"
 ```
 
-### Create and download a service account key {#create-key}
+### Create and download a service account key <a id="create-key"></a>
 
 Create a JSON key for the service account and download it locally:
 
@@ -134,7 +134,7 @@ You will upload this `clickpipes-pubsub-key.json` file in the ClickPipes UI when
 Service account keys grant access to your GCP project. Store the file securely, do not commit it to source control, and rotate it periodically. ClickPipes encrypts the key at rest after upload.
 </Info>
 
-## Notes {#notes}
+## Notes <a id="notes"></a>
 
 - `pubsub.topics.attachSubscription` is required on the **topic resource**, not the subscription. This is commonly missed when granting only subscription-level permissions.
 - If your topic does not use a native Pub/Sub schema (Avro or Protobuf), the `pubsub.schemas.get` permission is not needed.

@@ -3,14 +3,14 @@ sidebarTitle: 'Stored procedures & query parameters'
 keywords: ['clickhouse', 'stored procedures', 'prepared statements', 'query parameters', 'UDF', 'parameterized views']
 description: 'Guide on stored procedures, prepared statements, and query parameters in ClickHouse'
 slug: /guides/developer/stored-procedures-and-prepared-statements
-title: Stored procedures and query parameters in ClickHouse
+title: 'Stored procedures and query parameters in ClickHouse'
 doc_type: 'guide'
 ---
 
 If you're coming from a traditional relational database, you may be looking for stored procedures and prepared statements in ClickHouse.
 This guide explains ClickHouse's approach to these concepts and provides recommended alternatives.
 
-## Alternatives to stored procedures in ClickHouse {#alternatives-to-stored-procedures}
+## Alternatives to stored procedures in ClickHouse <a id="alternatives-to-stored-procedures"></a>
 
 ClickHouse doesn't support traditional stored procedures with control flow logic (`IF`/`ELSE`, loops, etc.).
 This is an intentional design decision based on ClickHouse's architecture as an analytical database.
@@ -23,11 +23,11 @@ ClickHouse is optimized for:
 
 Stored procedures with procedural logic work against these optimizations. Instead, ClickHouse provides alternatives that align with its strengths.
 
-### User-Defined Functions (UDFs) {#user-defined-functions}
+### User-Defined Functions (UDFs) <a id="user-defined-functions"></a>
 
 User-Defined Functions let you encapsulate reusable logic without control flow. ClickHouse supports two types:
 
-#### Lambda-based UDFs {#lambda-based-udfs}
+#### Lambda-based UDFs <a id="lambda-based-udfs"></a>
 
 Create functions using SQL expressions and lambda syntax:
 
@@ -99,7 +99,7 @@ SELECT format_phone('5551234567');
 
 See [`CREATE FUNCTION`](/reference/statements/create/function) for complete syntax.
 
-#### Executable UDFs {#executable-udfs}
+#### Executable UDFs <a id="executable-udfs"></a>
 
 For more complex logic, use executable UDFs that call external programs:
 
@@ -131,7 +131,7 @@ Executable UDFs can implement arbitrary logic in any language (Python, Node.js, 
 
 See [Executable UDFs](/reference/functions/regular-functions/udf) for details.
 
-### Parameterized views {#parameterized-views}
+### Parameterized views <a id="parameterized-views"></a>
 
 Parameterized views act like functions that return datasets.
 They're ideal for reusable queries with dynamic filtering:
@@ -185,7 +185,7 @@ FROM sales_by_date(start_date='2024-01-01', end_date='2024-01-31')
 WHERE product_id = 12345;
 ```
 
-#### Common use cases {#common-use-cases}
+#### Common use cases <a id="common-use-cases"></a>
 - Dynamic date range filtering
 - User-specific data slicing
 - [Multi-tenant data access](/products/cloud/guides/best-practices/multitenancy)
@@ -229,7 +229,7 @@ SELECT * FROM top_products_by_category(
 
 See the [Parameterized Views](/reference/statements/create/view#parameterized-view) section for more information.
 
-### Materialized views {#materialized-views}
+### Materialized views <a id="materialized-views"></a>
 
 Materialized views are ideal for pre-computing expensive aggregations that would traditionally be done in stored procedures. If you're coming from a traditional database, think of a materialized view as an **INSERT trigger** that automatically transforms and aggregates data as it's inserted into the source table:
 
@@ -282,7 +282,7 @@ WHERE date BETWEEN '2024-01-01' AND '2024-01-31'
 GROUP BY user_id;
 ```
 
-#### Refreshable materialized views {#refreshable-materialized-views}
+#### Refreshable materialized views <a id="refreshable-materialized-views"></a>
 
 For scheduled batch processing (like nightly stored procedures):
 
@@ -308,12 +308,12 @@ WHERE month = toStartOfMonth(today());
 
 See [Cascading Materialized Views](/concepts/features/materialized-views/cascading-materialized-views) for advanced patterns.
 
-### External orchestration {#external-orchestration}
+### External orchestration <a id="external-orchestration"></a>
 
 For complex business logic, ETL workflows, or multi-step processes, it's always possible to implement logic outside ClickHouse,
 using language clients.
 
-#### Using application code {#using-application-code}
+#### Using application code <a id="using-application-code"></a>
 
 Here's a side-by-side comparison showing how a MySQL stored procedure translates to application code with ClickHouse:
 
@@ -549,7 +549,7 @@ print(f"Status: {status}, Loyalty Points: {points}")
 
 <br/>
 
-#### Key differences {#key-differences}
+#### Key differences <a id="key-differences"></a>
 
 1. **Control flow** - MySQL stored procedure uses `IF/ELSE`, `WHILE` loops. In ClickHouse, implement this logic in your application code (Python, Java, etc.)
 2. **Transactions** - MySQL supports `BEGIN/COMMIT/ROLLBACK` for ACID transactions. ClickHouse is an analytical database optimized for append-only workloads, not transactional updates
@@ -564,7 +564,7 @@ print(f"Status: {status}, Loyalty Points: {points}")
 - **Hybrid architecture** → Use both! Stream transactional data from OLTP to ClickHouse for analytics
 </Tip>
 
-#### Using workflow orchestration tools {#using-workflow-orchestration-tools}
+#### Using workflow orchestration tools <a id="using-workflow-orchestration-tools"></a>
 
 - **Apache Airflow** - Schedule and monitor complex DAGs of ClickHouse queries
 - **dbt** - Transform data with SQL-based workflows
@@ -579,15 +579,15 @@ print(f"Status: {status}, Loyalty Points: {points}")
 - Monitoring and alerting
 - More flexible scheduling
 
-## Alternatives to prepared statements in ClickHouse {#alternatives-to-prepared-statements-in-clickhouse}
+## Alternatives to prepared statements in ClickHouse <a id="alternatives-to-prepared-statements-in-clickhouse"></a>
 
 While ClickHouse doesn't have traditional "prepared statements" in the RDBMS sense, it provides **query parameters** that serve the same purpose: safe, parameterized queries that prevent SQL injection.
 
-### Syntax {#query-parameters-syntax}
+### Syntax <a id="query-parameters-syntax"></a>
 
 There are two ways to define query parameters:
 
-#### Method 1: using `SET` {#method-1-using-set}
+#### Method 1: using `SET` <a id="method-1-using-set"></a>
 
 <Accordion title="Example table and data">
 ```sql
@@ -637,7 +637,7 @@ WHERE user_id = {user_id: UInt64}
 GROUP BY event_name;
 ```
 
-#### Method 2: using CLI parameters {#method-2-using-cli-parameters}
+#### Method 2: using CLI parameters <a id="method-2-using-cli-parameters"></a>
 
 ```bash
 clickhouse-client \
@@ -649,14 +649,14 @@ clickhouse-client \
              AND event_date BETWEEN {start_date: Date} AND {end_date: Date}"
 ```
 
-### Parameter syntax {#parameter-syntax}
+### Parameter syntax <a id="parameter-syntax"></a>
 
 Parameters are referenced using: `{parameter_name: DataType}`
 
 - `parameter_name` - The name of the parameter (without the `param_` prefix)
 - `DataType` - The ClickHouse data type to cast the parameter to
 
-### Data type examples {#data-type-examples}
+### Data type examples <a id="data-type-examples"></a>
 
 <Accordion title="Tables and sample data for example">
 ```sql
@@ -773,10 +773,10 @@ SELECT count() FROM {table: Identifier};
 </Tabs>
 
 <br/>
-For use of query parameters in [language clients](/integrations/language-clients), refer to the documentation for
+For use of query parameters in [language clients](/integrations/language-clients/index), refer to the documentation for
 the specific language client you're interested in.
 
-### Limitations of query parameters {#limitations-of-query-parameters}
+### Limitations of query parameters <a id="limitations-of-query-parameters"></a>
 
 Query parameters are **not general text substitutions**. They have specific limitations:
 
@@ -814,7 +814,7 @@ ALTER TABLE {table: Identifier} ADD COLUMN new_col String;  -- NOT SUPPORTED
 {statements: String};  -- NOT SUPPORTED
 ```
 
-### Security best practices {#security-best-practices}
+### Security best practices <a id="security-best-practices"></a>
 
 **Always use query parameters for user input:**
 
@@ -850,7 +850,7 @@ def get_user_orders(user_id: int, start_date: str):
     )
 ```
 
-### MySQL protocol prepared statements {#mysql-protocol-prepared-statements}
+### MySQL protocol prepared statements <a id="mysql-protocol-prepared-statements"></a>
 
 ClickHouse's [MySQL interface](/concepts/features/interfaces/mysql) includes minimal support for prepared statements (`COM_STMT_PREPARE`, `COM_STMT_EXECUTE`, `COM_STMT_CLOSE`), primarily to enable connectivity with tools like Tableau Online that wrap queries in prepared statements.
 
@@ -880,9 +880,9 @@ SELECT * FROM users WHERE id = {user_id: UInt64};
 
 For more details, see the [MySQL Interface documentation](/concepts/features/interfaces/mysql) and the [blog post on MySQL support](https://clickhouse.com/blog/mysql-support-in-clickhouse-the-journey).
 
-## Summary {#summary}
+## Summary <a id="summary"></a>
 
-### ClickHouse alternatives to stored procedures {#summary-stored-procedures}
+### ClickHouse alternatives to stored procedures <a id="summary-stored-procedures"></a>
 
 | Traditional Stored Procedure Pattern | ClickHouse Alternative                                                      |
 |--------------------------------------|-----------------------------------------------------------------------------|
@@ -893,7 +893,7 @@ For more details, see the [MySQL Interface documentation](/concepts/features/int
 | Complex multi-step ETL | Chained materialized views or external orchestration (Python, Airflow, dbt) |
 | Business logic with control flow | Application code                                                            |
 
-### Use of query parameters {#summary-query-parameters}
+### Use of query parameters <a id="summary-query-parameters"></a>
 
 Query parameters can be used for:
 - Preventing SQL injection
@@ -901,7 +901,7 @@ Query parameters can be used for:
 - Dynamic filtering in applications
 - Reusable query templates
 
-## Related documentation {#related-documentation}
+## Related documentation <a id="related-documentation"></a>
 
 - [`CREATE FUNCTION`](/reference/statements/create/function) - User-Defined Functions
 - [`CREATE VIEW`](/reference/statements/create/view) - Views including parameterized and materialized

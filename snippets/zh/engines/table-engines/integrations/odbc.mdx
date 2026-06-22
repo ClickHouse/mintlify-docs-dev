@@ -1,22 +1,21 @@
 ---
-description: '允许 ClickHouse 通过 ODBC 连接到外部数据库。'
+description: 'Allows ClickHouse to connect to external databases via ODBC.'
 sidebarTitle: 'ODBC'
 slug: /engines/table-engines/integrations/odbc
-title: 'ODBC 表引擎'
+title: 'ODBC table engine'
 doc_type: 'reference'
 ---
 
-<CloudNotSupportedBadge />
 
-允许 ClickHouse 通过 [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity) 连接到外部数据库。
+<CloudNotSupportedBadge/>
 
-为安全地实现 ODBC 连接，ClickHouse 使用单独的程序 `clickhouse-odbc-bridge`。如果直接由 `clickhouse-server` 加载 ODBC 驱动程序，驱动程序问题可能会导致 ClickHouse 服务器崩溃。ClickHouse 会在需要时自动启动 `clickhouse-odbc-bridge`。ODBC bridge 程序与 `clickhouse-server` 来自同一个安装包。
+Allows ClickHouse to connect to external databases via [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity).
 
-此引擎支持 [Nullable](/zh/reference/data-types/nullable) 数据类型。
+To safely implement ODBC connections, ClickHouse uses a separate program `clickhouse-odbc-bridge`. If the ODBC driver is loaded directly from `clickhouse-server`, driver problems can crash the ClickHouse server. ClickHouse automatically starts `clickhouse-odbc-bridge` when it is required. The ODBC bridge program is installed from the same package as the `clickhouse-server`.
 
-<div id="creating-a-table">
-  ## 创建表
-</div>
+This engine supports the [Nullable](../../../sql-reference/data-types/nullable.md){/* MIGRATE: unresolved relative link */} data type.
+
+## Creating a table <a id="creating-a-table"></a>
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -28,33 +27,31 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 ENGINE = ODBC(datasource, external_database, external_table)
 ```
 
-参见 [CREATE TABLE](/zh/reference/statements/create/table) 查询的详细说明。
+See a detailed description of the [CREATE TABLE](/sql-reference/statements/create/table){/* MIGRATE: unknown slug */} query.
 
-表结构可以与源表的结构不同：
+The table structure can differ from the source table structure:
 
-* 列名应与源表中的列名相同，但也可以只使用其中部分列，且顺序不限。
-* 列类型可以与源表中的不同。ClickHouse 会尝试将值 [转换](/zh/reference/functions/regular-functions/type-conversion-functions#CAST) 为 ClickHouse 数据类型。
-* [external&#95;table&#95;functions&#95;use&#95;nulls](/zh/reference/settings/session-settings#external_table_functions_use_nulls) 设置定义了如何处理 Nullable 列。默认值：1。如果为 0，表函数不会生成 Nullable 列，而是插入默认值来代替 NULL。此规则也适用于数组中的 NULL 值。
+- Column names should be the same as in the source table, but you can use just some of these columns and in any order.
+- Column types may differ from those in the source table. ClickHouse tries to [cast](/sql-reference/functions/type-conversion-functions#CAST){/* MIGRATE: unknown slug */} values to the ClickHouse data types.
+- The [external_table_functions_use_nulls](/operations/settings/settings#external_table_functions_use_nulls){/* MIGRATE: unknown slug */} setting defines how to handle Nullable columns. Default value: 1. If 0, the table function does not make Nullable columns and inserts default values instead of nulls. This is also applicable for NULL values inside arrays.
 
-**引擎参数**
+**Engine Parameters**
 
-* `datasource` — `odbc.ini` 文件中包含连接设置的节名称。
-* `external_database` — 外部 DBMS 中数据库的名称。
-* `external_table` — `external_database` 中表的名称。
+- `datasource` — Name of the section with connection settings in the `odbc.ini` file.
+- `external_database` — Name of a database in an external DBMS.
+- `external_table` — Name of a table in the `external_database`.
 
-这些参数也可以通过[命名集合](/zh/concepts/features/configuration/server-config/named-collections)传递。
+These parameters can also be passed using [named collections](/operations/named-collections.md){/* MIGRATE: unknown slug */}.
 
-<div id="usage-example">
-  ## 使用示例
-</div>
+## Usage example <a id="usage-example"></a>
 
-**通过 ODBC 从本地安装的 MySQL 获取数据**
+**Retrieving data from the local MySQL installation via ODBC**
 
-本示例已在 Ubuntu Linux 18.04 和 MySQL 服务器 5.7 上测试通过。
+This example is checked for Ubuntu Linux 18.04 and MySQL server 5.7.
 
-请确保已安装 unixODBC 和 MySQL Connector。
+Ensure that unixODBC and MySQL Connector are installed.
 
-默认情况下 (如果是通过软件包安装) ，ClickHouse 会以用户 `clickhouse` 的身份启动。因此，你需要在 MySQL 服务器中创建并配置该用户。
+By default (if installed from packages), ClickHouse starts as user `clickhouse`. Thus, you need to create and configure this user in the MySQL server.
 
 ```bash
 $ sudo mysql
@@ -65,7 +62,7 @@ mysql> CREATE USER 'clickhouse'@'localhost' IDENTIFIED BY 'clickhouse';
 mysql> GRANT ALL PRIVILEGES ON *.* TO 'clickhouse'@'localhost' WITH GRANT OPTION;
 ```
 
-然后在 `/etc/odbc.ini` 中配置连接。
+Then configure the connection in `/etc/odbc.ini`.
 
 ```bash
 $ cat /etc/odbc.ini
@@ -78,7 +75,7 @@ USER = clickhouse
 PASSWORD = clickhouse
 ```
 
-您可以使用 unixODBC 安装包中的 `isql` 工具来检查连接。
+You can check the connection using the `isql` utility from the unixODBC installation.
 
 ```bash
 $ isql -v mysqlconn
@@ -88,7 +85,7 @@ $ isql -v mysqlconn
 ...
 ```
 
-MySQL 中的表：
+Table in MySQL:
 
 ```text
 mysql> CREATE DATABASE test;
@@ -114,7 +111,7 @@ mysql> select * from test.test;
 1 row in set (0,00 sec)
 ```
 
-ClickHouse 中用于从 MySQL 表检索数据的表：
+Table in ClickHouse, retrieving data from the MySQL table:
 
 ```sql
 CREATE TABLE odbc_t
@@ -135,9 +132,7 @@ SELECT * FROM odbc_t
 └────────┴────────────────┘
 ```
 
-<div id="see-also">
-  ## 另见
-</div>
+## See also <a id="see-also"></a>
 
-* [ODBC 字典](/zh/reference/statements/create/dictionary/sources/odbc)
-* [ODBC 表函数](/zh/reference/functions/table-functions/odbc)
+- [ODBC dictionaries](/sql-reference/statements/create/dictionary/sources/odbc){/* MIGRATE: unknown slug */}
+- [ODBC table function](../../../sql-reference/table-functions/odbc.md){/* MIGRATE: unresolved relative link */}

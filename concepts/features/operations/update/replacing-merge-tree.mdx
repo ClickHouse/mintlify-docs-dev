@@ -12,7 +12,7 @@ import { Image } from "/snippets/components/Image.jsx";
 While transactional databases are optimized for transactional update and delete workloads, OLAP databases offer reduced guarantees for such operations. Instead, they optimize for immutable data inserted in batches for the benefit of significantly faster analytical queries. While ClickHouse offers update operations through mutations, as well as a lightweight means of deleting rows, its column-oriented structure means these operations should be scheduled with care, as described above. These operations are handled asynchronously, processed with a single thread, and require (in the case of updates) data to be rewritten on disk. They should thus not be used for high numbers of small changes.
 In order to process a stream of update and delete rows while avoiding the above usage patterns, we can use the ClickHouse table engine ReplacingMergeTree.
 
-## Automatic upserts of inserted rows {#automatic-upserts-of-inserted-rows}
+## Automatic upserts of inserted rows <a id="automatic-upserts-of-inserted-rows"></a>
 
 The [ReplacingMergeTree table engine](/reference/engines/table-engines/mergetree-family/replacingmergetree) allows update operations to be applied to rows, without needing to use inefficient `ALTER` or `DELETE` statements, by offering the ability for you to insert multiple copies of the same row and denote one as the latest version. A background process, in turn, asynchronously removes older versions of the same row, efficiently imitating an update operation through the use of immutable inserts.
 This relies on the ability of the table engine to identify duplicate rows. This is achieved using the `ORDER BY` clause to determine uniqueness, i.e., if two rows have the same values for the columns specified in the `ORDER BY`, they're considered duplicates. A `version` column, specified when defining the table, allows the latest version of a row to be retained when two rows are identified as duplicates i.e. the row with the highest version value is kept.
@@ -51,7 +51,7 @@ We recommend pausing inserts once (1) is guaranteed and until this command and t
 
 > Tip: You may also be able to issue `OPTIMIZE FINAL CLEANUP` against selective partitions no longer subject to changes.
 
-## Choosing a primary/deduplication key {#choosing-a-primarydeduplication-key}
+## Choosing a primary/deduplication key <a id="choosing-a-primarydeduplication-key"></a>
 
 Above, we highlighted an important additional constraint that must also be satisfied in the case of the ReplacingMergeTree: the values of columns of the `ORDER BY` uniquely identify a row across changes. If migrating from a transactional database like Postgres, the original Postgres primary key should thus be included in the Clickhouse `ORDER BY` clause.
 
@@ -95,18 +95,24 @@ ORDER BY (PostTypeId, toDate(CreationDate), CreationDate, Id)
 
 We use an `ORDER BY` key of `(PostTypeId, toDate(CreationDate), CreationDate, Id)`. The `Id` column, unique for each post, ensures rows can be deduplicated. A `Version` and `Deleted` column are added to the schema as required.
 
-## Querying ReplacingMergeTree {#querying-replacingmergetree}
+## Querying ReplacingMergeTree <a id="querying-replacingmergetree"></a>
 
-At merge time, the ReplacingMergeTree identifies duplicate rows, using the values of the `ORDER BY` columns as a unique identifier, and either retains only the highest version or removes all duplicates if the latest version indicates a delete. This, however, offers eventual correctness only - it doesn't guarantee rows will be deduplicated, and you shouldn't rely on it. Queries can, therefore, produce incorrect answers due to update and delete rows being considered in queries.
+At merge time, the ReplacingMergeTree identifies duplicate rows, using the values of the `ORDER BY` columns as a unique identifier, and either retains only the highest version or removes all duplicates if the latest version indicates a delete. This, however, offers eventual correctness only - it doesn't guarantee rows will be deduplicated, and you shouldn't rely on it.
 
-To obtain correct answers, you will need to complement background merges with query time deduplication and deletion removal. This can be achieved using the `FINAL` operator.
+<Info>
+**Use FINAL to read deduplicated data**
+
+Because deduplication only happens during background merges, a plain `SELECT` can still return duplicate or deleted rows. To read correct results at query time, use the `FINAL` modifier, which completes deduplication and deletion removal as the query runs.
+</Info>
 
 Consider the posts table above. We can use the normal method of loading this dataset but specify a deleted and version column in addition to values 0. For example purposes, we load 10000 rows only.
 
 ```sql
 INSERT INTO stackoverflow.posts_updateable SELECT 0 AS Version, 0 AS Deleted, *
 FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/stackoverflow/parquet/posts/*.parquet') WHERE AnswerCount > 0 LIMIT 10000
+```
 
+```response
 0 rows in set. Elapsed: 1.980 sec. Processed 8.19 thousand rows, 3.52 MB (4.14 thousand rows/s., 1.78 MB/s.)
 ```
 
@@ -114,7 +120,9 @@ Let's confirm the number of rows:
 
 ```sql
 SELECT count() FROM stackoverflow.posts_updateable
+```
 
+```response
 ┌─count()─┐
 │   10000 │
 └─────────┘
@@ -153,7 +161,9 @@ INSERT INTO posts_updateable SELECT
 FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0
 LIMIT 5000
+```
 
+```response
 0 rows in set. Elapsed: 4.056 sec. Processed 1.42 million rows, 2.20 GB (349.63 thousand rows/s., 543.39 MB/s.)
 ```
 
@@ -188,7 +198,9 @@ INSERT INTO posts_updateable SELECT
 FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0 AND AnswerCount > 0
 LIMIT 1000
+```
 
+```response
 0 rows in set. Elapsed: 0.166 sec. Processed 135.53 thousand rows, 212.65 MB (816.30 thousand rows/s., 1.28 GB/s.)
 ```
 
@@ -197,7 +209,9 @@ The result of the above operations will be 16,000 rows i.e. 10,000 + 5000 + 1000
 ```sql
 SELECT count()
 FROM posts_updateable
+```
 
+```response
 ┌─count()─┐
 │   10000 │
 └─────────┘
@@ -210,7 +224,9 @@ Your results will vary depending on the merges that have occurred. We can see th
 SELECT count()
 FROM posts_updateable
 FINAL
+```
 
+```response
 ┌─count()─┐
 │    9000 │
 └─────────┘
@@ -219,7 +235,7 @@ FINAL
 Peak memory usage: 8.14 MiB.
 ```
 
-## FINAL performance {#final-performance}
+## FINAL performance <a id="final-performance"></a>
 
 The `FINAL` operator does have a small performance overhead on queries.
 This will be most noticeable when queries aren't filtering on primary key columns,
@@ -229,7 +245,7 @@ deduplication will be reduced.
 
 If the `WHERE` condition doesn't use a key column, ClickHouse doesn't currently utilize the `PREWHERE` optimization when using `FINAL`. This optimization aims to reduce the rows read for non-filtered columns. Examples of emulating this `PREWHERE` and thus potentially improving performance can be found [here](https://clickhouse.com/blog/clickhouse-postgresql-change-data-capture-cdc-part-1#final-performance).
 
-## Exploiting partitions with ReplacingMergeTree {#exploiting-partitions-with-replacingmergetree}
+## Exploiting partitions with ReplacingMergeTree <a id="exploiting-partitions-with-replacingmergetree"></a>
 
 Merging of data in ClickHouse occurs at a partition level. When using ReplacingMergeTree, we recommend users partition their table according to best practices, provided you can ensure this **partitioning key doesn't change for a row**. This will ensure updates pertaining to the same row will be sent to the same ClickHouse partition. You may reuse the same partition key as Postgres provided you adhere to the best practices outlined here.
 
@@ -250,7 +266,9 @@ ORDER BY (PostTypeId, toDate(CreationDate), CreationDate, Id)
 
 INSERT INTO stackoverflow.posts_no_part SELECT 0 AS Version, 0 AS Deleted, *
 FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/stackoverflow/parquet/posts/*.parquet')
+```
 
+```response
 0 rows in set. Elapsed: 182.895 sec. Processed 59.82 million rows, 38.07 GB (327.07 thousand rows/s., 208.17 MB/s.)
 ```
 
@@ -270,7 +288,9 @@ FROM posts_no_part
 FINAL
 GROUP BY year
 ORDER BY year ASC
+```
 
+```response
 ┌─year─┬─total_answers─┐
 │ 2008 │        371480 │
 ...
@@ -302,7 +322,9 @@ FROM posts_with_part
 FINAL
 GROUP BY year
 ORDER BY year ASC
+```
 
+```response
 ┌─year─┬─total_answers─┐
 │ 2008 │       387832  │
 │ 2009 │       1165506 │
@@ -317,15 +339,15 @@ ORDER BY year ASC
 
 As shown, partitioning has significantly improved query performance in this case by allowing the deduplication process to occur at a partition level in parallel.
 
-## Merge behavior considerations {#merge-behavior-considerations}
+## Merge behavior considerations <a id="merge-behavior-considerations"></a>
 
 ClickHouse's merge selection mechanism goes beyond simple merging of parts. Below, we examine this behavior in the context of ReplacingMergeTree, including configuration options for enabling more aggressive merging of older data and considerations for larger parts.
 
-### Merge selection logic {#merge-selection-logic}
+### Merge selection logic <a id="merge-selection-logic"></a>
 
 While merging aims to minimize the number of parts, it also balances this goal against the cost of write amplification. Consequently, some ranges of parts are excluded from merging if they would lead to excessive write amplification, based on internal calculations. This behavior helps prevent unnecessary resource usage and extends the lifespan of storage components.
 
-### Merging behavior on large parts {#merging-behavior-on-large-parts}
+### Merging behavior on large parts <a id="merging-behavior-on-large-parts"></a>
 
 The ReplacingMergeTree engine in ClickHouse is optimized for managing duplicate rows by merging data parts, keeping only the latest version of each row based on a specified unique key. However, when a merged part reaches the `max_bytes_to_merge_at_max_space_in_pool` threshold, it will no longer be selected for further merging, even if `min_age_to_force_merge_seconds` is set. As a result, automatic merges can no longer be relied upon to remove duplicates that may accumulate with ongoing data insertion.
 
@@ -333,11 +355,11 @@ To address this, you can invoke `OPTIMIZE FINAL` to manually merge parts and rem
 
 For a more sustainable solution that maintains performance, partitioning the table is recommended. This can help prevent data parts from reaching the maximum merge size and reduces the need for ongoing manual optimizations.
 
-### Partitioning and merging across partitions {#partitioning-and-merging-across-partitions}
+### Partitioning and merging across partitions <a id="partitioning-and-merging-across-partitions"></a>
 
 As discussed in Exploiting Partitions with ReplacingMergeTree, we recommend partitioning tables as a best practice. Partitioning isolates data for more efficient merges and avoids merging across partitions, particularly during query execution. This behavior is enhanced in versions from 23.12 onward: if the partition key is a prefix of the sorting key, merging across partitions isn't performed at query time, leading to faster query performance.
 
-### Tuning merges for better query performance {#tuning-merges-for-better-query-performance}
+### Tuning merges for better query performance <a id="tuning-merges-for-better-query-performance"></a>
 
 By default, `min_age_to_force_merge_seconds` and `min_age_to_force_merge_on_partition_only` are set to 0 and false, respectively, disabling these features. In this configuration, ClickHouse will apply standard merging behavior without forcing merges based on partition age.
 
@@ -345,7 +367,7 @@ If a value for `min_age_to_force_merge_seconds` is specified, ClickHouse will ig
 
 This behavior can be further tuned by setting `min_age_to_force_merge_on_partition_only=true`, requiring all parts in the partition to be older than `min_age_to_force_merge_seconds` for aggressive merging. This configuration allows older partitions to merge down to a single part over time, which consolidates data and maintains query performance.
 
-### Recommended settings {#recommended-settings}
+### Recommended settings <a id="recommended-settings"></a>
 
 <Warning>
 Tuning merge behavior is an advanced operation. We recommend consulting with ClickHouse support before enabling these settings in production workloads.

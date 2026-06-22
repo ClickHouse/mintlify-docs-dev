@@ -7,9 +7,9 @@ doc_type: 'guide'
 keywords: ['fivetran', 'clickhouse destination', 'troubleshooting', 'best practices', 'debugging']
 ---
 
-## Common errors {#common-errors}
+## Common errors <a id="common-errors"></a>
 
-### Grants test failed or operations are failing related to permissions {#grants-test-failed}
+### Grants test failed or operations are failing related to permissions <a id="grants-test-failed"></a>
 
 **Error message:**
 
@@ -31,7 +31,7 @@ Grant the required privileges directly to the Fivetran user:
 GRANT CURRENT GRANTS ON *.* TO fivetran_user;
 ```
 
-### Error while waiting for all mutations to be completed {#mutations-not-completed}
+### Error while waiting for all mutations to be completed <a id="mutations-not-completed"></a>
 
 **Error message:**
 
@@ -57,7 +57,7 @@ This can happen when:
 2. **Check cluster health**: Ensure all nodes are healthy.
 3. **Wait and retry**: Mutations eventually complete once the cluster is healthy. Fivetran will retry the sync automatically.
 
-### Column mismatch error {#column-mismatch-error}
+### Column mismatch error <a id="column-mismatch-error"></a>
 
 **Error message:**
 
@@ -84,7 +84,7 @@ column user_email was not found in the table definition. Table columns: ...; inp
 3. **Re-sync the table**: In the Fivetran dashboard, trigger a historical re-sync for the affected table.
 4. **Drop and re-create**: As a last resort, drop the destination table and let Fivetran re-create it during the next sync.
 
-### AST is too big (code 168) {#ast-too-big}
+### AST is too big (code 168) <a id="ast-too-big"></a>
 
 **Error message:**
 
@@ -104,7 +104,7 @@ Lower `mutation_batch_size` and `hard_delete_batch_size` in the [advanced config
 
 ---
 
-### Memory limit exceeded / OOM (code 241) {#memory-limit-exceeded}
+### Memory limit exceeded / OOM (code 241) <a id="memory-limit-exceeded"></a>
 
 **Error message:**
 
@@ -122,7 +122,7 @@ code: 241, message: (total) memory limit exceeded: would use 14.01 GiB
 
 ---
 
-### Unexpected EOF / Connection error {#unexpected-eof}
+### Unexpected EOF / Connection error <a id="unexpected-eof"></a>
 
 **Error message:**
 
@@ -145,7 +145,7 @@ Or `FAILURE_WITH_TASK` with no stack trace in Fivetran logs.
 
 ---
 
-### Can't map type UInt64 {#uint64-type-error}
+### Can't map type UInt64 <a id="uint64-type-error"></a>
 
 **Error message:**
 
@@ -163,7 +163,7 @@ cause: can't map type UInt64 to Fivetran types
 
 ---
 
-### No primary keys for table {#no-primary-keys}
+### No primary keys for table <a id="no-primary-keys"></a>
 
 **Error message:**
 
@@ -180,7 +180,7 @@ Failed to alter table ... cause: no primary keys for table
 
 ---
 
-### Role-based grants failing {#role-based-grants}
+### Role-based grants failing <a id="role-based-grants"></a>
 
 **Error message:**
 
@@ -205,9 +205,9 @@ GRANT CURRENT GRANTS ON *.* TO fivetran_user;
 
 ---
 
-## Best practices {#best-practices}
+## Best practices <a id="best-practices"></a>
 
-### Dedicated ClickHouse service for Fivetran {#dedicated-service}
+### Dedicated ClickHouse service for Fivetran <a id="dedicated-service"></a>
 
 In case of high ingestion load, consider using ClickHouse Cloud's [compute-compute separation](/products/cloud/features/infrastructure/warehouses) to create a dedicated service for Fivetran write workloads. This isolates ingestion from analytical queries and prevents resource contention.
 
@@ -216,7 +216,7 @@ For example, the following architecture can be used:
 - **Service A (writer)**: Fivetran destination + other ingestion tools (ClickPipes, Kafka connectors)
 - **Service B (reader)**: BI tools, dashboards, ad-hoc queries
 
-### Optimizing reading queries {#optimizing-reading-queries}
+### Optimizing reading queries <a id="optimizing-reading-queries"></a>
 
 ClickHouse uses `SharedReplacingMergeTree` for Fivetran destination tables, which is the version of the [`ReplacingMergeTree` table engine](/concepts/features/operations/update/replacing-merge-tree) in ClickHouse Cloud. Duplicate rows with the same primary key are normal — deduplication happens asynchronously during background merges. At read time, you need to be careful to avoid returning duplicate rows, as some rows may not have been deduplicated yet.
 
@@ -232,7 +232,7 @@ If those optimizations are not sufficient, you have additional options that avoi
 - If you want to query a numeric column that is always incrementing, [you can use `max(the_column)`](/concepts/features/operations/insert/deduplication#avoiding-final).
 - If you need to retrieve the latest value for some columns for a particular key, you can use [`argMax(the_column, _fivetran_id)`](https://clickhouse.com/blog/10-best-practice-tips#perfecting_replacingmergetree).
 
-### Primary key and ORDER BY optimization {#primary-key-optimization}
+### Primary key and ORDER BY optimization <a id="primary-key-optimization"></a>
 
 Fivetran replicates the source table's primary key as the ClickHouse `ORDER BY` clause. When the source has no PK, `_fivetran_id` (a UUID) becomes the sorting key, which can lead to poor query performance because ClickHouse builds its [sparse primary index](/guides/clickhouse/data-modelling/sparse-primary-indexes) from the `ORDER BY` columns.
 
@@ -252,13 +252,13 @@ Fivetran replicates the source table's primary key as the ClickHouse `ORDER BY` 
    Avoid incremental (non-refreshable) materialized views for Fivetran-managed tables. Because Fivetran issues `UPDATE` and `DELETE` operations to keep data in sync, incremental materialized views will not reflect these changes and will contain stale or incorrect data.
 </Note>
 
-### Don't manually modify Fivetran-managed tables {#dont-modify-tables}
+### Don't manually modify Fivetran-managed tables <a id="dont-modify-tables"></a>
 
 Avoid manual DDL changes (e.g., `ALTER TABLE ... MODIFY COLUMN`) to tables managed by Fivetran. The connector expects the schema it created. Manual changes can cause [type mapping errors](#uint64-type-error) and schema mismatch failures.
 
 Use materialized views for custom transformations.
 
-## Debugging operations {#debugging}
+## Debugging operations <a id="debugging"></a>
 
 When diagnosing failures:
 - Check the ClickHouse `system.query_log` for server-side issues.
@@ -266,11 +266,11 @@ When diagnosing failures:
 
 For connector bugs, [create a GitHub issue](https://github.com/ClickHouse/clickhouse-fivetran-destination/issues) or contact [ClickHouse Support](/resources/about/support).
 
-### Debugging Fivetran syncs {#debugging-fivetran-syncs}
+### Debugging Fivetran syncs <a id="debugging-fivetran-syncs"></a>
 
 Use the following queries to diagnose sync failures on the ClickHouse side.
 
-#### Check recent ClickHouse errors related to Fivetran {#check-errors}
+#### Check recent ClickHouse errors related to Fivetran <a id="check-errors"></a>
 
 ```sql
 SELECT event_time, query, exception_code, exception
@@ -281,7 +281,7 @@ ORDER BY event_time DESC
 LIMIT 50;
 ```
 
-#### Check recent Fivetran user activity {#check-activity}
+#### Check recent Fivetran user activity <a id="check-activity"></a>
 
 ```sql
 SELECT event_time, query_kind, query, exception_code, exception

@@ -23,7 +23,7 @@ Review this [basic tutorial on certificate usage](https://ubuntu.com/server/docs
 
 <Steps>
 <Step>
-## Create a ClickHouse Deployment {#1-create-a-clickhouse-deployment}
+## Create a ClickHouse Deployment <a id="1-create-a-clickhouse-deployment"></a>
 
 This guide was written using Ubuntu 20.04 and ClickHouse installed on the following hosts using the DEB package (using apt). The domain is `marsnet.local`:
 
@@ -38,7 +38,7 @@ View the [Quick Start](/get-started/setup/install) for more details on how to in
 </Note>
 </Step>
 <Step>
-## Create TLS certificates {#2-create-tls-certificates}
+## Create TLS certificates <a id="2-create-tls-certificates"></a>
 <Note>
 Using self-signed certificates are for demonstration purposes only and shouldn't used in production. Certificate requests should be created to be signed by the organization and validated using the CA chain that will be configured in the settings. However, these steps can be used to configure and test settings, then can be replaced by the actual certificates that will be used.
 </Note>
@@ -88,7 +88,7 @@ Using self-signed certificates are for demonstration purposes only and shouldn't
     ```
 </Step>
 <Step>
-## Create and Configure a directory to store certificates and keys. {#3-create-and-configure-a-directory-to-store-certificates-and-keys}
+## Create and Configure a directory to store certificates and keys. <a id="3-create-and-configure-a-directory-to-store-certificates-and-keys"></a>
 
 <Note>
 This must be done on each node. Use appropriate certificates and keys on each host.
@@ -119,7 +119,7 @@ This must be done on each node. Use appropriate certificates and keys on each ho
     ```
 </Step>
 <Step>
-## Configure the environment with basic clusters using ClickHouse Keeper {#4-configure-the-environment-with-basic-clusters-using-clickhouse-keeper}
+## Configure the environment with basic clusters using ClickHouse Keeper <a id="4-configure-the-environment-with-basic-clusters-using-clickhouse-keeper"></a>
 
 For this deployment environment, the following ClickHouse Keeper settings are used in each node. Each server will have its own `<server_id>`. (For example, `<server_id>1</server_id>` for node `chnode1`, and so on.)
 
@@ -242,7 +242,7 @@ For a full explanation of all options, visit https://clickhouse.com/docs/operati
     ```
 </Step>
 <Step>
-## Configure TLS interfaces on ClickHouse nodes {#5-configure-tls-interfaces-on-clickhouse-nodes}
+## Configure TLS interfaces on ClickHouse nodes <a id="5-configure-tls-interfaces-on-clickhouse-nodes"></a>
 The settings below are configured in the ClickHouse server `config.xml`
 
 1.  Set the display name for the deployment (optional):
@@ -305,7 +305,7 @@ The settings below are configured in the ClickHouse server `config.xml`
     </openSSL>
     ```
 
-    For more information, visit https://clickhouse.com/docs/operations/server-configuration-parameters/settings/#server_configuration_parameters-openssl
+    For more information, visit [this page](/reference/settings/server-settings/settings#openssl)
 
 7. Configure TLS for gRPC on every node:
     ```xml
@@ -348,7 +348,7 @@ The settings below are configured in the ClickHouse server `config.xml`
     ```
 </Step>
 <Step>
-## Testing {#6-testing}
+## Testing <a id="6-testing"></a>
 1. Start all nodes, one at a time:
     ```bash
     service clickhouse-server start
@@ -386,7 +386,7 @@ The settings below are configured in the ClickHouse server `config.xml`
     |9444 | ClickHouse Keeper Raft port |
 
 3. Verify ClickHouse Keeper health
-The typical [4 letter word (4lW)](/guides/oss/deployment-and-scaling/keeper#four-letter-word-commands) commands won't work using `echo` without TLS, here is how to use the commands with `openssl`.
+The typical [4 letter word (4lW)](/guides/oss/deployment-and-scaling/keeper/index#four-letter-word-commands) commands won't work using `echo` without TLS, here is how to use the commands with `openssl`.
    - Start an interactive session with `openssl`
 
   ```bash
@@ -506,7 +506,7 @@ The typical [4 letter word (4lW)](/guides/oss/deployment-and-scaling/keeper#four
 </Step>
 </Steps>
 
-## Configure OpenSSL for standalone ClickHouse Keeper {#configure-openssl-for-standalone-clickhouse-keeper}
+## Configure OpenSSL for standalone ClickHouse Keeper <a id="configure-openssl-for-standalone-clickhouse-keeper"></a>
 
 When running ClickHouse Keeper as a standalone process (rather than embedded within ClickHouse server), the OpenSSL certificates and settings must be configured separately in the Keeper configuration file. Without this, Keeper will not be able to establish secure connections for client communication (`tcp_port_secure`) or Raft replication between Keeper nodes.
 
@@ -548,11 +548,11 @@ The `<server>` section is used for incoming client connections on the secure Kee
 The certificate paths above use `/etc/clickhouse-keeper/certs/` which is the typical path for standalone Keeper installations. If you installed Keeper using a different path, adjust accordingly. The certificates themselves are the same ones created in [step 2](#2-create-tls-certificates).
 </Note>
 
-## OpenSSL verification modes and certificate handlers {#openssl-verification-modes}
+## OpenSSL verification modes and certificate handlers <a id="openssl-verification-modes"></a>
 
 The `<openSSL>` configuration supports several options for `<verificationMode>` and `<invalidCertificateHandler>` that control how ClickHouse validates TLS certificates. These settings apply to clickhouse-server, clickhouse-client, and standalone ClickHouse Keeper.
 
-### Verification modes {#verification-modes}
+### Verification modes <a id="verification-modes"></a>
 
 Set `<verificationMode>` inside the `<server>` or `<client>` section of `<openSSL>`:
 
@@ -563,7 +563,7 @@ Set `<verificationMode>` inside the `<server>` or `<client>` section of `<openSS
 | `once` | On the server side, verifies the client certificate on the initial handshake only and skips renegotiation. On the client side, behaves the same as `relaxed`. |
 | `strict` | Requires and fully verifies the peer certificate. The connection fails if the certificate is missing, expired, or not signed by a trusted CA. Recommended for production. |
 
-### Invalid certificate handlers {#invalid-certificate-handlers}
+### Invalid certificate handlers <a id="invalid-certificate-handlers"></a>
 
 Set `<invalidCertificateHandler>` inside the `<server>` or `<client>` section of `<openSSL>`. This handler determines what happens when certificate verification fails. On the server side, it controls the response to invalid client certificates. On the client side, it controls the response to invalid server certificates.
 
@@ -572,7 +572,7 @@ Set `<invalidCertificateHandler>` inside the `<server>` or `<client>` section of
 | `RejectCertificateHandler` | Rejects the connection if the certificate is invalid. This is the default and recommended setting. |
 | `AcceptCertificateHandler` | Accepts the connection even if the certificate is invalid. Only use this for testing. |
 
-### Example: disabling certificate verification {#disabling-certificate-verification}
+### Example: disabling certificate verification <a id="disabling-certificate-verification"></a>
 
 <Warning>
 Disabling certificate verification removes TLS identity checks and exposes connections to man-in-the-middle attacks. Only use this configuration in isolated development or testing environments.
@@ -651,6 +651,6 @@ For `clickhouse-client`, you can also use the `--accept-invalid-certificate` CLI
 </openSSL>
 ```
 
-## Summary {#summary}
+## Summary <a id="summary"></a>
 
 This article focused on getting a ClickHouse environment configured with TLS. The settings will differ for different requirements in production environments; for example, certificate verification levels, protocols, ciphers, etc. But you should now have a good understanding of the steps involved in configuring and implementing secure connections.

@@ -33,10 +33,12 @@ from posixpath import normpath as posix_normpath
 
 THIS_REPO = Path(__file__).resolve().parent.parent
 DEFAULT_DOCUSAURUS = Path.home() / "Desktop" / "clickhouse-docs"
-SKIP_DIRS = {"node_modules", ".git", "build", "i18n", ".claude", ".mintlify", "scripts", "snippets", "static"}
+SKIP_DIRS = {"node_modules", ".git", "i18n", ".claude", ".mintlify", "scripts", "snippets", "static"}
+# Translation dirs are managed by the localisation bot — never migrate them.
+TRANSLATION_DIRS = {"ja", "ko", "ru", "zh", "es", "pt-BR"}
 # Same as SKIP_DIRS but allows the migrator's `--all` to descend into snippets/
 # so partials get the same transforms as pages.
-ITER_SKIP_DIRS = SKIP_DIRS - {"snippets"}
+ITER_SKIP_DIRS = (SKIP_DIRS | TRANSLATION_DIRS) - {"snippets"}
 EXTS = (".md", ".mdx")
 RUNNABLE_IMPORT = 'import { RunnableCode } from "/snippets/components/RunnableCode/RunnableCode.jsx";'
 IMAGE_IMPORT = 'import { Image } from "/snippets/components/Image.jsx";'
@@ -60,8 +62,6 @@ def file_to_url(rel_path: str) -> str:
     s = rel_path.rsplit(".", 1)[0].replace("\\", "/")
     if s == "index":
         return "/"
-    if s.endswith("/index"):
-        s = s[: -len("/index")]
     return "/" + s
 
 
@@ -116,6 +116,28 @@ def build_lookups(slug_map_csv: Path) -> tuple[Lookups, list[dict]]:
             continue
         url = file_to_url(str(rel).replace("\\", "/"))
         lk.slug_to_url.setdefault(url, url)
+        # For index pages, also register the stripped form (/foo/bar/index → /foo/bar)
+        # so links written either way resolve to the canonical /index form.
+        if url.endswith("/index"):
+            stripped = url[: -len("/index")]
+            lk.slug_to_url.setdefault(stripped, url)
+            lk.slug_to_url.setdefault(stripped + "/", url)
+        # Also register the file's slug: frontmatter so Docusaurus links using
+        # the canonical slug resolve correctly for hand-authored pages not in
+        # the slug-map CSV.
+        try:
+            head = p.read_text(encoding="utf-8", errors="replace")[:2000]
+            fm = FRONTMATTER_RE.match(head)
+            if fm:
+                for line in fm.group(1).split("\n"):
+                    k, _, v = line.partition(":")
+                    if k.strip() == "slug":
+                        slug_val = normalize_slug(v.strip().strip("'\""))
+                        lk.slug_to_url.setdefault(slug_val, url)
+                        lk.slug_to_url.setdefault(slug_val.rstrip("/"), url)
+                        break
+        except OSError:
+            pass
 
     # Trust every alias target the user has reviewed in slug-aliases.csv as a
     # valid URL — covers Mintlify-generated routes (e.g. OpenAPI pages) that
@@ -504,12 +526,19 @@ def _override_formats_arrays_jsonl(text: str) -> str:
 
 def _override_install_selector(text: str) -> str:
     """Replace the unmapped `@site/src/components/Install/Install` import with
-    the local InstallSelector shim at /snippets/components/Install/Install.jsx."""
-    return re.sub(
+    the local InstallSelector shim at /snippets/components/Install/Install.jsx.
+    Also rewrites Docusaurus <Link to="..."> → <a href="..."> and drops the
+    @docusaurus/Link unmapped-import marker."""
+    text = re.sub(
         r"\{/\*\s*MIGRATE:\s*unmapped import '@site/src/components/Install/Install'\s*\*/\}",
         'import {InstallSelector} from "/snippets/components/Install/Install.jsx";',
         text,
     )
+    text = re.sub(r"^\{/\* MIGRATE: unmapped import '@docusaurus/Link' \*/\}\s*\n",
+                  "", text, flags=re.MULTILINE)
+    text = re.sub(r"<Link\b([^>]*)\bto=", r"<a\1href=", text)
+    text = re.sub(r"</Link>", "</a>", text)
+    return text
 
 
 def _override_cloud_changelog_rss(text: str) -> str:
@@ -1724,6 +1753,10 @@ def rewrite_links(text: str, source_docu_file: str | None, lk: Lookups, issues: 
             line += f"  {{/* MIGRATE: {marker} */}}"
         return line
     text = REF_DEF_RE.sub(ref_repl, text)
+    # Strip any orphaned MIGRATE markers left outside a link's closing `)` from
+    # previous migration runs. These appear as `](url){/* MIGRATE: ... */}...`
+    # where the link itself was already rewritten cleanly.
+    text = re.sub(r"(\]\([^)\n]+\))(\s*\{/\*\s*MIGRATE:[^*]*\*/\})+", r"\1", text)
     return text
 
 

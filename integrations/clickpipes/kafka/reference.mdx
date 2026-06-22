@@ -13,7 +13,7 @@ integration:
 import { Image } from "/snippets/components/Image.jsx";
 import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
 
-## Supported data sources {#supported-data-sources}
+## Supported data sources <a id="supported-data-sources"></a>
 
 | Name                 |Logo|Type| Status          | Description                                                                                          |
 |----------------------|----|----|-----------------|------------------------------------------------------------------------------------------------------|
@@ -24,16 +24,16 @@ import ExperimentalBadge from "/snippets/components/ExperimentalBadge/Experiment
 | Azure Event Hubs     |<img src="/images/integrations/logos/azure_event_hubs.svg" alt="Azure Event Hubs logo" width="32" />|Streaming| Stable          | Configure ClickPipes and start ingesting streaming data from Azure Event Hubs into ClickHouse Cloud. |
 | WarpStream           |<img src="/images/integrations/logos/warpstream.svg" alt="WarpStream logo" width="32" />|Streaming| Stable          | Configure ClickPipes and start ingesting streaming data from WarpStream into ClickHouse Cloud.       |
 
-## Supported data formats {#supported-data-formats}
+## Supported data formats <a id="supported-data-formats"></a>
 
 The supported formats are:
 - [JSON](/guides/clickhouse/data-formats/json/intro)
 - [AvroConfluent](/reference/formats/Avro/AvroConfluent)
 - [Protobuf](/reference/formats/Protobuf/Protobuf)
 
-## Supported data types {#supported-data-types}
+## Supported data types <a id="supported-data-types"></a>
 
-### Standard {#standard-types-support}
+### Standard <a id="standard-types-support"></a>
 
 The following standard ClickHouse data types are currently supported in ClickPipes:
 
@@ -56,7 +56,7 @@ The following standard ClickHouse data types are currently supported in ClickPip
 - Tuple and Array with elements using any of the above types (including Nullables, one level depth only)
 - SimpleAggregateFunction types (for AggregatingMergeTree or SummingMergeTree destinations)
 
-### Variant type support {#variant-type-support}
+### Variant type support <a id="variant-type-support"></a>
 ClickPipes supports the Variant type in the following circumstances:
 - Avro Unions.  If your Avro schema contains a union with multiple non-null types, ClickPipes will infer the
   appropriate variant type.  Variant types are not otherwise supported for Avro data.
@@ -64,7 +64,7 @@ ClickPipes supports the Variant type in the following circumstances:
   in the source data stream.  Complex subtypes (arrays/maps/tuples) are not supported.  In addition, because of the way ClickPipes determines
   the correct variant subtype to use, only one integer or datetime type can be used in the Variant definition - for example, `Variant(Int64, UInt32)` is not supported.
 
-### JSON type support {#json-type-support}
+### JSON type support <a id="json-type-support"></a>
 ClickPipes support the JSON type in the following circumstances:
 - Avro Record and Protobuf Message fields can always be assigned to a JSON column.
 - Avro String and Bytes fields can be assigned to a JSON column if the Avro field actually contains JSON String objects.
@@ -73,14 +73,14 @@ ClickPipes support the JSON type in the following circumstances:
 
 Note that you will have to manually change the destination column to the desired JSON type, including any fixed or skipped paths.
 
-### Avro {#avro}
+### Avro <a id="avro"></a>
 
-#### Supported Avro data types {#supported-avro-data-types}
+#### Supported Avro data types <a id="supported-avro-data-types"></a>
 
 ClickPipes supports all Avro Primitive and Complex types, and all Avro Logical types except `local-timestamp-millis` and `local_timestamp-micros`.  Avro `record` types are converted to Tuple, `array` types to Array, and `map` to Map (string keys only).  In general the conversions listed [here](/concepts/features/interfaces/schema-inference#avro) are available.  We recommend using exact type matching for Avro numeric types, as ClickPipes does not check for overflow or precision loss on type conversion.
 Alternatively, all Avro types can be inserted into a `String` column, and will be represented as a valid JSON string in that case.
 
-#### Nullable types and Avro unions {#nullable-types-and-avro-unions}
+#### Nullable types and Avro unions <a id="nullable-types-and-avro-unions"></a>
 
 Nullable types in Avro are defined by using a Union schema of `(T, null)` or `(null, T)` where T is the base Avro type.  During schema inference, such unions will be mapped to a ClickHouse "Nullable" column.  Note that ClickHouse doesn't support
 `Nullable(Array)`, `Nullable(Map)`, or `Nullable(Tuple)` types.  Avro null unions for these types will be mapped to non-nullable versions (Avro Record types are mapped to a ClickHouse named Tuple).  Avro "nulls" for these types will be inserted as:
@@ -88,9 +88,9 @@ Nullable types in Avro are defined by using a Union schema of `(T, null)` or `(n
 - An empty Map for a null Avro Map
 - A named Tuple with all default/zero values for a null Avro Record
 
-### Protobuf {#protobuf}
+### Protobuf <a id="protobuf"></a>
 
-#### Supported Protobuf data types {#supported-protobuf-data-types}
+#### Supported Protobuf data types <a id="supported-protobuf-data-types"></a>
 
 ClickPipes supports all Protobuf 2 and 3 types, with the exception of the long-deprecated proto 2 `group` type. Basic type conversions use
 the following mappings:
@@ -132,18 +132,18 @@ The following [well-known types](https://protobuf.dev/reference/protobuf/google.
 | `google.protobuf.DoubleValue`                                                                | `Nullable(Float64)`      |
 | `google.protobuf.BoolValue`                                                                  | `Nullable(UInt8)`        |
 
-#### Protobuf `oneof` {#protobuf-one-ofs}
+#### Protobuf `oneof` <a id="protobuf-one-ofs"></a>
 
 During schema inference, Protobuf `oneof` fields are mapped by default to a named `Tuple`, where at most one field will hold a non-default
 value. These fields can also be automatically mapped to a `Variant` column where the active value takes the type of
 whichever constituent field is set. Alternatively, each constituent field can be manually mapped to its own ClickHouse column; since `oneof`
 fields are mutually exclusive, only one column will ever be populated per record.
 
-#### Message lists {#protobuf-message-lists}
+#### Message lists <a id="protobuf-message-lists"></a>
 
 If the top level Protobuf schema defined for the ClickPipe contains a single repeated field that is itself a protobuf Message, schema inference and column mapping will be based on the "contained" Message field.  The Kafka message will be processed as a list of such messages, and a single Kafka message will unwrap into multiple ClickHouse rows.
 
-## Kafka virtual columns {#kafka-virtual-columns}
+## Kafka virtual columns <a id="kafka-virtual-columns"></a>
 
 The following virtual columns are supported for Kafka compatible streaming data sources.  When creating a new destination, virtual columns can be added to the target table by using the `Add Column` button.
 

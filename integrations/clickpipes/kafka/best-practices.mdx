@@ -10,28 +10,28 @@ integration:
   - category: 'clickpipes'
 ---
 
-## Message Compression {#compression}
+## Message Compression <a id="compression"></a>
 
 We strongly recommend using compression for your Kafka topics. Compression can result in a significant saving in data transfer costs with virtually no performance hit.
 To learn more about message compression in Kafka, we recommend starting with this [guide](https://www.confluent.io/blog/apache-kafka-message-compression/).
 
-## Limitations {#limitations}
+## Limitations <a id="limitations"></a>
 
 - [`DEFAULT`](/reference/statements/create/table#default) is not supported.
-- Individual messages are limited to 2MB (uncompressed) by default when running with the smallest (XS) replica size, and 8MB (uncompressed) with larger replicas.  Messages that exceed this limit will be rejected with an error.  If you have a need for larger messages, please contact support.
+- Individual messages are limited to 16MB (uncompressed) by default when running with the smallest (XS) replica size, and 32MB (uncompressed) with larger replicas.  Messages that exceed this limit will be rejected with an error.  If you have a need for larger messages, please contact support.
 
-## Delivery semantics {#delivery-semantics}
+## Delivery semantics <a id="delivery-semantics"></a>
 ClickPipes for Kafka provides `at-least-once` delivery semantics (as one of the most commonly used approaches). We'd love to hear your feedback on delivery semantics [contact form](https://clickhouse.com/company/contact?loc=clickpipes). If you need exactly-once semantics, we recommend using our official [`clickhouse-kafka-connect`](https://clickhouse.com/blog/real-time-event-streaming-with-kafka-connect-confluent-cloud-clickhouse) sink.
 
-## Authentication {#authentication}
+## Authentication <a id="authentication"></a>
 For Apache Kafka protocol data sources, ClickPipes supports [SASL/PLAIN](https://docs.confluent.io/platform/current/kafka/authentication_sasl/authentication_sasl_plain.html) authentication with TLS encryption, as well as `SASL/SCRAM-SHA-256` and `SASL/SCRAM-SHA-512`. Depending on the streaming source (Redpanda, MSK, etc) will enable all or a subset of these auth mechanisms based on compatibility. If you auth needs differ please [give us feedback](https://clickhouse.com/company/contact?loc=clickpipes).
 
-## Warpstream Fetch Size {#warpstream-settings}
+## Warpstream Fetch Size <a id="warpstream-settings"></a>
 ClickPipes rely on the Kafka setting `max.fetch_bytes` to limit the size of data processed in a single ClickPipes node at any one time.  In some circumstances
 Warpstream doesn't respect this setting, which can cause unexpected pipe failures.  We strongly recommend that the Warpstream specific setting `kafkaMaxFetchPartitionBytesUncompressedOverride`
 to 8MB (or lower) when configuring your WarpStream agent to prevent ClickPipes failures.
 
-### IAM {#iam}
+### IAM <a id="iam"></a>
 
 ClickPipes supports the following AWS MSK authentication
 
@@ -78,7 +78,7 @@ Below is an example of the required IAM policy for Apache Kafka APIs for MSK:
 }
 ```
 
-#### Configuring a trusted relationship {#configuring-a-trusted-relationship}
+#### Configuring a trusted relationship <a id="configuring-a-trusted-relationship"></a>
 
 If you're authenticating to MSK with a IAM role ARN, you will need to add a trusted relationship between your ClickHouse Cloud instance so the role can be assumed.
 
@@ -102,26 +102,26 @@ Role-based access only works for ClickHouse Cloud instances deployed to AWS.
 }
 ```
 
-### Custom Certificates {#custom-certificates}
+### Custom Certificates <a id="custom-certificates"></a>
 ClickPipes for Kafka supports the upload of custom certificates for Kafka brokers which use non-public server certificates.
 Upload of client certificates and keys is also supported for mutual TLS (mTLS) based authentication.
 
-## Performance {#performance}
+## Performance <a id="performance"></a>
 
-### Batching {#batching}
+### Batching <a id="batching"></a>
 ClickPipes inserts data into ClickHouse in batches. This is to avoid creating too many parts in the database which can lead to performance issues in the cluster.
 
 Batches are inserted when one of the following criteria has been met:
 - The batch size has reached the maximum size (100,000 rows or 28MB per 1GB of pod memory)
 - The batch has been open for a maximum amount of time (5 seconds)
 
-### Latency {#latency}
+### Latency <a id="latency"></a>
 
 Latency (defined as the time between the Kafka message being produced and the message being available in ClickHouse) will be dependent on a number of factors (i.e. broker latency, network latency, message size/format). The [batching](#batching) described in the section above will also impact latency. We always recommend testing your specific use case with typical loads to determine the expected latency.
 
 ClickPipes doesn't provide any guarantees concerning latency. If you have specific low-latency requirements, please [contact us](https://clickhouse.com/company/contact?loc=clickpipes).
 
-### Scaling {#scaling}
+### Scaling <a id="scaling"></a>
 
 ClickPipes for Kafka is designed to scale horizontally and vertically. By default, we create a consumer group with one consumer. This can be configured during ClickPipe creation, or at any other point under **Settings** -> **Advanced Settings** -> **Scaling**.
 
@@ -132,7 +132,7 @@ Regardless number of running consumers, fault tolerance is available by design.
 If a consumer or its underlying infrastructure fails,
 the ClickPipe will automatically restart the consumer and continue processing messages.
 
-### Benchmarks {#benchmarks}
+### Benchmarks <a id="benchmarks"></a>
 
 Below are some informal benchmarks for ClickPipes for Kafka that can be used to get a general idea of the baseline performance. It's important to know that many factors can impact performance, including message size, data types, and data format. Your mileage may vary, and what we show here isn't a guarantee of actual performance.
 
