@@ -267,16 +267,16 @@ spec:
 Configure CPU e memória para os contêineres do ClickHouse:
 
 ```yaml
-# valores padrão
+# default values
 spec:
   containerTemplate:
     resources:
       requests:
         cpu: "250m"
-        memory: "256Mi"
+        memory: "512Mi"
       limits:
         cpu: "1"
-        memory: "1Gi"
+        memory: "512Mi"
 ```
 
 <div id="environment-variables">
@@ -320,6 +320,10 @@ spec:
 <div id="tls-ssl-configuration">
   ## Configuração de TLS/SSL
 </div>
+
+Para ver um exemplo de ponta a ponta — emitindo certificados com cert-manager, conectando
+clientes por portas seguras e criptografando o tráfego do Keeper — consulte o
+guia [Protegendo com TLS](/pt-BR/products/kubernetes-operator/guides/tls).
 
 <div id="configure-secure-endpoints">
   ### Configure endpoints seguros
@@ -370,6 +374,323 @@ spec:
             name: <ca-certificate-secret-name>
             key: <ca-certificate-key>
 ```
+
+<div id="external-secret">
+  ## Secret externo
+</div>
+
+Por padrão, o operador cria e controla um Secret que contém as credenciais internas do cluster (senha entre servidores, senha de gerenciamento, identidade do Keeper, Secret do cluster, chave de named-collections). O Secret recebe o nome do cluster e fica no espaço de nomes do cluster.
+
+Se você quiser gerenciar essas credenciais por conta própria — por exemplo, obtendo-as do HashiCorp Vault, AWS Secrets Manager ou [External Secrets Operator](https://external-secrets.io/) — aponte o operador para um Secret pré-existente usando `spec.externalSecret`:
+
+```yaml
+apiVersion: clickhouse.com/v1alpha1
+kind: ClickHouseCluster
+metadata:
+  name: sample
+spec:
+  replicas: 2
+  keeperClusterRef:
+    name: sample
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 10Gi
+  externalSecret:
+    name: my-clickhouse-credentials
+    policy: Observe
+```
+
+<Note>
+  O Secret referenciado deve estar no **mesmo espaço de nomes** que o ClickHouseCluster. O operador nunca exclui um Secret que não criou.
+</Note>
+
+<div id="external-secret-required-keys">
+  ### Chaves obrigatórias
+</div>
+
+O Secret deve conter as seguintes chaves:
+
+| Chave                   | Formato                                                                      | Quando é obrigatória             |
+| ----------------------- | ---------------------------------------------------------------------------- | -------------------------------- |
+| `interserver-password`  | senha em texto puro                                                          | Sempre                           |
+| `management-password`   | senha em texto puro                                                          | Sempre                           |
+| `keeper-identity`       | `clickhouse:<password>`                                                      | Sempre                           |
+| `cluster-secret`        | senha em texto puro                                                          | Sempre                           |
+| `named-collections-key` | chave AES de 16 bytes codificada em hexadecimal (32 caracteres hexadecimais) | Somente no ClickHouse `>= 25.12` |
+
+Um Secret completo fica assim:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-clickhouse-credentials
+  namespace: sample
+type: Opaque
+stringData:
+  interserver-password: "a-strong-random-password"
+  management-password: "another-strong-password"
+  keeper-identity: "clickhouse:keeper-auth-password"
+  cluster-secret: "cluster-internal-secret"
+  named-collections-key: "0123456789abcdef0123456789abcdef"   # 32 hex chars = 16 bytes
+```
+
+<div id="external-secret-policy">
+  ### Política: Observe vs Manage
+</div>
+
+`spec.externalSecret.policy` controla como o operador lida com chaves obrigatórias ausentes:
+
+| Política           | Comportamento quando faltam chaves                                                                                                                                                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Observe` (padrão) | A reconciliação fica **bloqueada** até que todas as chaves obrigatórias estejam presentes. O operador informa cada chave ausente — e a respectiva dica de formato — por meio da condição `ExternalSecretValid` (com o motivo `ExternalSecretInvalid`) e de um evento `Warning`. |
+| `Manage`           | O operador **gera** quaisquer chaves obrigatórias ausentes e as grava de volta no mesmo Secret. Útil para bootstrap: crie um Secret vazio, deixe o operador preenchê-lo e depois, se quiser, restrinja o acesso. Ainda assim, o operador nunca exclui o Secret.                 |
+
+<Note>
+  Mesmo com `policy: Manage`, o Secret já deve existir no espaço de nomes — o operador nunca cria o próprio Secret; ele apenas grava chaves geradas em um Secret existente. Se o Secret referenciado estiver ausente, a reconciliação será bloqueada com o motivo `ExternalSecretNotFound`, independentemente da política.
+</Note>
+
+Escolha `Observe` quando um sistema externo (Vault, ESO, sealed-secrets, GitOps) for a fonte de verdade e você quiser que o operador falhe claramente em caso de configuração incorreta. Escolha `Manage` quando quiser um bootstrap autossuficiente, mas ainda quiser manter a propriedade do próprio objeto Secret (por exemplo, para fazer backup dele).
+
+<div id="external-secret-status">
+  ### Condição de status e solução de problemas
+</div>
+
+O operador expõe a condição `ExternalSecretValid` em `ClickHouseCluster.status.conditions`. Verifique-a quando a reconciliação parecer travada:
+
+```bash
+# Plain kubectl — works out of the box
+kubectl describe clickhousecluster sample | sed -n '/Conditions:/,$p'
+
+# Same data as YAML
+kubectl get clickhousecluster sample -o yaml | sed -n '/conditions:/,/^[^ ]/p'
+
+# Pretty-printed JSON (requires jq)
+kubectl get clickhousecluster sample -o jsonpath='{.status.conditions}' | jq
+```
+
+Possíveis motivos:
+
+| `reason`                 | Significado                                                                                                                                      | Correção                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `ExternalSecretNotFound` | O Secret referenciado não existe no espaço de nomes.                                                                                             | Crie o Secret ou corrija `spec.externalSecret.name`.       |
+| `ExternalSecretInvalid`  | O Secret existe, mas não contém as chaves obrigatórias (apenas com `Observe`). A mensagem lista cada chave ausente junto com o formato esperado. | Adicione as chaves ausentes ou mude para `policy: Manage`. |
+| `ExternalSecretValid`    | Todas as chaves obrigatórias estão presentes, e o operador está usando o Secret.                                                                 | —                                                          |
+
+O operador coloca a reconciliação de volta na fila enquanto o Secret é inválido, então, assim que você adicionar as chaves ausentes, a próxima reconciliação as detectará automaticamente — não é necessário reiniciar os pods.
+
+<Note>
+  O conjunto de chaves obrigatórias depende da versão do ClickHouse em execução. `named-collections-key` só é validada quando a sonda de versão do operador detecta o ClickHouse `25.12` ou mais recente. Em versões anteriores, a chave pode não estar presente no Secret.
+</Note>
+
+<div id="additional-ports">
+  ## Portas adicionais
+</div>
+
+O operador expõe um conjunto fixo de portas em cada pod do Kubernetes do ClickHouse e em seu Service headless: `8123` HTTP, `9000` native, `9009` interserver, `9001` management, `9363` métricas do Prometheus e as variantes TLS `8443`/`9440` quando o TLS estiver habilitado. Para fazer o ClickHouse aceitar conexões em protocolos adicionais — MySQL, PostgreSQL, gRPC ou qualquer porta personalizada — declare-as em `spec.additionalPorts`:
+
+```yaml
+spec:
+  additionalPorts:
+    - name: mysql
+      port: 9004
+    - name: postgres
+      port: 9005
+    - name: grpc
+      port: 9100
+```
+
+O operador adiciona essas portas às `containerPorts` do pod do Kubernetes e ao Service headless. O exemplo completo está em [`examples/custom_protocols.yaml`](https://github.com/ClickHouse/clickhouse-operator/blob/main/examples/custom_protocols.yaml).
+
+<Warning>
+  `additionalPorts` apenas abre as portas no lado do Kubernetes. Isso **não** configura o servidor ClickHouse para escutar nessas portas. Você também precisa habilitar o protocolo correspondente em `spec.settings.extraConfig.protocols`. Sem isso, a porta fica aberta no Service, mas nada dentro do pod do Kubernetes está respondendo.
+</Warning>
+
+<div id="additional-ports-mysql-example">
+  ### Exemplo completo: MySQL wire protocol
+</div>
+
+Para expor o ClickHouse pelo MySQL wire protocol na porta `9004`:
+
+```yaml
+apiVersion: clickhouse.com/v1alpha1
+kind: ClickHouseCluster
+metadata:
+  name: sample
+spec:
+  replicas: 1
+  keeperClusterRef:
+    name: sample
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 2Gi
+
+  # 1) Open the port on the Pod and the headless Service.
+  additionalPorts:
+    - name: mysql
+      port: 9004
+
+  # 2) Tell ClickHouse server to actually listen on it.
+  settings:
+    extraConfig:
+      protocols:
+        mysql:
+          type: mysql
+          port: 9004
+          description: "MySQL wire protocol"
+```
+
+Depois de aplicar, verifique de dentro do cluster:
+
+```bash
+kubectl exec sample-clickhouse-0-0-0 -- \
+  clickhouse-client --port 9004 --query "SELECT 1"
+```
+
+<div id="additional-ports-constraints">
+  ### Restrições de campo
+</div>
+
+| Campo  | Regra                                                                                                                                                                           |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name` | Deve corresponder ao padrão DNS&#95;LABEL `^[a-z]([-a-z0-9]*[a-z0-9])?$`, com no máximo 63 caracteres. A unicidade é imposta pela CRD usando esse campo como chave de list-map. |
+| `port` | Inteiro em `[1, 65535]`. O webhook rejeita números de porta duplicados na lista.                                                                                                |
+
+<div id="additional-ports-reserved">
+  ### Portas e nomes reservados
+</div>
+
+O webhook de validação rejeita entradas de `additionalPorts` que entrariam em conflito com portas usadas pelo próprio operator. Todas as portas relacionadas a TLS são reservadas **incondicionalmente** para que habilitar `spec.settings.tls.enabled` mais tarde não possa invalidar um cluster que antes era válido.
+
+| Porta  | Reservada para      |
+| ------ | ------------------- |
+| `8123` | HTTP                |
+| `8443` | HTTPS               |
+| `9000` | TCP nativo          |
+| `9440` | TLS nativo          |
+| `9009` | interserver         |
+| `9001` | gerenciamento       |
+| `9363` | métricas Prometheus |
+
+Os nomes a seguir também são rejeitados — eles são os identificadores internos do operator para tipos de protocolo (não os aliases legíveis por pessoas):
+
+| Nome          |
+| ------------- |
+| `http`        |
+| `http-secure` |
+| `tcp`         |
+| `tcp-secure`  |
+| `interserver` |
+| `management`  |
+| `prometheus`  |
+
+Uma solicitação rejeitada gera um erro como:
+
+```
+spec.additionalPorts[0].port: 8123 is reserved for the operator-managed HTTP port
+spec.additionalPorts[0].name: "http" is reserved by the operator
+```
+
+<div id="version-probe-and-upgrade-channel">
+  ## Sonda de versão e canal de upgrade
+</div>
+
+O operador faz duas coisas independentes com as versões do cluster:
+
+1. **Sonda de versão** — um `Job` do Kubernetes que executa a imagem de contêiner uma vez para detectar a versão em execução do ClickHouse / Keeper. A versão detectada é registrada em `.status.version` e usada por outras etapas de reconciliação (por exemplo, a chave de named-collections do `Secret externo` só é exigida a partir do ClickHouse `25.12`).
+2. **Canal de upgrade** — uma verificação periódica no feed público de lançamentos do ClickHouse (`https://clickhouse.com/data/version_date.tsv`). O operador informa se há uma versão mais recente disponível por meio da condição de status `VersionUpgraded`. Ele nunca faz upgrade do cluster por conta própria — o usuário controla a tag da imagem.
+
+<div id="upgrade-channel-choosing">
+  ### Escolhendo um canal de lançamento
+</div>
+
+`spec.upgradeChannel` seleciona com qual conjunto de lançamentos upstream o operador faz a comparação. O mesmo campo existe tanto em `ClickHouseCluster` quanto em `KeeperCluster`.
+
+```yaml
+spec:
+  upgradeChannel: lts   # or "stable", or "25.8", or omitted
+```
+
+Valores permitidos (validados pelo CRD com o padrão `^(lts|stable|\d+\.\d+)?$`):
+
+| Valor                                  | Comportamento                                                                                                                                                                                            |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| *empty* (padrão)                       | O operador propõe apenas atualizações de **patch** dentro da linha major.minor em execução no momento. Um cluster em `25.8.3.1` será notificado sobre `25.8.4.x`, mas não sobre `25.9.x`.                |
+| `stable`                               | Acompanha o canal `stable` upstream — o lançamento mais recente que a ClickHouse Inc. sinaliza como estável na linha principal de lançamentos. Recebe upgrades de versão principal antes do canal `lts`. |
+| `lts`                                  | Acompanha o canal `lts` upstream — lançamentos com suporte de longo prazo. Recebe upgrades de versão principal com menos frequência, com janelas de suporte mais longas.                                 |
+| `25.8` (ou qualquer `<major>.<minor>`) | Fixa o canal em uma linha major.minor específica. Upgrades de versão principal além dela não são propostos, mesmo que exista uma versão mais nova no upstream.                                           |
+
+Para produção, em geral é preferível fixar o canal em um `<major>.<minor>` explícito (por exemplo, `25.8`). Isso mantém o cluster na linha de lançamento principal pretendida e permite que o operador exiba um aviso `WrongReleaseChannel` se alguma réplica, por algum motivo, acabar em uma major diferente — o que é especialmente importante quando a imagem é referenciada por um digest (`@sha256:...`) em vez de por uma tag legível por humanos. O padrão vazio é adequado para clusters de desenvolvimento em que saltos de versão principal não são uma preocupação.
+
+<div id="version-status-conditions">
+  ### Condições de status
+</div>
+
+Duas condições mostram o resultado da sonda e da verificação de atualização:
+
+| Condição          | Motivo                 | Significado                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VersionInSync`   | `VersionMatch`         | Todas as réplicas informam a mesma versão da imagem                                                                                                                                                                                                                                                                                                                                           |
+| `VersionInSync`   | `VersionMismatch`      | As réplicas estão executando versões diferentes. O evento de aviso é suprimido durante uma atualização rolling planejada. Isso normalmente ocorre quando uma tag de imagem mutável foi fixada (por exemplo, `latest` ou uma versão sem o patch, como `26.3`) e o registry subjacente mudou entre os pulls, fazendo com que réplicas diferentes acabem usando patches diferentes da mesma tag. |
+| `VersionInSync`   | `VersionPending`       | O Job da sonda de versão ainda não foi concluído                                                                                                                                                                                                                                                                                                                                              |
+| `VersionInSync`   | `VersionProbeFailed`   | O Job da sonda falhou; o operador não consegue determinar a versão em execução                                                                                                                                                                                                                                                                                                                |
+| `VersionUpgraded` | `UpToDate`             | O cluster está na versão mais recente disponível no canal selecionado                                                                                                                                                                                                                                                                                                                         |
+| `VersionUpgraded` | `MinorUpdateAvailable` | Há um patch mais recente disponível na mesma linha `major.minor`                                                                                                                                                                                                                                                                                                                              |
+| `VersionUpgraded` | `MajorUpdateAvailable` | Há um `major.minor` mais recente disponível no canal escolhido                                                                                                                                                                                                                                                                                                                                |
+| `VersionUpgraded` | `VersionOutdated`      | A versão em execução está desatualizada e não receberá mais correções do canal selecionado — normalmente porque a linha principal foi removida do `lts` ou `stable` upstream                                                                                                                                                                                                                  |
+| `VersionUpgraded` | `WrongReleaseChannel`  | A imagem em execução não pertence ao `upgradeChannel` selecionado. Exemplo: um cluster executando `26.5` com `upgradeChannel: lts`, já que `26.5` não faz parte da linha `lts` upstream.                                                                                                                                                                                                      |
+| `VersionUpgraded` | `UpgradeCheckFailed`   | O operador não conseguiu acessar o feed de lançamentos upstream                                                                                                                                                                                                                                                                                                                               |
+
+Inspecione-as com:
+
+```bash
+kubectl get clickhousecluster sample -o yaml | sed -n '/conditions:/,/^[^ ]/p'
+```
+
+<div id="version-probe-template">
+  ### Sobrescrevendo o Job da sonda de versão
+</div>
+
+A sonda é implementada como um `Job` padrão do Kubernetes. Se o seu cluster tiver políticas de admissão que exijam `Tolerations` específicas, seletores de nó, contextos de segurança ou se você quiser limitar por quanto tempo os Jobs de sonda concluídos permanecem, sobrescreva o template por meio de `spec.versionProbeTemplate`:
+
+```yaml
+spec:
+  versionProbeTemplate:
+    spec:
+      ttlSecondsAfterFinished: 600   # delete completed probe Jobs 10 minutes after completion
+      template:
+        spec:
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          tolerations:
+            - key: dedicated
+              operator: Equal
+              value: clickhouse
+              effect: NoSchedule
+          containers:
+            - name: version-probe
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+```
+
+O nome do contêiner `version-probe` é o nome padrão usado pelo operador — a entrada em `containers:` corresponde a ele pelo nome, então o operador faz um merge profundo dos campos fornecidos pelo usuário sobre os valores padrão.
+
+<div id="version-operator-flags">
+  ### Controles gerais do operador
+</div>
+
+Duas flags no gerenciador do operador controlam globalmente o loop de verificação de upgrade:
+
+| Flag                              | Padrão  | Efeito                                                                                                                                                        |
+| --------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--version-update-interval`       | `24h`   | Com que frequência o operador busca novamente a lista de versões upstream                                                                                     |
+| `--disable-version-update-checks` | `false` | Desabilita completamente a verificação de upgrade. A condição `VersionUpgraded` não é definida, e nenhum tráfego HTTP de saída para `clickhouse.com` é gerado |
+
+Defina `--disable-version-update-checks=true` em ambientes isolados da internet ou quando a saída para `clickhouse.com` não for permitida.
 
 <div id="clickhouse-settings">
   ## Configurações do ClickHouse
@@ -484,6 +805,49 @@ spec:
 ```
 
 Quando ativado, o operator sincroniza as tabelas Replicated e de integração para novas réplicas.
+
+<div id="server-logging">
+  ### Logging do servidor
+</div>
+
+Configure o log do servidor ClickHouse por meio de `spec.settings.logger`. Todos os campos são opcionais e têm um padrão seguro, então mesmo um cluster sem nenhuma alteração já registra em `trace` tanto no console do contêiner quanto em um arquivo em disco com rotação.
+
+```yaml
+spec:
+  settings:
+    logger:
+      logToFile: true   # Default: true. Set false to log only to the console
+      jsonLogs: false   # Default: false. Set true for structured JSON log lines
+      level: trace      # Default: trace
+      size: 1000M       # Default: 1000M. Rotate a log file once it reaches this size
+      count: 50         # Default: 50. Number of rotated files to keep
+```
+
+| Campo       | Padrão  | Descrição                                                                                                                      |
+| ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `logToFile` | `true`  | Quando `false`, o operador remove os destinos de arquivo e o servidor grava logs apenas no console do contêiner.               |
+| `jsonLogs`  | `false` | Quando `true`, o operador adiciona `formatting.type: json` para que cada linha seja um objeto JSON.                            |
+| `level`     | `trace` | Nível de verbosidade do log. Um de `test`, `trace`, `debug`, `information`, `notice`, `warning`, `error`, `critical`, `fatal`. |
+| `size`      | `1000M` | Tamanho máximo de um único arquivo de log antes da rotação.                                                                    |
+| `count`     | `50`    | Número de arquivos de log rotacionados que o servidor mantém.                                                                  |
+
+O operador sempre mantém o log no console ativado para que `kubectl logs` funcione, e também adiciona o log em arquivo quando `logToFile` é `true`. Um cluster com os valores padrão gera este bloco `logger`:
+
+```yaml
+logger:
+  console: true
+  level: trace
+  log: /var/log/clickhouse-server/clickhouse-server.log
+  errorlog: /var/log/clickhouse-server/clickhouse-server.err.log
+  size: 1000M
+  count: 50
+```
+
+O mesmo bloco `spec.settings.logger` também se aplica a um `KeeperCluster`; nesse caso, o operador grava seus arquivos em `/var/log/clickhouse-keeper/`.
+
+<Note>
+  O logging no console permanece ativado independentemente de `logToFile`, então `kubectl logs` continua funcionando mesmo quando você desativa o logging em arquivo. Defina `jsonLogs: true` quando enviar logs para um sistema de armazenamento de logs estruturados que processa JSON.
+</Note>
 
 <div id="custom-configuration">
   ## Configuração personalizada
