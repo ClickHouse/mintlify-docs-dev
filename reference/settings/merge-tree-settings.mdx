@@ -128,40 +128,10 @@ with settings `min_age_to_force_merge_seconds`,
 `enable_replacing_merge_with_cleanup_for_min_age_to_force_merge`.
 
 ## allow_experimental_reverse_key {#allow_experimental_reverse_key} 
-
-<ExperimentalBadge/>
 <SettingsInfoBlock type="Bool" default_value="0" />
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.12"},{"label": "0"},{"label": "New setting"}]}]}/>
 
-Enables support for descending sort order in MergeTree sorting keys. This
-setting is particularly useful for time series analysis and Top-N queries,
-allowing data to be stored in reverse chronological order to optimize query
-performance.
-
-With `allow_experimental_reverse_key` enabled, you can define descending sort
-orders within the `ORDER BY` clause of a MergeTree table. This enables the
-use of more efficient `ReadInOrder` optimizations instead of `ReadInReverseOrder`
-for descending queries.
-
-**Example**
-
-```sql
-CREATE TABLE example
-(
-time DateTime,
-key Int32,
-value String
-) ENGINE = MergeTree
-ORDER BY (time DESC, key)  -- Descending order on 'time' field
-SETTINGS allow_experimental_reverse_key = 1;
-
-SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
-```
-
-By using `ORDER BY time DESC` in the query, `ReadInOrder` is applied.
-
-**Default Value:** false
-
+Obsolete setting, does nothing.
 ## allow_floating_point_partition_key {#allow_floating_point_partition_key} 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
@@ -207,6 +177,16 @@ the partition or sorting key.
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 Reject primary/secondary indexes and sorting keys with identical expressions
+
+## allow_tuple_element_aggregation {#allow_tuple_element_aggregation} 
+<SettingsInfoBlock type="Bool" default_value="0" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting"}]}]}/>
+
+When enabled, individual elements within Tuple columns participate in
+aggregation during merge in SummingMergeTree, AggregatingMergeTree, and
+CoalescingMergeTree. Nested Tuples are expanded recursively so that all
+leaf elements are aggregated independently. This setting is immutable
+and must be specified at table creation time.
 
 ## allow_vertical_merges_from_compact_to_wide_parts {#allow_vertical_merges_from_compact_to_wide_parts} 
 <SettingsInfoBlock type="Bool" default_value="1" />
@@ -271,7 +251,7 @@ table in background.
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "minmax, uniq"},{"label": "Enable auto statistics by default"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": ""},{"label": "New setting"}]}]}/>
 
 Comma-separated list of statistics types to calculate automatically on all suitable columns.
-Supported statistics types: tdigest, countmin, minmax, nullcount, uniq.
+Supported statistics types: basic, tdigest, countmin, minmax, uniq.
 
 ## background_task_preferred_step_execution_time_ms {#background_task_preferred_step_execution_time_ms} 
 <SettingsInfoBlock type="Milliseconds" default_value="50" />
@@ -554,7 +534,7 @@ Compress in memory values of index granularity if it is possible
 
 ## enable_max_bytes_limit_for_min_age_to_force_merge {#enable_max_bytes_limit_for_min_age_to_force_merge} 
 <SettingsInfoBlock type="Bool" default_value="1" />
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "Limit part sizes even with min_age_to_force_merge_seconds by default"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "Added new setting to limit max bytes for min_age_to_force_merge."}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "New setting"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "Limit part sizes even with min_age_to_force_merge_seconds by default"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "New setting"}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "Added new setting to limit max bytes for min_age_to_force_merge."}]}]}/>
 
 If settings `min_age_to_force_merge_seconds` and
 `min_age_to_force_merge_on_partition_only` should respect setting
@@ -884,6 +864,25 @@ Mark compress block size, the actual size of the block to compress.
 
 Compression encoding used by marks, marks are small enough and cached, so
 the default compression is ZSTD(3).
+
+## materialize_projections_on_insert {#materialize_projections_on_insert} 
+<SettingsInfoBlock type="Bool" default_value="1" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "New setting"}]}]}/>
+
+When enabled, INSERTs create new parts with projections.
+Otherwise, they can be created by explicit [MATERIALIZE PROJECTION](/reference/statements/alter/projection#materialize-projection)
+or during merges with [materialize_projections_on_merge](/reference/settings/merge-tree-settings#materialize_projections_on_merge).
+
+## materialize_projections_on_merge {#materialize_projections_on_merge} 
+<SettingsInfoBlock type="Bool" default_value="0" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting"}]}]}/>
+
+When enabled, a merge rebuilds a projection that is missing from all of its source parts (for example because they were
+inserted with `materialize_projections_on_insert = 0`), so the merged part has the projection.
+
+Merges still only combine parts that share the same set of projections. To backfill a projection to all existing parts,
+use an explicit [MATERIALIZE PROJECTION](/reference/statements/alter/projection#materialize-projection). Projections
+are also created during INSERTs with [materialize_projections_on_insert](/reference/settings/merge-tree-settings#materialize_projections_on_insert).
 
 ## materialize_skip_indexes_on_merge {#materialize_skip_indexes_on_merge} 
 <SettingsInfoBlock type="Bool" default_value="1" />
@@ -1961,6 +1960,43 @@ primary key, i.e. a table with only few distinct primary key values.
 High-cardinality primary keys, e.g. involving timestamp columns of type
 `DateTime64`, are not expected to benefit from this setting.
 
+## packed_skip_index_max_bytes {#packed_skip_index_max_bytes} 
+
+<ExperimentalBadge/>
+<SettingsInfoBlock type="UInt64" default_value="0" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting. Pack any skip-index substream whose serialized on-disk size is at most this many bytes into a single skp_idx.packed archive per part; larger substreams stay in the standalone skp_idx_<name>.idx2 / .mrk2 layout. Decision is made per substream at write time."}]}]}/>
+
+Threshold (serialized on-disk bytes, i.e. after the substream's compression and hashing
+chain) below which a skip-index substream is bundled into a single `skp_idx.packed`
+archive per part instead of being written as a separate `skp_idx_<name>.idx2` / `.mrk2`
+file. Substreams larger than this stay in the legacy per-file layout. The decision is
+made independently per substream at write time, so a single part can have small indices
+(e.g. `minmax`) packed and large ones (e.g. a heavy `bloom_filter`) per-file. Set to 0
+to disable packing entirely (default).
+
+Each skip-index substream actually consists of a data file and a marks file; both buffer
+in memory up to the threshold before the spill decision is made. So peak memory while
+writing scales with `2 * packed_skip_index_max_bytes * (number of substreams that stay
+below the threshold)`.
+
+Full-text indices are not supported by this setting and are never packed.
+
+Packing reduces inode pressure when many skip indices are defined on a table (for example
+with `add_minmax_index_for_numeric_columns`).
+
+The on-disk format is self-describing: readers detect `skp_idx.packed` and serve packed
+substreams from inside it transparently. Changing this setting affects newly written parts
+only; existing parts retain whatever layout they had at write time.
+
+Known limitation: `system.data_skipping_indices.data_uncompressed_bytes` and
+`system.parts.secondary_indices_uncompressed_bytes` report the compressed size for packed
+substreams (the archive index doesn't store uncompressed sizes). This is cosmetic in
+monitoring with one functional consequence:
+`distributed_index_analysis_min_indexes_bytes_to_activate` compares against
+`data_uncompressed`, so a packed index that compresses well (`set` or `bloom_filter` over
+strings) may not cross the activation threshold even if the real uncompressed size would.
+The fallback is the normal query plan, not a wrong result.
+
 ## part_minmax_index_columns {#part_minmax_index_columns} 
 <SettingsInfoBlock type="MergeTreePartMinMaxIndexColumns" default_value="partition_key_only" />
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "partition_key_only"},{"label": "New setting."}]}]}/>
@@ -2737,6 +2773,13 @@ the implementation applies a minimum of 200 ms, so the next run is jittered in [
 If enabled all the replicas try to fetch part in memory data (like primary
 key, partition info and so on) from other replicas where it already exists.
 
+## shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup {#shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup} 
+<SettingsInfoBlock type="Bool" default_value="0" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting which allows SMT download parts data from replicas instead of S3 on startup"}]}]}/>
+
+If enabled all the replicas try to fetch part in memory data (like primary
+key, partition info and so on) on startup from other replicas where it already exists.
+
 ## shared_merge_tree_update_replica_flags_delay_ms {#shared_merge_tree_update_replica_flags_delay_ms} 
 <SettingsInfoBlock type="Milliseconds" default_value="30000" />
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.8"},{"label": "30000"},{"label": "New setting"}]}]}/>
@@ -2838,6 +2881,34 @@ If set to true, the table is in read-only mode. Any attempts to insert data or m
 How many seconds to keep tmp_-directories. You should not lower this value
 because merges and mutations may not be able to work with low value of this
 setting.
+
+## text_index_dictionary_block_frontcoding_compression {#text_index_dictionary_block_frontcoding_compression} 
+<SettingsInfoBlock type="Bool" default_value="1" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "New setting"}]}]}/>
+
+Default front-coding compression for text index dictionary blocks.
+Can be overridden by explicit `dictionary_block_frontcoding_compression` index argument.
+
+## text_index_dictionary_block_size {#text_index_dictionary_block_size} 
+<SettingsInfoBlock type="NonZeroUInt64" default_value="512" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "512"},{"label": "New setting"}]}]}/>
+
+Default dictionary block size for text indexes.
+Can be overridden by explicit `dictionary_block_size` index argument.
+
+## text_index_posting_list_block_size {#text_index_posting_list_block_size} 
+<SettingsInfoBlock type="NonZeroUInt64" default_value="1048576" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1048576"},{"label": "New setting"}]}]}/>
+
+Default posting list block size for text indexes (rows).
+Can be overridden by explicit `posting_list_block_size` index argument.
+
+## text_index_posting_list_codec {#text_index_posting_list_codec} 
+<SettingsInfoBlock type="TextIndexPostingListCodec" default_value="none" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "none"},{"label": "New setting"}]}]}/>
+
+Default posting list codec for text indexes.
+Can be overridden by explicit `posting_list_codec` index argument.
 
 ## try_fetch_recompressed_part_timeout {#try_fetch_recompressed_part_timeout} 
 <SettingsInfoBlock type="Seconds" default_value="7200" />

@@ -350,28 +350,32 @@ LIMIT 3;
 
 Introduced in: v23.5.0
 
-Converts a dictionary attribute value to `All` data type regardless of the dictionary configuration.
+Retrieves the attribute values of all the nodes that matched each key in a [regular expression tree dictionary](/reference/statements/create/dictionary/layouts/regexp-tree).
+
+Besides returning values of type `Array(T)` instead of `T`, this function behaves similarly to [`dictGet`](#dictGet).
 
 **Syntax**
 
 ```sql
-dictGetAll(dict_name, attr_name, id_expr)
+dictGetAll(dict_name, attr_names, id_expr[, limit])
 ```
 
 **Arguments**
 
 - `dict_name` — Name of the dictionary. [`String`](/reference/data-types/string)
-- `attr_name` — Name of the column of the dictionary. [`String`](/reference/data-types/string) or [`Tuple(String)`](/reference/data-types/tuple)
+- `attr_names` — Name of the column of the dictionary, or tuple of column names. [`String`](/reference/data-types/string) or [`Tuple(String)`](/reference/data-types/tuple)
 - `id_expr` — Key value. An expression returning a dictionary key-type value or tuple value (dictionary configuration dependent). [`Expression`](/reference/data-types/special-data-types/expression) or [`Tuple(T)`](/reference/data-types/tuple)
+- `limit` — Optional. Maximum length for each value array returned. When truncating, child nodes are given precedence over parent nodes, and otherwise the defined list order for the regexp tree dictionary is respected. If unspecified, the array length is unlimited. [`UInt*`](/reference/data-types/int-uint)
 
 **Returned value**
 
-Returns the value of the dictionary attribute that corresponds to `id_expr`,
-otherwise returns the content of the `<null_value>` element specified for the attribute in the dictionary configuration.
+Returns an array of the dictionary attribute values that correspond to `id_expr` for each attribute specified by `attr_names`.
+If there is no key corresponding to `id_expr` in the dictionary, an empty array is returned.
 
 <Note>
 ClickHouse throws an exception if it cannot parse the value of the attribute or the value does not match the attribute data type.
 </Note>
+ [`Array(T)`](/reference/data-types/array)
 
 **Examples**
 

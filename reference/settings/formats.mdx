@@ -145,6 +145,14 @@ Method to write Errors to text output.
 
 For AvroConfluent format: connection timeout in seconds for the Confluent Schema Registry HTTP client. Used by both schema fetch and schema registration. Must be greater than 0 and less than 600 (10 minutes).
 
+## format_avro_schema_registry_max_retries {#format_avro_schema_registry_max_retries}   
+
+<SettingsInfoBlock type="UInt64" default_value="5" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "5"},{"label": "New setting controlling the maximum number of retries for transient failures (transport timeouts, connection refused, DNS errors, HTTP 5xx/408/429) when communicating with the Confluent Schema Registry. Set to 0 to disable retries. Previous behavior (no retries) is preserved by `compatibility = '26.5'`."}]}]}/>
+
+For AvroConfluent format: maximum number of retries for transient failures when communicating with the Confluent Schema Registry (transport timeouts, connection refused, DNS errors, HTTP 5xx/408/429). Set to 0 to disable retries. The maximum allowed value is 20. Schema validation errors (HTTP 409, malformed Avro JSON) are not retried.
+
 ## format_avro_schema_registry_receive_timeout {#format_avro_schema_registry_receive_timeout}   
 
 <SettingsInfoBlock type="UInt64" default_value="1" />
@@ -152,6 +160,14 @@ For AvroConfluent format: connection timeout in seconds for the Confluent Schema
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "New setting to control the receive timeout (in seconds) for the Confluent Schema Registry HTTP client used by AvroConfluent format."}]}]}/>
 
 For AvroConfluent format: receive timeout in seconds for the Confluent Schema Registry HTTP client. Used by both schema fetch and schema registration. Must be greater than 0 and less than 600 (10 minutes).
+
+## format_avro_schema_registry_retry_initial_backoff_ms {#format_avro_schema_registry_retry_initial_backoff_ms}   
+
+<SettingsInfoBlock type="UInt64" default_value="100" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "100"},{"label": "New setting controlling the initial backoff (in milliseconds) before retrying a failed Confluent Schema Registry request. The backoff doubles on each retry, capped at 10 seconds. Has no effect when `format_avro_schema_registry_max_retries = 0` (the pre-26.6 behavior restored by `compatibility = '26.5'`)."}]}]}/>
+
+For AvroConfluent format: initial backoff in milliseconds before retrying a failed Confluent Schema Registry request. The backoff doubles on each subsequent retry, capped at 10 seconds. Must be greater than 0 and less than or equal to 60000.
 
 ## format_avro_schema_registry_send_timeout {#format_avro_schema_registry_send_timeout}   
 
@@ -655,6 +671,20 @@ Possible values:
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.5"},{"label": "0"},{"label": "Disable type-defaults for omitted fields when needed"}]}]}/>
 
 Force initialize omitted fields with null values
+
+## input_format_geojson_unsupported_geometry_handling {#input_format_geojson_unsupported_geometry_handling}   
+
+<SettingsInfoBlock type="GeoJSONUnsupportedGeometryHandling" default_value="throw" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "throw"},{"label": "New setting that controls handling of GeoJSON geometry types that cannot be represented in the Geometry type (GeometryCollection, MultiPoint)"}]}]}/>
+
+Controls what happens when a valid `GeoJSON` geometry type that cannot be represented in ClickHouse's `Geometry` type (such as `GeometryCollection` or `MultiPoint`) must be stored in the `geometry` column while reading `GeoJSON` input.
+
+Possible values:
+- `'throw'` (default) — throw an exception.
+- `'null'` — insert a `NULL` value for the `geometry` column and continue parsing.
+
+This applies only when the `geometry` column is materialized. When it is not a requested output column, such a geometry is validated for well-formedness but does not trigger the handling.
 
 ## input_format_hive_text_allow_variable_number_of_columns {#input_format_hive_text_allow_variable_number_of_columns}   
 
@@ -1578,6 +1608,16 @@ When enabled, dots in JSON keys will be escaped during parsing.
 The maximum number of dynamic subcolumns that can be created in every column during parsing of JSON column.
 It allows to control the number of dynamic subcolumns during parsing regardless of dynamic parameters specified in the data type.
 
+## output_format_always_write_decimal_point_in_float_and_decimal {#output_format_always_write_decimal_point_in_float_and_decimal}   
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting to always print a decimal point for floating-point and Decimal numbers in text formats, even when the value is a whole number."}]}]}/>
+
+Always print a decimal point for floating-point and Decimal numbers in text formats, even when the value is a whole number. For example, output `1.` instead of `1`.
+
+Disabled by default.
+
 ## output_format_arrow_compression_method {#output_format_arrow_compression_method}   
 
 <SettingsInfoBlock type="ArrowCompression" default_value="lz4_frame" />
@@ -1731,6 +1771,54 @@ If it set to true, then Tuples in CSV format are serialized as separate columns 
 Output trailing zeros when printing Decimal values. E.g. 1.230000 instead of 1.23.
 
 Disabled by default.
+
+## output_format_float_precision {#output_format_float_precision}   
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "A new setting to control decimal digits in float output"}]}]}/>
+
+When non-zero, format floating-point output (`Float32`, `Float64`, `BFloat16`) with at most this many digits after the decimal point (trailing zeros are removed).
+When 0 (the default), use the shortest round-trip representation.
+
+Values too large for fixed notation, and values whose magnitude is so small that rounding to the requested precision would lose all significant digits (the mantissa would become `±0`), are emitted in scientific notation instead. In these fallback cases the mantissa may carry more than the requested number of fractional digits.
+
+Valid range: 0 to 100.
+
+## output_format_image_height {#output_format_image_height}   
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "New setting controlling the height of the output image for image output formats such as PNG."}]}]}/>
+
+The height of the output image in pixels for image output formats such as `PNG`.
+
+Default value: 1024.
+
+## output_format_image_terminal_mode {#output_format_image_terminal_mode}   
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": ""},{"label": "New setting controlling whether image output formats such as PNG are rendered directly to the terminal using an inline image protocol."}]}]}/>
+
+For image output formats such as `PNG`, output the image directly to the terminal using an inline image protocol instead of writing the raw image bytes.
+
+Possible values:
+- `` (empty) — write the raw image bytes (the default).
+- `iterm` — use the iTerm2 inline image protocol.
+- `kitty` — use the Kitty graphics protocol.
+- `sixel` — use the Sixel protocol.
+- `auto` — if the output is a terminal, detect its capabilities and use `iterm`, `kitty`, or `sixel` (in this order); otherwise write the raw image bytes.
+
+Default value: `` (empty).
+
+## output_format_image_width {#output_format_image_width}   
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "New setting controlling the width of the output image for image output formats such as PNG."}]}]}/>
+
+The width of the output image in pixels for image output formats such as `PNG`.
+
+Default value: 1024.
 
 ## output_format_json_array_of_rows {#output_format_json_array_of_rows}   
 
@@ -2343,6 +2431,8 @@ If the data rendered in Pretty formats arrived in multiple chunks, even after a 
 
 Charset for printing grid borders. Available charsets: ASCII, UTF-8 (default).
 
+In interactive mode, `clickhouse-client` automatically switches to `ASCII` when the terminal does not support UTF-8 (as determined by the `LC_ALL`, `LC_CTYPE` and `LANG` environment variables), unless this setting is specified explicitly.
+
 ## output_format_pretty_highlight_digit_groups {#output_format_pretty_highlight_digit_groups}   
 
 <SettingsInfoBlock type="Bool" default_value="1" />
@@ -2455,6 +2545,16 @@ This avoids frequent output of too small blocks, but still allows to display dat
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.1"},{"label": "1000"},{"label": "Add new setting"}]}]}/>
 
 Output the pending block in pretty formats if more than the specified number of milliseconds has passed since the previous output.
+
+## output_format_pretty_use_nbsp_for_padding {#output_format_pretty_use_nbsp_for_padding}   
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting. When enabled, padding in `Pretty` output is rendered with `U+00A0` so it survives copy-paste through tools that compress runs of regular spaces."}]}]}/>
+
+If enabled, padding in `Pretty` output formats is rendered with `U+00A0` instead of an ASCII space.
+The output remains visually identical in monospace, but the padding survives tools that compress or trim runs of regular spaces.
+Only takes effect when `output_format_pretty_grid_charset` is `UTF-8`.
 
 ## output_format_protobuf_nullables_with_google_wrappers {#output_format_protobuf_nullables_with_google_wrappers}   
 

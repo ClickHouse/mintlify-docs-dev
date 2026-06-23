@@ -10,9 +10,7 @@ doc_type: 'guide'
 This guide covers how to configure ClickHouse and Keeper clusters using the operator.
 
 ## ClickHouseCluster configuration {#clickhousecluster-configuration}
-
 ### Basic configuration {#basic-configuration}
-
 ```yaml
 apiVersion: clickhouse.com/v1alpha1
 kind: ClickHouseCluster
@@ -30,7 +28,6 @@ spec:
 ```
 
 ### Replicas and shards {#replicas-and-shards}
-
 - **Replicas**: Number of ClickHouse instances per shard (for high availability)
 - **Shards**: Number of horizontal partitions (for scaling)
 
@@ -43,7 +40,6 @@ spec:
 A cluster with `replicas: 3` and `shards: 2` will create 6 ClickHouse pods total.
 
 ### Keeper integration {#keeper-integration}
-
 Every ClickHouse cluster must reference a KeeperCluster for coordination:
 
 ```yaml
@@ -56,7 +52,6 @@ spec:
 When `keeperClusterRef.namespace` is set, the operator must watch both namespaces. If `WATCH_NAMESPACE` is configured, include the ClickHouse and Keeper namespaces in that list.
 
 ## KeeperCluster configuration {#keepercluster-configuration}
-
 ```yaml
 apiVersion: clickhouse.com/v1alpha1
 kind: KeeperCluster
@@ -71,7 +66,6 @@ spec:
 ```
 
 ## Storage configuration {#storage-configuration}
-
 Configure persistent storage:
 
 ```yaml
@@ -88,9 +82,7 @@ Operator can modify existing PVC only if the underlying storage class supports v
 </Note>
 
 ## Pod configuration {#pod-configuration}
-
 ### Automatic topology spread and affinity {#automatic-topology-spread-and-affinity}
-
 Distribute pods across availability zones:
 
 ```yaml
@@ -105,7 +97,6 @@ Ensure your Kubernetes cluster has enough nodes in different zones to satisfy th
 </Note>
 
 ### Manual configuration {#manual-configuration}
-
 Arbitrary pod affinity/anti-affinity rules and topology spread constraints can be specified.
 
 ```yaml
@@ -120,13 +111,11 @@ spec:
 ### See [API Reference](/products/kubernetes-operator/reference/api-reference#podtemplatespec) for all supported Pod template options.
 
 ## Pod disruption budgets {#pod-disruption-budgets}
-
 The operator creates a [PodDisruptionBudget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/) (PDB) for each cluster so that voluntary disruptions — node drains, rolling upgrades, autoscaler evictions — cannot take down enough pods to lose quorum or break availability.
 
 For ClickHouse clusters with more than one shard, **one PDB is created per shard** so a disruption in one shard cannot count against another.
 
 ### Defaults {#pdb-defaults}
-
 The operator picks safe defaults based on the cluster size so that a fresh `apply` already protects against accidental quorum loss.
 
 | Resource | Topology | Default PDB |
@@ -139,7 +128,6 @@ The operator picks safe defaults based on the cluster size so that a fresh `appl
 For a 3-shard ClickHouseCluster with `replicas: 3`, the operator creates three PDBs, one per shard, each with `minAvailable: 1`.
 
 ### Overriding the defaults {#pdb-overrides}
-
 Use `spec.podDisruptionBudget` to override either `minAvailable` **or** `maxUnavailable` (exactly one):
 
 ```yaml
@@ -173,7 +161,6 @@ spec:
 ```
 
 ### Policies {#pdb-policies}
-
 `spec.podDisruptionBudget.policy` lets you choose **how aggressively** the operator manages PDBs:
 
 | Policy | Behavior |
@@ -199,7 +186,6 @@ spec:
 ```
 
 ### Cluster-wide opt-out {#pdb-cluster-wide-disable}
-
 PDB management can also be disabled cluster-wide via the operator's `ENABLE_PDB` environment variable. With `ENABLE_PDB=false`, the operator skips the PDB reconcile step for **every** ClickHouseCluster and KeeperCluster regardless of their `spec.podDisruptionBudget.policy`, and **does not watch** `PodDisruptionBudget` resources at all. The operator's ServiceAccount therefore does not need RBAC permissions on `poddisruptionbudgets.policy/v1`, which is useful when running the operator under a restricted ServiceAccount that intentionally omits those permissions.
 
 ```yaml
@@ -212,9 +198,7 @@ env:
 This is intended for environments that ship their own disruption policies (e.g. through Gatekeeper / Kyverno) and want the operator out of the loop entirely.
 
 ## Container configuration {#container-configuration}
-
 ### Custom image {#custom-image}
-
 Use a specific ClickHouse image:
 
 ```yaml
@@ -227,7 +211,6 @@ spec:
 ```
 
 ### Container resources {#container-resources}
-
 Configure CPU and memory for ClickHouse containers:
 
 ```yaml
@@ -244,7 +227,6 @@ spec:
 ```
 
 ### Environment variables {#environment-variables}
-
 Add custom environment variables:
 
 ```yaml
@@ -256,7 +238,6 @@ spec:
 ```
 
 ### Volume mounts {#volume-mounts}
-
 Add additional volume mounts:
 
 ```yaml
@@ -276,13 +257,11 @@ Operator will create projected volume with all specified mounts.
 ### See [API Reference](/products/kubernetes-operator/reference/api-reference#containertemplatespec) for all supported Container template options.
 
 ## TLS/SSL configuration {#tls-ssl-configuration}
-
 For an end-to-end example — issuing certificates with cert-manager, connecting
 clients over the secure ports, and encrypting Keeper traffic — see the
 [Securing with TLS](/products/kubernetes-operator/guides/tls) guide.
 
 ### Configure secure endpoints {#configure-secure-endpoints}
-
 Pass a reference to a Kubernetes Secret containing TLS certificates to enable secure endpoints
 
 ```yaml
@@ -296,7 +275,6 @@ spec:
 ```
 
 ### SSL certificate secret format {#ssl-certificate-secret-format}
-
 It is expected that the Secret contains the following keys:
 - `tls.crt` - PEM encoded server certificate
 - `tls.key` - PEM encoded private key
@@ -307,7 +285,6 @@ This format is compatible with cert-manager generated certificates.
 </Note>
 
 ### ClickHouse-Keeper communication over TLS {#clickhouse-keeper-communication-over-tls}
-
 If KeeperCluster has TLS enabled, ClickHouseCluster would use secure connection to Keeper nodes automatically.
 
 ClickHouseCluster should be able to verify Keeper nodes certificates.
@@ -325,7 +302,6 @@ spec:
 ```
 
 ## External Secret {#external-secret}
-
 By default the operator creates and owns a Secret containing the cluster's internal credentials (interserver password, management password, keeper identity, cluster secret, named-collections key). The Secret is named after the cluster and lives in the cluster's namespace.
 
 If you want to manage these credentials yourself — for example, sourcing them from HashiCorp Vault, AWS Secrets Manager, or [External Secrets Operator](https://external-secrets.io/) — point the operator at a pre-existing Secret using `spec.externalSecret`:
@@ -353,7 +329,6 @@ The referenced Secret must reside in the **same namespace** as the ClickHouseClu
 </Note>
 
 ### Required keys {#external-secret-required-keys}
-
 The Secret must contain the following keys:
 
 | Key | Format | When required |
@@ -382,7 +357,6 @@ stringData:
 ```
 
 ### Policy: Observe vs Manage {#external-secret-policy}
-
 `spec.externalSecret.policy` controls how the operator handles missing required keys:
 
 | Policy | Behavior on missing keys |
@@ -397,7 +371,6 @@ Even with `policy: Manage` the Secret must already exist in the namespace — th
 Pick `Observe` when an external system (Vault, ESO, sealed-secrets, GitOps) is the source of truth and you want the operator to fail loudly on misconfiguration. Pick `Manage` when you want self-sufficient bootstrapping but still want to retain ownership of the Secret object itself (for example, to back it up).
 
 ### Status condition and troubleshooting {#external-secret-status}
-
 The operator exposes a `ExternalSecretValid` condition on `ClickHouseCluster.status.conditions`. Inspect it when reconciliation looks stuck:
 
 ```bash
@@ -426,7 +399,6 @@ The set of required keys depends on the running ClickHouse version. `named-colle
 </Note>
 
 ## Additional ports {#additional-ports}
-
 The operator exposes a fixed set of ports on every ClickHouse Pod and its headless Service: `8123` HTTP, `9000` native, `9009` interserver, `9001` management, `9363` Prometheus metrics, and the TLS variants `8443`/`9440` when TLS is enabled. To make ClickHouse listen on additional protocols — MySQL, PostgreSQL, gRPC, or any custom port — declare them in `spec.additionalPorts`:
 
 ```yaml
@@ -447,7 +419,6 @@ The operator adds those ports to the Pod's `containerPorts` and to the headless 
 </Warning>
 
 ### End-to-end example: MySQL wire protocol {#additional-ports-mysql-example}
-
 To expose ClickHouse over the MySQL wire protocol on port `9004`:
 
 ```yaml
@@ -487,14 +458,12 @@ kubectl exec sample-clickhouse-0-0-0 -- \
 ```
 
 ### Field constraints {#additional-ports-constraints}
-
 | Field | Rule |
 |---|---|
 | `name` | Must match the DNS_LABEL pattern `^[a-z]([-a-z0-9]*[a-z0-9])?$`, max 63 characters. Uniqueness is enforced by the CRD as a list-map key. |
 | `port` | Integer in `[1, 65535]`. The webhook rejects duplicate port numbers within the list. |
 
 ### Reserved ports and names {#additional-ports-reserved}
-
 The validating webhook rejects `additionalPorts` entries that would collide with ports the operator binds itself. All TLS-related ports are reserved **unconditionally** so that flipping `spec.settings.tls.enabled` later cannot break a previously valid cluster.
 
 | Port | Reserved for |
@@ -527,14 +496,12 @@ spec.additionalPorts[0].name: "http" is reserved by the operator
 ```
 
 ## Version probe and upgrade channel {#version-probe-and-upgrade-channel}
-
 The operator does two independent things with cluster versions:
 
 1. **Version probe** — a Kubernetes `Job` that runs the container image once to detect the running ClickHouse / Keeper version. The detected version is recorded in `.status.version` and used by other reconciliation steps (e.g. the `External Secret` named-collections key is only required from ClickHouse `25.12`).
 2. **Upgrade channel** — a periodic check against the public ClickHouse release feed (`https://clickhouse.com/data/version_date.tsv`). The operator reports whether a newer version is available via the `VersionUpgraded` status condition. It never upgrades the cluster on its own — the user is in control of the image tag.
 
 ### Choosing a release channel {#upgrade-channel-choosing}
-
 `spec.upgradeChannel` selects which set of upstream releases the operator compares against. Same field exists on both `ClickHouseCluster` and `KeeperCluster`.
 
 ```yaml
@@ -554,7 +521,6 @@ Allowed values (validated by the CRD with the pattern `^(lts|stable|\d+\.\d+)?$`
 For production, pinning the channel to an explicit `<major>.<minor>` (e.g. `25.8`) is generally preferred. It locks the cluster to the intended major release line and lets the operator surface a `WrongReleaseChannel` warning if any replica somehow drifts onto a different major — which matters especially when the image is referenced by a digest (`@sha256:...`) rather than by a human-readable tag. The empty default is fine for development clusters where major-version jumps are not a concern.
 
 ### Status conditions {#version-status-conditions}
-
 Two conditions surface the result of the probe and the upgrade check:
 
 | Condition | Reason | Meaning |
@@ -577,7 +543,6 @@ kubectl get clickhousecluster sample -o yaml | sed -n '/conditions:/,/^[^ ]/p'
 ```
 
 ### Overriding the version probe Job {#version-probe-template}
-
 The probe is implemented as a regular Kubernetes `Job`. If your cluster has admission policies that require specific Tolerations, node selectors, security contexts, or you want to limit how long completed probe Jobs linger, override the template via `spec.versionProbeTemplate`:
 
 ```yaml
@@ -605,7 +570,6 @@ spec:
 The container name `version-probe` is the operator's default — the entry under `containers:` matches it by name, so the operator deep-merges the user-provided fields on top of the defaults.
 
 ### Operator-wide controls {#version-operator-flags}
-
 Two flags on the operator manager control the upgrade-check loop globally:
 
 | Flag | Default | Effect |
@@ -616,9 +580,7 @@ Two flags on the operator manager control the upgrade-check loop globally:
 Set `--disable-version-update-checks=true` in air-gapped environments or when egress to `clickhouse.com` is not allowed.
 
 ## ClickHouse settings {#clickhouse-settings}
-
 ### Default user password {#default-user-password}
-
 Set the default user password:
 
 ```yaml
@@ -642,7 +604,6 @@ kubectl create secret generic clickhouse-password --from-literal=password='your-
 ```
 
 #### Using ConfigMap for user passwords {#using-configmap-for-user-passwords}
-
 You can also use ConfigMap for non-sensitive default passwords:
 
 ```yaml
@@ -656,7 +617,6 @@ spec:
 ```
 
 ### Custom users in configuration {#custom-users-in-configuration}
-
 Configure additional users in configuration files.
 
 Create a ConfigMap and Secret for user:
@@ -708,7 +668,6 @@ spec:
 ```
 
 ### Database sync {#database-sync}
-
 Enable automatic database synchronization for new replicas:
 
 ```yaml
@@ -720,7 +679,6 @@ spec:
 When enabled, the operator synchronizes Replicated and integration tables to new replicas.
 
 ### Server logging {#server-logging}
-
 Configure the ClickHouse server log through `spec.settings.logger`. Every field is optional with a safe default, so a cluster you never touch already logs at `trace` to both the container console and a rotated file on disk.
 
 ```yaml
@@ -761,9 +719,7 @@ Console logging stays on regardless of `logToFile`, so `kubectl logs` keeps work
 </Note>
 
 ## Custom configuration {#custom-configuration}
-
 ### Embedded extra configuration {#embedded-extra-configuration}
-
 Instead of mounting custom configuration files, you can directly specify additional ClickHouse configuration options.
 
 Add custom ClickHouse configuration using `extraConfig`:
@@ -780,7 +736,6 @@ spec:
 * [All server settings](/reference/settings/server-settings/settings)
 
 ### Embedded extra users configuration {#embedded-extra-users-configuration}
-
 You can also specify additional ClickHouse users configuration using `extraUsersConfig`. This is useful for defining users, profiles, quotas, and grants directly in the cluster specification.
 
 ```yaml
@@ -812,7 +767,6 @@ The `extraUsersConfig` is stored in k8s ConfigMap object. Avoid plain text secre
 #### See [documentation](/concepts/features/configuration/settings/settings-users) for all supported ClickHouse users configuration options.
 
 ### Configuration example {#configuration-example}
-
 Complete configuration example:
 
 ```yaml
