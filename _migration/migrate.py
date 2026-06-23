@@ -114,6 +114,8 @@ def build_lookups(slug_map_csv: Path) -> tuple[Lookups, list[dict]]:
         rel = p.relative_to(THIS_REPO)
         if any(part in SKIP_DIRS for part in rel.parts):
             continue
+        if any(part in TRANSLATION_DIRS for part in rel.parts):
+            continue
         url = file_to_url(str(rel).replace("\\", "/"))
         lk.slug_to_url.setdefault(url, url)
         # For index pages, also register the stripped form (/foo/bar/index → /foo/bar)
