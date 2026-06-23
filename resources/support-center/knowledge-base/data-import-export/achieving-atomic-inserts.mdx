@@ -6,8 +6,10 @@ tags: ['Data Ingestion', 'Best Practices']
 keywords: ['atomic insert', 'staging table', 'MOVE PARTITION', 'ATTACH PARTITION', 'REPLACE PARTITION', 'multi-table consistency']
 ---
 
-## Problem {#problem}
+{frontMatter.description}
+{/* truncate */}
 
+## Problem {#problem}
 ClickHouse Cloud does not support multi-statement transactions in the traditional RDBMS sense.
 This creates two common challenges:
 
@@ -15,7 +17,6 @@ This creates two common challenges:
 2. Multi-table consistency: When a pipeline loads Table A successfully but fails on Table B, Table A is already committed and cannot be rolled back. Analysts querying across both tables see data that is out of sync.
 
 ## Background {#background}
-
 ClickHouse guarantees atomicity at the single-insert, single-partition level: if an `INSERT` succeeds, all rows in that block are visible; if it fails, none are. However, there is no built-in mechanism to atomically commit data across multiple inserts or multiple tables.
 
 The partition manipulation commands ([`MOVE PARTITION TO TABLE`](/reference/statements/alter/partition#move-partition-to-table), [`REPLACE PARTITION`](/reference/statements/alter/partition#replace-partition), [`ATTACH PARTITION FROM`](/reference/statements/alter/partition#attach-partition-from)) operate at the metadata level when the source and destination tables share the same storage policy.
@@ -23,15 +24,12 @@ The partition manipulation commands ([`MOVE PARTITION TO TABLE`](/reference/stat
 This means they execute almost instantaneously regardless of data size, making them ideal building blocks for atomic-swap patterns.
 
 ## Recommended solution {#recommended-solution}
-
 Instead of inserting directly into production tables and attempting to clean up on failure, use dedicated staging tables as a landing zone. After validating the data, use partition-level operations to atomically promote the data into production.
 
 ## Step-by-step for single-table atomicity {#step-by-step}
-
 <Steps>
 <Step>
 ### Create a staging table {#create-staging-table}
-
 Use the same schema, partition key, `ORDER BY`, and storage policy as the production table.
 
 ```sql
@@ -40,7 +38,6 @@ CREATE TABLE my_table_staging AS my_table_prod;
 </Step>
 <Step>
 ### Insert data into the staging table {#insert-into-staging}
-
 Run your insert against the staging table instead of the production table.
 
 ```sql
@@ -49,7 +46,6 @@ INSERT INTO my_table_staging SELECT ... FROM source;
 </Step>
 <Step>
 ### If the insert fails, truncate and retry {#on-failure}
-
 Truncate the staging table and run the load again. No production data has been affected.
 
 ```sql
@@ -58,7 +54,6 @@ TRUNCATE TABLE my_table_staging;
 </Step>
 <Step>
 ### If the insert succeeds, move the partitions to production {#on-success}
-
 To move the data into production and remove it from the staging table, use `MOVE PARTITION`.
 
 ```sql
@@ -75,7 +70,6 @@ Both operations are metadata-level changes on the same storage policy and comple
 </Step>
 <Step>
 ### Clean up the staging table {#clean-up}
-
 Once all partitions have been moved, truncate the staging table to leave it empty for the next load.
 
 ```sql
@@ -85,11 +79,9 @@ TRUNCATE TABLE my_table_staging;
 </Steps>
 
 ## Multi-table consistency {#multi-table-consistency}
-
 The same pattern solves pipelines where two or more tables must all be loaded before any of them becomes visible to analysts. Load each table's data into its own staging table and validate all of them, then run the partition moves together. Because each move is a near-instant metadata operation, the window in which the tables disagree shrinks from the duration of the full load to the time it takes to swap partitions.
 
 ## Requirements and constraints {#requirements-and-constraints}
-
 For `MOVE PARTITION TO TABLE`, `REPLACE PARTITION`, and `ATTACH PARTITION FROM`, the source and destination tables must have:
 
 - The same column structure
@@ -98,7 +90,6 @@ For `MOVE PARTITION TO TABLE`, `REPLACE PARTITION`, and `ATTACH PARTITION FROM`,
 - The destination table must include all indices and projections from the source table
 
 ## Example {#example}
-
 You can run the example below interactively using [fiddle](https://fiddle.clickhouse.com/7ef9ed84-ac14-4f2c-9ca5-d5913089769a):
 
 ```sql
@@ -138,6 +129,5 @@ SELECT * FROM prod;
 ```
 
 ## References {#references}
-
 - [**Manipulating Partitions and Parts**](/reference/statements/alter/partition)
 - To read more about this strategy, see the blog post [**Supercharging your large ClickHouse data loads - Part 3: Making a large data load resilient**](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part3).

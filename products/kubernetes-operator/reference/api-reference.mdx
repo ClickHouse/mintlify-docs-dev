@@ -8,15 +8,23 @@ doc_type: 'reference'
 sidebarTitle: 'API reference'
 ---
 
-
 This document provides detailed API reference for the ClickHouse Operator custom resources.
 
-## ClickHouseCluster {#clickhousecluster}
+## AdditionalPort {#additionalport}
+AdditionalPort declares one extra TCP port to expose on the ClickHouse Pod and the operator-managed headless Service.
 
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|---------|
+| `name` | string | Name uniquely identifies the port within the list. Used as both the container port name and the Service port name.<br />This must be a DNS_LABEL. | true |  |
+| `port` | integer | Port is the TCP port number to expose. | true |  |
+
+Appears in:
+- [ClickHouseClusterSpec](#clickhouseclusterspec)
+
+## ClickHouseCluster {#clickhousecluster}
 ClickHouseCluster is the Schema for the `clickhouseclusters` API.
 
 ### API Version and Kind {#clickhousecluster-api-version-and-kind}
-
 ```yaml
 apiVersion: clickhouse.com/v1alpha1
 kind: ClickHouseCluster
@@ -31,11 +39,9 @@ Appears in:
 - [ClickHouseClusterList](#clickhouseclusterlist)
 
 ## ClickHouseClusterList {#clickhouseclusterlist}
-
 ClickHouseClusterList contains a list of ClickHouseCluster.
 
 ### API Version and Kind {#clickhouseclusterlist-api-version-and-kind}
-
 ```yaml
 apiVersion: clickhouse.com/v1alpha1
 kind: ClickHouseClusterList
@@ -46,7 +52,6 @@ kind: ClickHouseClusterList
 | `items` | [ClickHouseCluster](#clickhousecluster) array |  | true |  |
 
 ## ClickHouseClusterSpec {#clickhouseclusterspec}
-
 ClickHouseClusterSpec defines the desired state of ClickHouseCluster.
 
 | Field | Type | Description | Required | Default |
@@ -65,12 +70,12 @@ ClickHouseClusterSpec defines the desired state of ClickHouseCluster.
 | `upgradeChannel` | string | UpgradeChannel specifies the release channel for major version upgrade checks.<br />When empty, only minor updates will be proposed. Allowed values are: stable, lts or specific major.minor version (e.g. 25.8). | false |  |
 | `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate) | VersionProbeTemplate overrides for the version detection Job. | false |  |
 | `externalSecret` | [ExternalSecret](#externalsecret) | ExternalSecret is an optional reference to an externally-managed Secret containing cluster secrets.<br />The secret must reside in the same namespace as the cluster. | false |  |
+| `additionalPorts` | [AdditionalPort](#additionalport) array | AdditionalPorts declares extra TCP ports to expose on the ClickHouse Pod and the operator-managed headless Service.<br />The operator only adds the ports to the Kubernetes resources, it does not configure the ClickHouse server to listen on them. | false |  |
 
 Appears in:
 - [ClickHouseCluster](#clickhousecluster)
 
 ## ClickHouseClusterStatus {#clickhouseclusterstatus}
-
 ClickHouseClusterStatus defines the observed state of ClickHouseCluster.
 
 | Field | Type | Description | Required | Default |
@@ -89,7 +94,6 @@ Appears in:
 - [ClickHouseCluster](#clickhousecluster)
 
 ## ClickHouseSettings {#clickhousesettings}
-
 ClickHouseSettings defines ClickHouse server settings options.
 
 | Field | Type | Description | Required | Default |
@@ -105,7 +109,6 @@ Appears in:
 - [ClickHouseClusterSpec](#clickhouseclusterspec)
 
 ## ClusterTLSSpec {#clustertlsspec}
-
 ClusterTLSSpec defines cluster TLS configuration.
 
 | Field | Type | Description | Required | Default |
@@ -120,7 +123,6 @@ Appears in:
 - [KeeperSettings](#keepersettings)
 
 ## ConfigMapKeySelector {#configmapkeyselector}
-
 ConfigMapKeySelector selects a key of a ConfigMap.
 
 | Field | Type | Description | Required | Default |
@@ -132,7 +134,6 @@ Appears in:
 - [DefaultPasswordSelector](#defaultpasswordselector)
 
 ## ContainerImage {#containerimage}
-
 ContainerImage defines a container image with repository, tag or hash.
 
 | Field | Type | Description | Required | Default |
@@ -145,14 +146,13 @@ Appears in:
 - [ContainerTemplateSpec](#containertemplatespec)
 
 ## ContainerTemplateSpec {#containertemplatespec}
-
 ContainerTemplateSpec describes the container configuration overrides for the cluster's containers.
 
 | Field | Type | Description | Required | Default |
 |-------|------|-------------|----------|---------|
 | `image` | [ContainerImage](#containerimage) | Image is the container image to be deployed. | true |  |
 | `imagePullPolicy` | [PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core) | ImagePullPolicy for the image, which defaults to IfNotPresent. | false |  |
-| `resources` | [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core) | Resources is the resource requirements for the server container.<br />Deep-merged with operator defaults via SMP. Individual limits and requests override only matching<br />keys; unset fields preserve operator defaults. | false |  |
+| `resources` | [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core) | Resources is the resource requirements for the server container.<br />Applied as a whole: operator defaults are used only when all resource fields are empty. | false |  |
 | `volumeMounts` | [VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#volumemount-v1-core) array | VolumeMounts is the list of volume mounts for the container.<br />Concatenated with operator-generated mounts. Entries sharing a `mountPath` with an operator<br />mount are merged into a projected volume. | false |  |
 | `env` | [EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#envvar-v1-core) array | Env is the list of environment variables to set in the container.<br />Merged with operator defaults by name. | false |  |
 | `securityContext` | [SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#securitycontext-v1-core) | SecurityContext defines the security options the container should be run with.<br />A non-nil SecurityContext fully replaces operator defaults; the user owns the<br />entire struct. When nil, operator defaults are preserved.<br />More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ | false |  |
@@ -164,7 +164,6 @@ Appears in:
 - [KeeperClusterSpec](#keeperclusterspec)
 
 ## DefaultPasswordSelector {#defaultpasswordselector}
-
 DefaultPasswordSelector selects the source for the default user's password.
 
 | Field | Type | Description | Required | Default |
@@ -177,7 +176,6 @@ Appears in:
 - [ClickHouseSettings](#clickhousesettings)
 
 ## ExternalSecret {#externalsecret}
-
 ExternalSecret is a reference to a Secret in the same namespace.
 
 | Field | Type | Description | Required | Default |
@@ -189,7 +187,6 @@ Appears in:
 - [ClickHouseClusterSpec](#clickhouseclusterspec)
 
 ## ExternalSecretPolicy {#externalsecretpolicy}
-
 ExternalSecretPolicy controls how the operator treats the external secret's content.
 
 | Field | Description |
@@ -201,11 +198,9 @@ Appears in:
 - [ExternalSecret](#externalsecret)
 
 ## KeeperCluster {#keepercluster}
-
 KeeperCluster is the Schema for the `keeperclusters` API.
 
 ### API Version and Kind {#keepercluster-api-version-and-kind}
-
 ```yaml
 apiVersion: clickhouse.com/v1alpha1
 kind: KeeperCluster
@@ -220,11 +215,9 @@ Appears in:
 - [KeeperClusterList](#keeperclusterlist)
 
 ## KeeperClusterList {#keeperclusterlist}
-
 KeeperClusterList contains a list of KeeperCluster.
 
 ### API Version and Kind {#keeperclusterlist-api-version-and-kind}
-
 ```yaml
 apiVersion: clickhouse.com/v1alpha1
 kind: KeeperClusterList
@@ -235,7 +228,6 @@ kind: KeeperClusterList
 | `items` | [KeeperCluster](#keepercluster) array |  | true |  |
 
 ## KeeperClusterReference {#keeperclusterreference}
-
 KeeperClusterReference identifies the KeeperCluster used by a ClickHouseCluster.
 
 | Field | Type | Description | Required | Default |
@@ -247,7 +239,6 @@ Appears in:
 - [ClickHouseClusterSpec](#clickhouseclusterspec)
 
 ## KeeperClusterSpec {#keeperclusterspec}
-
 KeeperClusterSpec defines the desired state of KeeperCluster.
 
 | Field | Type | Description | Required | Default |
@@ -258,7 +249,7 @@ KeeperClusterSpec defines the desired state of KeeperCluster.
 | `dataVolumeClaimSpec` | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | Specification of persistent storage for ClickHouse Keeper data. | false |  |
 | `labels` | object (keys:string, values:string) | Additional labels that are added to resources. | false |  |
 | `annotations` | object (keys:string, values:string) | Additional annotations that are added to resources. | false |  |
-| `podDisruptionBudget` | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec) | PodDisruptionBudget configures the PDB created for the Keeper cluster.<br />When unset, the operator defaults to maxUnavailable=replicas/2<br />(preserving quorum for a 2F+1 cluster). | false |  |
+| `podDisruptionBudget` | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec) | PodDisruptionBudget configures the PDB created for the Keeper cluster.<br />When unset, the operator defaults to maxUnavailable=replicas/2<br />(preserving quorum for a 2F+1 cluster); single-replica clusters use maxUnavailable=1. | false |  |
 | `settings` | [KeeperSettings](#keepersettings) | Configuration parameters for ClickHouse Keeper server. | false |  |
 | `clusterDomain` | string | ClusterDomain is the Kubernetes cluster domain suffix used for DNS resolution. | false | cluster.local |
 | `upgradeChannel` | string | UpgradeChannel specifies the release channel for major version upgrade checks.<br />When empty, only minor updates will be proposed. Allowed values are: stable, lts or specific major.minor version (e.g. 25.8). | false |  |
@@ -268,7 +259,6 @@ Appears in:
 - [KeeperCluster](#keepercluster)
 
 ## KeeperClusterStatus {#keeperclusterstatus}
-
 KeeperClusterStatus defines the observed state of KeeperCluster.
 
 | Field | Type | Description | Required | Default |
@@ -278,7 +268,7 @@ KeeperClusterStatus defines the observed state of KeeperCluster.
 | `configurationRevision` | string | ConfigurationRevision indicates target configuration revision for every replica. | true |  |
 | `statefulSetRevision` | string | StatefulSetRevision indicates target StatefulSet revision for every replica. | true |  |
 | `currentRevision` | string | CurrentRevision indicates latest applied KeeperCluster spec revision. | true |  |
-| `updateRevision` | string | CurrentRevision indicates latest requested KeeperCluster spec revision. | true |  |
+| `updateRevision` | string | UpdateRevision indicates latest requested KeeperCluster spec revision. | true |  |
 | `observedGeneration` | integer | ObservedGeneration indicates latest generation observed by controller. | true |  |
 | `version` | string | Version indicates the version reported by the container image. | false |  |
 | `versionProbeRevision` | string | VersionProbeRevision is the image hash of the last successful version probe.<br />When this matches the current image hash, the cached Version is used directly. | false |  |
@@ -287,7 +277,6 @@ Appears in:
 - [KeeperCluster](#keepercluster)
 
 ## KeeperSettings {#keepersettings}
-
 KeeperSettings defines ClickHouse Keeper server configuration.
 
 | Field | Type | Description | Required | Default |
@@ -300,7 +289,6 @@ Appears in:
 - [KeeperClusterSpec](#keeperclusterspec)
 
 ## LoggerConfig {#loggerconfig}
-
 LoggerConfig defines server logging configuration.
 
 | Field | Type | Description | Required | Default |
@@ -316,7 +304,6 @@ Appears in:
 - [KeeperSettings](#keepersettings)
 
 ## PDBPolicy {#pdbpolicy}
-
 PDBPolicy controls whether PodDisruptionBudgets are created.
 
 | Field | Description |
@@ -329,7 +316,6 @@ Appears in:
 - [PodDisruptionBudgetSpec](#poddisruptionbudgetspec)
 
 ## PodDisruptionBudgetSpec {#poddisruptionbudgetspec}
-
 PodDisruptionBudgetSpec configures the PDB created for the cluster.
 Exactly one of MinAvailable or MaxUnavailable may be set.
 When neither is set, the operator picks a safe default based on replica count.
@@ -346,7 +332,6 @@ Appears in:
 - [KeeperClusterSpec](#keeperclusterspec)
 
 ## PodTemplateSpec {#podtemplatespec}
-
 PodTemplateSpec describes the pod configuration overrides for the cluster's pods.
 
 | Field | Type | Description | Required | Default |
@@ -372,7 +357,6 @@ Appears in:
 - [KeeperClusterSpec](#keeperclusterspec)
 
 ## SecretKeySelector {#secretkeyselector}
-
 SecretKeySelector selects a key of a Secret.
 
 | Field | Type | Description | Required | Default |
@@ -385,7 +369,6 @@ Appears in:
 - [DefaultPasswordSelector](#defaultpasswordselector)
 
 ## TemplateMeta {#templatemeta}
-
 TemplateMeta defines supported metadata settings for template objects.
 
 | Field | Type | Description | Required | Default |
@@ -398,7 +381,6 @@ Appears in:
 - [VersionProbeTemplate](#versionprobetemplate)
 
 ## VersionProbeContainer {#versionprobecontainer}
-
 VersionProbeContainer defines container-level overrides for the version probe.
 Field names and JSON tags match corev1.Container so that SMP merges by name.
 
@@ -412,7 +394,6 @@ Appears in:
 - [VersionProbePodSpec](#versionprobepodspec)
 
 ## VersionProbeJobSpec {#versionprobejobspec}
-
 VersionProbeJobSpec defines Job-level overrides for the version probe.
 
 | Field | Type | Description | Required | Default |
@@ -424,7 +405,6 @@ Appears in:
 - [VersionProbeTemplate](#versionprobetemplate)
 
 ## VersionProbePodSpec {#versionprobepodspec}
-
 VersionProbePodSpec defines Pod-level overrides for the version probe.
 Field names and JSON tags match corev1.PodSpec for strategic merge patch compatibility.
 
@@ -439,7 +419,6 @@ Appears in:
 - [VersionProbePodTemplate](#versionprobepodtemplate)
 
 ## VersionProbePodTemplate {#versionprobepodtemplate}
-
 VersionProbePodTemplate describes overrides for the version probe Pod.
 
 | Field | Type | Description | Required | Default |
@@ -451,7 +430,6 @@ Appears in:
 - [VersionProbeJobSpec](#versionprobejobspec)
 
 ## VersionProbeTemplate {#versionprobetemplate}
-
 VersionProbeTemplate defines overrides for the version detection Job.
 The structure mirrors batchv1.JobTemplateSpec, exposing only supported fields.
 

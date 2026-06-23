@@ -1,5 +1,5 @@
 ---
-title: Designing a schema for observability
+title: 'Designing a schema for observability'
 description: 'Designing a schema design for observability'
 keywords: ['observability', 'logs', 'traces', 'metrics', 'OpenTelemetry', 'Grafana', 'OTel']
 slug: /use-cases/observability/schema-design
@@ -21,6 +21,15 @@ We recommend users always create their own schema for logs and traces for the fo
 _We describe each of the above use cases in detail below._
 
 **Important:** While users are encouraged to extend and modify their schema to achieve optimal compression and query performance, they should adhere to the OTel schema naming for core columns where possible. The ClickHouse Grafana plugin assumes the existence of some basic OTel columns to assist with query building e.g. Timestamp and SeverityText. The required columns for logs and traces are documented here [[1]](https://grafana.com/developers/plugin-tools/tutorials/build-a-logs-data-source-plugin#logs-data-frame-format)[[2]](https://grafana.com/docs/grafana/latest/explore/logs-integration/) and [here](https://grafana.com/docs/grafana/latest/explore/trace-integration/#data-frame-structure), respectively. You can choose to change these column names, overriding the defaults in the plugin configuration.
+
+<Tip>
+**ClickStack ships an optimized default schema**
+
+**ClickStack provides out-of-the-box schemas for logs, traces, and metrics** that incorporate the latest ClickHouse features (text indexes for full-text and map-key search, materialized columns and ALIAS arrays for direct-read filtering, block-number row lookups) and have been benchmarked to deliver strong out-of-the-box performance for logging and trace workloads. Use them as a reference point for your own design.
+
+- Canonical DDL: [Tables and schemas used by ClickStack](/clickstack/ingesting-data/schemas).
+- Optimization recipes: [ClickStack performance tuning](/clickstack/managing/performance-tuning). Many of the recommendations on that page (materialized columns, skip indexes, primary key choice, projections, materialized views) apply directly to a build-your-own setup.
+</Tip>
 
 ## Extracting structure with SQL {#extracting-structure-with-sql}
 
@@ -237,7 +246,7 @@ Materialized columns will, by default, not be returned in a `SELECT *`.  This is
 
 ## Materialized views {#materialized-views}
 
-[Materialized views](/concepts/features/materialized-views) provide a more powerful means of applying SQL filtering and transformations to logs and traces.
+[Materialized views](/concepts/features/materialized-views/index) provide a more powerful means of applying SQL filtering and transformations to logs and traces.
 
 Materialized Views allow you to shift the cost of computation from query time to insert time. A ClickHouse materialized view is just a trigger that runs a query on blocks of data as they're inserted into a table. The results of this query are inserted into a second "target" table.
 
@@ -624,7 +633,7 @@ While joins are rarely required in Observability use cases, dictionaries can sti
 <Info>
 **Accelerating joins**
 
-Users interested in accelerating joins with dictionaries can find further details [here](/concepts/features/dictionaries).
+Users interested in accelerating joins with dictionaries can find further details [here](/concepts/features/dictionaries/index).
 </Info>
 
 ### Insert time vs query time {#insert-time-vs-query-time}
@@ -636,7 +645,7 @@ Dictionaries can be used for enriching datasets at query time or insert time. Ea
 
 We recommend that users familiarize themselves with the basics of dictionaries. Dictionaries provide an in-memory lookup table from which values can be retrieved using dedicated [specialist functions](/reference/functions/regular-functions/ext-dict-functions#dictGetAll).
 
-For simple enrichment examples see the guide on Dictionaries [here](/concepts/features/dictionaries). Below, we focus on common observability enrichment tasks.
+For simple enrichment examples see the guide on Dictionaries [here](/concepts/features/dictionaries/index). Below, we focus on common observability enrichment tasks.
 
 ### Using IP dictionaries {#using-ip-dictionaries}
 
@@ -1074,7 +1083,7 @@ Note the use of Tuples for these user agent columns. Tuples are recommended for 
 
 For more examples and details on dictionaries, we recommend the following articles:
 
-- [Advanced dictionary topics](/concepts/features/dictionaries#advanced-dictionary-topics)
+- [Advanced dictionary topics](/concepts/features/dictionaries/index#advanced-dictionary-topics)
 - ["Using Dictionaries to Accelerate Queries"](https://clickhouse.com/blog/faster-queries-dictionaries-clickhouse)
 - [Dictionaries](/reference/statements/create/dictionary)
 
