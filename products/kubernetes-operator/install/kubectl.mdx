@@ -10,11 +10,13 @@ sidebarTitle: 'kubectl'
 This guide covers installing the ClickHouse Operator using kubectl and manifest files.
 
 ## Prerequisites {#prerequisites}
+
 - Kubernetes cluster v1.28.0 or later
 - kubectl v1.28.0 or later
 - Cluster admin permissions
 
 ## Install from Release Manifests {#install-from-release-manifests}
+
 <Note>
 Requires cert-manager to issue webhook certificates.
 </Note>
@@ -22,7 +24,13 @@ Requires cert-manager to issue webhook certificates.
 Install the operator and CRDs from the latest release:
 
 ```bash
-kubectl apply -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator.yaml
+kubectl apply --server-side --force-conflicts -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator.yaml
+```
+
+Server-side apply is required because the combined CRDs exceed the client-side apply size limit. For environments that only support client-side apply, use the description-stripped CRD variant:
+
+```bash
+kubectl apply -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator-stripped-crds.yaml
 ```
 
 This will:
@@ -35,6 +43,7 @@ This will:
 7. Enable metrics endpoint
 
 ## Verify Installation {#verify-installation}
+
 Check that the operator is running:
 
 ```bash
@@ -60,11 +69,13 @@ keeperclusters.clickhouse.com        2025-01-06T00:00:00Z
 ```
 
 ## Configure Custom Deployment Options {#configure-custom-deployment-options}
+
 If you want to configure operator deployment options, follow the steps below.
 
 <Steps>
 <Step>
 ### Clone the Repository {#clone-the-repository}
+
 ```bash
 git clone https://github.com/ClickHouse/clickhouse-operator.git
 cd clickhouse-operator
@@ -73,6 +84,7 @@ cd clickhouse-operator
 
 <Step>
 ### Configure installation options {#configure-installation-options}
+
 Edit config/default/kustomization.yaml to enable/disable features as needed.
 
 * To disable webhooks, comment out the `[WEBHOOK]` and `[CERTMANAGER]` sections.
@@ -83,11 +95,12 @@ Edit config/default/kustomization.yaml to enable/disable features as needed.
 
 <Step>
 ### Build and Deploy {#build-and-deploy}
+
 Build the operator manifests and apply them:
 
 ```bash
 make build-installer VERSION=<required operator version> [IMG=<custom registry path>]
-kubectl apply -f dist/install.yaml
+kubectl apply --server-side --force-conflicts -f dist/install.yaml
 ```
 
 </Step>
