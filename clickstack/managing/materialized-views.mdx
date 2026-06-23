@@ -12,7 +12,7 @@ import { Image } from "/snippets/components/Image.jsx";
 
 <BetaBadge/>
 
-## Introduction <a id="introduction"></a>
+## Introduction {#introduction}
 
 ClickStack can exploit [Incremental Materialized Views (IMV)](/concepts/features/materialized-views/incremental-materialized-view) to accelerate visualizations that rely on aggregation-heavy queries, such as computing average request duration per minute over time. This feature can dramatically improve query performance and is typically most beneficial for larger deployments, around 10 TB per day and above, while enabling scaling into the petabytes-per-day range. Incremental materialized views are in Beta and should be used with care.
 
@@ -22,7 +22,7 @@ This can reduce the computational overhead of running many alerts, especially si
 Reducing the execution time can be beneficial with respect to both responsiveness, and resource consumption.
 </Note>
 
-## What are incremental materialized views <a id="what-are-incremental-materialized-views"></a>
+## What are incremental materialized views {#what-are-incremental-materialized-views}
 
 Incremental materialized views allow you to shift the cost of computation from query time to insert time, resulting in significantly faster `SELECT` queries.
 
@@ -53,7 +53,7 @@ A single materialized view can compute multiple metrics for different groupings,
 Before proceeding further, you're recommended to familiarize yourself with materialized views in ClickHouse in more depth.
 See our guide on [Incremental materialized views](/concepts/features/materialized-views/incremental-materialized-view) for additional details.
 
-## Selecting visualizations for acceleration <a id="selecting-visualizatons-for-acceleration"></a>
+## Selecting visualizations for acceleration {#selecting-visualizatons-for-acceleration}
 
 Before creating any materialized views, it's important to understand which visualizations you want to accelerate and which workflows are most critical to your users.
 
@@ -61,7 +61,7 @@ In ClickStack, materialized views are designed to **accelerate aggregation-heavy
 
 In general, the following is recommended:
 
-### Identify high-impact visualizations <a id="identify-high-impact-visualizations"></a>
+### Identify high-impact visualizations {#identify-high-impact-visualizations}
 
 The best candidates for acceleration typically fall into one of the following categories:
 
@@ -73,7 +73,7 @@ The best candidates for acceleration typically fall into one of the following ca
 
 These visualizations are often executed repeatedly across users and time ranges, making them ideal targets for shifting computation from query time to insert time.
 
-### Balance benefit against insert-time cost <a id="balance-benefit-against-insert-time-cost"></a>
+### Balance benefit against insert-time cost {#balance-benefit-against-insert-time-cost}
 
 Materialized views introduce additional work at insert time, so they should be created selectively and deliberately. Not every visualization benefits from pre-aggregation, and accelerating rarely used charts is usually not worth the overhead. You should keep the total number of materialized views below a maximum of 20.
 
@@ -83,7 +83,7 @@ Prior to moving to production, always validate the resource overhead introduced 
 
 Once you have identified the visualizations that matter most, the next step is consolidation.
 
-### Consolidate visualizations into shared views <a id="consolidate-visualizations-into-shared-views"></a>
+### Consolidate visualizations into shared views {#consolidate-visualizations-into-shared-views}
 
 All materialized views in ClickStack should group data by a time interval using functions such as [`toStartOfMinute`](/reference/functions/regular-functions/date-time-functions#toStartOfMinute). However, many visualizations also share additional grouping keys such as service name, span name, or status code. When multiple visualizations use the same grouping dimensions, they can often be served by a single materialized view.
 
@@ -106,7 +106,7 @@ Consolidating views in this way reduces insert-time overhead, limits the total n
 
 At this stage, **focus on the queries** that will be issued by the visualizations you want to accelerate. In the next section, you'll see an example showing how multiple aggregation queries can be combined into a single materialized view.
 
-## Creating a materialized view <a id="creating-a-materialized-view"></a>
+## Creating a materialized view {#creating-a-materialized-view}
 
 Once you have identified a visualization, or set of visualizations, that you want to accelerate, the next step is to identify the underlying queries. In practice, this means inspecting the visualization configuration and reviewing the generated SQL, paying close attention to the aggregation metrics used, and the functions applied.
 
@@ -133,7 +133,7 @@ You can see an example of how to use the AggregatingMergeTree and Aggregate func
 
 It is **strongly recommended** to familiarize yourself with these concepts before moving forward.
 
-### Example materialized view <a id="example-materialized-view"></a>
+### Example materialized view {#example-materialized-view}
 
 Consider the following original query, which computes average duration, max duration, a count of events, and percentiles per minute, grouped by service name, and status code:
 
@@ -197,31 +197,31 @@ This materialized view consists of two parts:
 
 The result is a compact table that stores per-minute aggregation states for each service name and status code. Its size grows predictably with time and cardinality, and after background merges, it represents the same result as running the original aggregation over the raw data. Querying this table is significantly cheaper than aggregating directly from the source traces table, enabling fast, consistent visualization performance at scale.
 
-## Using materialized view usage in ClickStack <a id="materialized-view-usage-in-clickstack"></a>
+## Using materialized view usage in ClickStack {#materialized-view-usage-in-clickstack}
 
 Once materialized views have been created in ClickHouse, they must be registered in ClickStack so they can be used automatically by visualizations, dashboards, and alerts.
 
-### Registering a Materialized for usage <a id="registering-a-view"></a>
+### Registering a Materialized for usage {#registering-a-view}
 
 Materialized views should be registered against the **source** in HyperDX that corresponds to the **original source table** from which the view was derived.
 
 <Steps>
 <Step>
-#### Edit the source <a id="edit-the-source"></a>
+#### Edit the source {#edit-the-source}
 
 Navigate to the relevant **source** in HyperDX and open the **Edit configuration** dialog. Scroll to the section for materialized views.
 
 <Image img="/images/clickstack/materialized_views/edit_source.png" size="lg" alt="Edit sources"/>
 </Step>
 <Step>
-#### Add the materialized view <a id="add-the-materialized-view"></a>
+#### Add the materialized view {#add-the-materialized-view}
 
 Select **Add materialized view**, then choose the database and target table that back the materialized view.
 
 <Image img="/images/clickstack/materialized_views/add_view.png" size="lg" alt="Edit sources"/>
 </Step>
 <Step>
-#### Select metrics <a id="select-metrics"></a>
+#### Select metrics {#select-metrics}
 
 In most cases, the timestamp, dimension, and metric columns will be inferred automatically. If not, specify them manually.
 
@@ -234,14 +234,14 @@ For dimensions, specify all the columns, other than the timestamp, that the view
 <Image img="/images/clickstack/materialized_views/select_metrics.png" size="lg" alt="Select Metrics"/>
 </Step>
 <Step>
-#### Select the time granularity <a id="select-time-granularity"></a>
+#### Select the time granularity {#select-time-granularity}
 
 Select the **time granularity** of the materialized view, for example, one minute.
 
 <Image img="/images/clickstack/materialized_views/select_time_granularity.png" size="lg" alt="Select Time Granularity"/>
 </Step>
 <Step>
-#### Select the minimum date <a id="specify-the-minimum-date"></a>
+#### Select the minimum date {#specify-the-minimum-date}
 
 Specify the minimum date for which the materialized view contains data. This represents the earliest timestamp available in the view and is typically the time at which the view was created, assuming ingestion has been continuous.
 
@@ -259,7 +259,7 @@ SELECT min(Timestamp) FROM otel_traces_1m
 ```
 </Step>
 <Step>
-#### Save the source <a id="save-the-source"></a>
+#### Save the source {#save-the-source}
 
 Save the source configuration.
 
@@ -269,7 +269,7 @@ Save the source configuration.
 
 Once a materialized view has been registered, it's used automatically by ClickStack whenever a query is eligible without requiring changes to dashboards, visualizations, or alerts. ClickStack evaluates each query at execution time and determines whether a materialized view can be applied.
 
-### Verifying acceleration in dashboards and visualizations <a id="verifying-acceleration-in-dashboards-and-visualizations"></a>
+### Verifying acceleration in dashboards and visualizations {#verifying-acceleration-in-dashboards-and-visualizations}
 
 It's important to remember that incremental materialized views only contain data inserted **after the view was created**. They're not automatically backfilled, which keeps them lightweight and inexpensive to maintain. For this reason, users must explicitly specify the valid time range for a view when registering it.
 
@@ -298,7 +298,7 @@ ClickStack provides clear visual indicators to confirm whether a materialized vi
 
 These indicators make it easy to confirm whether a visualization is accelerated, understand why a particular view was selected, and diagnose why a view wasn't eligible.
 
-### How materialized views are selected for visualizations <a id="how-views-are-selected"></a>
+### How materialized views are selected for visualizations {#how-views-are-selected}
 
 When a visualization is executed, ClickStack may have multiple candidates available, including the base table, and multiple materialized views. To ensure optimal performance, ClickStack automatically evaluates and selects the most efficient option using ClickHouse's [`EXPLAIN ESTIMATE`](/reference/statements/explain#explain-estimate) mechanism.
 
@@ -326,7 +326,7 @@ This approach consistently minimizes data scanned and delivers predictable, low-
 
 Materialized views remain eligible even when visualizations include filters, search constraints, or time bucketing, provided that all required dimensions are present in the view. This allows views to accelerate dashboards, histograms, and filtered charts without requiring changes to visualization definitions.
 
-#### Example of choosing materialized views <a id="example-of-choosing-materialized-view"></a>
+#### Example of choosing materialized views {#example-of-choosing-materialized-view}
 
 Consider two materialized views created on the same trace source:
 
@@ -383,11 +383,11 @@ Because `otel_traces_1m` is smaller and scans fewer granules, it's selected auto
 
 Both materialized views still outperform querying the base table directly, but selecting the smallest sufficient view yields the best performance.
 
-### Alerts <a id="alerts"></a>
+### Alerts {#alerts}
 
 Alert queries automatically use materialized views when compatible. The same optimization logic applies, providing faster alert evaluation.
 
-## Backfilling a materialized view <a id="backfilling-a-materialized-view"></a>
+## Backfilling a materialized view {#backfilling-a-materialized-view}
 
 As noted earlier, incremental materialized views only contain data inserted **after the view is created** and aren't automatically backfilled. This design keeps views lightweight and inexpensive to maintain, but it also means they can't be used for queries that require data earlier than the view's minimum timestamp.
 
@@ -405,7 +405,7 @@ If additional resources aren't provisioned, backfilling can negatively impact pr
 
 In summary, backfilling is often not worth the cost and operational risk. It should be considered only in exceptional cases where historical acceleration is critical. If you choose to proceed, it is recommended to follow the controlled approach outlined below to balance performance, cost, and production impact.
 
-### Backfilling approaches <a id="backfilling-approaches"></a>
+### Backfilling approaches {#backfilling-approaches}
 
 <Info>
 **Avoid POPULATE**
@@ -433,13 +433,13 @@ GROUP BY
 
 As discussed earlier, incremental materialized views aren't backfilled automatically. The following processes are recommended to safely backfill historical data while preserving incremental behavior for new data.
 
-#### Direct backfill using `INSERT INTO SELECT` <a id="direct-backfill"></a>
+#### Direct backfill using `INSERT INTO SELECT` {#direct-backfill}
 
 This approach is best suited for **smaller datasets** or **relatively lightweight aggregation queries** where the full backfill can be completed in a reasonable amount of time without exhausting cluster resources. It's typically appropriate when the backfill query can run in minutes, or at most a few hours, and when temporary increases in CPU, and I/O usage are acceptable. For larger datasets or more expensive aggregations, consider the incremental, or block-based backfilling approaches below instead.
 
 <Steps>
 <Step>
-##### Determine the current coverage of the view <a id="determine-current-coverage-of-view"></a>
+##### Determine the current coverage of the view {#determine-current-coverage-of-view}
 
 Before attempting any backfill, first establish what data the materialized view already contains. This is done by querying the minimum timestamp present in the target table:
 
@@ -451,7 +451,7 @@ FROM otel_traces_1m;
 This timestamp represents the earliest point from which the view can satisfy queries. Any query from ClickStack requesting data earlier than this timestamp will fall back to the base table.
 </Step>
 <Step>
-##### Decide whether backfilling is necessary <a id="decide-whether-backfilling-is-neccessary"></a>
+##### Decide whether backfilling is necessary {#decide-whether-backfilling-is-neccessary}
 
 In most ClickStack deployments, queries focus on recent data, such as the last 24 hours. In these cases, newly created views become fully usable shortly after creation, and backfilling is unnecessary.
 
@@ -462,7 +462,7 @@ If the timestamp returned in the previous step is sufficiently old for your use 
 - The dataset size and aggregation cost make backfilling feasible.
 </Step>
 <Step>
-##### Backfill missing historical data <a id="backfill-missing-historical-data"></a>
+##### Backfill missing historical data {#backfill-missing-historical-data}
 
 If backfilling is required, populate the materialized view's target table for timestamps earlier than the current minimum using the query from the view modified to only read data older than the timestamp recorded above. Because the target table uses AggregatingMergeTree, the backfill query **must insert aggregation states, not final values**.
 
@@ -496,7 +496,7 @@ GROUP BY
 </Step>
 </Steps>
 
-#### Incremental backfilling using a Null table <a id="incremental-backfill-null-table"></a>
+#### Incremental backfilling using a Null table {#incremental-backfill-null-table}
 
 For larger datasets or more resource-intensive aggregation queries, a direct backfill using a single `INSERT INTO SELECT` can be impractical or unsafe. In these cases, an **incremental backfill** approach is recommended. This method more closely mirrors how incremental materialized views normally operate, processing data in manageable blocks rather than aggregating the entire historical dataset at once.
 
@@ -511,7 +511,7 @@ The key idea is to use a [**Null table**](/reference/engines/table-engines/speci
 
 <Steps>
 <Step>
-##### Create a Null table for backfilling <a id="create-null-table"></a>
+##### Create a Null table for backfilling {#create-null-table}
 
 Create a lightweight Null table that contains only the columns required by the materialized view's aggregation. This minimizes I/O and memory usage.
 
@@ -527,7 +527,7 @@ ENGINE = Null;
 ```
 </Step>
 <Step>
-##### Attach a materialized view to the Null table <a id="attach-mv-to-null-table"></a>
+##### Attach a materialized view to the Null table {#attach-mv-to-null-table}
 
 Next, create a materialized view on the Null table that targets the same aggregation table used by your primary materialized view.
 
@@ -553,7 +553,7 @@ GROUP BY
 This materialized view will execute incrementally as rows are inserted into the Null table, producing aggregation states in small blocks.
 </Step>
 <Step>
-##### Backfill data incrementally <a id="incremental-backfill"></a>
+##### Backfill data incrementally {#incremental-backfill}
 
 Finally, insert historical data into the Null table. The materialized view will process the data block by block, emitting aggregation states into the target table without persisting the raw rows.
 
@@ -580,11 +580,11 @@ For further details on tuning this process, including improving insert performan
 </Step>
 </Steps>
 
-## Recommendations <a id="recommendations"></a>
+## Recommendations {#recommendations}
 
 The following recommendations summarize best practices for designing and operating materialized views in ClickStack. Following these guidelines will help ensure materialized views are effective, predictable, and cost-efficient.
 
-### Granularity selection and alignment <a id="granularity-selection-and-alignment"></a>
+### Granularity selection and alignment {#granularity-selection-and-alignment}
 
 Materialized views are only used when the visualization or alert granularity is an **exact multiple** of the view's granularity. How this granularity is determined depends on the chart type:
 
@@ -603,7 +603,7 @@ Because of these rules:
 
 Higher granularity (for example, 1 hour) produces smaller views and lower storage overhead, while lower granularity (for example, 1 minute) provides more flexibility for fine-grained analysis. Choose the smallest granularity that supports your critical workflows.
 
-### Limit and consolidate materialized views <a id="limit-and-consolidate-materialized-views"></a>
+### Limit and consolidate materialized views {#limit-and-consolidate-materialized-views}
 
 Each materialized view introduces additional insert-time overhead and contributes to part and merge pressure.
 The following guidelines are recommended:
@@ -614,7 +614,7 @@ The following guidelines are recommended:
 
 Where possible, compute multiple metrics and support multiple charts from the same materialized view.
 
-### Choose dimensions carefully <a id="choose-dimensions-carefully"></a>
+### Choose dimensions carefully {#choose-dimensions-carefully}
 
 Include only dimensions that are commonly used for grouping or filtering:
 
@@ -628,7 +628,7 @@ Include only dimensions that are commonly used for grouping or filtering:
 A common and almost always useful baseline is a materialized view grouped by **service name with a count metric**, which enables fast histograms and service-level overviews in search and dashboards.
 </Info>
 
-### Naming conventions for aggregation columns <a id="naming-conventions-for-aggregation-columns"></a>
+### Naming conventions for aggregation columns {#naming-conventions-for-aggregation-columns}
 
 Materialized view aggregation columns must follow a strict naming convention to enable automatic inference:
 
@@ -640,7 +640,7 @@ Materialized view aggregation columns must follow a strict naming convention to 
 
 ClickStack relies on this convention to correctly map queries to materialized view columns.
 
-### Quantiles and sketch selection <a id="quantiles-and-sketch-selection"></a>
+### Quantiles and sketch selection {#quantiles-and-sketch-selection}
 
 Different quantile functions have different performance and storage characteristics:
 
@@ -649,7 +649,7 @@ Different quantile functions have different performance and storage characterist
 
 You can specify a sketch size (for example, `quantile(0.5)` at insert time for both functions. The resulting sketch can still be queried for other quantile values later e.g. `quantile(0.95)`. Experimenting is recommended to find the best balance for your workload.
 
-### Validate effectiveness continuously <a id="validate-effectiveness-continously"></a>
+### Validate effectiveness continuously {#validate-effectiveness-continously}
 
 Always verify that materialized views are delivering real benefits:
 
@@ -659,7 +659,7 @@ Always verify that materialized views are delivering real benefits:
 
 Materialized views should be treated as performance optimizations that require periodic review and adjustment as query patterns evolve.
 
-### Advanced configurations <a id="advanced-configurations"></a>
+### Advanced configurations {#advanced-configurations}
 
 For more complex workloads, multiple materialized views can be used to support different access patterns. Examples include:
 
@@ -670,9 +670,9 @@ These patterns can significantly improve performance when applied selectively, b
 
 Following these recommendations will help ensure materialized views remain effective, maintainable, and aligned with ClickStack's execution model.
 
-## Limitations <a id="limitations"></a>
+## Limitations {#limitations}
 
-### Common incompatibility reasons <a id="common-incompatibility-reasons"></a>
+### Common incompatibility reasons {#common-incompatibility-reasons}
 
 A materialized view **won't** be used if any of the following conditions apply:
 
@@ -691,7 +691,7 @@ A materialized view **won't** be used if any of the following conditions apply:
 - **Custom count expressions**
   Queries using expressions such as `count(if(...))` or other conditional counts can't be derived from standard aggregation states and therefore can't use materialized views.
 
-### Design and operational constraints <a id="design-and-operational-constraints"></a>
+### Design and operational constraints {#design-and-operational-constraints}
 
 - **No automatic backfilling**
   Incremental materialized views only contain data inserted after creation. Historical acceleration requires explicit backfilling, which may be expensive or impractical for large datasets.
@@ -707,9 +707,9 @@ A materialized view **won't** be used if any of the following conditions apply:
 
 Being aware of these limitations helps ensure materialized views are applied where they provide real benefit and avoid configurations that silently fall back to slower source-table queries.
 
-## Troubleshooting <a id="troubleshooting"></a>
+## Troubleshooting {#troubleshooting}
 
-### Materialized view not being used <a id="materialied-view-not-being-used"></a>
+### Materialized view not being used {#materialied-view-not-being-used}
 
 **Check 1: date range**
 
@@ -732,7 +732,7 @@ Being aware of these limitations helps ensure materialized views are applied whe
 - Ensure group by columns are in MV's dimension columns.
 - Check "Available group/filter columns" in optimization modal.
 
-### Slow materialized view queries <a id="slow-mv-queries"></a>
+### Slow materialized view queries {#slow-mv-queries}
 
 **Issue 1: materialized view granularity too fine**
 
@@ -749,7 +749,7 @@ Being aware of these limitations helps ensure materialized views are applied whe
 - The System is running `EXPLAIN` on each MV.
 - Solution: Remove MVs that are rarely used or always skipped.
 
-### Configuration errors <a id="config-errors"></a>
+### Configuration errors {#config-errors}
 
 **Error: "At least one aggregated column is required"**
 

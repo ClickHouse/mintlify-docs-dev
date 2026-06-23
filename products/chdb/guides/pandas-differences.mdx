@@ -9,7 +9,7 @@ doc_type: 'guide'
 
 While DataStore is highly compatible with pandas, there are important differences to understand.
 
-## Summary Table <a id="summary"></a>
+## Summary Table {#summary}
 
 | Aspect | pandas | DataStore |
 |--------|--------|-----------|
@@ -22,9 +22,9 @@ While DataStore is highly compatible with pandas, there are important difference
 
 ---
 
-## 1. Lazy vs Eager Execution <a id="lazy-execution"></a>
+## 1. Lazy vs Eager Execution {#lazy-execution}
 
-### pandas (Eager) <a id="pandas-eager"></a>
+### pandas (Eager) {#pandas-eager}
 
 Operations execute immediately:
 
@@ -36,7 +36,7 @@ result = df[df['age'] > 25]   # Filters NOW
 grouped = result.groupby('city')['salary'].mean()  # Aggregates NOW
 ```
 
-### DataStore (Lazy) <a id="datastore-lazy"></a>
+### DataStore (Lazy) {#datastore-lazy}
 
 Operations are deferred until results are needed:
 
@@ -52,7 +52,7 @@ print(grouped)        # Executes when displaying
 df = grouped.to_df()  # Or when converting to pandas
 ```
 
-### Why It Matters <a id="why-lazy"></a>
+### Why It Matters {#why-lazy}
 
 Lazy execution enables:
 - **Query optimization**: Multiple operations compile to one SQL query
@@ -62,9 +62,9 @@ Lazy execution enables:
 
 ---
 
-## 2. Return Types <a id="return-types"></a>
+## 2. Return Types {#return-types}
 
-### pandas <a id="pandas-return-types"></a>
+### pandas {#pandas-return-types}
 
 ```python
 df['col']           # Returns pd.Series
@@ -73,7 +73,7 @@ df[df['x'] > 10]    # Returns pd.DataFrame
 df.groupby('x')     # Returns DataFrameGroupBy
 ```
 
-### DataStore <a id="datastore-return-types"></a>
+### DataStore {#datastore-return-types}
 
 ```python
 ds['col']           # Returns ColumnExpr (lazy)
@@ -82,7 +82,7 @@ ds[ds['x'] > 10]    # Returns DataStore (lazy)
 ds.groupby('x')     # Returns LazyGroupBy
 ```
 
-### Converting to pandas Types <a id="converting-to-pandas-types"></a>
+### Converting to pandas Types {#converting-to-pandas-types}
 
 ```python
 # Get pandas DataFrame
@@ -98,7 +98,7 @@ print(ds)  # Automatically converts for display
 
 ---
 
-## 3. Execution Triggers <a id="triggers"></a>
+## 3. Execution Triggers {#triggers}
 
 DataStore executes when you need actual values:
 
@@ -115,7 +115,7 @@ DataStore executes when you need actual values:
 | Iteration | `for row in ds` | Need to iterate |
 | `equals()` | `ds.equals(other)` | Need comparison |
 
-### Operations That Stay Lazy <a id="stay-lazy"></a>
+### Operations That Stay Lazy {#stay-lazy}
 
 | Operation | Returns |
 |-----------|---------|
@@ -130,9 +130,9 @@ DataStore executes when you need actual values:
 
 ---
 
-## 4. Row Order <a id="row-order"></a>
+## 4. Row Order {#row-order}
 
-### pandas <a id="pandas-row-order"></a>
+### pandas {#pandas-row-order}
 
 Row order is always preserved:
 
@@ -141,7 +141,7 @@ df = pd.read_csv("data.csv")
 print(df.head())  # Always same order as file
 ```
 
-### DataStore <a id="datastore-row-order"></a>
+### DataStore {#datastore-row-order}
 
 Row order is **automatically preserved** for most operations:
 
@@ -155,7 +155,7 @@ ds_filtered = ds[ds['age'] > 25]  # Same order as pandas
 
 DataStore automatically tracks original row positions internally (using `rowNumberInAllBlocks()`) to ensure order consistency with pandas.
 
-### When Order Is Preserved <a id="order-preserved"></a>
+### When Order Is Preserved {#order-preserved}
 
 - File sources (CSV, Parquet, JSON, etc.)
 - pandas DataFrame sources
@@ -164,7 +164,7 @@ DataStore automatically tracks original row positions internally (using `rowNumb
 - After explicit `sort()` or `sort_values()`
 - Operations that define order (`nlargest()`, `nsmallest()`, `head()`, `tail()`)
 
-### When Order May Differ <a id="order-may-differ"></a>
+### When Order May Differ {#order-may-differ}
 
 - After `groupby()` aggregations (use `sort_values()` to ensure consistent order)
 - After `merge()` / `join()` with certain join types
@@ -172,9 +172,9 @@ DataStore automatically tracks original row positions internally (using `rowNumb
 
 ---
 
-## 5. No inplace Parameter <a id="no-inplace"></a>
+## 5. No inplace Parameter {#no-inplace}
 
-### pandas <a id="pandas-inplace"></a>
+### pandas {#pandas-inplace}
 
 ```python
 df.drop(columns=['col'], inplace=True)  # Modifies df
@@ -182,7 +182,7 @@ df.fillna(0, inplace=True)              # Modifies df
 df.rename(columns={'old': 'new'}, inplace=True)
 ```
 
-### DataStore <a id="datastore-inplace"></a>
+### DataStore {#datastore-inplace}
 
 `inplace=True` is not supported. Always assign the result:
 
@@ -192,7 +192,7 @@ ds = ds.fillna(0)                       # Returns new DataStore
 ds = ds.rename(columns={'old': 'new'})  # Returns new DataStore
 ```
 
-### Why No inplace? <a id="why-no-inplace"></a>
+### Why No inplace? {#why-no-inplace}
 
 DataStore uses immutable operations to enable:
 - Query building (lazy evaluation)
@@ -202,9 +202,9 @@ DataStore uses immutable operations to enable:
 
 ---
 
-## 6. Index Support <a id="index"></a>
+## 6. Index Support {#index}
 
-### pandas <a id="pandas-index"></a>
+### pandas {#pandas-index}
 
 Full index support:
 
@@ -216,7 +216,7 @@ df.reset_index()
 df.index.name = 'user_id'
 ```
 
-### DataStore <a id="datastore-index"></a>
+### DataStore {#datastore-index}
 
 Simplified index support:
 
@@ -231,16 +231,16 @@ df = df.set_index('id')
 df.loc['user123']
 ```
 
-### DataStore Source Matters <a id="datastore-source-matters"></a>
+### DataStore Source Matters {#datastore-source-matters}
 
 - **DataFrame source**: Preserves pandas index
 - **File source**: Uses simple integer index
 
 ---
 
-## 7. Comparison Behavior <a id="comparison"></a>
+## 7. Comparison Behavior {#comparison}
 
-### Comparing with pandas <a id="comparing-with-pandas"></a>
+### Comparing with pandas {#comparing-with-pandas}
 
 pandas doesn't recognize DataStore objects:
 
@@ -258,7 +258,7 @@ pdf == dsf  # pandas doesn't know DataStore
 pdf.equals(dsf.to_pandas())  # True
 ```
 
-### Using equals() <a id="using-equals"></a>
+### Using equals() {#using-equals}
 
 ```python
 # DataStore.equals() also works
@@ -267,9 +267,9 @@ dsf.equals(pdf)  # Compares with pandas DataFrame
 
 ---
 
-## 8. Type Inference <a id="types"></a>
+## 8. Type Inference {#types}
 
-### pandas <a id="pandas-types"></a>
+### pandas {#pandas-types}
 
 Uses numpy/pandas types:
 
@@ -277,7 +277,7 @@ Uses numpy/pandas types:
 df['col'].dtype  # int64, float64, object, datetime64, etc.
 ```
 
-### DataStore <a id="datastore-types"></a>
+### DataStore {#datastore-types}
 
 May use ClickHouse types:
 
@@ -289,7 +289,7 @@ df = ds.to_df()
 df['col'].dtype  # Now pandas type
 ```
 
-### Explicit Casting <a id="explicit-casting"></a>
+### Explicit Casting {#explicit-casting}
 
 ```python
 # Force specific type
@@ -298,9 +298,9 @@ ds['col'] = ds['col'].astype('int64')
 
 ---
 
-## 9. Memory Model <a id="memory"></a>
+## 9. Memory Model {#memory}
 
-### pandas <a id="pandas-memory"></a>
+### pandas {#pandas-memory}
 
 All data lives in memory:
 
@@ -308,7 +308,7 @@ All data lives in memory:
 df = pd.read_csv("huge.csv")  # 10GB in memory!
 ```
 
-### DataStore <a id="datastore-memory"></a>
+### DataStore {#datastore-memory}
 
 Data stays at source until needed:
 
@@ -322,9 +322,9 @@ df = ds.to_df()  # Maybe only 1GB now
 
 ---
 
-## 10. Error Messages <a id="errors"></a>
+## 10. Error Messages {#errors}
 
-### Different Error Sources <a id="different-error-sources"></a>
+### Different Error Sources {#different-error-sources}
 
 - **pandas errors**: From pandas library
 - **DataStore errors**: From chDB or ClickHouse
@@ -334,7 +334,7 @@ df = ds.to_df()  # Maybe only 1GB now
 # "Code: 62. DB::Exception: Syntax error..."
 ```
 
-### Debugging Tips <a id="debugging-tips"></a>
+### Debugging Tips {#debugging-tips}
 
 ```python
 # View the SQL to debug
@@ -350,7 +350,7 @@ config.enable_debug()
 
 ---
 
-## Migration Checklist <a id="checklist"></a>
+## Migration Checklist {#checklist}
 
 When migrating from pandas:
 
@@ -363,7 +363,7 @@ When migrating from pandas:
 
 ---
 
-## Quick Reference <a id="quick-ref"></a>
+## Quick Reference {#quick-ref}
 
 | pandas | DataStore |
 |--------|-----------|

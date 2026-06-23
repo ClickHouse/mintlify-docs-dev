@@ -9,7 +9,7 @@ doc_type: 'reference'
 
 This engine provides integration with the [Amazon S3](https://aws.amazon.com/s3/) ecosystem. This engine is similar to the [HDFS](/reference/engines/table-engines/integrations/hdfs) engine, but provides S3-specific features.
 
-## Example <a id="example"></a>
+## Example {#example}
 
 ```sql
 CREATE TABLE s3_engine_table (name String, value UInt32)
@@ -28,7 +28,7 @@ SELECT * FROM s3_engine_table LIMIT 2;
 └──────┴───────┘
 ```
 
-## Create a table <a id="creating-a-table"></a>
+## Create a table {#creating-a-table}
 
 ```sql
 CREATE TABLE s3_engine_table (name String, value UInt32)
@@ -37,7 +37,7 @@ CREATE TABLE s3_engine_table (name String, value UInt32)
     [SETTINGS ...]
 ```
 
-### Engine parameters <a id="parameters"></a>
+### Engine parameters {#parameters}
 
 - `path` — Bucket url with path to file. Supports following wildcards in readonly mode: `*`, `**`, `?`, `{abc,def}` and `{N..M}` where `N`, `M` — numbers, `'abc'`, `'def'` — strings. For more information see [below](#wildcards-in-path).
 - `NOSIGN` - If this keyword is provided in place of credentials, all the requests will not be signed.
@@ -49,7 +49,7 @@ CREATE TABLE s3_engine_table (name String, value UInt32)
 - `storage_class_name` - Options: `STANDARD` or `INTELLIGENT_TIERING`, allow to specify [AWS S3 Intelligent Tiering](https://aws.amazon.com/s3/storage-classes/intelligent-tiering/).
 - `extra_credentials` - Optional. Used to pass a `role_arn` for role-based access in ClickHouse Cloud. See [Secure S3](/products/cloud/guides/data-sources/accessing-s3-data-securely) for configuration steps.
 
-### Data cache <a id="data-cache"></a>
+### Data cache {#data-cache}
 
 `S3` table engine supports data caching on local disk.
 See filesystem cache configuration options and usage in this [section](/concepts/features/configuration/server-config/storing-data#using-local-cache).
@@ -80,13 +80,13 @@ There are two ways to define cache in configuration file.
 
 2. reuse cache configuration (and therefore cache storage) from clickhouse `storage_configuration` section, [described here](/concepts/features/configuration/server-config/storing-data#using-local-cache)
 
-### PARTITION BY <a id="partition-by"></a>
+### PARTITION BY {#partition-by}
 
 `PARTITION BY` — Optional. In most cases you don't need a partition key, and if it is needed you generally don't need a partition key more granular than by month. Partitioning does not speed up queries (in contrast to the ORDER BY expression). You should never use too granular partitioning. Don't partition your data by client identifiers or names (instead, make client identifier or name the first column in the ORDER BY expression).
 
 For partitioning by month, use the `toYYYYMM(date_column)` expression, where `date_column` is a column with a date of the type [Date](/reference/data-types/date). The partition names here have the `"YYYYMM"` format.
 
-#### Partition strategy <a id="partition-strategy"></a>
+#### Partition strategy {#partition-strategy}
 
 `WILDCARD`: Replaces the `{_partition_id}` wildcard in the file path with the actual partition key. Reading is not supported. Selected by default only under `compatibility` settings older than `26.6`; otherwise the default is `HIVE` (see the `file_like_engine_default_partition_strategy` setting).
 
@@ -132,7 +132,7 @@ arthur :) select _path, * from t_03363_parquet;
     └────────────────────────────────────────────────────────────────────────────┴──────┴─────────┴─────────┘
 ```
 
-### Querying partitioned data <a id="querying-partitioned-data"></a>
+### Querying partitioned data {#querying-partitioned-data}
 
 This example uses the [docker compose recipe](https://github.com/ClickHouse/examples/tree/5fdc6ff72f4e5137e23ea075c88d3f44b0202490/docker-compose-recipes/recipes/ch-and-minio-S3), which integrates ClickHouse and MinIO.  You should be able to reproduce the same queries using S3 by replacing the endpoint and authentication values.
 
@@ -151,7 +151,7 @@ reliability is sometimes imperfect it makes sense to transfer datasets
 in subsets, hence partitioned writes.
 </Note>
 
-#### Create the table <a id="create-the-table"></a>
+#### Create the table {#create-the-table}
 ```sql highlight={8}
 CREATE TABLE p
 (
@@ -167,12 +167,12 @@ ENGINE = S3(
 PARTITION BY column3
 ```
 
-#### Insert data <a id="insert-data"></a>
+#### Insert data {#insert-data}
 ```sql
 INSERT INTO p VALUES (1, 2, 3), (3, 2, 1), (78, 43, 45)
 ```
 
-#### Select from partition 3 <a id="select-from-partition-3"></a>
+#### Select from partition 3 {#select-from-partition-3}
 
 <Tip>
 This query uses the s3 table function
@@ -188,7 +188,7 @@ FROM s3('http://minio:10000/clickhouse//test_3.csv', 'minioadmin', 'minioadminpa
 └────┴────┴────┘
 ```
 
-#### Select from partition 1 <a id="select-from-partition-1"></a>
+#### Select from partition 1 {#select-from-partition-1}
 ```sql
 SELECT *
 FROM s3('http://minio:10000/clickhouse//test_1.csv', 'minioadmin', 'minioadminpassword', 'CSV')
@@ -199,7 +199,7 @@ FROM s3('http://minio:10000/clickhouse//test_1.csv', 'minioadmin', 'minioadminpa
 └────┴────┴────┘
 ```
 
-#### Select from partition 45 <a id="select-from-partition-45"></a>
+#### Select from partition 45 {#select-from-partition-45}
 ```sql
 SELECT *
 FROM s3('http://minio:10000/clickhouse//test_45.csv', 'minioadmin', 'minioadminpassword', 'CSV')
@@ -210,7 +210,7 @@ FROM s3('http://minio:10000/clickhouse//test_45.csv', 'minioadmin', 'minioadminp
 └────┴────┴────┘
 ```
 
-#### Limitation <a id="limitation"></a>
+#### Limitation {#limitation}
 
 You may naturally try to `Select * from p`, but as noted above, this query will fail; use the preceding query.
 
@@ -222,11 +222,11 @@ Received exception from server (version 23.4.1):
 Code: 48. DB::Exception: Received from localhost:9000. DB::Exception: Reading from a partitioned S3 storage is not implemented yet. (NOT_IMPLEMENTED)
 ```
 
-## Insert data <a id="inserting-data"></a>
+## Insert data {#inserting-data}
 
 Note that rows can only be inserted into new files. There are no merge cycles or file split operations. Once a file is written, subsequent inserts will fail. To avoid this you can use `s3_truncate_on_insert` and `s3_create_new_file_on_insert` settings. See more details [here](/integrations/connectors/data-ingestion/AWS/integrating-s3-with-clickhouse#inserting-data).
 
-## Virtual columns <a id="virtual-columns"></a>
+## Virtual columns {#virtual-columns}
 
 - `_path` — Path to the file. Type: `LowCardinality(String)`.
 - `_file` — Name of the file. Type: `LowCardinality(String)`.
@@ -237,7 +237,7 @@ Note that rows can only be inserted into new files. There are no merge cycles or
 
 For more information about virtual columns see [here](/reference/engines/table-engines/index#table_engines-virtual_columns).
 
-## Implementation details <a id="implementation-details"></a>
+## Implementation details {#implementation-details}
 
 - Reads and writes can be parallel
 - Not supported:
@@ -251,7 +251,7 @@ For more information about virtual columns see [here](/reference/engines/table-e
   Zero-copy replication is disabled by default in ClickHouse version 22.8 and higher.  This feature is not recommended for production use.
 </Info>
 
-## Wildcards in path <a id="wildcards-in-path"></a>
+## Wildcards in path {#wildcards-in-path}
 
 `path` argument can specify multiple files using bash-like wildcards. For being processed file should exist and match to the whole path pattern. Listing of files is determined during `SELECT` (not at `CREATE` moment).
 
@@ -310,13 +310,13 @@ CREATE TABLE table_with_asterisk (name String, value UInt32)
     ENGINE = S3('https://clickhouse-public-datasets.s3.amazonaws.com/my-bucket/{some,another}_folder/*', 'CSV');
 ```
 
-## Storage settings <a id="storage-settings"></a>
+## Storage settings {#storage-settings}
 
 - [s3_truncate_on_insert](/reference/settings/session-settings#s3_truncate_on_insert) - allows to truncate file before insert into it. Disabled by default.
 - [s3_create_new_file_on_insert](/reference/settings/session-settings#s3_create_new_file_on_insert) - allows to create a new file on each insert if format has suffix. Disabled by default.
 - [s3_skip_empty_files](/reference/settings/session-settings#s3_skip_empty_files) - allows to skip empty files while reading. Enabled by default.
 
-## S3-related settings <a id="settings"></a>
+## S3-related settings {#settings}
 
 The following settings can be set before query execution or placed into configuration file.
 
@@ -334,7 +334,7 @@ The following settings can be set before query execution or placed into configur
 
 Security consideration: if malicious user can specify arbitrary S3 URLs, `s3_max_redirects` must be set to zero to avoid [SSRF](https://en.wikipedia.org/wiki/Server-side_request_forgery) attacks; or alternatively, `remote_host_filter` must be specified in server configuration.
 
-## Endpoint-based settings <a id="endpoint-settings"></a>
+## Endpoint-based settings {#endpoint-settings}
 
 The following settings can be specified in configuration file for given endpoint (which will be matched by exact prefix of a URL):
 
@@ -377,7 +377,7 @@ The following settings can be specified in configuration file for given endpoint
 </s3>
 ```
 
-## Working with archives <a id="working-with-archives"></a>
+## Working with archives {#working-with-archives}
 
 Suppose that we have several archive files with following URIs on S3:
 
@@ -402,7 +402,7 @@ TAR
 While ZIP and TAR archives can be accessed from any supported storage location, 7Z archives can only be read from the local filesystem where ClickHouse is installed.
 </Note>
 
-## Accessing public buckets <a id="accessing-public-buckets"></a>
+## Accessing public buckets {#accessing-public-buckets}
 
 ClickHouse tries to fetch credentials from many different types of sources.
 Sometimes, it can produce problems when accessing some buckets that are public causing the client to return `403` error code.
@@ -413,11 +413,11 @@ CREATE TABLE big_table (name String, value UInt32)
     ENGINE = S3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/aapl_stock.csv', NOSIGN, 'CSVWithNames');
 ```
 
-## Optimizing performance <a id="optimizing-performance"></a>
+## Optimizing performance {#optimizing-performance}
 
 For details on optimizing the performance of the s3 function see [our detailed guide](/integrations/connectors/data-ingestion/AWS/performance).
 
-## Role-based access <a id="role-based-access"></a>
+## Role-based access {#role-based-access}
 
 In ClickHouse Cloud, you can use role-based access to authenticate with S3 instead of using access keys. See [Secure S3](/products/cloud/guides/data-sources/accessing-s3-data-securely) for configuration steps.
 
@@ -435,7 +435,7 @@ CREATE TABLE my_s3_table(name String, value UInt32)
 ENGINE = S3('https://my-bucket.s3.amazonaws.com/data/*.csv', extra_credentials(role_arn = 'arn:aws:iam::111111111111:role/ClickHouseAccessRole-001', external_id = 'my-external-id'), 'CSV')
 ```
 
-## See also <a id="see-also"></a>
+## See also {#see-also}
 
 - [s3 table function](/reference/functions/table-functions/s3)
 - [Integrating S3 with ClickHouse](/integrations/connectors/data-ingestion/AWS/integrating-s3-with-clickhouse)

@@ -14,7 +14,7 @@ ClickHouse also supports robust update and delete operations.
 
 This guide provides an overview of the available update methods in ClickHouse, and helps you choose the right update strategy for your workload.
 
-## Choosing an update strategy <a id="choosing-an-update-strategy"></a>
+## Choosing an update strategy {#choosing-an-update-strategy}
 
 There are two fundamental approaches to updating data in ClickHouse:
 
@@ -24,7 +24,7 @@ There are two fundamental approaches to updating data in ClickHouse:
 Within each of the two categories above, there are several ways to update data.
 Each has its advantages and performance characteristics and you should select the appropriate method based on your data model and the amount of data you intend to update.
 
-### When to use specialized table engines <a id="when-to-choose-specialised-table-engines"></a>
+### When to use specialized table engines {#when-to-choose-specialised-table-engines}
 
 Specialized table engines are the better choice when you have large volumes of updates, frequent row-level changes, or need to process a continuous stream of update and delete events.
 
@@ -39,7 +39,7 @@ The engines you will commonly encounter are:
 As MergeTree-family table engines merge data parts in the background, they offer _eventual consistency_, and the [`FINAL`](/reference/statements/select/from#final-modifier) keyword needs to be used to ensure proper deduplication in the interim when querying the table.
 There are other [engine types](/reference/engines/table-engines/mergetree-family/index) too, but these are the most commonly used ones.
 
-### When to use declarative updates <a id="when-to-use-declaritive-updates"></a>
+### When to use declarative updates {#when-to-use-declaritive-updates}
 
 Declarative UPDATE statements can be more straightforward for simple update operations without the complexity of managing deduplication logic, but they are generally better suited for updating smaller numbers of rows, less frequently, than with specialized engines.
 
@@ -48,9 +48,9 @@ Declarative UPDATE statements can be more straightforward for simple update oper
 | [Lightweight updates](/reference/statements/update)      | `UPDATE [table] SET ... WHERE` | Use this in most scenarios, particularly when running frequent, small UPDATEs (up to ~10% of table) as part of your application or workflows. For example, a user wants to delete their event history, and events are spread across a multi-tenant table with many users. This approach creates patch parts for immediate visibility without rewriting entire columns. It adds overhead to `SELECT` queries but has predictable latency.                              |
 | [Update mutation](/reference/statements/alter/update)    | `ALTER TABLE [table] UPDATE`   | Use this when performing larger scale data management, particularly when an update aligns with your table partitioning. For example, you need to update a column of all rows within a month, in a table partitioned by month.                                                                                                            |
 
-## Updates using specialized table engines <a id="insert-based-updates"></a>
+## Updates using specialized table engines {#insert-based-updates}
 
-### ReplacingMergeTree <a id="replacingmergetree"></a>
+### ReplacingMergeTree {#replacingmergetree}
 
 The `ReplacingMergeTree` deduplicates rows with the same sorting key during background merges, keeping only the latest version.
 
@@ -75,7 +75,7 @@ To update a row, simply insert a new version with the same sorting key values an
 
 Read more: [ReplacingMergeTree guide](/concepts/features/operations/update/replacing-merge-tree) | [ReplacingMergeTree reference](/reference/engines/table-engines/mergetree-family/replacingmergetree)
 
-### CoalescingMergeTree <a id="coalescingmergetree"></a>
+### CoalescingMergeTree {#coalescingmergetree}
 
 CoalescingMergeTree consolidates sparse records by keeping the latest non-null value for each column during merges. This enables column-level upserts rather than full row replacements.
 
@@ -103,7 +103,7 @@ This engine is available from ClickHouse 25.6.
 
 Read more: [CoalescingMergeTree](/reference/engines/table-engines/mergetree-family/coalescingmergetree)
 
-### CollapsingMergeTree <a id="collapsingmergetree"></a>
+### CollapsingMergeTree {#collapsingmergetree}
 
 Stemming from the idea that updates are expensive but inserts can be leveraged to perform updates, `CollapsingMergeTree` uses a `Sign` column to tell ClickHouse how to handle rows during merges. If `-1` is inserted for the sign column, the row will be collapsed (deleted) when paired with a matching `+1` row. Rows to update are identified based on the sorting key used in the `ORDER BY` clause when creating the table.
 
@@ -149,7 +149,7 @@ The approach above for updating requires your application to maintain state clie
 
 Read more: [CollapsingMergeTree](/reference/engines/table-engines/mergetree-family/collapsingmergetree)
 
-## Declarative updates <a id="sql-style-updates"></a>
+## Declarative updates {#sql-style-updates}
 
 These methods work with tables using [MergeTree family](/reference/engines/table-engines/mergetree-family/index) engines.
 
@@ -158,7 +158,7 @@ These methods work with tables using [MergeTree family](/reference/engines/table
 | [Mutations](#mutations) | `ALTER TABLE ... UPDATE` | Infrequent bulk updates, well suited for when an update aligns with your table partitioning. | Heavy I/O; rewrites columns |
 | [Lightweight updates](#lightweight-updates) | `UPDATE ... SET ... WHERE` | Small updates (~0.1-10% of rows); frequent updates needing performance | Adds SELECT overhead; patch parts count toward limits |
 
-### Mutations <a id="mutations"></a>
+### Mutations {#mutations}
 
 Mutations (`ALTER TABLE ... UPDATE`) rewrite all parts containing rows that match the `WHERE` expression.
 
@@ -177,7 +177,7 @@ Mutations are I/O intensive and should be used sparingly as they can impact clus
 
 Read more: [ALTER TABLE UPDATE](/reference/statements/alter/update)
 
-#### On-the-fly mutations <a id="on-the-fly-mutations"></a>
+#### On-the-fly mutations {#on-the-fly-mutations}
 
 With mutations via `ALTER TABLE ... UPDATE` you may have to wait for your mutations to be applied via a background process to see the changed values reflected in your queries.
 ClickHouse offers a way to change this behavior through "on-the-fly mutations".
@@ -248,7 +248,7 @@ The `SELECT` query now returns the correct result immediately, without having to
 ```
 </Accordion>
 
-##### Performance impact <a id="performance-impact"></a>
+##### Performance impact {#performance-impact}
 
 When on-the-fly mutations are enabled, mutations aren't materialized immediately but will only be applied during `SELECT` queries. However, please note that mutations are still being materialized asynchronously in the background, which is a heavy process.
 
@@ -256,7 +256,7 @@ If the number of submitted mutations constantly exceeds the number of mutations 
 
 We suggest enabling the setting `apply_mutations_on_fly` together with other `MergeTree`-level settings such as `number_of_mutations_to_throw` and `number_of_mutations_to_delay` to restrict the infinite growth of unmaterialized mutations.
 
-##### Support for subqueries and non-deterministic functions <a id="support-for-subqueries-and-non-deterministic-functions"></a>
+##### Support for subqueries and non-deterministic functions {#support-for-subqueries-and-non-deterministic-functions}
 
 On-the-fly mutations have limited support with subqueries and non-deterministic functions. Only scalar subqueries with a result that have a reasonable size (controlled by the setting `mutations_max_literal_size_to_replace`) are supported. Only constant non-deterministic functions are supported (e.g. the function `now()`).
 
@@ -268,7 +268,7 @@ These behaviors are controlled by the following settings:
 | `mutations_execute_subqueries_on_initiator` | If true, scalar subqueries are executed on the initiator replica and are replaced as literals in `UPDATE` and `DELETE` queries. | `false` |
 | `mutations_max_literal_size_to_replace` | The maximum size of serialized literals in bytes to replace in `UPDATE` and `DELETE` queries. | `16384` (16 KiB) |
 
-### Lightweight updates <a id="lightweight-updates"></a>
+### Lightweight updates {#lightweight-updates}
 
 Lightweight updates use "patch parts"—special data parts containing only the updated columns and rows—rather than rewriting entire columns like traditional mutations.
 
@@ -282,7 +282,7 @@ The trade-off is that `SELECT` queries incur overhead when applying patches, and
 
 Read more: [Lightweight UPDATE](/reference/statements/update)
 
-### On-the-fly mutations <a id="on-the-fly-mutations"></a>
+### On-the-fly mutations {#on-the-fly-mutations}
 
 On-the-fly mutations provide a mechanism to update rows such that subsequent `SELECT` queries automatically return the changed values without waiting for background processing. This effectively addresses the atomicity limitation of normal mutations.
 
@@ -322,7 +322,7 @@ On-the-fly mutations should only be used for a small number of operations—perh
 
 Read more: [On-the-fly mutations](#on-the-fly-mutations)
 
-## Comparison summary <a id="comparison-summary"></a>
+## Comparison summary {#comparison-summary}
 
 The following table summarizes query performance overhead based on [benchmarks](https://clickhouse.com/blog/updates-in-clickhouse-3-benchmarks). Mutations serve as the baseline since queries run at full speed once the mutation completes and data is physically rewritten.
 
@@ -335,7 +335,7 @@ The following table summarizes query performance overhead based on [benchmarks](
 | [CoalescingMergeTree](/reference/engines/table-engines/mergetree-family/coalescingmergetree) + `FINAL` | Similar to ReplacingMergeTree | Similar to ReplacingMergeTree | Column-level coalescing adds comparable overhead |
 | [CollapsingMergeTree](/reference/engines/table-engines/mergetree-family/collapsingmergetree) | Aggregation dependent | Aggregation dependent | Overhead depends on query complexity |
 
-## More resources <a id="more-resources"></a>
+## More resources {#more-resources}
 
 If you're interested in a deep-dive of how updates in ClickHouse have evolved over time, along with benchmarking analysis, see:
 - [Updates in ClickHouse Part 1: Purpose-Built Engines](https://clickhouse.com/blog/updates-in-clickhouse-1-purpose-built-engines)

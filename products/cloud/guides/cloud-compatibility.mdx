@@ -9,7 +9,7 @@ doc_type: 'guide'
 
 This guide provides an overview of what to expect functionally and operationally in ClickHouse Cloud. While ClickHouse Cloud is based on the open-source ClickHouse distribution, there may be some differences in architecture and implementation. You may find this blog on [how we built ClickHouse Cloud](https://clickhouse.com/blog/building-clickhouse-cloud-from-scratch-in-a-year) interesting and relevant to read as background.
 
-## ClickHouse Cloud architecture <a id="clickhouse-cloud-architecture"></a>
+## ClickHouse Cloud architecture {#clickhouse-cloud-architecture}
 ClickHouse Cloud significantly simplifies operational overhead and reduces the costs of running ClickHouse at scale. There is no need to size your deployment upfront, set up replication for high availability, manually shard your data, scale up your servers when your workload increases, or scale them down when you're not using them — we handle this for you.
 
 These benefits come as a result of architectural choices underlying ClickHouse Cloud:
@@ -20,10 +20,10 @@ These benefits come as a result of architectural choices underlying ClickHouse C
 - Seamless hibernation for intermittent workloads is on by default. We automatically pause your compute resources after a period of inactivity and transparently start it again when a new query arrives, so you don't have to pay for idle resources.
 - Advanced scaling controls provide the ability to set an auto-scaling maximum for additional cost control or an auto-scaling minimum to reserve compute resources for applications with specialized performance requirements.
 
-## Capabilities <a id="capabilities"></a>
+## Capabilities {#capabilities}
 ClickHouse Cloud provides access to a curated set of capabilities in the open source distribution of ClickHouse. Tables below describe some features that are disabled in ClickHouse Cloud at this time.
 
-### Database and table engines <a id="database-and-table-engines"></a>
+### Database and table engines {#database-and-table-engines}
 
 ClickHouse Cloud is a highly-available, replicated service by default, built on the [SharedMergeTree](/products/cloud/features/infrastructure/shared-merge-tree) table engine family. When you create a table with a standard MergeTree-family engine, Cloud automatically substitutes the corresponding `Shared*` engine. You don't add a `Shared` or `Replicated` prefix yourself.
 
@@ -58,13 +58,13 @@ The following engines are also supported and used as written:
 - S3
 - Kafka
 
-### Interfaces <a id="interfaces"></a>
+### Interfaces {#interfaces}
 ClickHouse Cloud supports HTTPS, native interfaces, and the [MySQL wire protocol](/concepts/features/interfaces/mysql). Support for more interfaces such as Postgres is coming soon.
 
-### Dictionaries <a id="dictionaries"></a>
+### Dictionaries {#dictionaries}
 Dictionaries are a popular way to speed up lookups in ClickHouse.  ClickHouse Cloud currently supports dictionaries from PostgreSQL, MySQL, remote and local ClickHouse servers, Redis, MongoDB and HTTP sources.
 
-### Federated queries <a id="federated-queries"></a>
+### Federated queries {#federated-queries}
 We support federated ClickHouse queries for cross-cluster communication in the cloud, and for communication with external self-managed ClickHouse clusters. ClickHouse Cloud currently supports federated queries using the following integration engines:
 - Deltalake
 - Hudi
@@ -77,11 +77,11 @@ We support federated ClickHouse queries for cross-cluster communication in the c
 
 Federated queries with some external database and table engines, such as SQLite, ODBC, JDBC, Redis, HDFS and Hive aren't yet supported.
 
-### User defined functions <a id="user-defined-functions"></a>
+### User defined functions {#user-defined-functions}
 
 User-defined functions in ClickHouse Cloud are in [public beta](/reference/functions/regular-functions/udf).
 
-#### Settings behavior <a id="udf-settings-behavior"></a>
+#### Settings behavior {#udf-settings-behavior}
 
 <Warning>
 **Important**
@@ -94,37 +94,37 @@ This means:
 - User profile settings aren't inherited by UDFs
 - Query-level settings don't apply within UDF execution
 
-### Experimental features <a id="experimental-features"></a>
+### Experimental features {#experimental-features}
 
 Experimental features are disabled in ClickHouse Cloud services to ensure the stability of service deployments.
 
-### Named collections <a id="named-collections"></a>
+### Named collections {#named-collections}
 
 [Named collections](/concepts/features/configuration/server-config/named-collections) aren't currently supported in ClickHouse Cloud.
 
-## Operational defaults and considerations <a id="operational-defaults-and-considerations"></a>
+## Operational defaults and considerations {#operational-defaults-and-considerations}
 The following are default settings for ClickHouse Cloud services. In some cases, these settings are fixed to ensure the correct operation of the service, and in others, they can be adjusted.
 
-### Operational limits <a id="operational-limits"></a>
+### Operational limits {#operational-limits}
 
-#### `max_parts_in_total: 10,000` <a id="max_parts_in_total-10000"></a>
+#### `max_parts_in_total: 10,000` {#max_parts_in_total-10000}
 The default value of the `max_parts_in_total` setting for MergeTree tables has been lowered from 100,000 to 10,000. The reason for this change is that we observed that a large number of data parts is likely to cause a slow startup time of services in the cloud. A large number of parts usually indicate a choice of too granular partition key, which is typically done accidentally and should be avoided. The change of default will allow the detection of these cases earlier.
 
-#### `max_concurrent_queries: 1,000` <a id="max_concurrent_queries-1000"></a>
+#### `max_concurrent_queries: 1,000` {#max_concurrent_queries-1000}
 Increased this per-server setting from the default of `100` to `1000` to allow for more concurrency. 
 This will result in `number of replicas * 1,000` concurrent queries for the offered tier services. 
 `1000` concurrent queries for Basic tier service limited to a single replica and `1000+` for Scale and Enterprise, 
 depending on the number of replicas configured.
 
-#### `max_table_size_to_drop: 1,000,000,000,000` <a id="max_table_size_to_drop-1000000000000"></a>
+#### `max_table_size_to_drop: 1,000,000,000,000` {#max_table_size_to_drop-1000000000000}
 Increased this setting from 50GB to allow for dropping of tables/partitions up to 1TB.
 
-### System settings <a id="system-settings"></a>
+### System settings {#system-settings}
 ClickHouse Cloud is tuned for variable workloads, and for that reason most system settings aren't configurable at this time. We don't anticipate the need to tune system settings for most users, but if you have a question about advanced system tuning, please contact ClickHouse Cloud Support.
 
-### Advanced security administration <a id="advanced-security-administration"></a>
+### Advanced security administration {#advanced-security-administration}
 As part of creating the ClickHouse service, we create a default database, and the default user that has broad permissions to this database. This initial user can create additional users and assign their permissions to this database. Beyond this, the ability to enable the following security features within the database using Kerberos, LDAP, or SSL X.509 certificate authentication aren't supported at this time.
 
-## Roadmap <a id="roadmap"></a>
+## Roadmap {#roadmap}
 
 We're evaluating demand for many other features in ClickHouse Cloud. If you have feedback and would like to ask for a specific feature, please [submit it here](https://console.clickhouse.cloud/support).

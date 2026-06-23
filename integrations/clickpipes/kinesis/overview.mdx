@@ -14,10 +14,10 @@ import { Image } from "/snippets/components/Image.jsx";
 
 Kinesis ClickPipes can be deployed and managed manually using the ClickPipes UI, as well as programmatically using [OpenAPI](/integrations/clickpipes/programmatic-access/openapi) and [Terraform](/integrations/clickpipes/programmatic-access/terraform).
 
-## Prerequisite <a id="prerequisite"></a>
+## Prerequisite {#prerequisite}
 You have familiarized yourself with the [ClickPipes intro](/integrations/clickpipes/home) and setup [IAM credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) or an [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html). Follow the [Kinesis Role-Based Access guide](/integrations/clickpipes/kinesis/auth) for information on how to setup a role that works with ClickHouse Cloud.
 
-## Creating your first ClickPipe <a id="creating-your-first-clickpipe"></a>
+## Creating your first ClickPipe {#creating-your-first-clickpipe}
 
 1. Access the SQL Console for your ClickHouse Cloud Service.
 
@@ -75,12 +75,12 @@ You have familiarized yourself with the [ClickPipes intro](/integrations/clickpi
 
 10. **Congratulations!** you have successfully set up your first ClickPipe. If this is a streaming ClickPipe it will be continuously running, ingesting data in real-time from your remote data source. Otherwise it will ingest the batch and complete.
 
-## Supported data formats <a id="supported-data-formats"></a>
+## Supported data formats {#supported-data-formats}
 
 The supported formats are:
 - [JSON](/reference/formats/JSON/JSON)
 
-## Compression <a id="compression"></a>
+## Compression {#compression}
 
 ClickPipes for Kinesis automatically detects and decompresses compressed records. Unlike Kafka, where the client library handles decompression transparently, Kinesis delivers raw bytes — ClickPipes handles this for you with no configuration required.
 
@@ -97,9 +97,9 @@ Compression is detected automatically via magic bytes in each record. If no know
 Auto-detection is safe for text-based formats like JSON and CSV, as printable ASCII characters will never collide with compression magic bytes.
 </Note>
 
-## Supported data types <a id="supported-data-types"></a>
+## Supported data types {#supported-data-types}
 
-### Standard types support <a id="standard-types-support"></a>
+### Standard types support {#standard-types-support}
 The following ClickHouse data types are currently supported in ClickPipes:
 
 - Base numeric types - \[U\]Int8/16/32/64, Float32/64, and BFloat16
@@ -119,16 +119,16 @@ The following ClickHouse data types are currently supported in ClickPipes:
 - Tuple and Array with elements using any of the above types (including Nullables, one level depth only)
 - SimpleAggregateFunction types (for AggregatingMergeTree or SummingMergeTree destinations)
 
-### Variant type support <a id="variant-type-support"></a>
+### Variant type support {#variant-type-support}
 You can manually specify a Variant type (such as `Variant(String, Int64, DateTime)`) for any JSON field
 in the source data stream.  Because of the way ClickPipes determines the correct variant subtype to use, only one integer or datetime
 type can be used in the Variant definition - for example, `Variant(Int64, UInt32)` isn't supported.
 
-### JSON type support <a id="json-type-support"></a>
+### JSON type support {#json-type-support}
 JSON fields that are always a JSON object can be assigned to a JSON destination column.  You will have to manually change the destination
 column to the desired JSON type, including any fixed or skipped paths. 
 
-## Kinesis virtual columns <a id="kinesis-virtual-columns"></a>
+## Kinesis virtual columns {#kinesis-virtual-columns}
 
 The following virtual columns are supported for Kinesis stream.  When creating a new destination table virtual columns can be added by using the `Add Column` button.
 
@@ -143,27 +143,27 @@ The following virtual columns are supported for Kinesis stream.  When creating a
 The _raw_message field can be used in cases where only full Kinesis JSON record is required (such as using ClickHouse [`JsonExtract*`](/reference/functions/regular-functions/json-functions#jsonextract-functions) functions to populate a downstream materialized
 view).  For such pipes, it may improve ClickPipes performance to delete all the "non-virtual" columns.
 
-## Limitations <a id="limitations"></a>
+## Limitations {#limitations}
 
 - [DEFAULT](/reference/statements/create/table#default) isn't supported.
 - Individual messages are limited to 16MB (uncompressed) by default when running with the smallest (XS) replica size, and 32MB (uncompressed) with larger replicas.  Messages that exceed this limit will be rejected with an error.  If you have a need for larger messages, please contact support.
 
-## Performance <a id="performance"></a>
+## Performance {#performance}
 
-### Batching <a id="batching"></a>
+### Batching {#batching}
 ClickPipes inserts data into ClickHouse in batches. This is to avoid creating too many parts in the database which can lead to performance issues in the cluster.
 
 Batches are inserted when one of the following criteria has been met:
 - The batch size has reached the maximum size (100,000 rows or 32MB per 1GB of replica memory)
 - The batch has been open for a maximum amount of time (5 seconds)
 
-### Latency <a id="latency"></a>
+### Latency {#latency}
 
 Latency (defined as the time between the Kinesis message being sent to the stream and the message being available in ClickHouse) will be dependent on a number of factors (i.e. Kinesis latency, network latency, message size/format). The [batching](#batching) described in the section above will also impact latency. We always recommend testing your specific use case to understand the latency you can expect.
 
 If you have specific low-latency requirements, please [contact us](https://clickhouse.com/company/contact?loc=clickpipes).
 
-### Active Shards <a id="active-shards"></a>
+### Active Shards {#active-shards}
 
 We strongly recommend limiting the number concurrently active shards to match your throughput requirements.  For an "On Demand" Kinesis stream, AWS will automatically assign a matching number of shards based on throughput,
 but for "Provisioned" streams, provisioning too many shards can cause latency as described below, plus have increased costs because Kinesis pricing for such streams is on a "per shard" basis.
@@ -173,7 +173,7 @@ ClickPipes assigns a specific number of "workers" per replica to read shard data
 to more than 4 shards at the same time, data won't be processed from the "extra" shards until a worker thread is available.  In particular, if the pipe is using "enhanced fanout", each worker thread will subscribe to a
 single shard for 5 minutes, and is unavailable to read any other shard during that time.  This can cause latency "spikes" of 5 minute multiples.
 
-### Scaling <a id="scaling"></a>
+### Scaling {#scaling}
 
 ClickPipes for Kinesis is designed to scale both horizontally and vertically. By default, we create a consumer group with one consumer. This can be configured during ClickPipe creation, or at any other point under **Settings** -> **Advanced Settings** -> **Scaling**.
 
@@ -184,6 +184,6 @@ Regardless number of running consumers, fault tolerance is available by design.
 If a consumer or its underlying infrastructure fails,
 the ClickPipe will automatically restart the consumer and continue processing messages.
 
-## Authentication <a id="authentication"></a>
+## Authentication {#authentication}
 
 To access Amazon Kinesis streams, you can use [IAM credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html) or an [IAM Role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html). For more details on how to setup an IAM role, you can [refer to this guide](/integrations/clickpipes/kinesis/auth) for information on how to setup a role that works with ClickHouse Cloud

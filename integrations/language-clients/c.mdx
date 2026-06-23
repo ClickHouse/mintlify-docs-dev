@@ -21,7 +21,7 @@ Report limitations or missing functionality through the [issue tracker](https://
 Understand however that this library is missing functionality by design.
 </Note>
 
-## What the library doesn't do <a id="non-goals"></a>
+## What the library doesn't do {#non-goals}
 
 These are deliberate non-goals. Handle them in your application or with a sibling library:
 
@@ -32,7 +32,7 @@ These are deliberate non-goals. Handle them in your application or with a siblin
 - Async I/O inside the library. The blocking client calls `chc_io.read` synchronously. For an
   event-loop client that performs no I/O itself, use the [ioless client](#async-client).
 
-## How the library is organized <a id="headers"></a>
+## How the library is organized {#headers}
 
 `clickhouse-c` ships as a flat set of headers. Each header holds both declarations and implementation,
 guarded by a sentinel macro. Pick the headers your build needs.
@@ -46,7 +46,7 @@ guarded by a sentinel macro. Pick the headers your build needs.
 | [`clickhouse-posix-io.h`](https://github.com/ClickHouse/clickhouse-c/blob/main/doc/clickhouse-posix-io.md) | I/O backend over blocking `read(2)`/`write(2)` | — |
 | [`clickhouse-openssl.h`](https://github.com/ClickHouse/clickhouse-c/blob/main/doc/clickhouse-openssl.md) | I/O backend over `SSL_read`/`SSL_write` | `-lssl -lcrypto` |
 
-## Required server setting <a id="server-setting"></a>
+## Required server setting {#server-setting}
 
 The decoder reads printable type names from the wire, so they must be encoded as text. ClickHouse
 writes them as text by default, but pin the setting on your queries so a server or session profile
@@ -56,7 +56,7 @@ that sets it to binary can't break decoding:
 output_format_native_encode_types_in_binary_format = 0
 ```
 
-## Adding it to your project <a id="adding-to-project"></a>
+## Adding it to your project {#adding-to-project}
 
 There's no package to install, so you should vendor the headers into your tree via a git submodule or a copy.
 Exactly one translation unit defines `CHC_IMPLEMENTATION` and pulls in the implementation;
@@ -80,7 +80,7 @@ every other unit includes the same headers for declarations only.
 Define `CHC_PROVIDE_STDLIB_ALLOC` before including `clickhouse.h` to use `chc_alloc_stdlib`.
 Define `CHC_NO_LZ4` or `CHC_NO_ZSTD` for `clickhouse-compression.h` to drop a lz4/zstd dependencies.
 
-## Connecting over TCP <a id="connecting-over-tcp"></a>
+## Connecting over TCP {#connecting-over-tcp}
 
 To talk to a ClickHouse server you set up the socket yourself, wrap it in a `chc_io`, and hand that
 to `chc_client_init`, which runs the Hello handshake synchronously. The library does no DNS,
@@ -126,7 +126,7 @@ Each `chc_client` is single-threaded and wraps one connection. The library calls
 callbacks synchronously; what those callbacks do underneath (`epoll`, `io_uring`,
 `WaitLatchOrSocket`) is up to you.
 
-## Running a query <a id="running-a-query"></a>
+## Running a query {#running-a-query}
 
 Send the query, then drain packets until `CHC_PKT_END_OF_STREAM`. Use `chc_client_send_query_ex` to
 attach the [required server setting](#server-setting); the bare `chc_client_send_query` sends an
@@ -172,7 +172,7 @@ packet of a result is a header block describing the schema with zero rows; data 
 `chc_packet_clear` frees the packet's block or exception — null those fields on the packet first to
 take ownership instead.
 
-## Reading column data <a id="reading-column-data"></a>
+## Reading column data {#reading-column-data}
 
 Blocks are column-oriented. Each column has a physical layout, returned by `chc_column_layout`, that
 you dispatch on; its declared type comes from `chc_block_column_type`. Composite layouts nest, so
@@ -236,7 +236,7 @@ When ingesting from an untrusted peer, call `chc_column_validate` on each column
 it. `chc_block_read` doesn't validate cross-field invariants such as array offsets and
 LowCardinality keys, so a forged block could otherwise read past inner-column bounds.
 
-## Inserting data <a id="inserting-data"></a>
+## Inserting data {#inserting-data}
 
 Build a block with `chc_block_builder`, then hand it to `chc_client_send_data`. The builder records
 pointers rather than copying, so the column slabs must outlive the send. An INSERT sends the query,
@@ -298,7 +298,7 @@ packed slab. Routing the builder through `chc_client_send_data` rather than the 
 `chc_block_write` lets the client set the block options from the negotiated revision and apply
 compression.
 
-## Compression <a id="compression"></a>
+## Compression {#compression}
 
 Pass a compression mode and a filled codec in `chc_client_opts`. The client decompresses incoming
 Data packets and compresses outgoing ones. The compression header ships `LZ4` and `ZSTD` adapters;
@@ -321,7 +321,7 @@ chc_client_opts opts = {
 To use a compression library the project doesn't ship a binding for, fill a `chc_codec` yourself;
 the vtable is declared in `clickhouse-compression.h`.
 
-## TLS <a id="tls"></a>
+## TLS {#tls}
 
 `clickhouse-openssl.h` provides a `chc_io` backend over `SSL_read`/`SSL_write`. You drive OpenSSL:
 the library never creates an `SSL_CTX`, verifies certificates, sets SNI, or calls `SSL_connect` /
@@ -341,7 +341,7 @@ chc_openssl_io_init(&state, &io, ssl, NULL, NULL);
 port 9440. Both backends accept an optional `check_cancel` callback, polled between reads, and a
 read deadline via `chc_openssl_io_set_deadline` / `chc_posix_io_set_deadline`.
 
-## Ioless (async) client <a id="async-client"></a>
+## Ioless (async) client {#async-client}
 
 `clickhouse-async.h` is an ioless variant of the TCP client for event loops. It never touches a
 socket: you submit the bytes you've received and drain the bytes it wants to send, driving `epoll`,
@@ -390,7 +390,7 @@ backpressure, so watch the pending-out length and stop issuing sends when it gro
 A working liburing driver is in
 [`test/test_async_uring.c`](https://github.com/ClickHouse/clickhouse-c/blob/main/test/test_async_uring.c).
 
-## Memory and the allocator <a id="allocator"></a>
+## Memory and the allocator {#allocator}
 
 Every entry point takes a `chc_alloc` vtable, so allocation rides on whatever scheme the host uses.
 
@@ -406,7 +406,7 @@ typedef struct chc_alloc {
 Define `CHC_PROVIDE_STDLIB_ALLOC` before including `clickhouse.h` and call `chc_alloc_stdlib()` for a
 standard `malloc`-backed allocator.
 
-## Errors and server exceptions <a id="errors"></a>
+## Errors and server exceptions {#errors}
 
 Functions return `CHC_OK` (0) or a nonzero `CHC_ERR_*` code. The code is the return value; a
 caller-stack-allocated `chc_err` carries the human-readable message. The library never heap-allocates
@@ -424,7 +424,7 @@ Server-side query errors aren't `chc_err` failures. They arrive on the packet st
 `CHC_PKT_EXCEPTION`, carrying the server's `code`, `display_text`, and `stack_trace`. Reserve
 `chc_err` checking for transport, protocol, and decode failures.
 
-## Supported data types <a id="supported-types"></a>
+## Supported data types {#supported-types}
 
 The block reader decodes:
 

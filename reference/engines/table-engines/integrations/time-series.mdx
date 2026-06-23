@@ -27,7 +27,7 @@ with [allow_experimental_time_series_table](/reference/settings/session-settings
 Input the command `set allow_experimental_time_series_table = 1`.
 </Info>
 
-## Syntax <a id="syntax"></a>
+## Syntax {#syntax}
 
 ```sql
 CREATE TABLE name [(columns)] ENGINE=TimeSeries
@@ -41,7 +41,7 @@ CREATE TABLE name [(columns)] ENGINE=TimeSeries
 The keyword `SAMPLES` has an alias `DATA` which is kept for backwards compatibility.
 </Note>
 
-## Usage <a id="usage"></a>
+## Usage {#usage}
 
 It's easier to start with everything set by default (it's allowed to create a `TimeSeries` table without specifying a list of columns):
 
@@ -53,7 +53,7 @@ Then this table can be used with the following protocols (a port must be assigne
 - [prometheus remote-write](/concepts/features/interfaces/prometheus#remote-write)
 - [prometheus remote-read](/concepts/features/interfaces/prometheus#remote-read)
 
-### Outer columns <a id="outer-columns"></a>
+### Outer columns {#outer-columns}
 
 Columns of a TimeSeries table are generated automatically. These are outer columns, they store no data, they just provide interface for SELECT/INSERT. Actual data is stored in [target tables](#target-tables). Here is the list of the outer columns:
 
@@ -91,7 +91,7 @@ INSERT INTO my_table (metric_name, tags, time_series, metric_family, type, unit,
      'http_requests_total', 'counter', 'requests', 'Total HTTP requests')
 ```
 
-### Specifying outer columns <a id="specifying-outer-columns"></a>
+### Specifying outer columns {#specifying-outer-columns}
 
 The outer `time_series` column can be listed explicitly in a `CREATE TABLE` statement to override its default `Array(Tuple(DateTime64(3), Float64))` type. ClickHouse extracts the timestamp and scalar types from the tuple and propagates them to the inner samples table:
 
@@ -108,7 +108,7 @@ SAMPLES INNER COLUMNS (timestamp UInt32, value Float32)
 
 If both forms are used in the same `CREATE TABLE` statement, the declared types must match.
 
-## Target tables <a id="target-tables"></a>
+## Target tables {#target-tables}
 
 A `TimeSeries` table doesn't have its own data, everything is stored in its target tables.
 This is similar to how a [materialized view](/reference/statements/create/view#materialized-view) works,
@@ -122,7 +122,7 @@ Rows inserted into a `TimeSeries` table are transformed, split into blocks, and 
 
 The target tables are the following:
 
-### Samples table <a id="samples-table"></a>
+### Samples table {#samples-table}
 
 The _samples_ table contains time series associated with some identifier.
 
@@ -134,7 +134,7 @@ The _samples_ table must have columns:
 | `timestamp` | [x] | `DateTime64(3)` | `DateTime64(X)` | A time point |
 | `value` | [x] | `Float64` | `Float32` or `Float64` | A value associated with the `timestamp` |
 
-### Tags table <a id="tags-table"></a>
+### Tags table {#tags-table}
 
 The _tags_ table contains identifiers calculated for each combination of a metric name and tags.
 
@@ -150,7 +150,7 @@ The _tags_ table must have columns:
 | `min_time` | [ ] | `Nullable(DateTime64(3))` | `DateTime64(X)` or `Nullable(DateTime64(X))` | Minimum timestamp of time series with that `id`. The column is created if [store_min_time_and_max_time](#settings) is `true` |
 | `max_time` | [ ] | `Nullable(DateTime64(3))` | `DateTime64(X)` or `Nullable(DateTime64(X))` | Maximum timestamp of time series with that `id`. The column is created if [store_min_time_and_max_time](#settings) is `true` |
 
-### Metrics table <a id="metrics-table"></a>
+### Metrics table {#metrics-table}
 
 The _metrics_ table contains some information about metrics been collected, the types of those metrics and their descriptions.
 
@@ -163,7 +163,7 @@ The _metrics_ table must have columns:
 | `unit` | [x] | `LowCardinality(String)` | `String` or `LowCardinality(String)` | The unit used in a metric |
 | `help` | [x] | `String` | `String` or `LowCardinality(String)` | The description of a metric |
 
-## Creation <a id="creation"></a>
+## Creation {#creation}
 
 There are multiple ways to create a table with the `TimeSeries` table engine.
 The simplest statement
@@ -258,7 +258,7 @@ ENGINE = ReplacingMergeTree
 ORDER BY metric_family_name
 ```
 
-## Creating a table AS existing table <a id="create-as"></a>
+## Creating a table AS existing table {#create-as}
 
 Statement `CREATE TABLE new_table AS existing_table` copies from the `existing_table`:
 
@@ -269,7 +269,7 @@ Statement `CREATE TABLE new_table AS existing_table` copies from the `existing_t
 The statement is not allowed if the `existing_table` has external targets.
 The outer column list is regenerated and not copied.
 
-## Adjusting types of columns <a id="adjusting-column-types"></a>
+## Adjusting types of columns {#adjusting-column-types}
 
 You can adjust the types of columns in the inner target tables using the `INNER COLUMNS` clause. For example, to store timestamps in microseconds and values as `Float32`:
 
@@ -285,7 +285,7 @@ CREATE TABLE my_table ENGINE=TimeSeries
 SAMPLES INNER COLUMNS (timestamp DateTime64(3) CODEC(DoubleDelta))
 ```
 
-## The `id` column <a id="id-column"></a>
+## The `id` column {#id-column}
 
 The `id` column contains identifiers, every identifier is calculated for a combination of a metric name and tags.
 The type and the `DEFAULT` expression used to generate identifiers can be customized via the `TAGS INNER COLUMNS` clause:
@@ -306,7 +306,7 @@ SETTINGS id_generator = 'sipHash64(metric_name, all_tags)'
 
 If the setting is set, it's used to generate `id` even if the column's `DEFAULT` contains a different expression.
 
-## The `tags` and `all_tags` columns <a id="tags-and-all-tags"></a>
+## The `tags` and `all_tags` columns {#tags-and-all-tags}
 
 There are two columns containing maps of tags - `tags` and `all_tags`. In this example they mean the same, however they can be different
 if setting `tags_to_columns` is used. This setting allows to specify that a specific tag should be stored in a separate column instead of storing
@@ -323,7 +323,7 @@ In this case the `tags` column will not contain tags `instance` and `job`,
 but the `all_tags` column will contain them. The `all_tags` column is ephemeral and its only purpose to be used in the DEFAULT expression
 for the `id` column.
 
-## Table engines of inner target tables <a id="inner-table-engines"></a>
+## Table engines of inner target tables {#inner-table-engines}
 
 By default inner target tables use the following table engines:
 - the [samples](#samples-table) table uses [MergeTree](/reference/engines/table-engines/mergetree-family/mergetree);
@@ -341,7 +341,7 @@ TAGS ENGINE=ReplicatedAggregatingMergeTree
 METRICS ENGINE=ReplicatedReplacingMergeTree
 ```
 
-## External target tables <a id="external-target-tables"></a>
+## External target tables {#external-target-tables}
 
 It's possible to make a `TimeSeries` table use a manually created table:
 
@@ -366,7 +366,7 @@ The external tables' column types (`id`, `timestamp`, `value`, and the `<tag_val
 
 The id-generator expression for an external tags target is resolved at INSERT time in the following order: the [`id_generator`](#settings) setting (if set), then the `DEFAULT` declared on the external table's `id` column (if any), then the canonical generator derived from the `id` type. The setting therefore overrides whatever `DEFAULT` is declared on the external table — see [The `id` column](#id-column) for details.
 
-## Altering settings <a id="altering-settings"></a>
+## Altering settings {#altering-settings}
 
 Two settings can be changed after `CREATE`:
 
@@ -382,7 +382,7 @@ Note that changing `id_generator` while data is already in the tags table can pr
 
 The other settings can't be changed with `ALTER ... MODIFY SETTING` because they are baked into the schema of the inner tables at `CREATE` time.
 
-## Settings <a id="settings"></a>
+## Settings {#settings}
 
 Here is a list of settings which can be specified while defining a `TimeSeries` table:
 
@@ -395,7 +395,7 @@ Here is a list of settings which can be specified while defining a `TimeSeries` 
 | `aggregate_min_time_and_max_time` | Bool | true | When creating an inner target `tags` table, this flag enables using `SimpleAggregateFunction(min, Nullable(DateTime64(3)))` instead of just `Nullable(DateTime64(3))` as the type of the `min_time` column, and the same for the `max_time` column |
 | `filter_by_min_time_and_max_time` | Bool | true | If set to true then the table will use the `min_time` and `max_time` columns for filtering time series |
 
-# Functions <a id="functions"></a>
+# Functions {#functions}
 
 Here is a list of functions supporting a `TimeSeries` table as an argument:
 - [timeSeriesSamples](/reference/functions/table-functions/timeSeriesSamples)

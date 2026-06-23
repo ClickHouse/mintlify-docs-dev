@@ -13,7 +13,7 @@ import ClickHouseSupportedBadge from "/snippets/components/ClickHouseSupported/C
 
 In this section, we provide documentation about some of the features available for dbt with ClickHouse.
 
-## Profile.yml configurations <a id="profile-yml-configurations"></a>
+## Profile.yml configurations {#profile-yml-configurations}
 
 To connect to ClickHouse from dbt, you'll need to add a [profile](https://docs.getdbt.com/docs/core/connect-data-platform/connection-profiles) to your `profiles.yml` file. A ClickHouse profile conforms to the following syntax:
 
@@ -56,14 +56,14 @@ your_profile_name:
       sync_request_timeout: [5] # Timeout for server ping
       compress_block_size: [1048576] # Compression block size if compression is enabled
 ```
-### Schema vs Database <a id="schema-vs-database"></a>
+### Schema vs Database {#schema-vs-database}
 
 The dbt model relation identifier `database.schema.table` isn't compatible with Clickhouse because Clickhouse doesn't
 support a `schema`.
 So we use a simplified approach `schema.table`, where `schema` is the Clickhouse database. Using the `default` database
 isn't recommended.
 
-### SET Statement Warning <a id="set-statement-warning"></a>
+### SET Statement Warning {#set-statement-warning}
 
 In many environments, using the SET statement to persist a ClickHouse setting across all DBT queries isn't reliable
 and can cause unexpected failures. This is particularly true when using HTTP connections through a load balancer that
@@ -72,7 +72,7 @@ happen with native ClickHouse connections. Accordingly, we recommend configuring
 "custom_settings" property of the DBT profile as a best practice, instead of relying on a pre-hook "SET" statement as
 has been occasionally suggested.
 
-### Setting `quote_columns` <a id="setting-quote_columns"></a>
+### Setting `quote_columns` {#setting-quote_columns}
 
 To prevent a warning, make sure to explicitly set a value for `quote_columns` in your `dbt_project.yml`. See the [doc on quote_columns](https://docs.getdbt.com/reference/resource-configs/quote_columns) for more information.
 
@@ -81,13 +81,13 @@ seeds:
   +quote_columns: false  #or `true` if you have CSV column headers with spaces
 ```
 
-### About the ClickHouse Cluster <a id="about-the-clickhouse-cluster"></a>
+### About the ClickHouse Cluster {#about-the-clickhouse-cluster}
 
 When using a ClickHouse cluster, you need to consider two things:
 - Setting the `cluster` setting.
 - Ensuring read-after-write consistency, especially if you're using more than one `threads`.
 
-#### Cluster Setting <a id="cluster-setting"></a>
+#### Cluster Setting {#cluster-setting}
 
 The `cluster` setting in profile enables dbt-clickhouse to run against a ClickHouse cluster. If `cluster` is set in the profile, **all models will be created with the `ON CLUSTER` clause** by default—except for those using a **Replicated** engine. This includes:
 
@@ -118,15 +118,15 @@ be created on the connected node only).
 If a model has been created without a `cluster` setting, dbt-clickhouse will detect the situation and run all DDL/DML
 without `on cluster` clause for this model.
 
-#### Read-after-write Consistency <a id="read-after-write-consistency"></a>
+#### Read-after-write Consistency {#read-after-write-consistency}
 
 dbt relies on a read-after-insert consistency model. This isn't compatible with ClickHouse clusters that have more than one replica if you can't guarantee that all operations will go to the same replica. You may not encounter problems in your day-to-day usage of dbt, but there are some strategies depending on your cluster to have this guarantee in place:
 - If you're using a ClickHouse Cloud cluster, you only need to set `select_sequential_consistency: 1` in your profile's `custom_settings` property. You can find more information about this setting [here](/reference/settings/session-settings#select_sequential_consistency).
 - If you're using a self-hosted cluster, make sure all dbt requests are sent to the same ClickHouse replica. If you have a load balancer on top of it, try using some `replica aware routing`/`sticky sessions` mechanism to be able to always reach the same replica. Adding the setting `select_sequential_consistency = 1` in clusters outside ClickHouse Cloud is [not recommended](/reference/settings/session-settings#select_sequential_consistency).
 
-## Additional ClickHouse macros <a id="additional-clickhouse-macros"></a>
+## Additional ClickHouse macros {#additional-clickhouse-macros}
 
-### Model materialization utility macros <a id="model-materialization-utility-macros"></a>
+### Model materialization utility macros {#model-materialization-utility-macros}
 
 The following macros are included to facilitate creating ClickHouse specific tables and views:
 
@@ -143,7 +143,7 @@ The following macros are included to facilitate creating ClickHouse specific tab
 - `ttl_config` -- Uses the `ttl` model configuration property to assign a ClickHouse table TTL expression. No TTL is
   assigned by default.
 
-### s3Source helper macro <a id="s3source-helper-macro"></a>
+### s3Source helper macro {#s3source-helper-macro}
 
 The `s3source` macro simplifies the process of selecting ClickHouse data directly from S3 using the ClickHouse S3 table
 function. It works by
@@ -168,7 +168,7 @@ See
 the [S3 test file](https://github.com/ClickHouse/dbt-clickhouse/blob/main/tests/integration/adapter/clickhouse/test_clickhouse_s3.py)
 for examples of how to use this macro.
 
-### Cross database macro support <a id="cross-database-macro-support"></a>
+### Cross database macro support {#cross-database-macro-support}
 
 dbt-clickhouse supports most of the cross database macros now included in `dbt Core` with the following exceptions:
 
@@ -178,13 +178,13 @@ dbt-clickhouse supports most of the cross database macros now included in `dbt C
 * Similarly, the `replace` SQL function in ClickHouse requires constant strings for the `old_chars` and `new_chars`
   parameters, so those parameters will be interpreted as strings rather than column names when invoking this macro.
 
-## Catalog Support <a id="catalog-support"></a>
+## Catalog Support {#catalog-support}
 
-### dbt Catalog Integration Status <a id="dbt-catalog-integration-status"></a>
+### dbt Catalog Integration Status {#dbt-catalog-integration-status}
 
 dbt Core v1.10 introduced catalog integration support, which allows adapters to materialize models into external catalogs that manage open table formats like Apache Iceberg. **This feature isn't yet natively implemented in dbt-clickhouse.** You can track the progress of this feature implementation in [GitHub issue #489](https://github.com/ClickHouse/dbt-clickhouse/issues/489).
 
-### ClickHouse Catalog Support <a id="clickhouse-catalog-support"></a>
+### ClickHouse Catalog Support {#clickhouse-catalog-support}
 
 ClickHouse recently added native support for Apache Iceberg tables and data catalogs. Most of the features are still `experimental`, but you can already use them if you use a recent ClickHouse version.
 
@@ -192,7 +192,7 @@ ClickHouse recently added native support for Apache Iceberg tables and data cata
 
 * Additionally, ClickHouse provides the [DataLakeCatalog database engine](/reference/engines/database-engines/datalake), which enables **connection to external data catalogs** including AWS Glue Catalog, Databricks Unity Catalog, Hive Metastore, and REST Catalogs. This allows you to query open table format data (Iceberg, Delta Lake) directly from external catalogs without data duplication.
 
-### Workarounds for Working with Iceberg and Catalogs <a id="workarounds-iceberg-catalogs"></a>
+### Workarounds for Working with Iceberg and Catalogs {#workarounds-iceberg-catalogs}
 
 You can read data from Iceberg tables or catalogs from your dbt project if you have already defined them in your ClickHouse cluster with the tools defined above. You can leverage the `source` functionality in dbt to reference these tables in your dbt projects. For example, if you want to access your tables in a REST Catalog, you can:
 
@@ -235,7 +235,7 @@ INNER JOIN {{ source('external_catalog', 'customers') }} c
     ON o.customer_id = c.customer_id
 ```
 
-### Notes on the Workarounds <a id="benefits-workarounds"></a>
+### Notes on the Workarounds {#benefits-workarounds}
 
 The good things about these workarounds are:
 * You'll have immediate access to different external table types and external catalogs without waiting for native dbt catalog integration.

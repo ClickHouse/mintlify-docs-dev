@@ -22,7 +22,7 @@ This opens the warehouse dialog where you can view existing services and create 
 
 <Image img="/images/managed-postgres/read-replica-dialog.png" alt="Read replica management dialog" size="md" border/>
 
-## Managing read replicas <a id="managing-read-replicas"></a>
+## Managing read replicas {#managing-read-replicas}
 
 The **Read replicas** page gives you two views, toggled with the **Flow** and **Table** controls in the top-right corner.
 
@@ -36,31 +36,31 @@ The **Table** view lists each replica with its service name, cloud provider and 
 
 To create a new replica, click **Create read replica** in the top-right corner of either view.
 
-## Why use read replicas <a id="why-use-read-replicas"></a>
+## Why use read replicas {#why-use-read-replicas}
 
-### Scalability <a id="scalability"></a>
+### Scalability {#scalability}
 
 Read replicas allow you to scale your database horizontally by distributing read-heavy workloads across multiple dedicated instances. This is particularly valuable for reporting queries, analytics processing, and real-time dashboards that would otherwise compete with your production traffic for resources.
 
-### Isolation <a id="isolation"></a>
+### Isolation {#isolation}
 
 By directing analytical and business intelligence queries to read replicas, you keep your primary instance focused and responsive for write operations and critical transactional workloads. This separation improves overall system performance and predictability. It also means you don't need to grant write access to analytical or reporting tools—they can operate safely against a replica with no risk of accidental data modification.
 
-### Business continuity <a id="business-continuity"></a>
+### Business continuity {#business-continuity}
 
 Read replicas can play a critical role in disaster recovery. If your primary database fails, a read replica can be promoted to primary, minimizing downtime and data loss. This provides an additional layer of resilience beyond your high availability standbys.
 
-## How read replicas work <a id="how-read-replicas-work"></a>
+## How read replicas work {#how-read-replicas-work}
 
 Read replicas in Managed Postgres use a WAL shipping architecture rather than streaming replication. This design choice prioritizes minimizing impact on your primary database.
 
-### WAL shipping from object storage <a id="wal-shipping-from-object-storage"></a>
+### WAL shipping from object storage {#wal-shipping-from-object-storage}
 
 When your primary database processes transactions, it generates Write-Ahead Log (WAL) records. These WAL segments are continuously archived to object storage (S3). Read replicas fetch and replay these WAL segments from object storage to stay synchronized with the primary.
 
 This architecture differs from [high availability standbys](/products/managed-postgres/high-availability), which use streaming replication with a direct connection to the primary.
 
-### Why we chose this approach <a id="why-we-chose-this-approach"></a>
+### Why we chose this approach {#why-we-chose-this-approach}
 
 We intentionally designed read replicas to consume WAL from object storage rather than connecting directly to the primary as streaming standbys. This approach provides complete isolation between read replicas and your primary database:
 
@@ -68,7 +68,7 @@ We intentionally designed read replicas to consume WAL from object storage rathe
 - **Independent scaling**: You can add or remove read replicas without any impact on primary performance.
 - **Network isolation**: Read replicas operate in their own network environment with separate connection endpoints.
 
-### Replication lag characteristics <a id="replication-lag-characteristics"></a>
+### Replication lag characteristics {#replication-lag-characteristics}
 
 The trade-off for this architecture is replication lag. WAL segments are archived from the primary at regular intervals (typically every 60 seconds or when a segment fills up, whichever comes first). This means read replicas may lag behind the primary by up to a few tens of seconds under normal conditions.
 

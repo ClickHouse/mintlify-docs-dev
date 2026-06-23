@@ -9,7 +9,7 @@ doc_type: 'guide'
 
 This guide helps you migrate existing pandas code to DataStore for better performance while maintaining compatibility.
 
-## The One-Line Migration <a id="one-line"></a>
+## The One-Line Migration {#one-line}
 
 The simplest migration is changing your import:
 
@@ -23,18 +23,18 @@ from chdb import datastore as pd
 
 That's it! Most pandas code works unchanged.
 
-## Step-by-Step Migration <a id="step-by-step"></a>
+## Step-by-Step Migration {#step-by-step}
 
 <Steps>
 <Step>
-### Install chDB <a id="step-1"></a>
+### Install chDB {#step-1}
 
 ```bash
 pip install "chdb>=4.0"
 ```
 </Step>
 <Step>
-### Change the Import <a id="step-2"></a>
+### Change the Import {#step-2}
 
 ```python
 # Change this:
@@ -45,7 +45,7 @@ from chdb import datastore as pd
 ```
 </Step>
 <Step>
-### Test Your Code <a id="step-3"></a>
+### Test Your Code {#step-3}
 
 Run your existing code. Most operations work unchanged:
 
@@ -60,7 +60,7 @@ df.to_csv("output.csv")
 ```
 </Step>
 <Step>
-### Handle Any Differences <a id="step-4"></a>
+### Handle Any Differences {#step-4}
 
 A few operations behave differently. See [Key Differences](#differences) below.
 </Step>
@@ -68,9 +68,9 @@ A few operations behave differently. See [Key Differences](#differences) below.
 
 ---
 
-## What Works Unchanged <a id="works-unchanged"></a>
+## What Works Unchanged {#works-unchanged}
 
-### Data Loading <a id="loading-unchanged"></a>
+### Data Loading {#loading-unchanged}
 
 ```python
 # All these work the same
@@ -80,7 +80,7 @@ df = pd.read_json("data.json")
 df = pd.read_excel("data.xlsx")
 ```
 
-### Filtering <a id="filtering-unchanged"></a>
+### Filtering {#filtering-unchanged}
 
 ```python
 # Boolean indexing
@@ -91,7 +91,7 @@ df[(df['age'] > 25) & (df['city'] == 'NYC')]
 df.query('age > 25 and salary > 50000')
 ```
 
-### Selection <a id="selection-unchanged"></a>
+### Selection {#selection-unchanged}
 
 ```python
 # Column selection
@@ -104,7 +104,7 @@ df.tail(10)
 df.iloc[0:100]
 ```
 
-### GroupBy and Aggregation <a id="groupby-unchanged"></a>
+### GroupBy and Aggregation {#groupby-unchanged}
 
 ```python
 # GroupBy
@@ -112,14 +112,14 @@ df.groupby('city')['salary'].mean()
 df.groupby(['city', 'dept']).agg({'salary': ['sum', 'mean']})
 ```
 
-### Sorting <a id="sorting-unchanged"></a>
+### Sorting {#sorting-unchanged}
 
 ```python
 df.sort_values('salary', ascending=False)
 df.sort_values(['city', 'age'])
 ```
 
-### String Operations <a id="string-unchanged"></a>
+### String Operations {#string-unchanged}
 
 ```python
 df['name'].str.upper()
@@ -127,7 +127,7 @@ df['name'].str.contains('John')
 df['name'].str.len()
 ```
 
-### DateTime Operations <a id="datetime-unchanged"></a>
+### DateTime Operations {#datetime-unchanged}
 
 ```python
 df['date'].dt.year
@@ -135,7 +135,7 @@ df['date'].dt.month
 df['date'].dt.dayofweek
 ```
 
-### I/O Operations <a id="io-unchanged"></a>
+### I/O Operations {#io-unchanged}
 
 ```python
 df.to_csv("output.csv")
@@ -145,9 +145,9 @@ df.to_json("output.json")
 
 ---
 
-## Key Differences <a id="differences"></a>
+## Key Differences {#differences}
 
-### 1. Lazy Evaluation <a id="lazy"></a>
+### 1. Lazy Evaluation {#lazy}
 
 DataStore operations are lazy - they don't execute until results are needed.
 
@@ -169,7 +169,7 @@ print(result)        # Triggers execution
 df = result.to_df()  # Triggers execution
 ```
 
-### 2. Return Types <a id="return-types"></a>
+### 2. Return Types {#return-types}
 
 | Operation | pandas Returns | DataStore Returns |
 |-----------|---------------|-------------------|
@@ -178,7 +178,7 @@ df = result.to_df()  # Triggers execution
 | `df[condition]` | DataFrame | DataStore (lazy) |
 | `df.groupby('x')` | GroupBy | LazyGroupBy |
 
-### 3. No inplace Parameter <a id="no-inplace"></a>
+### 3. No inplace Parameter {#no-inplace}
 
 DataStore doesn't support `inplace=True`. Always use the return value:
 
@@ -192,7 +192,7 @@ df.drop(columns=['col'], inplace=True)
 ds = ds.drop(columns=['col'])  # Assign the result
 ```
 
-### 4. Comparing DataStores <a id="comparing"></a>
+### 4. Comparing DataStores {#comparing}
 
 pandas doesn't recognize DataStore objects, so use `to_pandas()` for comparison:
 
@@ -204,7 +204,7 @@ df == ds  # pandas doesn't know DataStore
 df.equals(ds.to_pandas())
 ```
 
-### 5. Row Order <a id="row-order"></a>
+### 5. Row Order {#row-order}
 
 DataStore may not preserve row order for file sources (like SQL databases). Use explicit sorting:
 
@@ -219,9 +219,9 @@ ds = ds.sort('id')  # Explicit ordering
 
 ---
 
-## Migration Patterns <a id="patterns"></a>
+## Migration Patterns {#patterns}
 
-### Pattern 1: Read-Analyze-Write <a id="pattern-1"></a>
+### Pattern 1: Read-Analyze-Write {#pattern-1}
 
 ```python
 # pandas
@@ -237,7 +237,7 @@ result = df[df['amount'] > 100].groupby('category')['amount'].sum()
 result.to_csv("output.csv")
 ```
 
-### Pattern 2: DataFrame with pandas Operations <a id="pattern-2"></a>
+### Pattern 2: DataFrame with pandas Operations {#pattern-2}
 
 If you need pandas-specific features, convert at the end:
 
@@ -254,7 +254,7 @@ df = ds.to_df()
 df_pivoted = df.pivot_table(...)  # pandas-specific
 ```
 
-### Pattern 3: Mixed Workflow <a id="pattern-3"></a>
+### Pattern 3: Mixed Workflow {#pattern-3}
 
 ```python
 from chdb import datastore as pd
@@ -272,7 +272,7 @@ result = df.apply(complex_custom_function)  # pandas
 
 ---
 
-## Performance Comparison <a id="performance"></a>
+## Performance Comparison {#performance}
 
 DataStore is significantly faster for large datasets:
 
@@ -287,16 +287,16 @@ DataStore is significantly faster for large datasets:
 
 ---
 
-## Troubleshooting Migration <a id="troubleshooting"></a>
+## Troubleshooting Migration {#troubleshooting}
 
-### Issue: Operation Not Working <a id="issue-op"></a>
+### Issue: Operation Not Working {#issue-op}
 
 Some pandas operations may not be supported. Check:
 
 1. Is the operation in the [compatibility list](/products/chdb/datastore/pandas-compat)?
 2. Try converting to pandas first: `ds.to_df().operation()`
 
-### Issue: Different Results <a id="issue-results"></a>
+### Issue: Different Results {#issue-results}
 
 Enable debug logging to understand what's happening:
 
@@ -308,7 +308,7 @@ config.enable_debug()
 ds.filter(ds['x'] > 10).explain()
 ```
 
-### Issue: Slow Performance <a id="issue-slow"></a>
+### Issue: Slow Performance {#issue-slow}
 
 Check your execution pattern:
 
@@ -321,7 +321,7 @@ for i in range(1000):
 result = ds.filter(ds['id'].isin(ids)).to_df()
 ```
 
-### Issue: Type Mismatches <a id="issue-types"></a>
+### Issue: Type Mismatches {#issue-types}
 
 DataStore may infer types differently:
 
@@ -335,9 +335,9 @@ ds['col'] = ds['col'].astype('int64')
 
 ---
 
-## Gradual Migration Strategy <a id="gradual"></a>
+## Gradual Migration Strategy {#gradual}
 
-### Week 1: Test Compatibility <a id="week-1"></a>
+### Week 1: Test Compatibility {#week-1}
 
 ```python
 # Keep both imports
@@ -352,14 +352,14 @@ dsf = ds.read_csv("data.csv")
 assert pdf.equals(dsf.to_pandas())
 ```
 
-### Week 2: Switch Simple Scripts <a id="week-2"></a>
+### Week 2: Switch Simple Scripts {#week-2}
 
 Start with scripts that:
 - Read large files
 - Do filtering and aggregation
 - Don't use custom apply functions
 
-### Week 3: Handle Complex Cases <a id="week-3"></a>
+### Week 3: Handle Complex Cases {#week-3}
 
 For scripts with custom functions:
 
@@ -375,15 +375,15 @@ df = ds.to_df()
 result = df.apply(my_custom_function)
 ```
 
-### Week 4: Full Migration <a id="week-4"></a>
+### Week 4: Full Migration {#week-4}
 
 Switch all scripts to DataStore import.
 
 ---
 
-## FAQ <a id="faq"></a>
+## FAQ {#faq}
 
-### Can I use both pandas and DataStore? <a id="faq-both"></a>
+### Can I use both pandas and DataStore? {#faq-both}
 
 Yes! Convert between them freely:
 
@@ -398,7 +398,7 @@ df = ds_result.to_pandas()
 ds = ds.DataFrame(pd_result)
 ```
 
-### Will my tests still pass? <a id="faq-tests"></a>
+### Will my tests still pass? {#faq-tests}
 
 Most tests should pass. For comparison tests, convert to pandas:
 
@@ -409,7 +409,7 @@ def test_my_function():
     pd.testing.assert_frame_equal(result.to_pandas(), expected)
 ```
 
-### Can I use DataStore in Jupyter? <a id="faq-jupyter"></a>
+### Can I use DataStore in Jupyter? {#faq-jupyter}
 
 Yes! DataStore works in Jupyter notebooks:
 
@@ -420,7 +420,7 @@ ds = pd.read_csv("data.csv")
 ds.head()  # Displays nicely in Jupyter
 ```
 
-### How do I report issues? <a id="faq-issues"></a>
+### How do I report issues? {#faq-issues}
 
 If you find compatibility issues, report them at:
 https://github.com/chdb-io/chdb/issues

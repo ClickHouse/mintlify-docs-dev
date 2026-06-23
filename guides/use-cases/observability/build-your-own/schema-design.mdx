@@ -31,7 +31,7 @@ _We describe each of the above use cases in detail below._
 - Optimization recipes: [ClickStack performance tuning](/clickstack/managing/performance-tuning). Many of the recommendations on that page (materialized columns, skip indexes, primary key choice, projections, materialized views) apply directly to a build-your-own setup.
 </Tip>
 
-## Extracting structure with SQL <a id="extracting-structure-with-sql"></a>
+## Extracting structure with SQL {#extracting-structure-with-sql}
 
 Whether ingesting structured or unstructured logs, users often need the ability to:
 
@@ -173,7 +173,7 @@ Both of these use cases can be satisfied using ClickHouse by moving the above qu
 You may also perform processing using OTel Collector processors and operators as described [here](/guides/use-cases/observability/build-your-own/integrating-opentelemetry#processing---filtering-transforming-and-enriching). In most cases, you will find ClickHouse is significantly more resource-efficient and faster than the collector's processors. The principal downside of performing all event processing in SQL is the coupling of your solution to ClickHouse. For example, you may wish to send processed logs to alternative destinations from the OTel collector e.g. S3.
 </Info>
 
-### Materialized columns <a id="materialized-columns"></a>
+### Materialized columns {#materialized-columns}
 
 Materialized columns offer the simplest solution to extract structure from other columns. Values of such columns are always calculated at insert time and can't be specified in INSERT queries.
 
@@ -244,7 +244,7 @@ Peak memory usage: 3.16 MiB.
 Materialized columns will, by default, not be returned in a `SELECT *`.  This is to preserve the invariant that the result of a `SELECT *` can always be inserted back into the table using INSERT. This behavior can be disabled by setting `asterisk_include_materialized_columns=1` and can be enabled in Grafana (see `Additional Settings -> Custom Settings` in data source configuration).
 </Note>
 
-## Materialized views <a id="materialized-views"></a>
+## Materialized views {#materialized-views}
 
 [Materialized views](/concepts/features/materialized-views/index) provide a more powerful means of applying SQL filtering and transformations to logs and traces.
 
@@ -464,7 +464,7 @@ SELECT  Body,
 FROM otel_logs
 ```
 
-### Beware types <a id="beware-types"></a>
+### Beware types {#beware-types}
 
 The above materialized views rely on implicit casting - especially in the case of using the `LogAttributes` map. ClickHouse will often transparently cast the extracted value to the target table type, reducing the syntax required. However, we recommend users always test their views by using the views `SELECT` statement with an [`INSERT INTO`](/reference/statements/insert-into) statement with a target table using the same schema. This should confirm that types are correctly handled. Special attention should be given to the following cases:
 
@@ -478,7 +478,7 @@ The above materialized views rely on implicit casting - especially in the case o
 Avoid using [Nullable](/reference/data-types/nullable) in Clickhouse for Observability data. It is rarely required in logs and traces to be able to distinguish between empty and null. This feature incurs an additional storage overhead and will negatively impact query performance. See [here](/guides/clickhouse/data-modelling/schema-design#optimizing-types) for further details.
 </Info>
 
-## Choosing a primary (ordering) key <a id="choosing-a-primary-ordering-key"></a>
+## Choosing a primary (ordering) key {#choosing-a-primary-ordering-key}
 
 Once you have extracted your desired columns, you can begin optimizing your ordering/primary key.
 
@@ -499,7 +499,7 @@ On identifying the subset of columns for the ordering key, they must be declared
 We recommend deciding on your ordering keys once you have structured your logs. Don't use keys in attribute maps for the ordering key or JSON extraction expressions. Ensure you have your ordering keys as root columns in your table.
 </Info>
 
-## Using maps <a id="using-maps"></a>
+## Using maps {#using-maps}
 
 Earlier examples show the use of map syntax `map['key']` to access values in the `Map(String, String)` columns. As well as using map notation to access the nested keys, specialized ClickHouse [map functions](/reference/functions/regular-functions/tuple-map-functions#mapKeys) are available for filtering or selecting these columns.
 
@@ -526,7 +526,7 @@ Peak memory usage: 71.90 MiB.
 We don't recommend using dots in Map column names and may deprecate its use. Use an `_`.
 </Info>
 
-## Using aliases <a id="using-aliases"></a>
+## Using aliases {#using-aliases}
 
 Querying map types is slower than querying normal columns - see ["Accelerating queries"](#accelerating-queries). In addition, it's more syntactically complicated and can be cumbersome for you to write. To address this latter issue we recommend using Alias columns.
 
@@ -609,11 +609,11 @@ LIMIT 5
 By default, `SELECT *` excludes ALIAS columns. This behavior can be disabled by setting `asterisk_include_alias_columns=1`.
 </Info>
 
-## Optimizing types <a id="optimizing-types"></a>
+## Optimizing types {#optimizing-types}
 
 The [general Clickhouse best practices](/guides/clickhouse/data-modelling/schema-design#optimizing-types) for optimizing types apply to the ClickHouse use case.
 
-## Using codecs <a id="using-codecs"></a>
+## Using codecs {#using-codecs}
 
 In addition to type optimizations, you can follow the [general best practices for codecs](/guides/clickhouse/data-modelling/compression/compression-in-clickhouse#choosing-the-right-column-compression-codec) when attempting to optimize compression for ClickHouse Observability schemas.
 
@@ -621,7 +621,7 @@ In general, you will find the `ZSTD` codec highly applicable to logging and trac
 
 Furthermore, timestamps, while benefiting from delta encoding with respect to compression, have been shown to cause slow query performance if this column is used in the primary/ordering key. We recommend users assess the respective compression vs. query performance tradeoffs.
 
-## Using dictionaries <a id="using-dictionaries"></a>
+## Using dictionaries {#using-dictionaries}
 
 [Dictionaries](/reference/statements/create/dictionary) are a [key feature](https://clickhouse.com/blog/faster-queries-dictionaries-clickhouse) of ClickHouse providing in-memory [key-value](https://en.wikipedia.org/wiki/Key%E2%80%93value_database) representation of data from various internal and external [sources](/reference/statements/create/dictionary/sources/overview#dictionary-sources), optimized for super-low latency lookup queries.
 
@@ -636,7 +636,7 @@ While joins are rarely required in Observability use cases, dictionaries can sti
 Users interested in accelerating joins with dictionaries can find further details [here](/concepts/features/dictionaries/index).
 </Info>
 
-### Insert time vs query time <a id="insert-time-vs-query-time"></a>
+### Insert time vs query time {#insert-time-vs-query-time}
 
 Dictionaries can be used for enriching datasets at query time or insert time. Each of these approaches have their respective pros and cons. In summary:
 
@@ -647,7 +647,7 @@ We recommend that users familiarize themselves with the basics of dictionaries. 
 
 For simple enrichment examples see the guide on Dictionaries [here](/concepts/features/dictionaries/index). Below, we focus on common observability enrichment tasks.
 
-### Using IP dictionaries <a id="using-ip-dictionaries"></a>
+### Using IP dictionaries {#using-ip-dictionaries}
 
 Geo-enriching logs and traces with latitude and longitude values using IP addresses is a common Observability requirement. We can achieve this using `ip_trie` structured dictionary.
 
@@ -885,7 +885,7 @@ Users are likely to want the ip enrichment dictionary to be periodically updated
 
 The above countries and coordinates offer visualization capabilities beyond grouping and filtering by country. For inspiration see ["Visualizing geo data"](/guides/use-cases/observability/build-your-own/grafana#visualizing-geo-data).
 
-### Using regex dictionaries (user agent parsing) <a id="using-regex-dictionaries-user-agent-parsing"></a>
+### Using regex dictionaries (user agent parsing) {#using-regex-dictionaries-user-agent-parsing}
 
 The parsing of [user agent strings](https://en.wikipedia.org/wiki/User_agent) is a classical regular expression problem and a common requirement in log and trace based datasets. ClickHouse provides efficient parsing of user agents using Regular Expression Tree Dictionaries.
 
@@ -1079,7 +1079,7 @@ Os:     ('Other','0','0','0')
 Note the use of Tuples for these user agent columns. Tuples are recommended for complex structures where the hierarchy is known in advance. Sub-columns offer the same performance as regular columns (unlike Map keys) while allowing heterogeneous types.
 </Info>
 
-### Further reading <a id="further-reading"></a>
+### Further reading {#further-reading}
 
 For more examples and details on dictionaries, we recommend the following articles:
 
@@ -1087,11 +1087,11 @@ For more examples and details on dictionaries, we recommend the following articl
 - ["Using Dictionaries to Accelerate Queries"](https://clickhouse.com/blog/faster-queries-dictionaries-clickhouse)
 - [Dictionaries](/reference/statements/create/dictionary)
 
-## Accelerating queries <a id="accelerating-queries"></a>
+## Accelerating queries {#accelerating-queries}
 
 ClickHouse supports a number of techniques for accelerating query performance. The following should be considered only after choosing an appropriate primary/ordering key to optimize for the most popular access patterns and to maximize compression. This will usually have the largest impact on performance for the least effort.
 
-### Using Materialized views (incremental) for aggregations <a id="using-materialized-views-incremental-for-aggregations"></a>
+### Using Materialized views (incremental) for aggregations {#using-materialized-views-incremental-for-aggregations}
 
 In earlier sections, we explored the use of Materialized views for data transformation and filtering. Materialized views can, however, also be used to precompute aggregations at insert time and store the result. This result can be updated with the results from subsequent inserts, thus effectively allowing an aggregation to be precomputed at insert time.
 
@@ -1228,7 +1228,7 @@ This has sped up our query from 0.6s to 0.008s - over 75 times!
 These savings can be even greater on larger datasets with more complex queries. See [here](https://github.com/ClickHouse/clickpy) for examples.
 </Note>
 
-#### A more complex example <a id="a-more-complex-example"></a>
+#### A more complex example {#a-more-complex-example}
 
 The above example aggregates a simple count per hour using the [SummingMergeTree](/reference/engines/table-engines/mergetree-family/summingmergetree). Statistics beyond simple sums require a different target table engine: the [AggregatingMergeTree](/reference/engines/table-engines/mergetree-family/aggregatingmergetree).
 
@@ -1313,7 +1313,7 @@ ORDER BY Hour DESC
 
 Note we use a `GROUP BY` here instead of using `FINAL`.
 
-### Using Materialized views (incremental)  for fast lookups <a id="using-materialized-views-incremental--for-fast-lookups"></a>
+### Using Materialized views (incremental)  for fast lookups {#using-materialized-views-incremental--for-fast-lookups}
 
 You should consider their access patterns when choosing the ClickHouse ordering key with the columns that are frequently used in filter and aggregation clauses. This can be restrictive in Observability use cases, where users have more diverse access patterns that can't be encapsulated in a single set of columns. This is best illustrated in an example built into the default OTel schemas. Consider the default schema for the traces:
 
@@ -1417,7 +1417,7 @@ The CTE here identifies the minimum and maximum timestamp for the trace id `ae92
 
 This same approach can be applied for similar access patterns. We explore a similar example in Data Modeling [here](/concepts/features/materialized-views/incremental-materialized-view#lookup-table).
 
-### Using projections <a id="using-projections"></a>
+### Using projections {#using-projections}
 
 ClickHouse projections allow you to specify multiple `ORDER BY` clauses for a table.
 
@@ -1536,7 +1536,7 @@ Peak memory usage: 27.85 MiB.
 
 In the above example, we specify the columns used in the earlier query in the projection. This will mean only these specified columns will be stored on disk as part of the projection, ordered by Status. If alternatively, we used `SELECT *` here, all columns would be stored. While this would allow more queries (using any subset of columns) to benefit from the projection, additional storage will be incurred. For measuring disk space and compression, see ["Measuring table size & compression"](#measuring-table-size--compression).
 
-### Secondary/data skipping indices <a id="secondarydata-skipping-indices"></a>
+### Secondary/data skipping indices {#secondarydata-skipping-indices}
 
 No matter how well the primary key is tuned in ClickHouse, some queries will inevitably require full table scans. While this can be mitigated using Materialized views (and projections for some queries), these require additional maintenance and users to be aware of their availability in order to ensure they're exploited.  While traditional relational databases solve this with secondary indexes, these are ineffective in column-oriented databases like ClickHouse. Instead, ClickHouse uses "Skip" indexes, which can significantly improve query performance by allowing the database to skip over large data chunks with no matching values.
 
@@ -1546,7 +1546,7 @@ You should read and understand the [guide to secondary indices](/concepts/featur
 
 **In general, they're effective when a strong correlation exists between the primary key and the targeted, non-primary column/expression and users are looking up rare values i.e. those which don't occur in many granules.**
 
-### Text index for full text search <a id="text-index-for-full-text-search"></a>
+### Text index for full text search {#text-index-for-full-text-search}
 
 ClickHouse provides a specialized [text index](/reference/engines/table-engines/mergetree-family/textindexes) for full-text search.
 This index builds an inverted index over tokenized text data, enabling fast token-based search queries.
@@ -1607,7 +1607,7 @@ Query id: ff0b866c-6df7-47be-9e36-795ef3888169
 1 row in set. Elapsed: 0.584 sec. Processed 19.95 million rows, 3.08 GB (34.15 million rows/s., 5.27 GB/s.)
 ```
 
-#### Adding a text index <a id="adding-a-text-index"></a>
+#### Adding a text index {#adding-a-text-index}
 
 A text index on the Body column can be added during table creation:
 
@@ -1665,7 +1665,7 @@ Query id: ebc31a94-92b3-48aa-860a-939d7e788ef4
 Peak memory usage: 15.23 MiB.
 ```
 
-#### Using a preprocessor <a id="using-a-preprocessor"></a>
+#### Using a preprocessor {#using-a-preprocessor}
 
 In this dataset, the Body column contains a JSON-formatted string with multiple key-value pairs (e.g., `msg`, `id`, `ctx`, `attr`, etc.).
 
@@ -1936,13 +1936,13 @@ Bloom filters can require significant tuning. We recommend following the notes [
 
 </details>
 
-### Extracting from maps <a id="extracting-from-maps"></a>
+### Extracting from maps {#extracting-from-maps}
 
 The Map type is prevalent in the OTel schemas. This type requires the values and keys to have the same type - sufficient for metadata such as Kubernetes labels. Be aware that when querying a subkey of a Map type, the entire parent column is loaded. If the map has many keys, this can incur a significant query penalty as more data needs to be read from disk than if the key existed as a column.
 
 If you frequently query a specific key, consider moving it into its own dedicated column at the root. This is typically a task that happens in response to common access patterns and after deployment and may be difficult to predict before production. See ["Managing schema changes"](/guides/use-cases/observability/build-your-own/managing-data#managing-schema-changes) for how to modify your schema post-deployment.
 
-## Measuring table size & compression <a id="measuring-table-size--compression"></a>
+## Measuring table size & compression {#measuring-table-size--compression}
 
 One of the principal reasons ClickHouse is used for Observability is compression.
 

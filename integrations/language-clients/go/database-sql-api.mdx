@@ -16,7 +16,7 @@ The `database/sql` or "standard" API allows you to use the client in scenarios w
 
 Additionally, this client supports using HTTP as the transport layer - data will still be encoded in the native format for optimal performance.
 
-## Connecting <a id="connecting"></a>
+## Connecting {#connecting}
 
 Connection can be achieved either via a DSN string with the format `clickhouse://<host>:<port>?<query_option>=<value>` and `Open` method or via the `clickhouse.OpenDB` method. The latter isn't part of the `database/sql` specification but returns a `sql.DB` instance. This method provides functionality such as profiling, for which there are no obvious means of exposing through the `database/sql` specification.
 
@@ -54,7 +54,7 @@ func ConnectDSN() error {
 
 **For all subsequent examples, unless explicitly shown, we assume the use of the ClickHouse `conn` variable has been created and is available.**
 
-### Connection settings <a id="connection-settings"></a>
+### Connection settings {#connection-settings}
 
 Most configuration options are shared with the ClickHouse API. See [Configuration](/integrations/language-clients/go/configuration) for shared settings. The following SQL-specific DSN parameters are available:
 
@@ -91,7 +91,7 @@ func ConnectSettings() error {
 ```
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/connect_settings.go)
 
-### Connecting over HTTP <a id="connecting-over-http"></a>
+### Connecting over HTTP {#connecting-over-http}
 
 By default, connections are established over the native protocol. For users needing HTTP, this can be enabled by either modifying the DSN to include the HTTP protocol or by specifying the Protocol in the connection options.
 
@@ -128,7 +128,7 @@ func ConnectDSNHTTP() error {
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/connect_http.go)
 
-### Sessions <a id="sessions"></a>
+### Sessions {#sessions}
 
 <Info>
 **HTTP only**
@@ -202,7 +202,7 @@ if err := rows.Err(); err != nil {
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/session.go)
 
-## Execution <a id="execution"></a>
+## Execution {#execution}
 
 Once a connection has been obtained, you can issue `sql` statements for execution via the Exec method.
 
@@ -224,7 +224,7 @@ _, err = conn.Exec("INSERT INTO example VALUES (1, 'test-1')")
 
 This method doesn't support receiving a context - by default, it executes with the background context. You can use `ExecContext` if this is needed - see [Using Context](#using-context).
 
-## Batch insert <a id="batch-insert"></a>
+## Batch insert {#batch-insert}
 
 Batch semantics can be achieved by creating a `sql.Tx` via the `Being` method. From this, a batch can be obtained using the `Prepare` method with the `INSERT` statement. This returns a `sql.Stmt` to which rows can be appended using the `Exec` method. The batch will be accumulated in memory until `Commit` is executed on the original `sql.Tx`.
 
@@ -258,7 +258,7 @@ return scope.Commit()
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/batch.go)
 
-## Querying rows <a id="querying-rows"></a>
+## Querying rows {#querying-rows}
 
 Querying a single row can be achieved using the `QueryRow` method. This returns a  *sql.Row, on which Scan can be invoked with pointers to variables into which the columns should be marshaled. A `QueryRowContext` variant allows a context to be passed other than background - see [Using Context](#using-context).
 
@@ -310,7 +310,7 @@ if err := rows.Err(); err != nil {
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/query_rows.go)
 
-## Async insert <a id="async-insert"></a>
+## Async insert {#async-insert}
 
 Asynchronous inserts can be achieved by executing an insert via the `ExecContext` method. This should be passed a context with asynchronous mode enabled, as shown below. This allows the user to specify whether the client should wait for the server to complete the insert or respond once the data has been received. This effectively controls the parameter [wait_for_async_insert](/reference/settings/session-settings#wait_for_async_insert).
 
@@ -341,7 +341,7 @@ ctx := clickhouse.Context(context.Background(), clickhouse.WithStdAsync(false))
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/async.go)
 
-## Parameter binding <a id="parameter-binding"></a>
+## Parameter binding {#parameter-binding}
 
 The standard API supports the same parameter binding capabilities as the [ClickHouse API](/integrations/language-clients/go/clickhouse-api#parameter-binding), allowing parameters to be passed to the `Exec`, `Query` and `QueryRow` methods (and their equivalent [Context](#using-context) variants). Positional, named and numbered parameters are supported.
 
@@ -371,7 +371,7 @@ fmt.Printf("Named bind count: %d\n", count)
 
 Note [special cases](/integrations/language-clients/go/clickhouse-api#special-cases) still apply.
 
-## Using context <a id="using-context"></a>
+## Using context {#using-context}
 
 The standard API supports the same ability to pass deadlines, cancellation signals, and other request-scoped values via the context as the [ClickHouse API](/integrations/language-clients/go/clickhouse-api#using-context). Unlike the ClickHouse API, this is achieved by using `Context` variants of the methods i.e. methods such as `Exec`, which use the background context by default, have a variant `ExecContext` to which a context can be passed as the first parameter. This allows a context to be passed at any stage of an application flow. For example, you can pass a context when establishing a connection via `ConnContext` or when requesting a query row via `QueryRowContext`. Examples of all available methods are shown below.
 
@@ -454,7 +454,7 @@ if err := rows.Err(); err != nil {
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/context.go)
 
-## Dynamic scanning <a id="dynamic-scanning"></a>
+## Dynamic scanning {#dynamic-scanning}
 
 Similar to the [ClickHouse API](/integrations/language-clients/go/clickhouse-api#dynamic-scanning), column type information is available to allow you to create runtime instances of correctly typed variables which can be passed to Scan. This allows columns to be read where the type isn't known.
 
@@ -499,7 +499,7 @@ if err := rows.Err(); err != nil {
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/dynamic_scan_types.go)
 
-## External tables <a id="external-tables"></a>
+## External tables {#external-tables}
 
 [External tables](/reference/engines/table-engines/special/external-data) allow the client to send data to ClickHouse, with a `SELECT` query. This data is put in a temporary table and can be used in the query itself for evaluation.
 
@@ -570,7 +570,7 @@ fmt.Printf("external_table_1 UNION external_table_2: %d\n", count)
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/external_data.go)
 
-## Open telemetry <a id="open-telemetry"></a>
+## Open telemetry {#open-telemetry}
 
 ClickHouse supports [trace context propagation](/guides/oss/deployment-and-scaling/monitoring/opentelemetry) on both TCP and HTTP transports. Use `clickhouse.WithSpan` to attach a span to a query via the context.
 
@@ -600,7 +600,7 @@ fmt.Printf("count: %d\n", count)
 
 [Full Example](https://github.com/ClickHouse/clickhouse-go/blob/main/examples/std/open_telemetry.go)
 
-## Compression <a id="compression"></a>
+## Compression {#compression}
 
 The standard API supports the same compression algorithms as native [ClickHouse API](/integrations/language-clients/go/configuration#compression) i.e. `lz4` and `zstd` compression at a block level. In addition, gzip, deflate and br compression are supported for HTTP connections. If any of these are enabled, compression is performed on blocks during insertion and for query responses. Other requests e.g. pings or query requests, will remain uncompressed. This is consistent with `lz4` and `zstd` options.
 

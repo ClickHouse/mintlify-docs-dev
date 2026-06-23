@@ -18,10 +18,10 @@ You can sign up for the Private Preview waitlist [here](https://clickhouse.com/c
 
 Pub/Sub ClickPipes can be deployed and managed manually using the ClickPipes UI, as well as programmatically using [OpenAPI](/integrations/clickpipes/programmatic-access/openapi) and [Terraform](/integrations/clickpipes/programmatic-access/terraform).
 
-## Prerequisite <a id="prerequisite"></a>
+## Prerequisite {#prerequisite}
 You have familiarized yourself with the [ClickPipes intro](/integrations/clickpipes/home), have access to a GCP project containing the topic you want to ingest from, and have created a service account with the appropriate Pub/Sub permissions. Follow the [Pub/Sub IAM permissions guide](/integrations/clickpipes/pubsub/auth) for the exact set of permissions ClickPipes requires.
 
-## Creating your first ClickPipe <a id="creating-your-first-clickpipe"></a>
+## Creating your first ClickPipe {#creating-your-first-clickpipe}
 
 1. Access the SQL Console for your ClickHouse Cloud Service.
 
@@ -84,7 +84,7 @@ You have familiarized yourself with the [ClickPipes intro](/integrations/clickpi
 
 10. **Congratulations!** You have successfully set up your first Pub/Sub ClickPipe. It will be continuously running, ingesting data in real-time from your Pub/Sub topic into your ClickHouse Cloud service.
 
-## Managed subscriptions <a id="managed-subscriptions"></a>
+## Managed subscriptions {#managed-subscriptions}
 
 Pub/Sub messages are consumed through subscriptions, not directly from topics. ClickPipes creates and manages a dedicated subscription for each pipe — you only ever pick a topic.
 
@@ -96,7 +96,7 @@ Pub/Sub messages are consumed through subscriptions, not directly from topics. C
 
 The service account you provide must therefore have permission to create and delete subscriptions on the project, in addition to consuming from them. See the [Pub/Sub IAM permissions guide](/integrations/clickpipes/pubsub/auth) for the full list.
 
-## Supported data formats <a id="supported-data-formats"></a>
+## Supported data formats {#supported-data-formats}
 
 The supported formats are:
 - [JSON](/reference/formats/JSON/JSON)
@@ -105,7 +105,7 @@ The supported formats are:
 
 For Avro and Protobuf, the schema is resolved from the Pub/Sub schema registry on the topic. The pipe always uses the latest revision of the topic's schema; the schema selector in the UI is read-only by design.
 
-## Compression <a id="compression"></a>
+## Compression {#compression}
 
 ClickPipes for Pub/Sub automatically detects and decompresses compressed messages. The Pub/Sub client delivers raw bytes — ClickPipes handles decompression for you with no configuration required.
 
@@ -122,9 +122,9 @@ Compression is detected automatically via magic bytes in each message. If no kno
 Auto-detection is safe for text-based formats like JSON, as printable ASCII characters will never collide with compression magic bytes. The decompressed payload is limited to 64MB.
 </Note>
 
-## Supported data types <a id="supported-data-types"></a>
+## Supported data types {#supported-data-types}
 
-### Standard types support <a id="standard-types-support"></a>
+### Standard types support {#standard-types-support}
 The following ClickHouse data types are currently supported in ClickPipes:
 
 - Base numeric types - \[U\]Int8/16/32/64, Float32/64, and BFloat16
@@ -144,16 +144,16 @@ The following ClickHouse data types are currently supported in ClickPipes:
 - Tuple and Array with elements using any of the above types (including Nullables, one level depth only)
 - SimpleAggregateFunction types (for AggregatingMergeTree or SummingMergeTree destinations)
 
-### Variant type support <a id="variant-type-support"></a>
+### Variant type support {#variant-type-support}
 You can manually specify a Variant type (such as `Variant(String, Int64, DateTime)`) for any JSON field
 in the source data stream.  Because of the way ClickPipes determines the correct variant subtype to use, only one integer or datetime
 type can be used in the Variant definition - for example, `Variant(Int64, UInt32)` isn't supported.
 
-### JSON type support <a id="json-type-support"></a>
+### JSON type support {#json-type-support}
 JSON fields that are always a JSON object can be assigned to a JSON destination column.  You will have to manually change the destination
 column to the desired JSON type, including any fixed or skipped paths.
 
-## Pub/Sub virtual columns <a id="pubsub-virtual-columns"></a>
+## Pub/Sub virtual columns {#pubsub-virtual-columns}
 
 The following virtual columns are supported for Pub/Sub topics. When creating a new destination table virtual columns can be added by using the `Add Column` button.
 
@@ -167,35 +167,35 @@ The following virtual columns are supported for Pub/Sub topics. When creating a 
 
 The `_raw_message` field can be used in cases where only the full Pub/Sub message payload is required (such as using ClickHouse [`JsonExtract*`](/reference/functions/regular-functions/json-functions#jsonextract-functions) functions to populate a downstream materialized view). For such pipes, it may improve ClickPipes performance to delete all the "non-virtual" columns.
 
-## Limitations <a id="limitations"></a>
+## Limitations {#limitations}
 
 - [DEFAULT](/reference/statements/create/table#default) isn't supported.
 - Individual messages are limited to 16MB (uncompressed) by default when running with the smallest (XS) replica size, and 32MB (uncompressed) with larger replicas.  Messages that exceed this limit will be rejected with an error.  If you have a need for larger messages, please contact support.
 - Pub/Sub subscription filters are immutable — changing the filter expression requires recreating the pipe.
 - Filters apply to message attributes only, not the message payload.
 
-## Performance <a id="performance"></a>
+## Performance {#performance}
 
-### Batching <a id="batching"></a>
+### Batching {#batching}
 ClickPipes inserts data into ClickHouse in batches. This is to avoid creating too many parts in the database which can lead to performance issues in the cluster.
 
 Batches are inserted when one of the following criteria has been met:
 - The batch size has reached the maximum size (100,000 rows or 32MB per 1GB of replica memory)
 - The batch has been open for a maximum amount of time (5 seconds)
 
-### Latency <a id="latency"></a>
+### Latency {#latency}
 
 Latency (defined as the time between a Pub/Sub message being published and the message being available in ClickHouse) will be dependent on a number of factors (publisher latency, network latency, message size/format). The [batching](#batching) described in the section above will also impact latency. We always recommend testing your specific use case to understand the latency you can expect.
 
 If you have specific low-latency requirements, please [contact us](https://clickhouse.com/company/contact?loc=clickpipes).
 
-### Ordering keys <a id="ordering-keys"></a>
+### Ordering keys {#ordering-keys}
 
 Pub/Sub guarantees that messages sharing the same [ordering key](https://cloud.google.com/pubsub/docs/ordering) are delivered in publish order to a single subscriber. ClickPipes enables ordering on its managed subscriptions by default — when messages carry ordering keys, subscribers receive them in order; when messages don't carry ordering keys, behavior is unchanged.
 
 If your producer publishes all messages under a small number of ordering keys (or a single key), Pub/Sub will funnel those messages to a small number of subscribers, which can limit horizontal throughput. We recommend either omitting ordering keys when ordering is not required, or using a high-cardinality ordering key.
 
-### Scaling <a id="scaling"></a>
+### Scaling {#scaling}
 
 ClickPipes for Pub/Sub is designed to scale both horizontally and vertically. Each pipe uses a single managed Pub/Sub subscription — this is not configurable. By default, one consumer pulls from that subscription; you can increase the number of consumers during ClickPipe creation, or at any other point under **Settings** -> **Advanced Settings** -> **Scaling**. ClickPipes distributes messages from the subscription across the running consumers automatically — no additional coordination is required.
 
@@ -203,11 +203,11 @@ ClickPipes provides high availability with an availability-zone-distributed arch
 
 Regardless of the number of running consumers, fault tolerance is available by design. If a consumer or its underlying infrastructure fails, ClickPipes will automatically restart the consumer and continue processing messages.
 
-### Delivery semantics <a id="delivery-semantics"></a>
+### Delivery semantics {#delivery-semantics}
 
 ClickPipes for Pub/Sub provides **at-least-once** delivery. A Pub/Sub message is acknowledged only after the corresponding row has been inserted into ClickHouse (or written to the error table for malformed records); all messages are acknowledged once handled — including bad records routed to the error table — to prevent infinite redelivery. If a replica crashes after the insert but before the ack reaches Pub/Sub, the message will be redelivered after the ack deadline and inserted again, so downstream consumers must tolerate duplicates. If you need exactly-once semantics, deduplicate downstream using the `_message_id` virtual column (each Pub/Sub message ID is unique within a topic).
 
-## Authentication <a id="authentication"></a>
+## Authentication {#authentication}
 
 ClickPipes for Pub/Sub authenticates with GCP using a service account JSON key. You upload the key file when creating the pipe; ClickPipes encrypts it at rest and uses it at runtime to consume messages and manage the lifecycle of the managed subscription.
 

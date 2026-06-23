@@ -15,13 +15,13 @@ import RowBinaryFormatSettings from '/snippets/common-row-binary-format-settings
 |-------|--------|-------|
 | ✔     | ✗      |       |
 
-## Description <a id="description"></a>
+## Description {#description}
 
 Similar to the [`RowBinaryWithNamesAndTypes`](/reference/formats/RowBinary/RowBinaryWithNamesAndTypes) format, but with an extra byte before each cell that indicates whether the column's `DEFAULT` value should be used — exactly like in the [`RowBinaryWithDefaults`](/reference/formats/RowBinary/RowBinaryWithDefaults) format. This combination supports schema-evolving `INSERT`s: the writer can omit columns from the header (they receive the target column's `DEFAULT`) and, for any column it does send, it can mark individual cells as "use the column's `DEFAULT`" without conflating that with `NULL`.
 
 This format is input only.
 
-## Wire format <a id="wire-format"></a>
+## Wire format {#wire-format}
 
 The header is identical to [`RowBinaryWithNamesAndTypes`](/reference/formats/RowBinary/RowBinaryWithNamesAndTypes):
 
@@ -35,7 +35,7 @@ After the header, each row consists of `N` cells. For each cell:
   - `0x01` — use the target column's `DEFAULT` expression. No value bytes follow.
   - `0x00` — a value follows, serialized via the column type's `RowBinary` serializer. For `Nullable(T)` the value bytes start with the `Nullable` null byte (`0` for non-null, `1` for NULL), then the inner value if non-null.
 
-## Defaults vs NULL <a id="defaults-vs-null"></a>
+## Defaults vs NULL {#defaults-vs-null}
 
 The per-cell default marker and `Nullable`'s built-in null byte are independent. A `Nullable(UInt32) DEFAULT 42` column can be sent three different ways per row:
 
@@ -45,7 +45,7 @@ The per-cell default marker and `Nullable`'s built-in null byte are independent.
 | `00 01`    | Value path, then `NULL` via the `Nullable` type.       |
 | `00 00 …`  | Value path, then a non-null inner value.               |
 
-## Schema evolution <a id="schema-evolution"></a>
+## Schema evolution {#schema-evolution}
 
 | Case                                                                             | Behavior                                                                                                                                                                                |
 |----------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -54,7 +54,7 @@ The per-cell default marker and `Nullable`'s built-in null byte are independent.
 | Column present in the header, cell marker `0x00`                                 | Value is parsed normally.                                                                                                                                                               |
 | Extra column in the header, not in the target table                              | Silently dropped when `input_format_skip_unknown_fields = 1` (the marker is consumed first; if `0x01`, nothing else; if `0x00`, the typed value is parsed and discarded).               |
 
-## Example usage <a id="example-usage"></a>
+## Example usage {#example-usage}
 
 ```sql title="Query"
 SELECT * FROM format(
@@ -73,6 +73,6 @@ SELECT * FROM format(
 - The header carries one column named `x` of type `Nullable(UInt32)`.
 - The single cell uses marker `0x01`, meaning "use `DEFAULT 42`".
 
-## Format settings <a id="format-settings"></a>
+## Format settings {#format-settings}
 
 <RowBinaryFormatSettings/>

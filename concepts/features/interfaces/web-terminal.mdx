@@ -10,7 +10,7 @@ The web terminal is an in-browser interface that provides an interactive `clickh
 
 Navigate to `/webterminal` on any ClickHouse HTTP port (for example, `http://localhost:8123/webterminal`) to open the terminal.
 
-## Enabling and disabling the feature <a id="enabling-the-feature"></a>
+## Enabling and disabling the feature {#enabling-the-feature}
 
 The `/webterminal` endpoint is enabled by default and is controlled by the `enable_webterminal` server setting. To disable it, set the setting to `false`; requests to `/webterminal` then return HTTP status `403 Forbidden`.
 
@@ -24,7 +24,7 @@ The `/webterminal` endpoint is enabled by default and is controlled by the `enab
 `enable_webterminal` replaces the former `allow_experimental_webterminal` setting. The old name is still honored for backward compatibility when `enable_webterminal` is not set.
 </Note>
 
-## Authentication <a id="authentication"></a>
+## Authentication {#authentication}
 
 The web terminal authenticates the user against the same `Session` and access-control checks as the HTTP protocol, but credentials are exchanged in-band over the established WebSocket connection rather than via the HTTP upgrade request. After the WebSocket handshake completes, the browser sends the first message as JSON:
 
@@ -36,7 +36,7 @@ This avoids placing credentials in URL query parameters or `Authorization` heade
 
 Invalid credentials cause the server to close the WebSocket with code `1008`; the browser UI re-prompts for credentials.
 
-## What the session looks like <a id="session"></a>
+## What the session looks like {#session}
 
 Once authenticated, the server runs `clickhouse-client` attached to a pseudoterminal and bridges its input and output over WebSocket. The session supports the full `clickhouse-client` experience, including:
 
@@ -47,11 +47,11 @@ Once authenticated, the server runs `clickhouse-client` attached to a pseudoterm
 
 The terminal uses [xterm.js](https://xtermjs.org/) for rendering. All assets are served from the ClickHouse binary itself — no third-party CDNs are loaded.
 
-## Integration with `/play` <a id="play-integration"></a>
+## Integration with `/play` {#play-integration}
 
 The [`/play`](/concepts/features/interfaces/http) Web SQL UI embeds the web terminal as a dockable panel. Toggle it with the terminal icon in the sidebar or press the `~` key when the query editor is empty. The `/play` page detects `/webterminal` availability at load time and hides the terminal controls when the endpoint is unavailable (for example, when `enable_webterminal` is set to `false`).
 
-## Security considerations <a id="security"></a>
+## Security considerations {#security}
 
 The web terminal exposes an interactive shell-like session to anyone who can authenticate against the ClickHouse HTTP endpoint, so the same caveats that apply to the HTTP protocol apply here:
 
@@ -62,6 +62,6 @@ The web terminal exposes an interactive shell-like session to anyone who can aut
 
 The handler also enforces WebSocket protocol conformance per RFC 6455: unmasked client frames, reserved opcodes, oversized or fragmented control frames, and reserved RSV bits are rejected with protocol-error close codes.
 
-## Platform availability <a id="platform"></a>
+## Platform availability {#platform}
 
 The handler is compiled on all platforms ClickHouse supports. The pseudoterminal layer used by the embedded `clickhouse-client` runner is implemented on top of portable POSIX primitives (`posix_openpt`/`grantpt`/`unlockpt`), with a Linux-specific path that uses the thread-safe `ptsname_r`. The links to `/webterminal` on the ClickHouse start page and in `/play` are hidden automatically when the endpoint is unavailable (for example, when `enable_webterminal` is set to `false`).

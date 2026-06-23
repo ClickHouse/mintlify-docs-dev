@@ -6,7 +6,7 @@ title: 'Functions for Encoding Mapbox Vector Tiles'
 doc_type: 'reference'
 ---
 
-## Overview <a id="overview"></a>
+## Overview {#overview}
 
 [Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) (MVT) are the protobuf-encoded tiles that web map
 clients such as MapLibre and Mapbox GL render natively. ClickHouse can build such tiles entirely in SQL with a pair of
@@ -28,7 +28,7 @@ The resulting bytes are a complete tile that can be returned directly over the H
 These functions mirror the PostGIS workflow and are also available under their PostGIS names as aliases: `ST_AsMVTGeom`
 for `MVTEncodeGeom` and `ST_AsMVT` for `MVTEncode`.
 
-## MVTEncodeGeom <a id="mvtencodegeom"></a>
+## MVTEncodeGeom {#mvtencodegeom}
 
 Projects a geometry given in geographic coordinates (longitude/latitude) into the tile-local pixel space of the
 slippy-map tile identified by `zoom`, `tile_x` and `tile_y`, clips it to the tile, snaps it to the integer pixel grid,
@@ -79,7 +79,7 @@ SELECT MVTEncodeGeom((13.37, 52.52)::Point, 10, 550, 335) AS pixel
 └────────────┘
 ```
 
-## MVTEncode <a id="mvtencode"></a>
+## MVTEncode {#mvtencode}
 
 Encodes a group of features into a binary Mapbox Vector Tile layer. This is the aggregate counterpart of the scalar
 function `MVTEncodeGeom`. Each input row becomes one feature; point, line and polygon geometry are supported.
@@ -114,7 +114,7 @@ MVTEncode(layer_name[, extent[, feature_id_name[, stringify_unsupported]]])(geom
 
 Returns the binary contents of a single-layer Mapbox Vector Tile. [`String`](/reference/data-types/string).
 
-### Property types <a id="property-types"></a>
+### Property types {#property-types}
 
 Each property element is encoded as the Mapbox Vector Tile `Value` variant matching its ClickHouse type:
 
@@ -134,7 +134,7 @@ which case it is encoded as its text `string_value`.
 Identical property values are interned into the layer's shared value pool, so a value that appears on many features is
 stored only once.
 
-### Naming the properties tuple <a id="naming-the-properties-tuple"></a>
+### Naming the properties tuple {#naming-the-properties-tuple}
 
 The properties tuple must have explicit element names. Column aliases inside `tuple(...)` are **not** propagated to tuple
 element names, so name the elements with a cast:
@@ -143,7 +143,7 @@ element names, so name the elements with a cast:
 tuple(count(), any(id))::Tuple(cluster_count UInt64, id String)
 ```
 
-### Clustering <a id="clustering"></a>
+### Clustering {#clustering}
 
 Clustering is expressed in SQL, not by the function. Because `MVTEncodeGeom` rounds to whole pixels, grouping on the
 pixel geometry merges coincident geometry; aggregate the group in a subquery, then pass one row per cluster to
@@ -164,7 +164,7 @@ Grouping on a `Geometry` value requires `allow_suspicious_types_in_group_by = 1`
 `Geometry` type is restricted by default. Omit the inner `GROUP BY` (and `count()`) to emit one feature per input row
 instead of clustered features.
 
-## MVTBoundingBox <a id="mvtboundingbox"></a>
+## MVTBoundingBox {#mvtboundingbox}
 
 Returns the geographic bounding box of the slippy-map tile identified by `zoom`, `tile_x` and `tile_y` as a tuple
 `(min_lon, min_lat, max_lon, max_lat)` in degrees.
@@ -203,7 +203,7 @@ SELECT MVTBoundingBox(0, 0, 0) AS bbox
 └──────────────────────────────────────────────────┘
 ```
 
-## MVTBoundingBoxMercator <a id="mvtboundingboxmercator"></a>
+## MVTBoundingBoxMercator {#mvtboundingboxmercator}
 
 The Web Mercator counterpart of `MVTBoundingBox`. Returns the
 bounding box of the tile in the full-`UInt32` Web Mercator coordinate space used internally by `MVTEncodeGeom`, as a tuple
@@ -236,7 +236,7 @@ SELECT MVTBoundingBoxMercator(1, 0, 0) AS bbox
 └──────────────────────────────┘
 ```
 
-## Restricting rows to a tile <a id="restricting-rows-to-a-tile"></a>
+## Restricting rows to a tile {#restricting-rows-to-a-tile}
 
 A tile must only contain the geometry that belongs to it. This is best expressed as two cooperating steps: a cheap,
 index-using bounding-box predicate in the `WHERE` clause (performance), and the clip of `MVTEncodeGeom` (correctness).
@@ -263,7 +263,7 @@ The bounding-box predicate is only a coarse prefilter; the exact tile boundary i
 `MVTEncodeGeom`. Pass `clip => false` (the seventh argument) to `MVTEncodeGeom` to disable clipping and rely on the
 `WHERE` predicate alone.
 
-## Serving tiles over HTTP <a id="serving-tiles-over-http"></a>
+## Serving tiles over HTTP {#serving-tiles-over-http}
 
 ClickHouse does not expose a tile endpoint by default: the HTTP interface only accepts queries at `/`. A clean
 `/tile/{z}/{x}/{y}` URL is added by the operator with a [predefined query handler](/concepts/features/interfaces/http) in the
@@ -302,7 +302,7 @@ For point data this works just as well against plain `longitude`/`latitude` colu
 for large tables, extend the inner query as shown in [Clustering](#clustering) and
 [Restricting rows to a tile](#restricting-rows-to-a-tile).
 
-## Limitations <a id="limitations"></a>
+## Limitations {#limitations}
 
 - The Web Mercator projection clamps latitude to `±85.05112878°` and does not handle antimeridian-crossing inputs.
 

@@ -13,7 +13,7 @@ doc_type: 'reference'
 |-------|--------|-------|
 | ✔     | ✔      |       |
 
-## Description <a id="description"></a>
+## Description {#description}
 
 The full official specification of the `Native` format is available [here](/reference/interfaces/specs/NativeFormat), and the companion specification of the `Native` protocol — the TCP wire protocol that carries it — is available [here](/reference/interfaces/specs/NativeProtocol).
 
@@ -34,7 +34,7 @@ You can use this format to quickly generate dumps that can only be read by the C
 It might not be practical to work with this format yourself.
 </Tip>
 
-## Data types wire format <a id="data-types-wire-format"></a>
+## Data types wire format {#data-types-wire-format}
 
 Data is sent over the wire in a columnar format, which means that each column is sent separately,
 and all values of a column are sent together as a single array.
@@ -47,7 +47,7 @@ a `BlockInfo` structure is written before the column and row counts. The example
 the plain HTTP interface without a protocol version, which omits `BlockInfo`.
 </Note>
 
-### Block structure <a id="block-structure"></a>
+### Block structure {#block-structure}
 
 The following query returns two columns, `number` and `str`, with three rows:
 
@@ -89,7 +89,7 @@ const data = new Uint8Array([
 ])
 ```
 
-### Multiple blocks <a id="multiple-blocks"></a>
+### Multiple blocks {#multiple-blocks}
 
 However, in many cases, the data will not fit into a single block, and ClickHouse will send the data as multiple blocks.
 Consider the following query that fetches two rows with reduced block size to force splitting the data as one row per block:
@@ -143,7 +143,7 @@ const data = new Uint8Array([
 ]);
 ```
 
-### Simple data types <a id="simple-data-types"></a>
+### Simple data types {#simple-data-types}
 
 The wire format for an individual value of one of the simpler data types is similar to `RowBinary`/`RowBinaryWithNamesAndTypes`.
 The full list of types that match this description includes:
@@ -163,7 +163,7 @@ The full list of types that match this description includes:
 
 Refer to the descriptions of the types above in ["RowBinary data types wire format"](/reference/formats/RowBinary/RowBinary#data-types-wire-format) for more details.
 
-### Complex data types <a id="complex-data-types"></a>
+### Complex data types {#complex-data-types}
 
 The encoding of the following types differs from `RowBinary` and `RowBinaryWithNamesAndTypes`.
 
@@ -175,7 +175,7 @@ The encoding of the following types differs from `RowBinary` and `RowBinaryWithN
 - Dynamic
 - JSON
 
-#### Nullable <a id="nullable"></a>
+#### Nullable {#nullable}
 
 In the `Native` format, a nullable column will have a number of bytes equal to the number of rows in the block before the actual data. Each of these bytes indicates whether the value is `NULL` or not. For example, with this query, each odd number will be `NULL` instead:
 
@@ -295,7 +295,7 @@ const data = new Uint8Array([
 ])
 ```
 
-#### LowCardinality <a id="lowcardinality"></a>
+#### LowCardinality {#lowcardinality}
 
 Unlike [RowBinary](/reference/formats/RowBinary/RowBinary#lowcardinality) where `LowCardinality` is transparent, the Native format uses a dictionary-based columnar encoding. A column is encoded as a version prefix, then a dictionary of unique values, and an array of integer indexes into that dictionary.
 
@@ -343,7 +343,7 @@ With `LowCardinality(Nullable(String))`, index 0 is `NULL`:
 02 00 02 00 02              // indexes → "yes", NULL, "yes", NULL, "yes"
 ```
 
-#### Array <a id="array"></a>
+#### Array {#array}
 
 Unlike [RowBinary](/reference/formats/RowBinary/RowBinary#array) where each array is prefixed with a LEB128 element count, the Native format encodes arrays as two columnar sub-streams:
 
@@ -382,7 +382,7 @@ An empty array has the same offset as the previous row. For example, `Array(Stri
 01 32                       // "2"
 ```
 
-#### Map <a id="map"></a>
+#### Map {#map}
 
 A `Map(K, V)` is encoded as `Array(Tuple(K, V))` — array offsets followed by all keys, then all values. This differs from [RowBinary](/reference/formats/RowBinary/RowBinary#map) where keys and values are interleaved per entry.
 
@@ -411,7 +411,7 @@ For example, `Map(String, UInt64)` with 3 rows `[{'a':0,'b':10}, {'a':1,'b':11},
 0c 00 00 00 00 00 00 00    // 12
 ```
 
-#### Variant <a id="variant"></a>
+#### Variant {#variant}
 
 Unlike [RowBinary](/reference/formats/RowBinary/RowBinary#variant) where each row carries its own discriminant byte followed by the value inline, the Native format separates discriminators from data.
 
@@ -440,7 +440,7 @@ For example, `Variant(String, UInt32)` with 5 rows `[0::UInt32, 'hello', NULL, 3
 03 00 00 00                 // 3
 ```
 
-#### Dynamic <a id="dynamic"></a>
+#### Dynamic {#dynamic}
 
 Unlike [RowBinary](/reference/formats/RowBinary/RowBinary#dynamic) where each value is self-describing (type prefix + value), the Native format serializes `Dynamic` as a structure prefix followed by a [Variant](#variant) column.
 
@@ -467,7 +467,7 @@ For example, `Dynamic` with 5 rows `[0::UInt32, 'hello', NULL, 3::UInt32, 'hello
 03 00 00 00                 // UInt32: 3
 ```
 
-#### JSON <a id="json"></a>
+#### JSON {#json}
 
 Unlike [RowBinary](/reference/formats/RowBinary/RowBinary#json) where each row is self-describing with path names and values, the Native format serializes `JSON` in a columnar structure. The encoding is complex and version-dependent: it consists of a structure prefix with the serialization version, dynamic path names, and shared data layout, followed by typed paths (each as a bulk column), dynamic paths (each as a [Dynamic](#dynamic) column), and shared data for overflow paths.
 

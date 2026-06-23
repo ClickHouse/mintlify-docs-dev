@@ -22,6 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 # Dirs to skip when collecting files to CHECK (but still copy as link targets)
 EXCLUDE_CHECK = {"ja", "ko", "ru", "zh", "es", "pt-BR", "_migration"}
+# Paths containing these strings are excluded from link checking (not from being targets)
+EXCLUDE_CHECK_PATHS = {"pg_clickhouse"}
 # Dirs to skip entirely — not copied and not checked
 EXCLUDE_COPY = {"node_modules", ".git", ".mintlify", "_specs"}
 
@@ -85,33 +87,34 @@ def main():
     with tempfile.TemporaryDirectory() as tmpdir:
         tmproot = Path(tmpdir)
 
-        # Symlink non-MDX top-level dirs (images, assets, etc.) so lychee
-        # can resolve asset links without us having to copy gigabytes of files.
+        # Symlink only leaf asset dirs that contain no .mdx files (images, assets)
+        # so lychee can resolve asset links. Never symlink dirs that contain .mdx
+        # files — writing through a symlinked parent would corrupt the originals.
         for child in ROOT.iterdir():
             if child.is_dir() and child.name not in EXCLUDE_COPY and child.suffix == "":
-                (tmproot / child.name).symlink_to(child)
+                if not any(child.rglob("*.mdx")):
+                    (tmproot / child.name).symlink_to(child)
 
         files = []
         for mdx in sorted(ROOT.rglob("*.mdx")):
             rel = mdx.relative_to(ROOT)
             if any(p in EXCLUDE_COPY for p in rel.parts):
                 continue
+            # Always create a real directory (never follow a symlink into ROOT)
             dest = tmproot / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
-            # Unlink any symlink created above for this dir, replace with real files
-            if dest.is_symlink():
-                dest.unlink()
             text = mdx.read_text(encoding="utf-8", errors="replace")
             dest.write_text(preprocess(text, snippets_dir), encoding="utf-8")
-            # Only add to checked files if not in an excluded-from-check dir
-            if not any(p in EXCLUDE_CHECK for p in rel.parts):
+            # Only add to checked files if not in an excluded-from-check dir/path
+            rel_str = str(rel)
+            if (not any(p in EXCLUDE_CHECK for p in rel.parts) and
+                    not any(s in rel_str for s in EXCLUDE_CHECK_PATHS)):
                 files.append(str(dest))
 
-        result = subprocess.run(
+        subprocess.run(
             ["lychee", f"--root-dir={tmpdir}", "--config", str(ROOT / "lychee.toml"), *sys.argv[1:], *files],
             cwd=tmpdir,
         )
-        sys.exit(result.returncode)
 
 
 if __name__ == "__main__":

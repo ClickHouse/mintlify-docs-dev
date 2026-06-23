@@ -19,7 +19,7 @@ This page is one half of a pair and is published together with the companion [Na
 
 A few properties hold throughout. The protocol is binary and positional: there are no field tags except inside `BlockInfo`, so a single misplaced byte desynchronizes everything that follows. It is stateful, and each TCP connection processes one query at a time — there is no multiplexing. Fixed-width integers are little-endian.
 
-## Overview <a id="overview"></a>
+## Overview {#overview}
 
 | Property         | Value |
 |------------------|-------|
@@ -66,25 +66,25 @@ sequenceDiagram
 
 The native TCP protocol always carries tabular data in the Native format, regardless of any `FORMAT` clause in the SQL. Re-formatting into `RowBinary`, `CSV`, `JSON`, and so on is the client's job, done after it decodes the Native blocks. (The HTTP interface is a different code path that *does* honour the `FORMAT` clause; HTTP is out of scope here.)
 
-## Security <a id="security"></a>
+## Security {#security}
 
-### Transport security (TLS) <a id="transport-security"></a>
+### Transport security (TLS) {#transport-security}
 
 TLS lives at the transport layer, below the protocol. When it is enabled the entire TCP stream is encrypted, and the protocol messages are byte-for-byte identical whether TLS is in use or not.
 
-### Authentication <a id="authentication"></a>
+### Authentication {#authentication}
 
 Authentication happens during the handshake, in the [`ClientHello`](#clienthello) message. The `user` and `password` fields travel as plaintext strings, so transport-level encryption (TLS) is what protects credentials in transit.
 
 SSH challenge-response authentication is available from protocol version 54466 onward — see [SSH challenge-response authentication](#ssh-authentication).
 
-### Inter-server secret <a id="inter-server-secret"></a>
+### Inter-server secret {#inter-server-secret}
 
 For distributed query execution, servers authenticate to one another by proving knowledge of a shared secret — without putting the secret on the wire. Each Query carries a 32-byte SHA-256 `auth_hash` in [`Query`](#query) field 4, computed over a salt, nonce, the configured secret, and the query, which the receiving server recomputes and compares. This is gated by the `INTERSERVER_SECRET` feature (v54441). External clients always send an empty string here. See [Inter-server authentication](#inter-server-authentication).
 
-## Versioning and feature gates <a id="versioning-and-feature-gates"></a>
+## Versioning and feature gates {#versioning-and-feature-gates}
 
-### Version negotiation <a id="version-negotiation"></a>
+### Version negotiation {#version-negotiation}
 
 Both client and server declare their maximum supported protocol version during the handshake. The **negotiated version** is the smaller of the two:
 
@@ -94,7 +94,7 @@ negotiated_version = min(client_version, server_version)
 
 Every message after that uses the negotiated version to decide which fields are present on the wire.
 
-### Feature gates <a id="feature-gates"></a>
+### Feature gates {#feature-gates}
 
 A feature is identified by the protocol version that introduced it, and is **active** when the negotiated version is greater than or equal to that number.
 
@@ -102,7 +102,7 @@ A feature is identified by the protocol version that introduced it, and is **act
 When a feature is active, its fields **must** be present on the wire. The protocol is strictly positional, so omitting a feature-gated field corrupts the byte stream for every field that follows.
 </Warning>
 
-### Feature table <a id="feature-table"></a>
+### Feature table {#feature-table}
 
 | Feature                         | Version | Affects                | Wire impact |
 |---------------------------------|---------|------------------------|-------------|
@@ -152,7 +152,7 @@ When a feature is active, its fields **must** be present on the wire. The protoc
 | PROGRESS_IN_ASYNC_INSERT        | 54484   | Progress (INSERT)      | On an **asynchronous** INSERT (`async_insert = 1`), once the insert is flushed the server sends an extra [`Progress`](#progress) packet, then the insert's `ProfileEvents`, before `EndOfStream`. Gated on the *negotiated* version ≥ 54484; below it the server omits this trailing Progress. The Progress wire format is unchanged — only the emission is new. In practice the increment carries the elapsed time; the written-row counters are reported via the accompanying ProfileEvents. A client that already drains interleaved Progress needs no format change, only to tolerate one more packet. |
 | CLIENT_AGENT_IN_CLIENT_INFO     | 54485   | ClientInfo             | Adds a trailing `client_agent` `String` to ClientInfo. The canonical client auto-detects an agent identifier from its environment (for example `claude-code`, `cursor`, `gemini-cli`, or the value of the `AGENT` variable); an external client with nothing detected sends an empty string. Required once negotiated version ≥ 54485 — omitting it desynchronizes the rest of the Query packet. |
 
-## Packet envelope <a id="packet-envelope"></a>
+## Packet envelope {#packet-envelope}
 
 Every message on the wire shares the same outer structure, in both directions:
 
@@ -167,7 +167,7 @@ The packet type is a `VarUInt`, not a fixed-width byte. For values below 128 a `
 
 The [message reference](#message-reference) documents only the **body** of each packet — the bytes after the packet type code. Field numbering starts at 1 with the first body field.
 
-### Chunked framing (v54470+) <a id="chunked-framing"></a>
+### Chunked framing (v54470+) {#chunked-framing}
 
 When the `CHUNKED_PROTOCOL` feature is **negotiated** (see [the handshake](#handshake-phase)), every packet on the wire is wrapped in chunked framing. The wrapping is **per-direction**: client→server and server→client are negotiated separately and may end up in different modes (chunked versus unframed).
 
@@ -210,11 +210,11 @@ On the client side, the client's SEND preference negotiates against the server's
 
 **Timing.** The negotiation strings travel on the unframed wire: ClientHello → ServerHello (server prefs) → Addendum (client's negotiated values). The framing flip applies to every byte sent *after* the Addendum is flushed. The Addendum itself, the ClientHello, and the ServerHello are always unframed.
 
-## Connection lifecycle <a id="connection-lifecycle"></a>
+## Connection lifecycle {#connection-lifecycle}
 
 At any moment a connection is in exactly one of four states: `HANDSHAKE`, `READY`, `READING_RESPONSE`, or terminated. Because the protocol does not multiplex, a client that sends a new request before draining the previous response interleaves bytes on the wire and corrupts the stream.
 
-### States <a id="states"></a>
+### States {#states}
 
 ```mermaid
 stateDiagram-v2
@@ -240,7 +240,7 @@ The happy path runs straight down — `HANDSHAKE → READY → READING_RESPONSE 
 | `READING_RESPONSE` | Entered when the client sends a Query. The client must fully drain the server's response stream before returning to `READY`. The only allowed client→server packet here is Cancel (not specified on this page). |
 | Terminated         | No longer usable. The client must open a new TCP connection and restart the handshake. |
 
-### Handshake phase <a id="handshake-phase"></a>
+### Handshake phase {#handshake-phase}
 
 Authenticates and negotiates the protocol version. Happens exactly once per connection, before anything else.
 
@@ -277,7 +277,7 @@ sequenceDiagram
 
 On success the connection moves to `READY`; on any error it terminates.
 
-### Ping phase <a id="ping-phase"></a>
+### Ping phase {#ping-phase}
 
 An application-level liveness check, independent of TCP keepalive. A successful Ping/Pong round-trip confirms the TCP connection is alive in both directions and the server is responsive. Ping is stateless and uncorrelated with any query, so multiple sequential Pings are independent.
 
@@ -306,7 +306,7 @@ sequenceDiagram
    | `Exception` (2)       | Decode [`Exception`](#exception) and return as error. |
    | anything else         | Protocol violation. |
 
-### Query phase <a id="query-phase"></a>
+### Query phase {#query-phase}
 
 The client submits a SQL statement; the server streams back result blocks and execution telemetry. The response is a sequence of packets terminated by exactly one `EndOfStream` or `Exception`.
 
@@ -360,7 +360,7 @@ On `EndOfStream` or a handled `Exception` the connection returns to `READY`. A p
 The `num_rows == 0` case trips up new implementations. A zero-row block is a boundary marker or schema header, not an end-of-stream signal. Only `EndOfStream` or `Exception` ends the response.
 </Note>
 
-### INSERT phase <a id="insert-phase"></a>
+### INSERT phase {#insert-phase}
 
 The INSERT phase is the [Query phase](#query-phase) with two extra exchanges. The client submits an `INSERT` statement; the server replies with a **schema block** describing the target table; the client streams Data packets with the rows, then the empty Data marker; the server finishes with `EndOfStream` or `Exception`.
 
@@ -404,7 +404,7 @@ sequenceDiagram
 
 The connection returns to `READY` on `EndOfStream` or a handled `Exception`. Protocol violations and I/O errors terminate it.
 
-## Message reference <a id="message-reference"></a>
+## Message reference {#message-reference}
 
 Fields are listed in wire order. The `Type` column uses:
 
@@ -421,7 +421,7 @@ The `Role` column says who uses each field:
 
 These tables document only the body of each packet, after the packet type code.
 
-### ClientHello (packet type 0) <a id="clienthello"></a>
+### ClientHello (packet type 0) {#clienthello}
 
 Client → Server. The first message after the TCP connection opens.
 
@@ -435,7 +435,7 @@ Client → Server. The first message after the TCP connection opens.
 | 6 | user             | String  | universal | Username for authentication |
 | 7 | password         | String  | universal | Password (plaintext) |
 
-### ServerHello (packet type 0) <a id="serverhello"></a>
+### ServerHello (packet type 0) {#serverhello}
 
 Server → Client. The reply to ClientHello on successful authentication.
 
@@ -470,7 +470,7 @@ The list reflects the server operator's password-policy configuration and is pur
 To bound resource use against a hostile or misconfigured server, cap the decoded `count` at 256 entries and each `pattern` and `message` String at 4096 bytes. A `count` of `0` (no following pairs) is the common case for servers with no password policy configured.
 </Note>
 
-### Addendum (no packet type) <a id="addendum"></a>
+### Addendum (no packet type) {#addendum}
 
 Client → Server, gated by `ADDENDUM` (v54458). Sent immediately after the handshake exchange completes. It is not a distinct packet type — the fields go on the wire raw, with no packet type byte prefix.
 
@@ -483,15 +483,15 @@ Client → Server, gated by `ADDENDUM` (v54458). Sent immediately after the hand
 
 The chunked-framing flip applies *after* this Addendum is flushed — the Addendum itself is unframed.
 
-### Ping (packet type 4) <a id="ping"></a>
+### Ping (packet type 4) {#ping}
 
 Client → Server. No body — the packet is a single byte `0x04` before chunked framing; when chunking is negotiated the byte becomes the one-byte payload of a chunk (see [chunked framing](#chunked-framing)).
 
-### Pong (packet type 4) <a id="pong"></a>
+### Pong (packet type 4) {#pong}
 
 Server → Client. No body — the packet is a single byte `0x04` before chunked framing; when chunking is negotiated the byte becomes the one-byte payload of a chunk (see [chunked framing](#chunked-framing)).
 
-### Exception (packet type 2) <a id="exception"></a>
+### Exception (packet type 2) {#exception}
 
 Server → Client. Sent when the server hits an error during any phase.
 
@@ -503,7 +503,7 @@ Server → Client. Sent when the server hits an error during any phase.
 | 4 | stack_trace | String | universal | Server-side stack trace |
 | 5 | has_nested (obsolete) | Bool   | universal | Obsolete compatibility byte. Always written as `false` by the server |
 
-### Query (packet type 1) <a id="query"></a>
+### Query (packet type 1) {#query}
 
 Client → Server.
 
@@ -519,7 +519,7 @@ Client → Server.
 | 7 | query_body     | String      | universal    | always                                   | SQL text |
 | 8 | parameters     | Parameter[] | client       | PARAMETERS (v54459)                      | See [Parameter](#parameter). Terminated by empty key. |
 
-### ClientInfo (embedded in Query) <a id="clientinfo"></a>
+### ClientInfo (embedded in Query) {#clientinfo}
 
 Client → Server, embedded in the Query body (field 2). Gated by `CLIENT_INFO` (v54032). (Some fields inside ClientInfo are gated by later versions, as noted per-field below.)
 
@@ -574,7 +574,7 @@ If has_trace == 1:
   [UInt8:    trace_flags]       W3C trace flags
 ```
 
-### Inter-server authentication <a id="inter-server-authentication"></a>
+### Inter-server authentication {#inter-server-authentication}
 
 The Query field 4 (`auth_hash`) is **not** the shared cluster secret on the wire. Sending the raw secret would both fail authentication and leak it. Instead, a server acting as an inter-server client proves it knows the secret with a salted SHA-256 hash:
 
@@ -585,7 +585,7 @@ The Query field 4 (`auth_hash`) is **not** the shared cluster secret on the wire
 
 External (non-inter-server) clients never enter this mode and always send an empty `auth_hash`.
 
-### Setting <a id="setting"></a>
+### Setting {#setting}
 
 Encoded inline in the Query body's settings list (the [Query](#query) packet, field 3). The list is **always present**, regardless of negotiated version, and is terminated by a Setting with an empty key — a single `VarUInt 0`, with no flags or value following. Only the per-setting encoding depends on the negotiated version, gated by `SETTINGS_SERIALIZED_AS_STRINGS` (v54429).
 
@@ -608,7 +608,7 @@ The `flags` field packs:
 - `0x0c` — a **2-bit tier** field, not an independent flag: `0x00` = Production, `0x04` = Obsolete, `0x08` = Experimental, `0x0c` = Beta. Read all 2 bits (`flags & 0x0c`) — a naive `flags & 0x04` test would misclassify Beta (`0x0c`) as Obsolete.
 - `0x80` — **HotReload** (config reload without restart; defined in the flags enum, encountered mainly for coordination settings).
 
-### Parameter <a id="parameter"></a>
+### Parameter {#parameter}
 
 Query parameters, for parameterized queries like `SELECT {x:UInt64}`. Encoded identically to a [Setting](#setting) with the `Custom` flag (`0x02`) set, and terminated by an empty key in the same way.
 
@@ -622,7 +622,7 @@ Query parameters, for parameterized queries like `SELECT {x:UInt64}`. Encoded id
 The parameter value is the SQL representation of the value, not a raw literal. String-typed parameters must be passed already single-quoted (for example, the value for `{name:String}` is `'Alice'`, not `Alice`); otherwise the server's value parser rejects them.
 </Note>
 
-### Data (packet type 1 server→client, packet type 2 client→server) <a id="data"></a>
+### Data (packet type 1 server→client, packet type 2 client→server) {#data}
 
 Both directions. Carries result blocks, INSERT data, external tables, and end-of-data markers.
 
@@ -643,7 +643,7 @@ The **end-of-data marker** is a packet whose Block is empty — `0` columns and 
 
 The block variants and what they mean are documented under [Block variants](/reference/interfaces/specs/NativeFormat#block-variants).
 
-### Progress (packet type 3) <a id="progress"></a>
+### Progress (packet type 3) {#progress}
 
 Server → Client. Sent periodically during query execution. All fields are VarUInt, and each packet carries **increments since the previous `Progress` packet**, not cumulative totals. Before sending, the server reads its counters and atomically resets them to zero, and computes `elapsed_ns` as the time delta since the last send. A client therefore **must accumulate** successive packets locally to obtain running totals — treating a packet as an absolute value makes the progress display jump backwards or undercount once more than one packet arrives.
 
@@ -657,7 +657,7 @@ Server → Client. Sent periodically during query execution. All fields are VarU
 | 6 | wrote_bytes | VarUInt | universal | WRITE_CLIENT_INFO (v54420)             | Bytes written since the previous packet (for INSERT); accumulate |
 | 7 | elapsed_ns  | VarUInt | universal | SERVER_QUERY_TIME_IN_PROGRESS (v54460) | Nanoseconds elapsed since the previous packet (a delta, not total query time); accumulate |
 
-### ProfileInfo (packet type 6) <a id="profileinfo"></a>
+### ProfileInfo (packet type 6) {#profileinfo}
 
 Server → Client. Sent once per query, near the end of execution.
 
@@ -672,7 +672,7 @@ Server → Client. Sent once per query, near the end of execution.
 | 7 | applied_aggregation           | Bool    | universal | ROWS_BEFORE_AGGREGATION (v54469)   | Whether GROUP BY was applied |
 | 8 | rows_before_aggregation       | VarUInt | universal | ROWS_BEFORE_AGGREGATION (v54469)   | Row count before aggregation |
 
-### Totals (packet type 7) <a id="totals"></a>
+### Totals (packet type 7) {#totals}
 
 Server → Client. Sent for queries with `WITH TOTALS`. Wire format is identical to [Data](#data): a `table_name` string (always empty) followed by a Block. Only the packet type byte differs.
 
@@ -682,7 +682,7 @@ Server → Client. Sent for queries with `WITH TOTALS`. Wire format is identical
 [Block]                     see the Native Format spec
 ```
 
-### Extremes (packet type 8) <a id="extremes"></a>
+### Extremes (packet type 8) {#extremes}
 
 Server → Client. Sent when the `extremes` setting is enabled. Wire format is identical to [Data](#data). The block has exactly 2 rows: row 0 holds the minimum of each column, row 1 holds the maximum.
 
@@ -692,7 +692,7 @@ Server → Client. Sent when the `extremes` setting is enabled. Wire format is i
 [Block]                     num_rows = 2
 ```
 
-### Log (packet type 10) <a id="log"></a>
+### Log (packet type 10) {#log}
 
 Server → Client. Sent when the query has an active logs queue (the `send_logs_level` setting; see [log streaming](#log-streaming)).
 
@@ -717,7 +717,7 @@ The 8 columns, in this exact order:
 | 7 | source                  | String   | Logger name |
 | 8 | text                    | String   | Log message text |
 
-### ProfileEvents (packet type 14) <a id="profileevents"></a>
+### ProfileEvents (packet type 14) {#profileevents}
 
 Server → Client. Carries per-query performance counters.
 
@@ -744,7 +744,7 @@ The 6 columns:
 The `value` column's element type is not fixed across packets — older servers emit `UInt64`, newer ones `Int64`. Read the column's type string from the block header rather than assuming one width.
 </Note>
 
-### TableColumns (packet type 11) <a id="tablecolumns"></a>
+### TableColumns (packet type 11) {#tablecolumns}
 
 Server → Client, gated by `COLUMN_DEFAULTS_METADATA` (v54410). The server sends it before the INSERT schema block to carry column-default metadata, but only when the negotiated version is ≥ 54410 **and** the `input_format_defaults_for_omitted_fields` setting is enabled. Below 54410 the packet is never sent, so an older client must **not** wait for it — the schema `Data` block comes directly. A v54410+ client should be ready for either order: an optional `TableColumns`, then the schema block.
 
@@ -759,7 +759,7 @@ Server → Client, gated by `COLUMN_DEFAULTS_METADATA` (v54410). The server send
 At negotiated version ≥ 54481 (`COMPRESSED_LOGS_PROFILE_EVENTS_COLUMNS`) the server writes **both** fields through the same optionally-compressed output path, so when the query has `compression = true` the whole `TableColumns` body (`external_table` + `columns_description`) is inside the [compression frame](/reference/interfaces/specs/NativeFormat#compression-frame); the client reads it through the matching decompressed stream. When the query has no compression, the body is on the wire uncompressed exactly as the table above shows. This matters for `INSERT` schema responses: a client that switches compression handling for `Log` and `ProfileEvents` but not `TableColumns` will misread the response when query compression is enabled.
 </Info>
 
-### TimezoneUpdate (packet type 17) <a id="timezoneupdate"></a>
+### TimezoneUpdate (packet type 17) {#timezoneupdate}
 
 Server → Client, gated by `TIMEZONE_UPDATES` (v54464). Sent in exactly one place: the initializer for the `input` table function (a query of the form `INSERT INTO <table> SELECT ... FROM input('<structure>')`, which streams rows from the client). Right after the server sends the input-schema `Data` block (see the [INSERT phase](#insert-phase)), it emits `TimezoneUpdate` carrying the query context's current `session_timezone` so the client parses the rows it is about to send with the same timezone. The server does **not** emit this packet for arbitrary mid-query `SET session_timezone` changes, nor to tell the client how to format later result blocks.
 
@@ -769,7 +769,7 @@ Server → Client, gated by `TIMEZONE_UPDATES` (v54464). Sent in exactly one pla
 
 The packet arrives once, immediately after the input-schema block and before the client starts sending row blocks. A decoder that ignores `TimezoneUpdate` MUST still consume the trailing `String` to keep the wire aligned.
 
-### SSH challenge-response authentication (packet types 11, 12, 18) <a id="ssh-authentication"></a>
+### SSH challenge-response authentication (packet types 11, 12, 18) {#ssh-authentication}
 
 Gated by `SSH_AUTHENTICATION` (v54466), and opt-in only. A connection enters the SSH flow when ClientHello sends `user = " SSH KEY AUTHENTICATION " + <real_user>` (with the leading and trailing spaces) and `password = ""`. The server reads the prefix, strips it to recover the real user, and switches to challenge-response.
 
@@ -823,9 +823,9 @@ This is the reverse of the password handshake, where ServerHello immediately fol
 
 External clients that don't use SSH auth never see packets 11, 12, or 18 — they stay off the wire unless the user explicitly opts in via the username prefix.
 
-## Packet type reference <a id="packet-type-reference"></a>
+## Packet type reference {#packet-type-reference}
 
-### Client → Server <a id="client-to-server"></a>
+### Client → Server {#client-to-server}
 
 | Code | Name                      | Body format         | Description |
 |------|---------------------------|---------------------|-------------|
@@ -844,7 +844,7 @@ External clients that don't use SSH auth never see packets 11, 12, or 18 — the
 | 12   | SSHChallengeResponse      | [SSH auth](#ssh-authentication) | SSH auth challenge response |
 | 13   | QueryPlan                 | not specified       | Query plan |
 
-### Server → Client <a id="server-to-client"></a>
+### Server → Client {#server-to-client}
 
 | Code | Name                           | Body format         | Description |
 |------|--------------------------------|---------------------|-------------|
@@ -868,7 +868,7 @@ External clients that don't use SSH auth never see packets 11, 12, or 18 — the
 | 17   | TimezoneUpdate                 | [TimezoneUpdate](#timezoneupdate) | Server timezone update |
 | 18   | SSHChallenge                   | [SSH auth](#ssh-authentication) | SSH auth challenge |
 
-## Configuration <a id="configuration"></a>
+## Configuration {#configuration}
 
 This section covers the tunables that shape native protocol connections:
 
@@ -878,9 +878,9 @@ This section covers the tunables that shape native protocol connections:
 
 The defaults below reflect a recent server release; they may differ across versions and deployments.
 
-### Transport-layer settings <a id="transport-layer-settings"></a>
+### Transport-layer settings {#transport-layer-settings}
 
-#### Socket options <a id="socket-options"></a>
+#### Socket options {#socket-options}
 
 | Option               | Default                          | Side       | Description |
 |----------------------|----------------------------------|------------|-------------|
@@ -888,7 +888,7 @@ The defaults below reflect a recent server release; they may differ across versi
 | `SO_KEEPALIVE`       | on (client), OS default (server) | asymmetric | Kernel-level TCP keepalive probes. Client explicitly enables this when `tcp_keep_alive_timeout > 0`. Server inherits the OS default. |
 | `SO_RCVBUF` / `SO_SNDBUF` | OS defaults                 | —          | Socket buffer sizes. Not tuned by the protocol. |
 
-#### Timeouts <a id="timeouts"></a>
+#### Timeouts {#timeouts}
 
 | Setting                                  | Default | Unit         | Side   | Description |
 |------------------------------------------|---------|--------------|--------|-------------|
@@ -914,7 +914,7 @@ tcp_keep_alive_timeout (290s)
 
 OS keepalive fires first and may detect dead peers silently at the kernel level. The application receive timeout is the next line of defence. The idle timeout is the last resort that reaps long-unused connections.
 
-#### Connection limits <a id="connection-limits"></a>
+#### Connection limits {#connection-limits}
 
 | Setting                                       | Default       | Unit    | Side   | Description |
 |-----------------------------------------------|---------------|---------|--------|-------------|
@@ -925,11 +925,11 @@ OS keepalive fires first and may detect dead peers silently at the kernel level.
 
 A connection that issues queries regularly can live indefinitely. Only idle connections are reaped after an hour, and there is no default maximum lifetime.
 
-### Application-layer settings <a id="application-layer-settings"></a>
+### Application-layer settings {#application-layer-settings}
 
 These settings travel per-query in the [Query packet's settings list](#setting). They change what the server sends on the wire, or how it is framed.
 
-#### Compression <a id="compression-settings"></a>
+#### Compression {#compression-settings}
 
 | Setting                          | Default  | Unit   | Description |
 |----------------------------------|----------|--------|-------------|
@@ -938,7 +938,7 @@ These settings travel per-query in the [Query packet's settings list](#setting).
 
 The `compression` flag in the [Query packet](#query) (field 6) toggles compression on and off; these settings select which codec is used when it is on.
 
-#### Log streaming <a id="log-streaming"></a>
+#### Log streaming {#log-streaming}
 
 | Setting                  | Default       | Unit   | Description |
 |--------------------------|---------------|--------|-------------|
@@ -947,7 +947,7 @@ The `compression` flag in the [Query packet](#query) (field 6) toggles compressi
 
 Setting `send_logs_level` to anything other than `"none"` makes the server emit [Log](#log) packets during query execution.
 
-#### Progress reporting <a id="progress-reporting"></a>
+#### Progress reporting {#progress-reporting}
 
 | Setting             | Default | Unit         | Description |
 |---------------------|---------|--------------|-------------|
@@ -955,7 +955,7 @@ Setting `send_logs_level` to anything other than `"none"` makes the server emit 
 
 This is a target minimum, not a strict maximum: the server may send Progress packets less often when the query is not producing work fast enough.
 
-#### Result envelope <a id="result-envelope"></a>
+#### Result envelope {#result-envelope}
 
 | Setting                | Default       | Unit               | Description |
 |------------------------|---------------|--------------------|-------------|
@@ -964,7 +964,7 @@ This is a target minimum, not a strict maximum: the server may send Progress pac
 | `max_result_bytes`     | 0 (unlimited) | uncompressed bytes | Cap on uncompressed byte volume. Behaviour controlled by `result_overflow_mode`. |
 | `result_overflow_mode` | `"throw"`     | string             | `"throw"` ends the stream with Exception; `"break"` sends partial results followed by EndOfStream. |
 
-#### Async INSERT <a id="async-insert"></a>
+#### Async INSERT {#async-insert}
 
 | Setting                          | Default | Unit    | Description |
 |----------------------------------|---------|---------|-------------|
@@ -972,13 +972,13 @@ This is a target minimum, not a strict maximum: the server may send Progress pac
 | `wait_for_async_insert`          | true    | bool    | When true (with `async_insert` on), the server holds the response until queued data is flushed. |
 | `wait_for_async_insert_timeout`  | 120     | seconds | Maximum time the server waits for a flush before returning. |
 
-#### Distributed tracing <a id="distributed-tracing"></a>
+#### Distributed tracing {#distributed-tracing}
 
 | Setting                                 | Default | Unit              | Description |
 |-----------------------------------------|---------|-------------------|-------------|
 | `opentelemetry_start_trace_probability` | 0.0     | 0–1 probability   | Server-side probability of attaching OpenTelemetry context to response telemetry. |
 
-### Settings out of scope <a id="settings-out-of-scope"></a>
+### Settings out of scope {#settings-out-of-scope}
 
 These settings are sometimes mistaken for protocol-level settings, but they control SQL execution, storage, or CPU use rather than wire behaviour. A protocol implementation does not need to handle them specially.
 
@@ -991,7 +991,7 @@ These settings are sometimes mistaken for protocol-level settings, but they cont
 
 The `*_native_*` settings are the exception: they change the bytes inside native TCP `Data` blocks, so a protocol implementation must account for them. `output_format_native_encode_types_in_binary_format` switches the column `type` field from a textual string to a binary type encoding, `output_format_native_write_json_as_string` emits `JSON` columns as a `String`, and `output_format_native_use_flattened_dynamic_and_json_serialization` selects the FLATTENED `Dynamic`/`JSON` layout. Because these affect the block body rather than the packet envelope, they are specified in the [Native Format](/reference/interfaces/specs/NativeFormat) spec — see [column wire layout](/reference/interfaces/specs/NativeFormat#column-wire-layout) and [versioned types](/reference/interfaces/specs/NativeFormat#versioned-types).
 
-## Glossary <a id="glossary"></a>
+## Glossary {#glossary}
 
 **Cancel** — a client-initiated packet (type 3) that aborts a running query. Not specified in detail on this page.
 

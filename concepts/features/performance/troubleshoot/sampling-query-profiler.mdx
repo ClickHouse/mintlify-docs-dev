@@ -55,13 +55,13 @@ SETTINGS allow_introspection_functions = 1
 </Tab>
 </Tabs>
 
-## Using the query profiler in self-managed deployments <a id="self-managed-query-profiler"></a>
+## Using the query profiler in self-managed deployments {#self-managed-query-profiler}
 
 In self-managed deployments, to use the query profiler follow the steps below:
 
 <Steps>
 <Step>
-### Install ClickHouse with debug info <a id="debug-info"></a>
+### Install ClickHouse with debug info {#debug-info}
 
 Install the `clickhouse-common-static-dbg` package:
 1. Follow the instructions in step ["Set up the Debian repository"](/get-started/setup/self-managed/debian-ubuntu#setup-the-debian-repository)
@@ -70,7 +70,7 @@ Install the `clickhouse-common-static-dbg` package:
 4. Run `clickhouse-client`. The debug symbols from clickhouse-common-static-dbg will automatically be picked up by the server - you don't need to do anything special to enable them
 </Step>
 <Step>
-### Check server config <a id="server-config"></a>
+### Check server config {#server-config}
 
 Ensure that the [`trace_log`](/reference/settings/server-settings/settings#trace_log) section of your [server configuration file](/concepts/features/configuration/server-config/configuration-files) is set up. It is enabled by default:
 
@@ -97,7 +97,7 @@ Remember that data in this table is valid only for a running server.
 After the server restart, ClickHouse does not clean up the table and all the stored virtual memory address may become invalid.
 </Step>
 <Step>
-### Configure profile timers <a id="configure-profile-timers"></a>
+### Configure profile timers {#configure-profile-timers}
 
 Set up the [`query_profiler_cpu_time_period_ns`](/reference/settings/session-settings#query_profiler_cpu_time_period_ns) or [`query_profiler_real_time_period_ns`](/reference/settings/session-settings#query_profiler_real_time_period_ns) settings.
 Both settings can be used simultaneously.
@@ -110,7 +110,7 @@ This frequency allows you to collect sufficient information about your ClickHous
 If you need to profile each individual query, use a higher sampling frequency.
 </Step>
 <Step>
-### Analyze the `trace_log` system table <a id="analyze-trace-log-system-table"></a>
+### Analyze the `trace_log` system table {#analyze-trace-log-system-table}
 
 To analyze the `trace_log` system table allow introspection functions with the [`allow_introspection_functions`](/reference/settings/session-settings#allow_introspection_functions) setting:
 
@@ -132,7 +132,7 @@ If you need to visualize `trace_log` info, try [flamegraph](/integrations/connec
 </Step>
 </Steps>
 
-## Building flame graphs with the `flameGraph` function <a id="flamegraph"></a>
+## Building flame graphs with the `flameGraph` function {#flamegraph}
 
 ClickHouse provides the [`flameGraph`](/reference/functions/aggregate-functions/flame_graph) aggregate function which builds a flame graph directly from stack traces stored in `trace_log`.
 The output is an array of strings in a format compatible with [flamegraph.pl](https://github.com/brendangregg/FlameGraph).
@@ -153,7 +153,7 @@ When `ptr` is non-zero, `flameGraph` maps allocations (`size > 0`) and deallocat
 Only allocations that were not freed are shown.
 Unmatched deallocations are ignored.
 
-### CPU flame graph <a id="cpu-flame-graph"></a>
+### CPU flame graph {#cpu-flame-graph}
 
 <Note>
 The queries below require you to have [flamegraph.pl](https://github.com/brendangregg/FlameGraph) installed.
@@ -183,7 +183,7 @@ clickhouse client --allow_introspection_functions=1 \
     | flamegraph.pl > flame_cpu.svg
 ```
 
-### Memory flame graph — all allocations <a id="memory-flame-graph-all"></a>
+### Memory flame graph — all allocations {#memory-flame-graph-all}
 
 ```sql
 SET memory_profiler_sample_probability = 1, max_untracked_memory = 1;
@@ -199,7 +199,7 @@ clickhouse client --allow_introspection_functions=1 \
     | flamegraph.pl --countname=bytes --color=mem > flame_mem.svg
 ```
 
-### Memory flame graph — unfreed allocations <a id="memory-flame-graph-unfreed"></a>
+### Memory flame graph — unfreed allocations {#memory-flame-graph-unfreed}
 
 This variant matches allocations against deallocations by pointer and shows only memory that was not freed during the query.
 
@@ -220,7 +220,7 @@ clickhouse client --allow_introspection_functions=1 \
     | flamegraph.pl --countname=bytes --color=mem > flame_mem_unfreed.svg
 ```
 
-### Memory flame graph — active allocations at a point in time <a id="memory-flame-graph-time-point"></a>
+### Memory flame graph — active allocations at a point in time {#memory-flame-graph-time-point}
 
 This approach lets you find peak memory usage and visualize what was allocated at that moment.
 
@@ -228,7 +228,7 @@ This approach lets you find peak memory usage and visualize what was allocated a
 SET memory_profiler_sample_probability = 1, max_untracked_memory = 1;
 ```
 
-#### Find memory usage over time <a id="find-memory-usage-over-time"></a>
+#### Find memory usage over time {#find-memory-usage-over-time}
 
 ```sql
 SELECT
@@ -245,7 +245,7 @@ GROUP BY event_time
 ORDER BY event_time;
 ```
 
-#### Find the time point with maximum memory usage <a id="find-time-point-maximum-memory-usage"></a>
+#### Find the time point with maximum memory usage {#find-time-point-maximum-memory-usage}
 
 ```sql
 SELECT
@@ -260,7 +260,7 @@ FROM (
 );
 ```
 
-#### Build a flame graph of active allocations at that time point <a id="build-flame-graph"></a>
+#### Build a flame graph of active allocations at that time point {#build-flame-graph}
 
 ```bash
 clickhouse client --allow_introspection_functions=1 \
@@ -275,7 +275,7 @@ clickhouse client --allow_introspection_functions=1 \
     | flamegraph.pl --countname=bytes --color=mem > flame_mem_time_point_pos.svg
 ```
 
-#### Build a flame graph of deallocations after that time point (to understand what was freed later) <a id="build-flame-graph-deallocations"></a>
+#### Build a flame graph of deallocations after that time point (to understand what was freed later) {#build-flame-graph-deallocations}
 
 ```bash
 clickhouse client --allow_introspection_functions=1 \
@@ -290,7 +290,7 @@ clickhouse client --allow_introspection_functions=1 \
     | flamegraph.pl --countname=bytes --color=mem > flame_mem_time_point_neg.svg
 ```
 
-## Example <a id="example"></a>
+## Example {#example}
 
 The code snippet below:
 - Filters `trace_log` data by a query identifier and the current date.

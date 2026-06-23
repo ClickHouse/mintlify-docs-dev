@@ -13,7 +13,7 @@ ClickStack supports visualizations based on raw SQL queries. This gives you full
 
 SQL-based visualizations are useful when you need to go beyond the built-in Chart Explorer — for example, to join tables or build complex aggregations that are not supported by the chart builder.
 
-## Creating a SQL-based visualization <a id="creating-a-raw-sql-chart"></a>
+## Creating a SQL-based visualization {#creating-a-raw-sql-chart}
 
 To create a SQL-based visualization, open a dashboard tile editor and select the **SQL** tab. 
 
@@ -26,11 +26,11 @@ From there:
 3. Write your SQL query in the editor, using query parameters and macros to integrate with the dashboard time range and filters.
 4. Click the **play** button to preview results, then **Save**.
 
-## Query parameters <a id="query-parameters"></a>
+## Query parameters {#query-parameters}
 
 [Query parameters](/reference/syntax#defining-and-using-query-parameters) allow your SQL to reference the dashboard's current time range and granularity. They use the ClickHouse parameterized query syntax: `{paramName:Type}`.
 
-### Available parameters <a id="available-parameters"></a>
+### Available parameters {#available-parameters}
 
 The parameters available depend on the chart type:
 
@@ -50,11 +50,11 @@ The parameters available depend on the chart type:
 | `{startDateMilliseconds:Int64}` | Int64   | Start of the dashboard date range (milliseconds since epoch)     |
 | `{endDateMilliseconds:Int64}`   | Int64   | End of the dashboard date range (milliseconds since epoch)       |
 
-## Macros <a id="macros"></a>
+## Macros {#macros}
 
 Macros are shortcuts that expand into common ClickHouse SQL expressions. They are prefixed with `$__` and are replaced before the query is sent to ClickHouse.
 
-### Time boundary macros <a id="time-boundary-macros"></a>
+### Time boundary macros {#time-boundary-macros}
 
 These macros return a ClickHouse expression representing the dashboard's start or end time. They take no arguments.
 
@@ -66,7 +66,7 @@ These macros return a ClickHouse expression representing the dashboard's start o
 | `$__toTime_ms`   | `fromUnixTimestamp64Milli({endDateMilliseconds:Int64})`               | DateTime64  |
 | `$__interval_s`  | `{intervalSeconds:Int64}`                                             | Int64       |
 
-### Time filter macros <a id="time-filter-macros"></a>
+### Time filter macros {#time-filter-macros}
 
 These macros generate a `WHERE` clause fragment that filters a column to the dashboard time range.
 
@@ -85,7 +85,7 @@ TimestampTime >= toDateTime(fromUnixTimestamp64Milli({startDateMilliseconds:Int6
 AND TimestampTime <= toDateTime(fromUnixTimestamp64Milli({endDateMilliseconds:Int64}))
 ```
 
-### Time interval macros <a id="time-interval-macros"></a>
+### Time interval macros {#time-interval-macros}
 
 These macros bucket a timestamp column into intervals matching the dashboard granularity. They are typically used in `SELECT` and `GROUP BY` clauses for time series charts. These are only available for Line and Stacked-bar visualizations.
 
@@ -100,7 +100,7 @@ These macros bucket a timestamp column into intervals matching the dashboard gra
 toStartOfInterval(toDateTime(TimestampTime), INTERVAL {intervalSeconds:Int64} second)
 ```
 
-### Dashboard filter macro <a id="dashboard-filter-macro"></a>
+### Dashboard filter macro {#dashboard-filter-macro}
 
 | Macro         | Description                                                                            |
 |---------------|----------------------------------------------------------------------------------------|
@@ -108,11 +108,11 @@ toStartOfInterval(toDateTime(TimestampTime), INTERVAL {intervalSeconds:Int64} se
 
 When a **Source** is selected on the chart and dashboard filters are active, `$__filters` expands to the corresponding SQL `WHERE` conditions. When no source is selected or no filters are applied, it expands to `(1=1)`, so it is always safe to include in a `WHERE` clause.
 
-## How query results are plotted <a id="how-results-are-plotted"></a>
+## How query results are plotted {#how-results-are-plotted}
 
 ClickStack automatically maps result columns to chart elements based on column types. The mapping rules differ by chart type.
 
-### Line and Stacked Bar charts <a id="line-and-stacked-bar-charts"></a>
+### Line and Stacked Bar charts {#line-and-stacked-bar-charts}
 
 | Role               | Column type                        | Description                                                                                 |
 |--------------------|------------------------------------|---------------------------------------------------------------------------------------------|
@@ -120,24 +120,24 @@ ClickStack automatically maps result columns to chart elements based on column t
 | **Series Value**   | All numeric columns                | Each numeric column is plotted as a separate series. These are typically aggregate values.   |
 | **Group Names**    | String, Map, or Array columns      | Optional. Rows with different group values are plotted as separate series.                   |
 
-### Pie chart <a id="pie-chart"></a>
+### Pie chart {#pie-chart}
 
 | Role              | Column type                        | Description                                                      |
 |-------------------|------------------------------------|------------------------------------------------------------------|
 | **Slice Value**   | First numeric column               | Determines each slice's size.                                    |
 | **Slice Label**   | String, Map, or Array columns      | Optional. Each unique value becomes a slice label.               |
 
-### Number chart <a id="number-chart"></a>
+### Number chart {#number-chart}
 
 | Role       | Column type          | Description                                                             |
 |------------|----------------------|-------------------------------------------------------------------------|
 | **Number** | First numeric column | The value from the first row of the first numeric column is displayed.  |
 
-### Table chart <a id="table-chart"></a>
+### Table chart {#table-chart}
 
 All result columns are displayed directly as table columns.
 
-## Examples <a id="examples"></a>
+## Examples {#examples}
 
 <Info>
 **Required system table access**
@@ -145,7 +145,7 @@ All result columns are displayed directly as table columns.
 You will need to specify `otel_v2.otel_logs` or `otel_v2.otel_traces` if running the following examples on [play-clickstack.clickhouse.com](https://play-clickstack.clickhouse.com).
 </Info>
 
-### Line chart — log count over time by service <a id="example-line-chart"></a>
+### Line chart — log count over time by service {#example-line-chart}
 
 This query counts log events per service, bucketed into time intervals matching the dashboard granularity.
 
@@ -166,7 +166,7 @@ ORDER BY ts ASC
 - `count` (numeric) is plotted as the series value.
 - `ServiceName` (string) creates a separate line per service.
 
-### Line chart — using macros <a id="example-line-chart-macros"></a>
+### Line chart — using macros {#example-line-chart-macros}
 
 The same query written using macros for brevity:
 
@@ -182,7 +182,7 @@ GROUP BY ServiceName, ts
 ORDER BY ts ASC
 ```
 
-### Stacked bar chart — error count by severity <a id="example-stacked-bar"></a>
+### Stacked bar chart — error count by severity {#example-stacked-bar}
 
 ```sql
 SELECT
@@ -197,7 +197,7 @@ GROUP BY SeverityText, ts
 ORDER BY ts ASC
 ```
 
-### Table chart — top 10 slowest endpoints <a id="example-table"></a>
+### Table chart — top 10 slowest endpoints {#example-table}
 
 ```sql
 SELECT
@@ -212,7 +212,7 @@ ORDER BY avg_duration_ms DESC
 LIMIT 10
 ```
 
-### Pie chart — request distribution by service <a id="example-pie"></a>
+### Pie chart — request distribution by service {#example-pie}
 
 ```sql
 SELECT
@@ -227,7 +227,7 @@ GROUP BY ServiceName
 - `request_count` (numeric) determines each slice's size.
 - `ServiceName` (string) labels each slice.
 
-### Number chart — total error count <a id="example-number"></a>
+### Number chart — total error count {#example-number}
 
 ```sql
 SELECT
@@ -240,7 +240,7 @@ WHERE $__timeFilter(TimestampTime)
 
 The single numeric value `total_errors` from the first row is displayed.
 
-## Notes <a id="notes"></a>
+## Notes {#notes}
 
 - SQL-based visualizations execute with `readonly` mode enabled — only `SELECT` queries are permitted.
 - SQL-based visualizations must be exactly one SQL query - multiple queries are not supported.

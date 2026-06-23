@@ -9,9 +9,9 @@ doc_type: 'guide'
 
 DataStore delivers significant performance improvements over pandas for many operations. This guide explains why and how to optimize your workloads.
 
-## Why DataStore Is Faster <a id="why-faster"></a>
+## Why DataStore Is Faster {#why-faster}
 
-### 1. SQL Pushdown <a id="sql-pushdown"></a>
+### 1. SQL Pushdown {#sql-pushdown}
 
 Operations are pushed down to the data source:
 
@@ -26,7 +26,7 @@ ds = ds[ds['year'] == 2024]        # Filter in SQL
 df = ds.to_df()                    # Only load filtered data
 ```
 
-### 2. Column Pruning <a id="column-pruning"></a>
+### 2. Column Pruning {#column-pruning}
 
 Only needed columns are read:
 
@@ -38,7 +38,7 @@ result = ds.select('name', 'age').to_df()
 # vs pandas: Reads all 100 columns, then selects
 ```
 
-### 3. Lazy Evaluation <a id="lazy-evaluation"></a>
+### 3. Lazy Evaluation {#lazy-evaluation}
 
 Multiple operations compile to one query:
 
@@ -61,15 +61,15 @@ result = (ds
 
 ---
 
-## Benchmark: DataStore vs pandas <a id="benchmark"></a>
+## Benchmark: DataStore vs pandas {#benchmark}
 
-### Test Environment <a id="test-environment"></a>
+### Test Environment {#test-environment}
 
 - Data: 10 million rows
 - Hardware: Standard laptop
 - File format: CSV
 
-### Results <a id="results"></a>
+### Results {#results}
 
 | Operation | pandas (ms) | DataStore (ms) | Winner |
 |-----------|-------------|----------------|--------|
@@ -88,7 +88,7 @@ result = (ds
 | Filter (single) | 276 | 526 | Comparable |
 | Sort (multiple) | 947 | 1,477 | Comparable |
 
-### Key Insights <a id="insights"></a>
+### Key Insights {#insights}
 
 1. **GroupBy operations**: DataStore up to **19.93x faster**
 2. **Complex pipelines**: DataStore **5-6x faster** (SQL pushdown benefit)
@@ -98,16 +98,16 @@ result = (ds
 
 ---
 
-## When DataStore Wins <a id="when-datastore-wins"></a>
+## When DataStore Wins {#when-datastore-wins}
 
-### Heavy Aggregations <a id="heavy-aggregations"></a>
+### Heavy Aggregations {#heavy-aggregations}
 
 ```python
 # DataStore excels: 19.93x faster
 result = ds.groupby('category')['amount'].sum()
 ```
 
-### Complex Pipelines <a id="complex-pipelines"></a>
+### Complex Pipelines {#complex-pipelines}
 
 ```python
 # DataStore excels: 5-6x faster
@@ -121,7 +121,7 @@ result = (ds
 )
 ```
 
-### Large File Processing <a id="large-file-processing"></a>
+### Large File Processing {#large-file-processing}
 
 ```python
 # DataStore: Only loads what you need
@@ -129,7 +129,7 @@ ds = pd.read_parquet("huge_file.parquet")
 result = ds.filter(ds['id'] == 12345).to_df()  # Fast!
 ```
 
-### Multiple Column Operations <a id="multiple-column-operations"></a>
+### Multiple Column Operations {#multiple-column-operations}
 
 ```python
 # DataStore: Combines into single SQL
@@ -140,11 +140,11 @@ ds = ds.filter(ds['is_large'])
 
 ---
 
-## When pandas Is Comparable <a id="when-pandas-wins"></a>
+## When pandas Is Comparable {#when-pandas-wins}
 
 In most scenarios, DataStore matches or exceeds pandas performance. However, pandas may be slightly faster in these specific cases:
 
-### Small Datasets (&lt;1,000 rows) <a id="small-datasets"></a>
+### Small Datasets (&lt;1,000 rows) {#small-datasets}
 
 ```python
 # For very small datasets, overhead is minimal for both
@@ -152,7 +152,7 @@ In most scenarios, DataStore matches or exceeds pandas performance. However, pan
 small_df = pd.DataFrame({'x': range(100)})
 ```
 
-### Simple Slice Operations <a id="simple-slice-operations"></a>
+### Simple Slice Operations {#simple-slice-operations}
 
 ```python
 # Single slice operations without aggregation
@@ -160,7 +160,7 @@ df = df[df['x'] > 10]  # pandas slightly faster
 ds = ds[ds['x'] > 10]  # DataStore comparable
 ```
 
-### Custom Python Lambda Functions <a id="custom-python-functions"></a>
+### Custom Python Lambda Functions {#custom-python-functions}
 
 ```python
 # pandas required for custom Python code
@@ -180,7 +180,7 @@ For fine-grained control over execution, see [Execution Engine Configuration](/p
 
 ---
 
-## Zero-Copy DataFrame Integration <a id="zero-copy"></a>
+## Zero-Copy DataFrame Integration {#zero-copy}
 
 DataStore uses **zero-copy** for reading and writing pandas DataFrames. This means:
 
@@ -199,9 +199,9 @@ ds = DataStore(existing_df)  # No data copy
 
 ---
 
-## Optimization Tips <a id="tips"></a>
+## Optimization Tips {#tips}
 
-### 1. Enable Performance Mode for Heavy Workloads <a id="use-performance-mode"></a>
+### 1. Enable Performance Mode for Heavy Workloads {#use-performance-mode}
 
 For aggregation-heavy workloads where you don't need exact pandas output format (row order, MultiIndex columns, dtype corrections), enable performance mode for maximum throughput:
 
@@ -226,7 +226,7 @@ result = (ds
 
 See [Performance Mode](/products/chdb/configuration/performance-mode) for full details.
 
-### 2. Use Parquet Instead of CSV <a id="use-parquet"></a>
+### 2. Use Parquet Instead of CSV {#use-parquet}
 
 ```python
 # CSV: Slower, reads entire file
@@ -242,7 +242,7 @@ df.to_parquet("data.parquet")
 
 **Expected improvement**: 3-10x faster reads
 
-### 3. Filter Early <a id="filter-early"></a>
+### 3. Filter Early {#filter-early}
 
 ```python
 # Good: Filter first, then aggregate
@@ -258,7 +258,7 @@ result = (ds
 )
 ```
 
-### 4. Select Only Needed Columns <a id="select-only-needed-columns"></a>
+### 4. Select Only Needed Columns {#select-only-needed-columns}
 
 ```python
 # Good: Column pruning
@@ -268,7 +268,7 @@ result = ds.select('name', 'amount').filter(ds['amount'] > 100)
 result = ds.filter(ds['amount'] > 100)  # Loads all columns
 ```
 
-### 5. Leverage SQL Aggregations <a id="leverage-sql-aggregations"></a>
+### 5. Leverage SQL Aggregations {#leverage-sql-aggregations}
 
 ```python
 # GroupBy is where DataStore shines
@@ -279,7 +279,7 @@ result = ds.groupby('category').agg({
 })
 ```
 
-### 6. Use head() Instead of Full Queries <a id="use-head"></a>
+### 6. Use head() Instead of Full Queries {#use-head}
 
 ```python
 # Don't load entire result if you only need a sample
@@ -289,7 +289,7 @@ result = ds.filter(ds['type'] == 'A').head(100)  # LIMIT 100
 # result = ds.filter(ds['type'] == 'A').to_df()  # Loads everything
 ```
 
-### 7. Batch Operations <a id="batch-operations"></a>
+### 7. Batch Operations {#batch-operations}
 
 ```python
 # Good: Single execution
@@ -300,7 +300,7 @@ result1 = ds.filter(ds['x'] > 10).to_df()  # Execute
 result2 = result1[result1['y'] < 100]       # Execute again
 ```
 
-### 8. Use explain() to Optimize <a id="use-explain"></a>
+### 8. Use explain() to Optimize {#use-explain}
 
 ```python
 # View the query plan before executing
@@ -313,9 +313,9 @@ result = query.to_df()
 
 ---
 
-## Profiling Your Workload <a id="profiling"></a>
+## Profiling Your Workload {#profiling}
 
-### Enable Profiling <a id="enable-profiling"></a>
+### Enable Profiling {#enable-profiling}
 
 ```python
 from chdb.datastore.config import config, get_profiler
@@ -330,7 +330,7 @@ profiler = get_profiler()
 profiler.report()
 ```
 
-### Identify Bottlenecks <a id="identify-bottlenecks"></a>
+### Identify Bottlenecks {#identify-bottlenecks}
 
 ```text
 Performance Report
@@ -342,7 +342,7 @@ read_csv                1.2s        30.0%
 Other                   0.3s        7.5%
 ```
 
-### Compare Approaches <a id="compare-approaches"></a>
+### Compare Approaches {#compare-approaches}
 
 ```python
 # Test approach 1
@@ -361,7 +361,7 @@ print(f"Approach 2: {time2:.0f}ms")
 
 ---
 
-## Best Practices Summary <a id="summary"></a>
+## Best Practices Summary {#summary}
 
 | Practice | Impact |
 |----------|--------|
@@ -377,7 +377,7 @@ print(f"Approach 2: {time2:.0f}ms")
 
 ---
 
-## Quick Decision Guide <a id="decision"></a>
+## Quick Decision Guide {#decision}
 
 | Your Workload | Recommendation |
 |---------------|----------------|

@@ -13,11 +13,11 @@ doc_type: 'reference'
 |-------|--------|-------|
 | ✔     | ✔      |       |
 
-## Description <a id="description"></a>
+## Description {#description}
 
 [Apache Parquet](https://parquet.apache.org/) is a columnar storage format widespread in the Hadoop ecosystem. ClickHouse supports read and write operations for this format.
 
-## Data types matching <a id="data-types-matching-parquet"></a>
+## Data types matching {#data-types-matching-parquet}
 
 The table below shows how Parquet data types match ClickHouse [data types](/reference/data-types/index).
 
@@ -78,26 +78,26 @@ For some Parquet types there's no closely matching ClickHouse type. We read them
 * `TIMESTAMP`/`TIME` with `isAdjustedToUTC=false` is a local wall-clock time (year, month, day, hour, minute, second and subsecond fields in a local timezone, regardless of what specific time zone is considered local), same as SQL `TIMESTAMP WITHOUT TIME ZONE`. ClickHouse reads it as if it were a UTC timestamp instead. E.g. `2025-09-29 18:42:13.000` (representing a reading of a local wall clock) becomes `2025-09-29 18:42:13.000` (`DateTime64(3, 'UTC')` representing a point in time). If converted to String, it shows the correct year, month, day, hour, minute, second and subsecond, which can then be interpreted as being in some local timezone instead of UTC. Counterintuitively, changing the type from `DateTime64(3, 'UTC')` to `DateTime64(3)` would not help as both types represent a point in time rather than a clock reading, but `DateTime64(3)` would incorrectly be formatted using local timezone.
 * `INTERVAL` is currently read as `FixedString(12)` with raw binary representation of the time interval, as encoded in Parquet file.
 
-## Geo types (GeoParquet) <a id="geo-types"></a>
+## Geo types (GeoParquet) {#geo-types}
 
 ClickHouse supports reading and writing geometry columns according to the [GeoParquet](https://geoparquet.org/) specification. Geometry columns are stored as `BYTE_ARRAY` payloads encoded in [WKB](https://libgeos.org/specifications/wkb/) (or WKT on read), with a JSON `geo` key in the file-level Parquet metadata describing each geometry column's encoding, geometry type and CRS.
 
-### Read behavior <a id="read"></a>
+### Read behavior {#read}
 
 On read, geometry columns are mapped to the corresponding ClickHouse [geo data types](/reference/data-types/geo):
 * A column declared as `Point`, `LineString`, `Polygon`, `MultiLineString` or `MultiPolygon` is read into the matching ClickHouse geo type.
 * A column with multiple or unknown geometry types is read into the [`Geometry`](/reference/data-types/geo#geometry) type, which is a `Variant` over all supported geo types.
 * If the requested column type is `String`, the GeoParquet metadata is ignored and the raw encoded geometry payload is returned as-is — WKB or WKT bytes, matching whichever encoding the GeoParquet column declares. This is also true if the setting [`input_format_parquet_allow_geoparquet_parser`](/reference/settings/formats#input_format_parquet_allow_geoparquet_parser) is set to `0`.
 
-### Write behavior <a id="write"></a>
+### Write behavior {#write}
 
 On write, top-level columns of type `Point`, `LineString`, `Polygon`, `MultiLineString` or `MultiPolygon` are encoded as `BYTE_ARRAY` (WKB) and the appropriate `geo` JSON metadata is appended to the Parquet file footer. A top-level [`Geometry`](/reference/data-types/geo#geometry) `Variant` is also encoded as a WKB `BYTE_ARRAY` payload (its sub-values are converted to WKB and stored as a `Nullable(String)` column), but no `geo` metadata is emitted for it, so the result is not recognized as a GeoParquet geometry column on read. Other geo-related types, such as [`Ring`](/reference/data-types/geo#ring), are written using their native underlying representation with no GeoParquet metadata. This behavior can be disabled entirely by setting [`output_format_parquet_geometadata`](/reference/settings/formats#output_format_parquet_geometadata) to `0`, in which case even the supported geo types are written using their native underlying representation (`Point` as `Tuple(Float64, Float64)`, `LineString` as `Array(Point)`, `Polygon` as `Array(Array(Point))`, etc.) and no GeoParquet metadata is emitted.
 
 Geometry columns must appear at the root of the schema or nested inside `Tuple` (`struct`); nesting them inside `Array` or `Map` is not supported. `Nullable` is not supported for geo columns either.
 
-## Example usage <a id="example-usage"></a>
+## Example usage {#example-usage}
 
-### Inserting data <a id="inserting-data"></a>
+### Inserting data {#inserting-data}
 
 Using a Parquet file with the following data, named as `football.parquet`:
 
@@ -129,7 +129,7 @@ Insert the data:
 INSERT INTO football FROM INFILE 'football.parquet' FORMAT Parquet;
 ```
 
-### Reading data <a id="reading-data"></a>
+### Reading data {#reading-data}
 
 Read data using the `Parquet` format:
 
@@ -146,7 +146,7 @@ Parquet is a binary format that does not display in a human-readable form on the
 
 To exchange data with Hadoop, you can use the [`HDFS table engine`](/reference/engines/table-engines/integrations/hdfs).
 
-## Format settings <a id="format-settings"></a>
+## Format settings {#format-settings}
 
 | Setting                                                                        | Description                                                                                                                                                                                                                       | Default     |
 |--------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------|

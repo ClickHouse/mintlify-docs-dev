@@ -9,12 +9,12 @@ keywords: ['Useful Queries']
 {frontMatter.description}
 {/* truncate */}
 
-## Useful queries for troubleshooting <a id="useful-queries-for-troubleshooting"></a>
+## Useful queries for troubleshooting {#useful-queries-for-troubleshooting}
 In no particular order, here are some handy queries for troubleshooting ClickHouse and figuring out what is happening. 
 
 We also have a great blog with some [essential queries for monitoring ClickHouse](https://clickhouse.com/blog/monitoring-troubleshooting-select-queries-clickhouse).
 
-## View which settings have been changed from the default <a id="view-which-settings-have-been-changed-from-the-default"></a>
+## View which settings have been changed from the default {#view-which-settings-have-been-changed-from-the-default}
 ```sql
 SELECT
     name,
@@ -23,7 +23,7 @@ FROM system.settings
 WHERE changed
 ```
 
-## Get the size of all your tables <a id="get-the-size-of-all-your-tables"></a>
+## Get the size of all your tables {#get-the-size-of-all-your-tables}
 ```sql
 SELECT table,
     formatReadableSize(sum(bytes)) as size
@@ -44,7 +44,7 @@ The response looks like:
 └─────────────────┴───────────┘
 ```
 
-## Row count and average day size of your table <a id="row-count-and-average-day-size-of-your-table"></a>
+## Row count and average day size of your table {#row-count-and-average-day-size-of-your-table}
 ```sql
 SELECT
     table,
@@ -69,7 +69,7 @@ FROM
 )
 ```
 
-## Compression columns percentage as well as the size of primary index in memory <a id="compression-columns-percentage-as-well-as-the-size-of-primary-index-in-memory"></a>
+## Compression columns percentage as well as the size of primary index in memory {#compression-columns-percentage-as-well-as-the-size-of-primary-index-in-memory}
 You can see how compressed your data is by column. This query also returns the size of your primary indexes in memory - useful to know because primary indexes must fit in memory.
 
 ```sql
@@ -109,7 +109,7 @@ RIGHT JOIN
 ORDER BY parts.bytes_size DESC
 ```
 
-## Number of queries sent by client in the last 10 minutes <a id="number-of-queries-sent-by-client-in-the-last-10-minutes"></a>
+## Number of queries sent by client in the last 10 minutes {#number-of-queries-sent-by-client-in-the-last-10-minutes}
 Feel free to increase or decrease the time interval in the `toIntervalMinute(10)` function:
 
 ```sql
@@ -129,7 +129,7 @@ ORDER BY
     count() ASC
 ```
 
-## Number of parts in each partition <a id="number-of-parts-in-each-partition"></a>
+## Number of parts in each partition {#number-of-parts-in-each-partition}
 ```sql
 SELECT
     concat(database, '.', table),
@@ -143,7 +143,7 @@ GROUP BY
     partition_id
 ```
 
-## Finding long running queries <a id="finding-long-running-queries"></a>
+## Finding long running queries {#finding-long-running-queries}
 This can help find queries that are stuck:
 
 ```sql
@@ -179,7 +179,7 @@ WHERE
     query_id = '0bb6e88b-9b9a-4ffc-b612-5746c859e360';
 ```
 
-## View the most recent errors <a id="view-the-most-recent-errors"></a>
+## View the most recent errors {#view-the-most-recent-errors}
 ```
 SELECT *
 FROM system.errors
@@ -197,7 +197,7 @@ The response looks like:
 └───────────────────────┴──────┴───────┴─────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┴──────────────────┴────────┘
 ```
 
-## Top 10 queries that are using the most CPU and memory <a id="top-10-queries-that-are-using-the-most-cpu-and-memory"></a>
+## Top 10 queries that are using the most CPU and memory {#top-10-queries-that-are-using-the-most-cpu-and-memory}
 ```sql
 SELECT
     type,
@@ -216,7 +216,7 @@ LIMIT 10
 A single query can be logged as multiple rows with different `query_id` values — distributed secondary queries and internal view steps have `is_initial_query = 0`. Filter on `is_initial_query = 1` (or `query_id = initial_query_id`) to see queries as they were submitted, and note that the internal `query_id` values ClickHouse assigns may include a label such as `queryView...`. See the [`query_log` reference](/reference/system-tables/query_log) for details.
 </Note>
 
-## How much disk space are my projection using <a id="how-much-disk-space-are-my-projection-using"></a>
+## How much disk space are my projection using {#how-much-disk-space-are-my-projection-using}
 ```sql
 SELECT
     name,
@@ -227,7 +227,7 @@ SELECT
 FROM system.projection_parts
 ```
 
-## Show disk storage, number of parts, number of rows in system.parts and marks across databases <a id="show-disk-storage-number-of-parts-number-of-rows-in-systemparts-and-marks-across-databases"></a>
+## Show disk storage, number of parts, number of rows in system.parts and marks across databases {#show-disk-storage-number-of-parts-number-of-rows-in-systemparts-and-marks-across-databases}
 ```sql
 SELECT
     database,
@@ -246,7 +246,7 @@ GROUP BY
 ORDER BY database ASC
 ```
 
-## List details of recently written new parts <a id="list-details-of-recently-written-new-parts"></a>
+## List details of recently written new parts {#list-details-of-recently-written-new-parts}
 The details include when they got created, how large they are, how many rows, and more:
 
 ```sql
@@ -261,14 +261,14 @@ ORDER BY modification_time DESC
 LIMIT 100
 ```
 
-## Cluster-wide monitoring queries <a id="cluster-wide-monitoring-queries"></a>
+## Cluster-wide monitoring queries {#cluster-wide-monitoring-queries}
 The following queries are useful for monitoring ClickHouse clusters. They use `clusterAllReplicas()` to aggregate data across all nodes.
 
 <Note>
 These queries assume your cluster is named `default`. If your cluster has a different name, replace `'default'` and `default` with your cluster's actual name.
 </Note>
 
-### Average new parts created per minute and second (last hour) <a id="avg-new-parts-per-minute-and-second"></a>
+### Average new parts created per minute and second (last hour) {#avg-new-parts-per-minute-and-second}
 ```sql
 WITH
     PER_MINUTE AS
@@ -299,7 +299,7 @@ FROM
 
 Replace `'your_table'` with the actual table name you want to monitor.
 
-### CPU and memory intensive queries (cluster-wide) <a id="cpu-and-memory-intensive-queries-cluster-wide"></a>
+### CPU and memory intensive queries (cluster-wide) {#cpu-and-memory-intensive-queries-cluster-wide}
 ```sql
 SELECT
     type,
@@ -314,7 +314,7 @@ ORDER BY memory_usage DESC
 LIMIT 10
 ```
 
-### Merges in progress with ETA <a id="merges-in-progress-with-eta"></a>
+### Merges in progress with ETA {#merges-in-progress-with-eta}
 This query shows currently executing merges on the cluster with estimated time to completion:
 
 ```sql
@@ -331,7 +331,7 @@ FROM clusterAllReplicas(default, merge(system, '^merges'))
 ORDER BY (elapsed / progress) - elapsed ASC
 ```
 
-### Most common queries by normalized hash <a id="most-common-queries-by-normalized-hash"></a>
+### Most common queries by normalized hash {#most-common-queries-by-normalized-hash}
 Find the most frequently executed queries (useful for identifying which queries to optimize):
 
 ```sql
@@ -346,7 +346,7 @@ ORDER BY execution_count DESC
 LIMIT 20
 ```
 
-### Error counts by event type and date <a id="error-counts-by-event-type-and-date"></a>
+### Error counts by event type and date {#error-counts-by-event-type-and-date}
 Analyze part creation errors across the cluster:
 
 ```sql
@@ -368,7 +368,7 @@ ORDER BY
     error_count DESC
 ```
 
-### Number of tables by node <a id="number-of-tables-by-node"></a>
+### Number of tables by node {#number-of-tables-by-node}
 Check table distribution across cluster nodes:
 
 ```sql
@@ -381,7 +381,7 @@ GROUP BY hostName()
 ORDER BY table_count DESC
 ```
 
-### Check for async insert operations <a id="check-for-async-insert-operations"></a>
+### Check for async insert operations {#check-for-async-insert-operations}
 Monitor async insert activity:
 
 ```sql
@@ -396,8 +396,8 @@ GROUP BY event_date
 ORDER BY event_date DESC
 ```
 
-## Parts and merges analysis <a id="parts-and-merges-analysis"></a>
-### Currently active parts by table <a id="currently-active-parts-by-table"></a>
+## Parts and merges analysis {#parts-and-merges-analysis}
+### Currently active parts by table {#currently-active-parts-by-table}
 See the number of active parts per table across the cluster:
 
 ```sql
@@ -412,7 +412,7 @@ GROUP BY database, table
 ORDER BY part_count DESC
 ```
 
-### Partitions with too many parts <a id="partitions-with-too-many-parts"></a>
+### Partitions with too many parts {#partitions-with-too-many-parts}
 Find partitions that may have too many parts (which can impact query performance):
 
 ```sql
@@ -429,7 +429,7 @@ HAVING part_count > 100
 ORDER BY part_count DESC
 ```
 
-### Detached parts <a id="detached-parts"></a>
+### Detached parts {#detached-parts}
 Check for detached parts that might need investigation:
 
 ```sql
@@ -445,8 +445,8 @@ GROUP BY database, table, partition_id, name, reason
 ORDER BY database, table
 ```
 
-## System information queries <a id="system-information-queries"></a>
-### Cluster-wide memory usage by node <a id="cluster-wide-memory-usage-by-node"></a>
+## System information queries {#system-information-queries}
+### Cluster-wide memory usage by node {#cluster-wide-memory-usage-by-node}
 Monitor memory consumption across nodes:
 
 ```sql
@@ -461,7 +461,7 @@ GROUP BY hostName()
 ORDER BY peak_memory DESC
 ```
 
-### Running queries on the cluster <a id="running-queries-on-the-cluster"></a>
+### Running queries on the cluster {#running-queries-on-the-cluster}
 Check what queries are currently executing:
 
 ```sql
@@ -477,7 +477,7 @@ FROM clusterAllReplicas(default, system.processes)
 ORDER BY elapsed DESC
 ```
 
-### Modified settings from defaults <a id="modified-settings-from-defaults"></a>
+### Modified settings from defaults {#modified-settings-from-defaults}
 See which settings have been changed from defaults:
 
 ```sql
@@ -490,7 +490,7 @@ WHERE changed = 1
 ORDER BY hostName(), name
 ```
 
-### Replication queue status <a id="replication-queue-status"></a>
+### Replication queue status {#replication-queue-status}
 For replicated tables, check the replication queue:
 
 ```sql

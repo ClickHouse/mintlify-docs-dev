@@ -19,7 +19,7 @@ If you're on ClickHouse Cloud, we recommend using [ClickPipes](/integrations/cli
 - Organize fault-tolerant storage.
 - Process streams as they become available.
 
-## Creating a table <a id="creating-a-table"></a>
+## Creating a table {#creating-a-table}
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -149,7 +149,7 @@ Kafka(kafka_broker_list, kafka_topic_list, kafka_group_name, kafka_format
 The Kafka table engine doesn't support columns with [default value](/reference/statements/create/table#default_values). If you need columns with default value, you can add them at materialized view level (see below).
 </Info>
 
-## Description <a id="description"></a>
+## Description {#description}
 
 The delivered messages are tracked automatically, so each message in a group is only counted once. If you want to get the data twice, then create a copy of the table with another group name.
 
@@ -198,7 +198,7 @@ To stop receiving topic data or to change the conversion logic, detach the mater
 
 If you want to change the target table by using `ALTER`, we recommend disabling the material view to avoid discrepancies between the target table and the data from the view.
 
-## Configuration <a id="configuration"></a>
+## Configuration {#configuration}
 
 Similar to GraphiteMergeTree, the Kafka engine supports extended configuration using the ClickHouse config file. There are two configuration keys that you can use: global (below `<kafka>`) and topic-level (below `<kafka><kafka_topic>`). The global configuration is applied first, and then the topic-level configuration is applied (if it exists).
 
@@ -244,7 +244,7 @@ Similar to GraphiteMergeTree, the Kafka engine supports extended configuration u
 
 For a list of possible configuration options, see the [librdkafka configuration reference](https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md). Use the underscore (`_`) instead of a dot in the ClickHouse configuration. For example, `check.crcs=true` will be `<check_crcs>true</check_crcs>`.
 
-### Kerberos support <a id="kafka-kerberos-support"></a>
+### Kerberos support {#kafka-kerberos-support}
 
 To deal with Kerberos-aware Kafka, add `security_protocol` child element with `sasl_plaintext` value. It is enough if Kerberos ticket-granting ticket is obtained and cached by OS facilities.
 ClickHouse is able to maintain Kerberos credentials using a keytab file. Consider `sasl_kerberos_service_name`, `sasl_kerberos_keytab` and `sasl_kerberos_principal` child elements.
@@ -260,7 +260,7 @@ Example:
 </kafka>
 ```
 
-## Virtual columns <a id="virtual-columns"></a>
+## Virtual columns {#virtual-columns}
 
 - `_topic` — Kafka topic. Data type: `LowCardinality(String)`.
 - `_key` — Key of the message. Data type: `String`.
@@ -278,7 +278,7 @@ Additional virtual columns when `kafka_handle_error_mode='stream'`:
 
 Note: `_raw_message` and `_error` virtual columns are filled only in case of exception during parsing, they are always empty when message was parsed successfully.
 
-## Mapping columns to Kafka message metadata <a id="mapping-columns-to-kafka-message-metadata"></a>
+## Mapping columns to Kafka message metadata {#mapping-columns-to-kafka-message-metadata}
 
 When producing messages with `INSERT INTO`, the Kafka engine always uses a column named `_key` (of type `String`) as the Kafka message key and a column named `_timestamp` (of type `DateTime`) as the Kafka message timestamp — if those columns exist in the table. By default, these columns also appear in the produced message payload alongside the other columns.
 
@@ -315,7 +315,7 @@ INSERT INTO kafka_out VALUES
 
 The produced Kafka message has payload `{"event_json":"{\"a\":1}"}`, key `session-42`, the current timestamp, and two headers `source=api` and `trace_id=abc-123`.
 
-## Data formats support <a id="data-formats-support"></a>
+## Data formats support {#data-formats-support}
 
 Kafka engine supports all [formats](/reference/formats/index) supported in ClickHouse.
 The number of rows in one Kafka message depends on whether the format is row-based or block-based:
@@ -323,7 +323,7 @@ The number of rows in one Kafka message depends on whether the format is row-bas
 - For row-based formats the number of rows in one Kafka message can be controlled by setting `kafka_max_rows_per_message`.
 - For block-based formats we cannot divide block into smaller parts, but the number of rows in one block can be controlled by general setting [max_block_size](/reference/settings/session-settings#max_block_size).
 
-## Engine to store committed offsets in ClickHouse Keeper <a id="engine-to-store-committed-offsets-in-clickhouse-keeper"></a>
+## Engine to store committed offsets in ClickHouse Keeper {#engine-to-store-committed-offsets-in-clickhouse-keeper}
 
 <ExperimentalBadge/>
 
@@ -344,7 +344,7 @@ SETTINGS
 SETTINGS allow_experimental_kafka_offsets_storage_in_keeper=1;
 ```
 
-### Known limitations <a id="known-limitations"></a>
+### Known limitations {#known-limitations}
 
 As the new engine is experimental, it is not production ready yet. There are few known limitations of the implementation:
 - Rapidly dropping and recreating the table or specifying the same ClickHouse Keeper path to different engines might cause issues. As best practice you can use the `{uuid}` in `kafka_keeper_path` to avoid clashing paths.

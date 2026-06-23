@@ -9,14 +9,14 @@ doc_type: 'guide'
 
 import { Image } from "/snippets/components/Image.jsx";
 
-## Introduction <a id="introduction"></a>
+## Introduction {#introduction}
 
 Auto-scaling database resources requires careful balance: scaling up too slowly can risk performance degradation while scaling down too aggressively can trigger constant oscillations.
 
 ClickHouse Cloud enables faster scale-downs, minimized scaling oscillations, and substantial infrastructure cost reduction for variable workloads, while maintaining the stability needed for production databases
 by pairing a two-window recommendation framework with a target-tracking CPU recommendation system.
 
-## CPU-based Scaling <a id="cpu-based-scaling"></a>
+## CPU-based Scaling {#cpu-based-scaling}
 
 CPU Scaling is based on target tracking which calculates the exact CPU allocation needed to keep utilization at a target level. A scaling action is only triggered if current CPU utilization falls outside a defined band:
 
@@ -34,12 +34,12 @@ recommended_cpu = max_cpu_usage / target_utilization
 
 If the CPU utilization is between 37.5%–75% of allocated capacity, no scaling action is taken. Outside that band, the recommender computes the exact size needed to land back at 53% utilization, and the service is scaled accordingly.
 
-### Example <a id="cpu-scaling-example"></a>
+### Example {#cpu-scaling-example}
 
 A service allocated 4 vCPU experiences a spike to 3.8 vCPU usage (~95% utilization), crossing the 75% high watermark.
 The recommender calculates: `3.8 / 0.53 ≈ 7.2 vCPU`, and rounds up to the next available size (8 vCPU). Once load subsides and usage drops below 37.5% (1.5 vCPU), the recommender scales back down proportionally.
 
-## Memory-based recommendations <a id="memory-based-recommendations"></a>
+## Memory-based recommendations {#memory-based-recommendations}
 
 ClickHouse Cloud automatically recommends memory sizes based on your service's actual usage patterns.
 The recommender analyzes usage over a lookback window and adds headroom to handle spikes and prevent out-of-memory (OOM) errors.
@@ -49,7 +49,7 @@ The recommender looks at three signals:
 - **Resident memory**: The peak memory held by the process overall
 - **OOM events**: Whether queries or replicas have recently run out of memory
 
-### How headroom is calculated <a id="how-headroom-is-calculated"></a>
+### How headroom is calculated {#how-headroom-is-calculated}
 
 For query and resident memory, the amount of headroom added depends on how predictable your usage is:
 
@@ -58,7 +58,7 @@ For query and resident memory, the amount of headroom added depends on how predi
 
 If OOM events are detected, the recommender applies a more aggressive **1.5x multiplier** to ensure the service has enough memory to recover.
 
-### Final recommendation <a id="final-recommendation"></a>
+### Final recommendation {#final-recommendation}
 
 The system takes the highest value across all signals:
 
@@ -71,7 +71,7 @@ desired_memory = max(
 )
 ```
 
-## Two-window recommender <a id="two-window-recommender"></a>
+## Two-window recommender {#two-window-recommender}
 
 Instead of using a single window, ClickHouse Cloud uses two lookback windows with different time ranges:
 - **Small Window (3 hours)**: Captures recent usage patterns, enables faster scale-down

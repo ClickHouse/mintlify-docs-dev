@@ -19,18 +19,18 @@ Event deltas pair a latency heatmap with automatic attribute analysis so you can
 
 In the screenshot above, the right edge of the heatmap sits at roughly 10 ms, not back at the 1 ms baseline that held through the morning. The degradation is still in progress, so we are catching this mid-incident.
 
-## Prerequisites <a id="prerequisites"></a>
+## Prerequisites {#prerequisites}
 
 Event deltas require a **Trace** data source with a duration expression. Any OpenTelemetry-instrumented service producing span data works. Available in all ClickStack deployments (Managed, Open Source, ClickHouse Cloud).
 
-## Getting started <a id="getting-started"></a>
+## Getting started {#getting-started}
 
 1. From the **Data Source** dropdown, select a source that holds traces. Source names are arbitrary; what matters is that the source is configured as a Trace type. The **Event Deltas** tab is only enabled for such sources.
 2. In the **Analysis Mode** section, click the **Event Deltas** tab.
 
 Event deltas is a separate analysis mode alongside **Results Table** and **Event Patterns**. Switching to it swaps the view to a heatmap and an attribute analysis grid, but your search filters and time range are preserved and you can switch back at any time.
 
-## The heatmap <a id="the-heatmap"></a>
+## The heatmap {#the-heatmap}
 
 The heatmap plots spans across two dimensions:
 
@@ -41,7 +41,7 @@ Color intensity indicates event count per bucket; brighter means more spans.
 
 You can read patterns straight off the heatmap: bimodal latency, latency spikes at specific times, a band of consistently slow spans, or a slow band that drifts upward over time (a creeping regression). To investigate a region, click and drag a rectangle on it. That becomes your **Selection** and switches the analysis below into comparison mode.
 
-## Distribution mode: cardinality outliers <a id="distribution-mode"></a>
+## Distribution mode: cardinality outliers {#distribution-mode}
 
 With no selection on the heatmap, the analysis panel shows one bar chart per attribute, computed across all matching spans. The legend reads **All spans** (visible in the overview screenshot above).
 
@@ -54,13 +54,13 @@ Use distribution mode when you want to understand the **cardinality shape** of y
 
 Combine with the search bar to narrow the population first (e.g., only error spans, only client spans, only one endpoint), then read the distributions for that subset.
 
-## Comparison mode: deviations from normal <a id="comparison-mode"></a>
+## Comparison mode: deviations from normal {#comparison-mode}
 
 Click and drag a rectangle on the heatmap to enter comparison mode. The selected spans become the **Selection** (orange bars); everything outside becomes the **Background** (green bars). Each attribute chart then shows both populations side by side, sorted so the attributes with the largest divergence appear first. A value present almost exclusively in one side, or absent from one side, is the strongest candidate for what differs.
 
 The shape of the rectangle you draw changes the question you're asking. The two common shapes are described below.
 
-### Use case 1: Before vs after a regression <a id="before-vs-after"></a>
+### Use case 1: Before vs after a regression {#before-vs-after}
 
 When the heatmap shows latency drifting upward over the timeline (the slow band thickens, the bright band climbs, or a clear inflection point separates a healthy period from a degraded one), drag a rectangle from the climb inflection to the right edge of the window. To sharpen the comparison, set the bottom of the rectangle at the healthy baseline rather than at the bottom of the axis: this isolates the spans that are genuinely slower than normal in the degraded window, instead of dragging in still-healthy fast spans that happen to fall in the same time range.
 
@@ -70,7 +70,7 @@ The attribute bars below the heatmap are sorted with the largest divergences fir
 
 This is the right shape when you want to ask "what changed?" A tighter variant uses the same workflow: when a small knot of slow spans sits in an otherwise quiet band (a brief burst on the right edge, a cluster in the middle of a steady period), draw a small box around just that cluster instead. The shape changes the question: a vertical strip asks _what changed in time_; a small focused box asks _what is special about this cluster_.
 
-### Use case 2: Slow versus fast <a id="slow-vs-fast"></a>
+### Use case 2: Slow versus fast {#slow-vs-fast}
 
 When the heatmap shows two latency populations clearly separated on the duration axis, drag a wide rectangle that spans the entire time range but covers only the upper, cleanly-separated band. The slow population becomes the Selection; the fast bulk becomes the Background.
 
@@ -82,7 +82,7 @@ The 100 s ceiling line is informative on its own: a constant horizontal line at 
 
 This is the right shape when you want to ask "what makes the slow spans different from the fast ones?" rather than chasing a specific anomaly. A divergent attribute points at a code-path or input cause; a flat comparison points at a systemic one.
 
-## Iterative drill-down <a id="drill-down"></a>
+## Iterative drill-down {#drill-down}
 
 Comparison and distribution modes are most powerful when chained. Click any bar to open a popover with three actions:
 
@@ -100,7 +100,7 @@ Aggregated **Other (N)** buckets that collapse low-frequency values aren't click
 
 When the population is small enough, switch to the **Results Table** tab to inspect individual traces; your filters carry over.
 
-## Customize the heatmap <a id="customize"></a>
+## Customize the heatmap {#customize}
 
 The gear icon in the top-right of the heatmap opens the **Display Settings** drawer.
 
@@ -126,7 +126,7 @@ Common scenarios where you'd change these defaults:
 - **Plot something other than duration on the Y axis.** Setting **Value** to `SpanAttributes.http.response.size` lets you investigate slow *large* responses; an expression like `if(StatusCode = 'Error', 1, 0)` plots error frequency over time across services.
 - **Color by something other than count.** Setting **Count** to `p95(Duration)` colors each bucket by tail latency rather than volume, surfacing rare-but-slow pockets that a count-based view washes out. `countDistinct(TraceId)` distinguishes trace volume from span volume when one trace produces many spans.
 
-## Tips for effective use <a id="tips"></a>
+## Tips for effective use {#tips}
 
 A few practices make Event deltas substantially more useful:
 
@@ -135,12 +135,12 @@ A few practices make Event deltas substantially more useful:
 - **Iterate filter, heatmap, filter.** A single selection rarely identifies the cause. Treat the first comparison as a hypothesis, filter on the most divergent value, and re-read the new heatmap and distributions. Two or three iterations usually narrow a regression to one or two attributes.
 - **Use distribution mode without a selection** when no contrast is yet visible (you know there is an issue but the heatmap looks uniform). Apply a hypothesis filter such as only error spans, only client spans, or only one endpoint, and let the attribute distributions point you at the highest-impact values before you draw any rectangle.
 
-## Troubleshooting <a id="troubleshooting"></a>
+## Troubleshooting {#troubleshooting}
 
-### Event Deltas tab isn't visible <a id="tab-not-visible"></a>
+### Event Deltas tab isn't visible {#tab-not-visible}
 
 The **Event Deltas** tab under **Analysis Mode** only appears when a **Trace** source with a duration expression is selected. Verify that your data source is configured as a Trace type and has span data with duration information.
 
-### Attribute charts show few or no results <a id="few-results"></a>
+### Attribute charts show few or no results {#few-results}
 
 If the sample is too small (fewer than a few dozen spans), distributions may not be statistically meaningful. Widen the time range or relax your search filters.

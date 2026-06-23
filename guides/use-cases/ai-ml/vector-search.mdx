@@ -19,7 +19,7 @@ import { Image } from "/snippets/components/Image.jsx";
 - Use QBit to perform vector search using the DBPedia dataset
 </Info>
 
-## Vector search primer <a id="vector-search-primer"></a>
+## Vector search primer {#vector-search-primer}
 
 In mathematics and physics, a vector is formally defined as an object that has both a magnitude and direction.
 This often takes the form of a line segment or an arrow through space and can be used to represent quantities such as velocity, force and acceleration.
@@ -38,7 +38,7 @@ It powers music recommendations, retrieval-augmented generation (RAG) for large 
 Users often prefer regular databases with ad-hoc vector capabilities over fully specialized vector stores, despite specialized databases' advantages.
 ClickHouse supports [brute-force vector search](/reference/engines/table-engines/mergetree-family/annindexes#exact-nearest-neighbor-search) as well as [methods for approximate nearest neighbour (ANN) search](/reference/engines/table-engines/mergetree-family/annindexes#approximate-nearest-neighbor-search), including HNSW – the current standard for fast vector retrieval.
 
-### Understanding embeddings <a id="understanding-embeddings"></a>
+### Understanding embeddings {#understanding-embeddings}
 
 Let's look at a simple example to understand how vector search works.
 Consider embeddings (vector representations) of words:
@@ -90,12 +90,12 @@ apple:           [-0.99105519,1.28887844,-0.43526649,-0.98520696,0.66154391]
 query embedding: [-0.88693672,1.31532824,-0.51182908,-0.99652702,0.5990777]
 ```
 
-## Approximate Nearest Neighbours (ANN) <a id="approximate-nearest-neighbours"></a>
+## Approximate Nearest Neighbours (ANN) {#approximate-nearest-neighbours}
 
 For large datasets, brute-force search becomes too slow.
 This is where Approximate Nearest Neighbours methods come in.
 
-### Quantisation <a id="quantisation"></a>
+### Quantisation {#quantisation}
 
 Quantisation involves downcasting to smaller numeric types.
 Smaller numbers mean smaller data, and smaller data means faster distance calculations.
@@ -106,7 +106,7 @@ You have two options:
 1. **Keep the quantised copy alongside the original column** - This doubles storage, but it's safe as we can always fall back to full precision
 2. **Replace the original values entirely** (by downcasting on insertion) - This saves space and I/O, but it's a one-way door
 
-### Hierarchical Navigable Small World (HNSW) <a id="hnsw"></a>
+### Hierarchical Navigable Small World (HNSW) {#hnsw}
 
 <Image size="md" img="/images/use-cases/AI_ML/QBit/diagram_1.jpg" alt="HNSW layer structure"/>
 
@@ -123,7 +123,7 @@ The main bottleneck is memory. ClickHouse uses the [usearch](https://github.com/
 As a result, larger datasets require proportionally more RAM.
 </Warning>
 
-### Comparison of approaches <a id="comparison-approaches"></a>
+### Comparison of approaches {#comparison-approaches}
 
 | Category | Brute-force | HNSW | QBit |
 |----------|-------------|------|------|
@@ -131,9 +131,9 @@ As a result, larger datasets require proportionally more RAM.
 | **Speed** | Slow | Fast | Flexible |
 | **Others** | Quantized: more space or irreversible precision | Index has to fit in memory and has to be built | Still O(#records) |
 
-## QBit deep dive <a id="qbit-deepdive"></a>
+## QBit deep dive {#qbit-deepdive}
 
-### Quantised Bit (QBit) <a id="quantised-bit"></a>
+### Quantised Bit (QBit) {#quantised-bit}
 
 QBit is a new data structure that can store `BFloat16`, `Float32`, and `Float64` values by taking advantage of how floating-point numbers are represented – as bits.
 Instead of storing each number as a whole, QBit splits the values into **bit planes**: every first bit, every second bit, every third bit, and so on.
@@ -155,7 +155,7 @@ Precision and performance can be adjusted dynamically at query time, allowing us
 Although QBit speeds up vector search, its computational complexity remains O(n). In other words: if your dataset is small enough for an HNSW index to fit comfortably in RAM, that is still the fastest choice.
 </Info>
 
-### The data type <a id="the-data-type"></a>
+### The data type {#the-data-type}
 
 Here's how to create a QBit column:
 
@@ -189,7 +189,7 @@ Each group is stored in a separate `FixedString(N)` column: fixed-length strings
 If the original vector length doesn't divide evenly by 8, the structure is padded with invisible elements to make it align to 8. This ensures compatibility with FixedString, which operates strictly on full bytes.
 </Tip>
 
-### The distance calculation <a id="the-distance-calculation"></a>
+### The distance calculation {#the-distance-calculation}
 
 To query with QBit, use the [`L2DistanceTransposed`](/reference/functions/regular-functions/distance-functions#L2DistanceTransposed) function with a precision parameter:
 
@@ -213,7 +213,7 @@ ORDER BY distance;
 
 The third parameter (16) specifies the precision level in bits.
 
-### I/O Optimisation <a id="io-optimisation"></a>
+### I/O Optimisation {#io-optimisation}
 
 <Image size="md" img="/images/use-cases/AI_ML/QBit/diagram_3.jpg" alt="QBit I/O optimization"/>
 
@@ -225,7 +225,7 @@ In the query above, we use a precision level of 16. Since a Float64 has 64 bits,
 
 After reading, we reconstruct only the top portion of each number from the loaded bit planes, leaving the unread bits zeroed out.
 
-### Calculation optimisation <a id="calculation-optimisation"></a>
+### Calculation optimisation {#calculation-optimisation}
 
 <Image size="md" img="/images/use-cases/AI_ML/QBit/diagram_7.jpg" alt="Downcasting comparison"/>
 
@@ -233,11 +233,11 @@ One might ask whether casting to a smaller type, such as Float32 or BFloat16, co
 
 Instead, we can downcast only the reference vector and treat the QBit data as if it contained narrower values ("forgetting" the existence of some columns), since its layout often corresponds to a truncated version of those types.
 
-#### BFloat16 Optimization <a id="bfloat16-optimization"></a>
+#### BFloat16 Optimization {#bfloat16-optimization}
 
 BFloat16 is a Float32 truncated by half. It keeps the same sign bit and 8-bit exponent, but only the upper 7 bits of the 23-bit mantissa. Because of this, reading the first 16 bit planes from a QBit column effectively reproduces the layout of BFloat16 values. So in this case, we can (and do) safely convert the reference vector to BFloat16.
 
-#### Float64 Complexity <a id="float64-complexity"></a>
+#### Float64 Complexity {#float64-complexity}
 
 Float64, however, is a different story. It uses an 11-bit exponent and a 52-bit mantissa, meaning it's not simply a Float32 with twice the bits. Its structure and exponent bias are completely different. Downcasting a Float64 to a smaller format like Float32 requires an actual IEEE-754 conversion, where each value is rounded to the nearest representable Float32. This rounding step is computationally expensive.
 
@@ -245,11 +245,11 @@ Float64, however, is a different story. It uses an 11-bit exponent and a 52-bit 
 If you're interested in a deep-dive of performance elements of QBit, see ["Let’s vectorize"](https://clickhouse.com/blog/qbit-vector-search#lets-vectorise)
 </Tip>
 
-## Example with DBpedia <a id="example"></a>
+## Example with DBpedia {#example}
 
 Let's see QBit in action with a real-world example using the DBpedia dataset, which contains 1 million Wikipedia articles represented as Float32 embeddings.
 
-### Setup <a id="setup"></a>
+### Setup {#setup}
 
 First, create the table 
 
@@ -310,7 +310,7 @@ ALTER TABLE dbpedia ADD COLUMN qbit QBit(Float32, 1536);
 ALTER TABLE dbpedia UPDATE qbit = vector WHERE 1;
 ```
 
-### Search query <a id="search-query"></a>
+### Search query {#search-query}
 
 We'll look for concepts most related to all space-related search terms: Moon, Apollo 11, Space Shuttle, Astronaut, Rocket:
 
@@ -611,7 +611,7 @@ avg_distance:         1.0882147550582886
 
 **Performance:** 10 rows in set. Elapsed: 1.157 sec. Processed 10.00 million rows, 32.76 GB (8.64 million rows/s., 28.32 GB/s.) Peak memory usage: **6.05 GiB**.
 </Accordion>
-### Key Insight <a id="key-insight"></a>
+### Key Insight {#key-insight}
 
 The results? Not just good. Surprisingly good. It's not obvious that floating points stripped of their entire mantissa and half their exponent still hold meaningful information.
 
@@ -619,7 +619,7 @@ The results? Not just good. Surprisingly good. It's not obvious that floating po
 
 Memory usage reduced from **6.05 GB to 740 MB** while maintaining excellent semantic search quality!
 
-## Conclusion <a id="result"></a>
+## Conclusion {#result}
 
 QBit is a column type that stores floats as bit planes.
 It lets you choose how many bits to read during vector search, tuning recall and performance without changing the data.

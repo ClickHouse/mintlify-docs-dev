@@ -19,7 +19,7 @@ Usage scenarios:
 This engine is not currently available in ClickHouse Cloud, please [use the S3 table function instead](/reference/functions/table-functions/s3).
 </Note>
 
-## Usage in ClickHouse Server <a id="usage-in-clickhouse-server"></a>
+## Usage in ClickHouse Server {#usage-in-clickhouse-server}
 
 ```sql
 File(Format)
@@ -40,7 +40,7 @@ You may manually create this subfolder and file in server filesystem and then [A
 Be careful with this functionality, because ClickHouse does not keep track of external changes to such files. The result of simultaneous writes via ClickHouse and outside of ClickHouse is undefined.
 </Note>
 
-## Example <a id="example"></a>
+## Example {#example}
 
 **1.** Set up the `file_engine_table` table:
 
@@ -71,7 +71,7 @@ SELECT * FROM file_engine_table
 └──────┴───────┘
 ```
 
-## Usage in ClickHouse-local <a id="usage-in-clickhouse-local"></a>
+## Usage in ClickHouse-local {#usage-in-clickhouse-local}
 
 In [clickhouse-local](/concepts/features/tools-and-utilities/clickhouse-local) File engine accepts file path in addition to `Format`. Default input/output streams can be specified using numeric or human-readable names like `0` or `stdin`, `1` or `stdout`. It is possible to read and write compressed files based on an additional engine parameter or file extension (`gz`, `br` or `xz`).
 
@@ -81,7 +81,7 @@ In [clickhouse-local](/concepts/features/tools-and-utilities/clickhouse-local) F
 $ echo -e "1,2\n3,4" | clickhouse-local -q "CREATE TABLE table (a Int64, b Int64) ENGINE = File(CSV, stdin); SELECT a, b FROM table; DROP TABLE table"
 ```
 
-## Details of Implementation <a id="details-of-implementation"></a>
+## Details of Implementation {#details-of-implementation}
 
 - Multiple `SELECT` queries can be performed concurrently, but `INSERT` queries will wait each other.
 - Supported creating new file by `INSERT` query.
@@ -92,20 +92,20 @@ $ echo -e "1,2\n3,4" | clickhouse-local -q "CREATE TABLE table (a Int64, b Int64
   - Indices
   - Replication
 
-## PARTITION BY <a id="partition-by"></a>
+## PARTITION BY {#partition-by}
 
 `PARTITION BY` — Optional.  It is possible to create separate files by partitioning the data on a partition key. In most cases, you don't need a partition key, and if it is needed you generally don't need a partition key more granular than by month. Partitioning does not speed up queries (in contrast to the ORDER BY expression). You should never use too granular partitioning. Don't partition your data by client identifiers or names (instead, make client identifier or name the first column in the ORDER BY expression).
 
 For partitioning by month, use the `toYYYYMM(date_column)` expression, where `date_column` is a column with a date of the type [Date](/reference/data-types/date). The partition names here have the `"YYYYMM"` format.
 
-## Virtual columns <a id="virtual-columns"></a>
+## Virtual columns {#virtual-columns}
 
 - `_path` — Path to the file. Type: `LowCardinality(String)`.
 - `_file` — Name of the file. Type: `LowCardinality(String)`.
 - `_size` — Size of the file in bytes. Type: `Nullable(UInt64)`. If the size is unknown, the value is `NULL`.
 - `_time` — Last modified time of the file. Type: `Nullable(DateTime)`. If the time is unknown, the value is `NULL`.
 
-## Settings <a id="settings"></a>
+## Settings {#settings}
 
 - [engine_file_empty_if_not_exists](/reference/settings/session-settings#engine_file_empty_if_not_exists) - allows to select empty data from a file that doesn't exist. Disabled by default.
 - [engine_file_truncate_on_insert](/reference/settings/session-settings#engine_file_truncate_on_insert) - allows to truncate file before insert into it. Disabled by default.
