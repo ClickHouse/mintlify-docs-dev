@@ -1,21 +1,22 @@
 ---
-description: 'Allows ClickHouse to connect to external databases via ODBC.'
+description: 'Permite que o ClickHouse se conecte a bancos de dados externos via ODBC.'
 sidebarTitle: 'ODBC'
 slug: /engines/table-engines/integrations/odbc
-title: 'ODBC table engine'
+title: 'Motor de tabela ODBC'
 doc_type: 'reference'
 ---
 
+<CloudNotSupportedBadge />
 
-<CloudNotSupportedBadge/>
+Permite que o ClickHouse se conecte a bancos de dados externos via [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity).
 
-Allows ClickHouse to connect to external databases via [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity).
+Para implementar conexões ODBC com segurança, o ClickHouse usa um programa separado, `clickhouse-odbc-bridge`. Se o driver ODBC for carregado diretamente pelo `clickhouse-server`, problemas no driver poderão derrubar o servidor ClickHouse. O ClickHouse inicia automaticamente o `clickhouse-odbc-bridge` quando necessário. O programa ODBC bridge é instalado a partir do mesmo pacote que o `clickhouse-server`.
 
-To safely implement ODBC connections, ClickHouse uses a separate program `clickhouse-odbc-bridge`. If the ODBC driver is loaded directly from `clickhouse-server`, driver problems can crash the ClickHouse server. ClickHouse automatically starts `clickhouse-odbc-bridge` when it is required. The ODBC bridge program is installed from the same package as the `clickhouse-server`.
+Este motor oferece suporte ao tipo de dado [Nullable](/pt-BR/reference/data-types/nullable).
 
-This engine supports the [Nullable](../../../sql-reference/data-types/nullable.md){/* MIGRATE: unresolved relative link */} data type.
-
-## Creating a table <a id="creating-a-table"></a>
+<div id="creating-a-table">
+  ## Criar uma tabela
+</div>
 
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
@@ -27,31 +28,33 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 ENGINE = ODBC(datasource, external_database, external_table)
 ```
 
-See a detailed description of the [CREATE TABLE](/sql-reference/statements/create/table){/* MIGRATE: unknown slug */} query.
+Veja uma descrição detalhada da consulta [CREATE TABLE](/pt-BR/reference/statements/create/table).
 
-The table structure can differ from the source table structure:
+A estrutura da tabela pode diferir da estrutura da tabela de origem:
 
-- Column names should be the same as in the source table, but you can use just some of these columns and in any order.
-- Column types may differ from those in the source table. ClickHouse tries to [cast](/sql-reference/functions/type-conversion-functions#CAST){/* MIGRATE: unknown slug */} values to the ClickHouse data types.
-- The [external_table_functions_use_nulls](/operations/settings/settings#external_table_functions_use_nulls){/* MIGRATE: unknown slug */} setting defines how to handle Nullable columns. Default value: 1. If 0, the table function does not make Nullable columns and inserts default values instead of nulls. This is also applicable for NULL values inside arrays.
+* Os nomes das colunas devem ser os mesmos da tabela de origem, mas você pode usar apenas algumas delas e em qualquer ordem.
+* Os tipos das colunas podem diferir dos da tabela de origem. O ClickHouse tenta fazer [cast](/pt-BR/reference/functions/regular-functions/type-conversion-functions#CAST) dos valores para os tipos de dados do ClickHouse.
+* A configuração [external&#95;table&#95;functions&#95;use&#95;nulls](/pt-BR/reference/settings/session-settings#external_table_functions_use_nulls) define como lidar com colunas Nullable. Valor padrão: 1. Se for 0, a função de tabela não cria colunas Nullable e insere valores padrão em vez de valores nulos. Isso também se aplica a valores NULL dentro de arrays.
 
-**Engine Parameters**
+**Parâmetros do motor**
 
-- `datasource` — Name of the section with connection settings in the `odbc.ini` file.
-- `external_database` — Name of a database in an external DBMS.
-- `external_table` — Name of a table in the `external_database`.
+* `datasource` — Nome da seção com as configurações de conexão no arquivo `odbc.ini`.
+* `external_database` — Nome de um banco de dados em um SGBD externo.
+* `external_table` — Nome de uma tabela no `external_database`.
 
-These parameters can also be passed using [named collections](/operations/named-collections.md){/* MIGRATE: unknown slug */}.
+Esses parâmetros também podem ser passados usando [coleções nomeadas](/pt-BR/concepts/features/configuration/server-config/named-collections).
 
-## Usage example <a id="usage-example"></a>
+<div id="usage-example">
+  ## Exemplo de uso
+</div>
 
-**Retrieving data from the local MySQL installation via ODBC**
+**Recuperando dados da instalação local do MySQL via ODBC**
 
-This example is checked for Ubuntu Linux 18.04 and MySQL server 5.7.
+Este exemplo foi testado no Ubuntu Linux 18.04 e no servidor MySQL 5.7.
 
-Ensure that unixODBC and MySQL Connector are installed.
+Certifique-se de que o unixODBC e o MySQL Connector estejam instalados.
 
-By default (if installed from packages), ClickHouse starts as user `clickhouse`. Thus, you need to create and configure this user in the MySQL server.
+Por padrão (quando instalado por meio de pacotes), o ClickHouse é iniciado como o usuário `clickhouse`. Portanto, você precisa criar e configurar esse usuário no servidor MySQL.
 
 ```bash
 $ sudo mysql
@@ -62,7 +65,7 @@ mysql> CREATE USER 'clickhouse'@'localhost' IDENTIFIED BY 'clickhouse';
 mysql> GRANT ALL PRIVILEGES ON *.* TO 'clickhouse'@'localhost' WITH GRANT OPTION;
 ```
 
-Then configure the connection in `/etc/odbc.ini`.
+Em seguida, configure a conexão em `/etc/odbc.ini`.
 
 ```bash
 $ cat /etc/odbc.ini
@@ -75,7 +78,7 @@ USER = clickhouse
 PASSWORD = clickhouse
 ```
 
-You can check the connection using the `isql` utility from the unixODBC installation.
+Você pode verificar a conexão usando o utilitário `isql` da instalação do unixODBC.
 
 ```bash
 $ isql -v mysqlconn
@@ -85,7 +88,7 @@ $ isql -v mysqlconn
 ...
 ```
 
-Table in MySQL:
+Tabela no MySQL:
 
 ```text
 mysql> CREATE DATABASE test;
@@ -111,7 +114,7 @@ mysql> select * from test.test;
 1 row in set (0,00 sec)
 ```
 
-Table in ClickHouse, retrieving data from the MySQL table:
+Tabela no ClickHouse que recupera dados da tabela MySQL:
 
 ```sql
 CREATE TABLE odbc_t
@@ -132,7 +135,9 @@ SELECT * FROM odbc_t
 └────────┴────────────────┘
 ```
 
-## See also <a id="see-also"></a>
+<div id="see-also">
+  ## Veja também
+</div>
 
-- [ODBC dictionaries](/sql-reference/statements/create/dictionary/sources/odbc){/* MIGRATE: unknown slug */}
-- [ODBC table function](../../../sql-reference/table-functions/odbc.md){/* MIGRATE: unresolved relative link */}
+* [Dicionários ODBC](/pt-BR/reference/statements/create/dictionary/sources/odbc)
+* [função de tabela ODBC](/pt-BR/reference/functions/table-functions/odbc)
