@@ -149,6 +149,8 @@ CREATE SERVER taxi_srv FOREIGN DATA WRAPPER clickhouse_fdw
 
 * `driver`: драйвер подключения к ClickHouse: &quot;binary&quot; или
   &quot;http&quot;. **Обязательный параметр.**
+* `compression`: сжатие native-протокола для драйвера &quot;binary&quot;: одно из
+  значений &quot;none&quot;, &quot;lz4&quot; или &quot;zstd&quot;. По умолчанию — &quot;lz4&quot;. Для драйвера &quot;http&quot; не используется.
 * `dbname`: база данных ClickHouse, используемая при подключении. По умолчанию —
   &quot;default&quot;.
 * `fetch_size`: примерный размер батча в байтах для потоковой передачи по HTTP. Батчи
@@ -162,6 +164,16 @@ CREATE SERVER taxi_srv FOREIGN DATA WRAPPER clickhouse_fdw
   * 9004, если `driver` — &quot;binary&quot; и `host` не является хостом ClickHouse Cloud
   * 8443, если `driver` — &quot;http&quot; и `host` — хост ClickHouse Cloud
   * 8123, если `driver` — &quot;http&quot; и `host` не является хостом ClickHouse Cloud
+* `min_tls_version`: минимальная версия протокола TLS, согласуемая при подключениях,
+  использующих TLS. Одно из значений: `TLSv1`, `TLSv1.1`, `TLSv1.2` или `TLSv1.3`. По умолчанию —
+  минимальная версия, заданная в самой библиотеке TLS. Применяется к обоим драйверам.
+* `secure`: управляет использованием TLS для подключения. Возможные значения:
+  * `auto` (по умолчанию): использовать TLS, если `host` — хост ClickHouse Cloud или
+    `port` — защищенный порт; в противном случае — plaintext.
+  * `on` (или `true`/`yes`/`1`): всегда использовать TLS. Значение `port` по умолчанию — 8443
+    (&quot;http&quot;) или 9440 (&quot;binary&quot;).
+  * `off` (или `false`/`no`/`0`): никогда не использовать TLS. Значение `port` по умолчанию — 8123
+    (&quot;http&quot;) или 9000 (&quot;binary&quot;).
 
 <div id="alter-server">
   ### ALTER SERVER
@@ -1163,6 +1175,10 @@ SELECT clickhouse_raw_query(
 * `reverse(bytea)`: [reverse](/ru/reference/functions/regular-functions/string-functions#reverse)
 * `strpos`: [positionUTF8](/ru/reference/functions/regular-functions/string-search-functions#positionutf8)
 * `regexp_like`: [match](/ru/reference/functions/regular-functions/string-search-functions#match)
+* `regexp_match`: [extractGroups](/ru/reference/functions/regular-functions/string-search-functions#extractGroups)
+  если регулярное выражение содержит подвыражения в скобках; в противном случае
+  [extractAll](/ru/reference/functions/regular-functions/string-search-functions#extractAll)
+  со срезом через [arraySlice](/ru/reference/functions/regular-functions/array-functions#arraySlice).
 * `regexp_replace`: [replaceRegexpOne](/ru/reference/functions/regular-functions/string-replace-functions#replaceRegexpOne) или [replaceRegexpOne](/ru/reference/functions/regular-functions/string-replace-functions#replaceRegexpAll) при наличии флага `g`
 * `regexp_split_to_array`: [splitByRegexp](/ru/reference/functions/regular-functions/splitting-merging-functions#splitByRegexp)
 * `md5`: [MD5](/ru/reference/functions/regular-functions/hash-functions#MD5)
@@ -1345,28 +1361,28 @@ SELECT quantile(0.25)(a) FROM t1;
 * `quantileExact(double)`: [quantileExact](/ru/reference/functions/aggregate-functions/quantileExact)
 
 <div id="pushdown-window-functions">
-  ### Pushdown оконных функций
+  ### Проталкивание оконных функций
 </div>
 
-Эти PostgreSQL [оконные функции] поддерживают pushdown в ClickHouse с секциями `OVER
+Эти PostgreSQL [оконные функции] проталкиваются в ClickHouse с секциями `OVER
 (PARTITION BY ... ORDER BY ...)`, включая спецификации рамки окна, где это
 применимо.
 
-* [row&#95;number](/ru/reference/functions/window-functions#row_number)
-* [rank](/ru/reference/functions/window-functions#rank)
-* [dense&#95;rank](/ru/reference/functions/window-functions#dense_rank)
-* [ntile](/ru/reference/functions/window-functions#ntile)
-* [cume&#95;dist](/ru/reference/functions/window-functions#cume_dist)
-* [percent&#95;rank](/ru/reference/functions/window-functions#percent_rank)
-* [lead](/ru/reference/functions/window-functions#lead)
-* [lag](/ru/reference/functions/window-functions#lag)
-* [first&#95;value](/ru/reference/functions/window-functions#first_value)
-* [last&#95;value](/ru/reference/functions/window-functions#last_value)
-* [nth&#95;value](/ru/reference/functions/window-functions#nth_value)
+* [row&#95;number](/ru/reference/functions/window-functions/index#row_number)
+* [rank](/ru/reference/functions/window-functions/index#rank)
+* [dense&#95;rank](/ru/reference/functions/window-functions/index#dense_rank)
+* [ntile](/ru/reference/functions/window-functions/index#ntile)
+* [cume&#95;dist](/ru/reference/functions/window-functions/index#cume_dist)
+* [percent&#95;rank](/ru/reference/functions/window-functions/index#percent_rank)
+* [lead](/ru/reference/functions/window-functions/index#lead)
+* [lag](/ru/reference/functions/window-functions/index#lag)
+* [first&#95;value](/ru/reference/functions/window-functions/index#first_value)
+* [last&#95;value](/ru/reference/functions/window-functions/index#last_value)
+* [nth&#95;value](/ru/reference/functions/window-functions/index#nth_value)
 * `min` / `max` (с секцией `OVER`)
 
 Функции ранжирования (`row_number`, `rank`, `dense_rank`, `ntile`, `cume_dist`,
-`percent_rank`) опускают секцию рамки окна при pushdown, поскольку ClickHouse
+`percent_rank`) опускают секцию рамки окна при проталкивании, поскольку ClickHouse
 не принимает спецификации рамки окна для этих функций.
 
 <div id="compatibility-notes">
@@ -1382,52 +1398,87 @@ SELECT quantile(0.25)(a) FROM t1;
 умолчанию), и старается обеспечить базовый уровень совместимости, важно учитывать
 различия между ними и то, как pg&#95;clickhouse их обрабатывает.
 
-* PostgreSQL поддерживает [POSIX Regular Expressions], а ClickHouse —
-  [RE2 Regular Expressions][RE2]. Учитывайте различия в поведении: используйте RE2,
-  когда регулярное выражение будет вычисляться в ClickHouse (например, в
-  условии `WHERE`), и POSIX, когда оно будет вычисляться в Postgres (например, в
-  условии `SELECT`).
+* PostgreSQL поддерживает [регулярные выражения POSIX], а ClickHouse —
+  [регулярные выражения RE2][RE2]. Учитывайте различия в их поведении: используйте RE2,
+  если регулярное выражение будет обрабатываться в ClickHouse (например, в
+  предложении `WHERE`), и POSIX, если оно будет обрабатываться в Postgres (например, в
+  предложении `SELECT`).
 
-* pg&#95;clickhouse выполняет pushdown [Regex flags] Postgres, добавляя их в начало
+* pg&#95;clickhouse проталкивает [флаги Postgres], добавляя их в начало
   регулярного выражения ClickHouse внутри `(?)`. Например:
 
   ```sql
   regexp_like(val, '^VAL\d', 'i')
   ```
 
-  Превращается в
+  Преобразуется в
 
   ```sql
-  match(val, concat('(?i-s)', '^VAL\\d'))
+  match(val, concat('(?i)', '^VAL\\d'))
   ```
 
-  Обратите внимание на `-s`; это приводит поведение в соответствие с регулярными
-  выражениями Postgres, отключая `s`, который в ClickHouse включён по умолчанию.
-  pg&#95;clickhouse не добавляет `-s`, если флаги в вызове функции Postgres
-  включают `s`. К сожалению, такое поведение нарушает совместимость
-  некоторых регулярных выражений в Postgres 24 и более ранних версиях.
-
-* Единственные флаги, которые поддерживаются обеими системами и поэтому могут использоваться при вычислении в
+* Единственные флаги, которые поддерживаются в обоих вариантах и потому могут использоваться при обработке в
   ClickHouse:
 
-  * `i`: регистронезависимый
-  * `m`: многострочный режим:
-  * `s`: позволяет `.` соответствовать `\n`
-  * `p`: частичное сопоставление с учётом новой строки (обрабатывается так же, как `s`)
-  * `t`: строгий синтаксис (по умолчанию, удаляется pg&#95;clickhouse)
+  | Флаг | Как   | Примечания                                                               |
+  | ---- | ----- | ------------------------------------------------------------------------ |
+  | `i`  | `i`   | регистронезависимое сопоставление                                        |
+  | `m`  | `m-s` | `^` и `$` соответствуют началу/концу строки, а также началу/концу текста |
+  | `n`  | `m-s` | псевдоним Postgres для `m`                                               |
+  | `p`  | `-s`  | не позволяет `.` и `[^x]` соответствовать `\n`                           |
+  | `s`  | `s`   | позволяет `.` и `[^x]` соответствовать `\n`                              |
+  | `t`  |       | строгий синтаксис, игнорируется                                          |
+  | `w`  | `m`   | обратное частичное сопоставление с учётом переводов строки               |
 
-  RE2 поддерживает только эти флаги; не используйте никакие другие [Postgres flags]
+  RE2 поддерживает только эти флаги; не используйте другие [флаги Postgres].
 
-* Любые другие флаги, переданные функциям регулярных выражений, приведут к тому, что
-  функция не будет передана через pushdown.
+* В этой таблице приведено краткое описание влияния различных флагов (а также отсутствия флага, что
+  эквивалентно `s`) на сопоставление символов новой строки и концов строк. Обратите внимание, что в
+  Postgres флаги `m` и `p` не позволяют отрицательным символьным классам (`[^xyz]`)
+  сопоставляться с символом новой строки, тогда как их аналоги в ClickHouse это ограничение не вводят. В остальном
+  поведение ClickHouse такое же, как в Postgres:
+
+  | Шаблон регулярного выражения для `a\nb` | Postgres | ClickHouse | Совпадает? |
+  | --------------------------------------- | :------: | :--------: | :--------: |
+  | `a.b`                                   |   true   |    true    |     ✔︎     |
+  | `a[^x]b`                                |   true   |    true    |     ✔︎     |
+  | `a$`                                    |   false  |    false   |     ✔︎     |
+  | **Флаг `s`**                            |          |            |            |
+  | `(?s)a.b`                               |   true   |    true    |     ✔︎     |
+  | `(?s)a[^x]b`                            |   true   |    true    |     ✔︎     |
+  | `(?s)a$`                                |   false  |    false   |     ✔︎     |
+  | **Флаг `m`**                            |          |            |            |
+  | `(?m)a.b`                               |   false  |    false   |     ✔︎     |
+  | `(?m)a[^x]b`                            |   true   |    false   |      ✘     |
+  | `(?m)a$`                                |   true   |    true    |     ✔︎     |
+  | **Флаг `p`**                            |          |            |            |
+  | `(?p)a.b`                               |   false  |    false   |     ✔︎     |
+  | `(?p)a[^x]b`                            |   true   |    false   |      ✘     |
+  | `(?p)a$`                                |   false  |    false   |     ✔︎     |
+  | **Флаг `w`**                            |          |            |            |
+  | `(?w)a.b`                               |   true   |    true    |      ✔     |
+  | `(?w)a[^x]b`                            |   true   |    true    |      ✔     |
+  | `(?w)a$`                                |   true   |    true    |      ✔     |
+
+* Любые другие флаги, передаваемые функциям регулярных выражений, будут препятствовать
+  pushdown функции.
 
 * Исключение — `regexp_replace()`, которая также поддерживает флаг `g`. Когда
-  установлен `g`, pg&#95;clickhouse использует `replaceRegexpAll()` вместо
-  `replaceRegexpOne()` и удаляет этот флаг перед добавлением остальных флагов в начало.
+  задан `g`, pg&#95;clickhouse использует `replaceRegexpAll()` вместо
+  `replaceRegexpOne()` и удаляет этот флаг перед добавлением остальных флагов.
 
-* Аргумент замены в Postgres `regexp_replace()` поддерживает `\&` для
-  ссылки на всё совпадение, тогда как в ClickHouse для всего
-  совпадения используется `\0`. Обязательно используйте `\0`, когда функция передаётся через pushdown в ClickHouse.
+* Аргумент replacement в Postgres `regexp_replace()` поддерживает `\&` для
+  ссылки на всё совпадение, тогда как в ClickHouse для ссылки на всё
+  совпадение используется `\0`. Обязательно используйте `\0`, когда функция проталкивается в ClickHouse.
+
+* Postgres `regexp_match` возвращает `NULL`, если совпадений нет, тогда как
+  проталкиваемые выражения возвращают пустой массив. Используйте `COALESCE()`,
+  чтобы вместо `NULL` возвращать пустой массив и тем самым сравнивать возвращаемые значения
+  единообразно. Например:
+
+  ```sql
+  SELECT * FROM events WHERE COALESCE(regexp_match(msg, '^ERR'), '{}');
+  ```
 
 Чтобы полностью избежать неоднозначности, рассмотрите возможность установки
 [pg&#95;clickhouse.pushdown&#95;regex](#pg_clickhousepushdown_regex), чтобы предотвратить
@@ -1526,7 +1577,7 @@ PostgreSQL [`to_char()`] для `timestamp` и `timestamp with time zone`
 
 [CREATE FOREIGN TABLE]: https://www.postgresql.org/docs/current/sql-createforeigntable.html "Документация PostgreSQL: CREATE FOREIGN TABLE"
 
-[table engine]: /reference/engines/table-engines "Документация ClickHouse: движки таблиц"
+[table engine]: /reference/engines/table-engines/index "Документация ClickHouse: движки таблиц"
 
 [AggregateFunction Type]: /reference/data-types/aggregatefunction "Документация ClickHouse: тип AggregateFunction"
 
@@ -1588,9 +1639,9 @@ PostgreSQL [`to_char()`] для `timestamp` и `timestamp with time zone`
 
 [оконная функция]: https://www.postgresql.org/docs/current/functions-window.html "Документация PostgreSQL: оконные функции"
 
-[POSIX Regular Expressions]: https://www.postgresql.org/docs/18/functions-matching.html#FUNCTIONS-POSIX-REGEXP "Документация PostgreSQL: регулярные выражения POSIX"
+[POSIX Regular Expressions]: https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-POSIX-REGEXP "Документация PostgreSQL: регулярные выражения POSIX"
 
-[Postgres flags]: https://www.postgresql.org/docs/18/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "Документация PostgreSQL: буквы встроенных опций ARE"
+[Postgres flags]: https://www.postgresql.org/docs/current/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "Документация PostgreSQL: буквы встроенных опций ARE"
 
 [RE2]: https://github.com/google/re2/wiki/Syntax "Синтаксис RE2"
 

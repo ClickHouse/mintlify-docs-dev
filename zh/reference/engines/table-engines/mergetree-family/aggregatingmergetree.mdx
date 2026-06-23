@@ -7,7 +7,7 @@ title: 'AggregatingMergeTree 表引擎'
 doc_type: 'reference'
 ---
 
-该引擎继承自 [MergeTree](/zh/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree)，并修改了数据分区片段合并的逻辑。ClickHouse 会将所有具有相同主键 (更准确地说，具有相同[排序键](/zh/reference/engines/table-engines/mergetree-family/mergetree)) 的行合并为一行 (在单个数据分区片段内) ，该行存储聚合函数状态的组合。
+该引擎继承自 [MergeTree](/zh/reference/engines/table-engines/mergetree-family/mergetree)，并修改了数据分区片段合并的逻辑。ClickHouse 会将所有具有相同主键 (更准确地说，具有相同[排序键](/zh/reference/engines/table-engines/mergetree-family/mergetree)) 的行合并为一行 (在单个数据分区片段内) ，该行存储聚合函数状态的组合。
 
 你可以将 `AggregatingMergeTree` 表用于增量数据聚合，也可用于聚合 materialized view。
 
@@ -187,6 +187,48 @@ FROM test.visits;
   每个源行都会在 materialized view 中生成一行，实际的聚合会在后续
   `AggregatingMergeTree` 合并 parts 时发生。只有在 `optimize_on_insert = 0` 时才是如此。
 </Note>
+
+<div id="tuple-element-aggregation">
+  ## Tuple 元素聚合
+</div>
+
+启用 `allow_tuple_element_aggregation` 设置后，`Tuple` 列会被递归展平，使每个叶子元素都能独立参与聚合。这意味着，`Tuple` 中的 `AggregateFunction` 或 `SimpleAggregateFunction` 子列会按照各自的函数进行聚合，就像它们是顶层列一样。
+
+排序键中的 `Tuple` 子列不参与聚合。非聚合子列会被视为普通列 (保留其第一个值) 。
+
+<Note>
+  此设置不可变，必须在创建表时指定。
+</Note>
+
+```sql
+CREATE TABLE agg_tuples
+(
+    key UInt32,
+    metrics Tuple(
+        total_visits SimpleAggregateFunction(sum, UInt64),
+        unique_users SimpleAggregateFunction(max, UInt64)
+    )
+) ENGINE = AggregatingMergeTree()
+ORDER BY key
+SETTINGS allow_tuple_element_aggregation = 1;
+
+INSERT INTO agg_tuples VALUES (1, (100, 5));
+INSERT INTO agg_tuples VALUES (1, (200, 8));
+INSERT INTO agg_tuples VALUES (2, (50, 3));
+
+OPTIMIZE TABLE agg_tuples FINAL;
+
+SELECT key, metrics.total_visits, metrics.unique_users FROM agg_tuples ORDER BY key;
+```
+
+```text
+┌─key─┬─metrics.total_visits─┬─metrics.unique_users─┐
+│   1 │                  300 │                    8 │
+│   2 │                   50 │                    3 │
+└─────┴──────────────────────┴──────────────────────┘
+```
+
+`total_visits` 通过 `sum` 聚合 (100 + 200 = 300) ，而 `unique_users` 则通过 `max` 聚合 (max(5, 8) = 8) 。
 
 <div id="related-content">
   ## 相关内容

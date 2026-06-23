@@ -250,14 +250,14 @@ ClickHouse では、一意な主キーは必須ではありません。同じ主
   ### ソートキーと異なる主キーを選択する
 </div>
 
-ソートキーとは異なる主キー (各 mark についてインデックスファイルに書き込まれる値の式) を指定できます。この場合、主キー式のタプルはソートキー式のタプルのプレフィックスでなければなりません。
+ソートキーとは異なる主キー (各 マーク について索引ファイルに書き込まれる値の式) を指定できます。この場合、主キー式のタプルはソートキー式のタプルのプレフィックスでなければなりません。
 
 この機能は、[SummingMergeTree](/ja/reference/engines/table-engines/mergetree-family/summingmergetree) および
 [AggregatingMergeTree](/ja/reference/engines/table-engines/mergetree-family/aggregatingmergetree) テーブルエンジンを使用する場合に有用です。これらのエンジンを使う一般的なケースでは、テーブルには *次元* と *メジャー* という 2 種類のカラムがあります。典型的なクエリでは、任意の `GROUP BY` と次元によるフィルタリングを用いて、メジャーカラムの値を集約します。SummingMergeTree と AggregatingMergeTree は、ソートキーの値が同じ行を集約するため、そこにすべての次元を追加するのが自然です。その結果、キー式は長いカラム一覧で構成されることになり、新たな次元が追加されるたびにこの一覧を頻繁に更新しなければなりません。
 
 このような場合は、効率的な範囲スキャンに必要な少数のカラムだけを主キーに残し、残りの次元カラムをソートキーのタプルに追加するのが合理的です。
 
-ソートキーの [ALTER](/ja/reference/statements/alter) は軽量な操作です。これは、新しいカラムをテーブルとソートキーに同時に追加しても、既存のパーツを変更する必要がないためです。古いソートキーは新しいソートキーのプレフィックスであり、新たに追加されたカラムにはデータが存在しないため、テーブルの変更時点ではデータは古いソートキーと新しいソートキーの両方に対してソート済みの状態になっています。
+ソートキーの [ALTER](/ja/reference/statements/alter/index) は軽量な操作です。これは、新しいカラムをテーブルとソートキーに同時に追加しても、既存のパーツを変更する必要がないためです。古いソートキーは新しいソートキーのプレフィックスであり、新たに追加されたカラムにはデータが存在しないため、テーブルの変更時点ではデータは古いソートキーと新しいソートキーの両方に対してソート済みの状態になっています。
 
 <div id="use-of-indexes-and-partitions-in-queries">
   ### クエリにおける索引とパーティションの利用
@@ -635,7 +635,9 @@ sparse_grams(min_ngram_length, max_ngram_length, min_cutoff_length, size_of_bloo
 | [match](/ja/reference/functions/regular-functions/string-search-functions#match)                                                       | ✗   | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [startsWith](/ja/reference/functions/regular-functions/string-functions#startsWith)                                                    | ✔   | ✔      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [endsWith](/ja/reference/functions/regular-functions/string-functions#endsWith)                                                        | ✗   | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
-| [multiSearchAny](/ja/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗   | ✗      | ✔              | ✗              | ✗                | ✗                | ✗    |
+| [multiSearchAny](/ja/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗   | ✗      | ✔              | ✗              | ✗                | ✗                | ✔    |
+| [multiSearchAnyUTF8](/ja/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8)                             | ✗   | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
+| [multiMatchAny](/ja/reference/functions/regular-functions/string-search-functions#multiMatchAny)                                       | ✗   | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
 | [in](/ja/reference/functions/regular-functions/in-functions)                                                                           | ✔   | ✔      | ✔              | ✔              | ✔                | ✔                | ✔    |
 | [notIn](/ja/reference/functions/regular-functions/in-functions)                                                                        | ✔   | ✔      | ✔              | ✔              | ✔                | ✔                | ✗    |
 | [less (`<`)](/ja/reference/functions/regular-functions/comparison-functions#less)                                                      | ✔   | ✔      | ✗              | ✗              | ✗                | ✗                | ✗    |
@@ -782,11 +784,11 @@ ORDER BY id;
 式は、[Date](/ja/reference/data-types/date)、[Date32](/ja/reference/data-types/date32)、[DateTime](/ja/reference/data-types/datetime) または [DateTime64](/ja/reference/data-types/datetime64) のデータ型を返す必要があります。
 
 <Tip>
-  **TTL 式では非決定論的関数を避けてください**
+  **有効期限 (TTL) 式では非決定論的関数を避けてください**
 
-  TTL は挿入時ではなく、バックグラウンドマージ時に評価されます。
+  有効期限 (TTL) は挿入時ではなく、バックグラウンドマージ時に評価されます。
   `rand()`、`now()`、`now64()` のような関数は、マージのたびに再評価されるため、予測不能な削除動作につながります。
-  ClickHouse はカラムにまったく依存しない式をブロックしますが、現在のところ、カラム参照と組み合わせた非決定論的関数 (例: `ts + rand()`) は拒否しません。予測可能な結果を得るため、TTL 式は決定論的で、カラムから導出される値のみに基づいて記述してください。
+  ClickHouse はカラムにまったく依存しない式をブロックしますが、現在のところ、カラム参照と組み合わせた非決定論的関数 (例: `ts + rand()`) は拒否しません。予測可能な結果を得るため、有効期限 (TTL) 式は決定論的で、カラムから導出される値のみに基づいて記述してください。
 </Tip>
 
 **構文**
@@ -798,7 +800,7 @@ TTL time_column
 TTL time_column + interval
 ```
 
-`interval` を定義するには、[時間間隔](/ja/reference/operators#operators-for-working-with-dates-and-times) 演算子を使用します。例:
+`interval` を定義するには、[時間間隔](/ja/reference/operators/index#operators-for-working-with-dates-and-times) 演算子を使用します。例:
 
 ```sql
 TTL date_time + INTERVAL 1 MONTH
@@ -1179,7 +1181,7 @@ SETTINGS storage_policy = 'moving_from_ssd_to_hdd'
 `MergeTree` テーブルでは、データはさまざまな方法でディスクに書き込まれます。
 
 * insert (`INSERT` クエリ) の結果として。
-* バックグラウンドのマージおよび[mutations](/ja/reference/statements/alter#mutations)の実行時。
+* バックグラウンドのマージおよび[mutations](/ja/reference/statements/alter/index#mutations)の実行時。
 * 別のレプリカからダウンロードするとき。
 * パーティションの凍結 [ALTER TABLE ... FREEZE PARTITION](/ja/reference/statements/alter/partition#freeze-partition) の結果として。
 
@@ -1385,13 +1387,13 @@ ALTER TABLE tab DROP STATISTICS a;
 </div>
 
 `use_statistics_for_part_pruning` が有効になっている場合、統計情報をパーツ剪枝に利用できます。
-現在、パーツ剪枝に対応している統計情報は `MinMax` と `NullCount` です。カラムに MinMax 統計情報が定義されている場合、ClickHouse は各パーツについてそのカラムの最小値と最大値を追跡します。`Nullable` カラムに NullCount 統計情報が定義されている場合、ClickHouse は各パーツ内の NULL 値の数を追跡します。これにより、`IS NULL` / `IS NOT NULL` 述語に基づく剪枝が可能になり、NULL 値を含むカラムに対する範囲フィルタの剪枝精度も向上します。
+現在、パーツ剪枝に対応している統計情報は `MinMax` と `Basic` のみです。このような統計情報がカラムに定義されている場合、ClickHouse は各パーツについてそのカラムの最小値と最大値を追跡します。
 パーツ剪枝では、そのパーツ内のどの行もクエリのフィルタ条件に一致しないことが分かっている場合、データパーツ全体の読み取りをスキップできます。
 
 **例:**
 
 ```sql
--- 'value' カラムに対して MinMax 統計を持つテーブルを作成
+-- Create a table with MinMax statistics on the 'value' column
 CREATE TABLE test_stats
 (
     id UInt64,
@@ -1402,23 +1404,35 @@ ORDER BY id;
 
 SYSTEM STOP MERGES test_stats;
 
--- 複数のパーツを作成するため、データを別々に挿入する
-INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- パーツ 1: value の範囲 [0, 999]
-INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- パーツ 2: value の範囲 [10000, 10999]
+-- Insert data in separate inserts to create multiple parts
+INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- Part 1: value range [0, 999]
+INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- Part 2: value range [10000, 10999]
 
 SET use_statistics_for_part_pruning = 1;
 
--- このクエリでは、パーツ 1 の最大値 (999) が 5000 未満であるため、パーツ 1 全体がスキップされる
+-- This query will skip Part 1 entirely because its max value (999) < 5000
 SELECT count() FROM test_stats WHERE value > 5000;
 
--- プルーニングの効果を確認するには、EXPLAIN を使用する
+-- Use EXPLAIN to see the pruning effect
 EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
--- 出力には "Parts: 1/2" と表示され、1 つのパーツがプルーニングされたことが示される
+-- The output will show "Parts: 1/2" indicating one part was pruned
 ```
 
 <div id="available-types-of-column-statistics">
   ### 利用可能なカラム STATISTICS の種類
 </div>
+
+* `Basic`
+
+  カラムから導出される単一値サマリーをコンパクトにまとめたものです。カラム型に応じて、次の情報が格納されます:
+
+  * 値が数値で表現される任意のカラム (整数、浮動小数点数、`Decimal*`、`Date*`、`DateTime*`、`Enum*`、`IPv4` など) の場合: 最小値と最大値。これにより、範囲フィルタの選択性を推定でき、パーツ剪枝も可能になります。
+  * `String` および `FixedString` カラムの場合: `NULL` ではない値の合計バイト長 (ここから平均文字列長を導き出せます) 。
+  * `Nullable` および `LowCardinality(Nullable)` カラムの場合: `NULL` 値の件数。オプティマイザはこれを使って、選択性の推定から `NULL` 行を除外します。
+
+    単一の `Basic` 統計で、これらのうち複数を同時に格納できます。たとえば `Nullable(UInt32)` カラムでは、数値の最小値/最大値と `NULL` 件数の両方を追跡します。`MinMax` と比べると、`Basic` は `String` / `FixedString` カラムでも利用でき、`UUID` や `IPv6` のような型の `Nullable` wrapper に対しても、`NULL` 件数だけを追跡する目的で宣言できます。
+
+    構文: `basic`
 
 * `MinMax`
 
@@ -1438,12 +1452,6 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
 
   構文: `uniq`
 
-* `NullCount`
-
-  `Nullable` カラム内の `NULL` 値の数を追跡します。PREWHERE optimization における `IS NULL`/`IS NOT NULL` 述語の選択性を正確に推定するために使用され、NULL の有無に基づくパーツ剪枝も可能にします。
-
-  構文: `nullcount`
-
 * `CountMin`
 
   カラム内の各値の出現頻度を近似的に数えられる [CountMin](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch) スケッチです。
@@ -1454,25 +1462,31 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
   ### サポートされているデータ型
 </div>
 
-|           | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | String or FixedString | Nullable(*) / LowCardinality(Nullable(*)) |
-| --------- | -------------------------------------------------- | --------------------- | ----------------------------------------- |
-| CountMin  | ✔                                                  | ✔                     | ✗                                         |
-| MinMax    | ✔                                                  | ✗                     | ✔                                         |
-| NullCount | ✗                                                  | ✗                     | ✔                                         |
-| TDigest   | ✔                                                  | ✗                     | ✔                                         |
-| Uniq      | ✔                                                  | ✔                     | ✔                                         |
+|          | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | IPv4 | String or FixedString |
+| -------- | -------------------------------------------------- | ---- | --------------------- |
+| Basic    | ✔                                                  | ✔    | ✔                     |
+| CountMin | ✔                                                  | ✔    | ✔                     |
+| MinMax   | ✔                                                  | ✔    | ✗                     |
+| TDigest  | ✔                                                  | ✗    | ✗                     |
+| Uniq     | ✔                                                  | ✔    | ✔                     |
+
+上記はいずれも、列挙された型の `Nullable` および `LowCardinality(Nullable)` ラッパーを受け付けます。`Basic` はさらに、null の件数のみを追跡する目的で、`UUID` や `IPv6` などの型の `Nullable` ラッパーに対して宣言することもできます。
 
 <div id="supported-operations">
-  ### 対応する操作
+  ### サポートされる操作
 </div>
 
-|           | 等値フィルター (==) | 範囲フィルター (`>, >=, <, <=`) | `IS NULL` / `IS NOT NULL` |
-| --------- | ------------ | ------------------------ | ------------------------- |
-| CountMin  | ✔            | ✗                        | ✗                         |
-| MinMax    | ✗            | ✔                        | ✗                         |
-| NullCount | ✗            | ✗                        | ✔                         |
-| TDigest   | ✗            | ✔                        | ✗                         |
-| Uniq      | ✔            | ✗                        | ✗                         |
+|          | 等値フィルター (==) | 範囲フィルター (`>, >=, <, <=`) |
+| -------- | ------------ | ------------------------ |
+| Basic    | ✗            | ✔ (数値カラムのみ)              |
+| CountMin | ✔            | ✗                        |
+| MinMax   | ✗            | ✔ (数値カラムのみ)              |
+| TDigest  | ✗            | ✔ (数値カラムのみ)              |
+| Uniq     | ✔            | ✗                        |
+
+`String` / `FixedString` カラムに対する `Basic` では、統計情報として記録されるのは、非 NULL の合計
+バイト長 (平均文字列長の推定に使用) と NULL の件数のみです。
+範囲フィルターやパーツ剪枝には使用されません。
 
 <div id="column-level-settings">
   ## カラムレベルの設定

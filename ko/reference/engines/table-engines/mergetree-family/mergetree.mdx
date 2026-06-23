@@ -257,7 +257,7 @@ ClickHouse는 고유한 프라이머리 키를 요구하지 않습니다. 동일
 
 이 경우 효율적인 범위 스캔에 필요한 몇 개의 컬럼만 프라이머리 키에 남겨 두고, 나머지 차원 컬럼은 정렬 키 튜플에 추가하는 것이 좋습니다.
 
-정렬 키에 대한 [ALTER](/ko/reference/statements/alter)는 가벼운 작업입니다. 새 컬럼을 테이블과 정렬 키에 동시에 추가하더라도 기존 데이터 파트는 변경할 필요가 없기 때문입니다. 이전 정렬 키는 새 정렬 키의 접두사이고, 새로 추가된 컬럼에는 데이터가 없으므로, 테이블 수정 시점의 데이터는 이전 정렬 키와 새 정렬 키를 모두 기준으로 정렬된 상태가 됩니다.
+정렬 키에 대한 [ALTER](/ko/reference/statements/alter/index)는 가벼운 작업입니다. 새 컬럼을 테이블과 정렬 키에 동시에 추가하더라도 기존 데이터 파트는 변경할 필요가 없기 때문입니다. 이전 정렬 키는 새 정렬 키의 접두사이고, 새로 추가된 컬럼에는 데이터가 없으므로, 테이블 수정 시점의 데이터는 이전 정렬 키와 새 정렬 키를 모두 기준으로 정렬된 상태가 됩니다.
 
 <div id="use-of-indexes-and-partitions-in-queries">
   ### 쿼리에서 인덱스와 파티션 활용
@@ -634,7 +634,9 @@ sparse_grams(min_ngram_length, max_ngram_length, min_cutoff_length, size_of_bloo
 | [match](/ko/reference/functions/regular-functions/string-search-functions#match)                                                       | ✗    | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [startsWith](/ko/reference/functions/regular-functions/string-functions#startsWith)                                                    | ✔    | ✔      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [endsWith](/ko/reference/functions/regular-functions/string-functions#endsWith)                                                        | ✗    | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
-| [multiSearchAny](/ko/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗    | ✗      | ✔              | ✗              | ✗                | ✗                | ✗    |
+| [multiSearchAny](/ko/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗    | ✗      | ✔              | ✗              | ✗                | ✗                | ✔    |
+| [multiSearchAnyUTF8](/ko/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8)                             | ✗    | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
+| [multiMatchAny](/ko/reference/functions/regular-functions/string-search-functions#multiMatchAny)                                       | ✗    | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
 | [in](/ko/reference/functions/regular-functions/in-functions)                                                                           | ✔    | ✔      | ✔              | ✔              | ✔                | ✔                | ✔    |
 | [notIn](/ko/reference/functions/regular-functions/in-functions)                                                                        | ✔    | ✔      | ✔              | ✔              | ✔                | ✔                | ✗    |
 | [less (`<`)](/ko/reference/functions/regular-functions/comparison-functions#less)                                                      | ✔    | ✔      | ✗              | ✗              | ✗                | ✗                | ✗    |
@@ -797,7 +799,7 @@ TTL time_column
 TTL time_column + interval
 ```
 
-`interval`을 정의하려면 [시간 인터벌](/ko/reference/operators#operators-for-working-with-dates-and-times) 연산자를 사용하십시오. 예를 들면 다음과 같습니다:
+`interval`을 정의하려면 [시간 인터벌](/ko/reference/operators/index#operators-for-working-with-dates-and-times) 연산자를 사용하십시오. 예를 들면 다음과 같습니다:
 
 ```sql
 TTL date_time + INTERVAL 1 MONTH
@@ -1180,7 +1182,7 @@ SETTINGS storage_policy = 'moving_from_ssd_to_hdd'
 `MergeTree` 테이블에서는 데이터가 여러 방식으로 디스크에 기록됩니다.
 
 * 삽입(`INSERT` 쿼리)의 결과로 기록됩니다.
-* 백그라운드 머지 및 [뮤테이션](/ko/reference/statements/alter#mutations) 중에 기록됩니다.
+* 백그라운드 머지 및 [뮤테이션](/ko/reference/statements/alter/index#mutations) 중에 기록됩니다.
 * 다른 레플리카에서 다운로드할 때 기록됩니다.
 * 파티션 동결 [ALTER TABLE ... FREEZE PARTITION](/ko/reference/statements/alter/partition#freeze-partition)의 결과로 기록됩니다.
 
@@ -1386,13 +1388,13 @@ ALTER TABLE tab DROP STATISTICS a;
 </div>
 
 `use_statistics_for_part_pruning`이 활성화되면 통계를 파트 프루닝에 사용할 수 있습니다.
-현재 `MinMax` 및 `NullCount` 통계는 파트 프루닝을 지원합니다. 컬럼에 MinMax 통계가 정의되면 ClickHouse는 각 파트에서 해당 컬럼의 최솟값과 최댓값을 추적합니다. `Nullable` 컬럼에 NullCount 통계가 정의되면 ClickHouse는 각 파트의 NULL 값 개수를 추적하므로 `IS NULL` / `IS NOT NULL` 프레디케이트를 기반으로 프루닝할 수 있으며, NULL 값이 있는 컬럼의 범위 필터 프루닝 정확도도 향상됩니다.
+현재 `MinMax` 및 `Basic` 통계는 파트 프루닝을 지원합니다. 이러한 통계가 컬럼에 정의되면 ClickHouse는 각 파트에서 해당 컬럼의 최솟값과 최댓값을 추적합니다.
 파트 프루닝을 사용하면 쿼리 필터 조건과 일치하는 행이 전혀 없는 파트는 전체를 읽지 않고 건너뛸 수 있습니다.
 
 **예시:**
 
 ```sql
--- 'value' 컬럼에 MinMax 통계를 적용한 테이블을 생성합니다
+-- Create a table with MinMax statistics on the 'value' column
 CREATE TABLE test_stats
 (
     id UInt64,
@@ -1403,23 +1405,35 @@ ORDER BY id;
 
 SYSTEM STOP MERGES test_stats;
 
--- 여러 파트를 만들기 위해 데이터를 나누어 삽입합니다
-INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- 파트 1: value 값 범위 [0, 999]
-INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- 파트 2: value 값 범위 [10000, 10999]
+-- Insert data in separate inserts to create multiple parts
+INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- Part 1: value range [0, 999]
+INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- Part 2: value range [10000, 10999]
 
 SET use_statistics_for_part_pruning = 1;
 
--- 이 쿼리는 최대값(999)이 5000보다 작으므로 파트 1을 완전히 건너뜁니다
+-- This query will skip Part 1 entirely because its max value (999) < 5000
 SELECT count() FROM test_stats WHERE value > 5000;
 
--- 프루닝 효과를 확인하려면 EXPLAIN을 사용합니다
+-- Use EXPLAIN to see the pruning effect
 EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
--- 출력에 "Parts: 1/2"가 표시되며, 이는 파트 1개가 프루닝되었음을 의미합니다
+-- The output will show "Parts: 1/2" indicating one part was pruned
 ```
 
 <div id="available-types-of-column-statistics">
   ### 사용 가능한 컬럼 통계 유형
 </div>
+
+* `Basic`
+
+  컬럼에서 파생되는 단일 값 요약을 묶어 놓은 간결한 통계 묶음입니다. 컬럼 타입에 따라 다음 항목이 채워집니다:
+
+  * 값이 숫자로 표현되는 모든 컬럼(정수, 부동소수점, `Decimal*`, `Date*`, `DateTime*`, `Enum*`, `IPv4`, ...): 범위 필터의 선택도를 추정하고 파트 프루닝을 가능하게 하는 최솟값과 최댓값
+  * `String` 및 `FixedString` 컬럼: `NULL`이 아닌 값의 전체 바이트 길이(여기서 평균 문자열 길이를 도출할 수 있음)
+  * `Nullable` 및 `LowCardinality(Nullable)` 컬럼: `NULL` 값의 개수이며, 최적화기는 이를 사용해 선택도 추정에서 `NULL` 행을 제외합니다.
+
+    하나의 `Basic` 통계는 이들 중 여러 항목을 한 번에 채울 수 있습니다. 예를 들어 `Nullable(UInt32)` 컬럼에서는 숫자 최솟값/최댓값과 `NULL` 값 개수를 모두 추적합니다. `MinMax`와 비교하면 `Basic`은 `String` / `FixedString` 컬럼에서도 추가로 동작하며, `UUID`나 `IPv6` 같은 타입의 `Nullable` 래퍼에 선언해 `NULL` 값 개수만 추적할 수도 있습니다.
+
+    구문: `basic`
 
 * `MinMax`
 
@@ -1439,12 +1453,6 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
 
   구문: `uniq`
 
-* `NullCount`
-
-  널 허용 컬럼에서 `NULL` 값의 개수를 추적합니다. PREWHERE 최적화에서 `IS NULL`/`IS NOT NULL` 프레디케이트의 선택도를 정확하게 추정하는 데 사용되며, `NULL` 존재 여부를 기반으로 한 파트 프루닝도 가능하게 합니다.
-
-  구문: `nullcount`
-
 * `CountMin`
 
   컬럼의 각 값이 나타나는 빈도를 근사적으로 계산해 주는 [CountMin](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch) 스케치입니다.
@@ -1455,25 +1463,31 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
   ### 지원되는 데이터 타입
 </div>
 
-|           | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | String or FixedString | Nullable(*) / LowCardinality(Nullable(*)) |
-| --------- | -------------------------------------------------- | --------------------- | ----------------------------------------- |
-| CountMin  | ✔                                                  | ✔                     | ✗                                         |
-| MinMax    | ✔                                                  | ✗                     | ✔                                         |
-| NullCount | ✗                                                  | ✗                     | ✔                                         |
-| TDigest   | ✔                                                  | ✗                     | ✔                                         |
-| Uniq      | ✔                                                  | ✔                     | ✔                                         |
+|          | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | IPv4 | String or FixedString |
+| -------- | -------------------------------------------------- | ---- | --------------------- |
+| Basic    | ✔                                                  | ✔    | ✔                     |
+| CountMin | ✔                                                  | ✔    | ✔                     |
+| MinMax   | ✔                                                  | ✔    | ✗                     |
+| TDigest  | ✔                                                  | ✗    | ✗                     |
+| Uniq     | ✔                                                  | ✔    | ✔                     |
+
+위에 나열된 타입의 `Nullable` 및 `LowCardinality(Nullable)` 래퍼도 모두 허용됩니다. `Basic`은 null 개수만 추적하기 위한 용도로 `UUID` 또는 `IPv6` 같은 타입의 `Nullable` 래퍼에도 추가로 선언할 수 있습니다.
 
 <div id="supported-operations">
   ### 지원되는 연산
 </div>
 
-|           | 동등성 필터 (==) | 범위 필터 (`>, >=, <, <=`) | `IS NULL` / `IS NOT NULL` |
-| --------- | ----------- | ---------------------- | ------------------------- |
-| CountMin  | ✔           | ✗                      | ✗                         |
-| MinMax    | ✗           | ✔                      | ✗                         |
-| NullCount | ✗           | ✗                      | ✔                         |
-| TDigest   | ✗           | ✔                      | ✗                         |
-| Uniq      | ✔           | ✗                      | ✗                         |
+|          | 동등 필터 (==) | 범위 필터 (`>, >=, <, <=`) |
+| -------- | ---------- | ---------------------- |
+| Basic    | ✗          | ✔ (숫자 컬럼만)             |
+| CountMin | ✔          | ✗                      |
+| MinMax   | ✗          | ✔ (숫자 컬럼만)             |
+| TDigest  | ✗          | ✔ (숫자 컬럼만)             |
+| Uniq     | ✔          | ✗                      |
+
+`String` / `FixedString` 컬럼에서 `Basic`은 전체
+non-NULL 바이트 길이(평균 문자열 길이 추정에 사용)와 NULL 개수만 기록합니다.
+범위 필터와 파트 프루닝에는 사용되지 않습니다.
 
 <div id="column-level-settings">
   ## 컬럼 수준 설정

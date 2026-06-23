@@ -474,6 +474,12 @@ SELECT extractGroups(s, '< ([\\w\\-]+): ([^\\r\\n]+)');
 Повторяющиеся токены игнорируются.
 Например, needles = [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] обрабатывается так же, как [&#39;ClickHouse&#39;].
 
+<Note>
+  Когда текстовый индекс определяет [предобработчик](/ru/reference/engines/table-engines/mergetree-family/textindexes#creating-a-text-index) (например, `lowerUTF8`), `hasAllTokens` применяет его к `input` и, если `needles` имеет тип [String](/ru/reference/data-types/string), к `needles` перед токенизацией. Когда `needles` имеет тип [Array(String)](/ru/reference/data-types/array), его элементы передаются как есть, и предобработчик к ним не применяется.
+  Предобработчик применяется только при использовании текстового индекса, поэтому результаты могут различаться между запросами, использующими текстовый индекс, и запросами, которые его не используют (например, `SETTINGS use_skip_indexes = 0`).
+  Эта несогласованность допускается для повышения удобства полнотекстового поиска.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -574,7 +580,7 @@ INSERT INTO log VALUES
 ```response title=Response
 ```
 
-**Пример сo столбцом типа Array**
+**Пример со столбцом типа Array**
 
 ```sql title=Query
 SELECT count() FROM log WHERE hasAllTokens(tags, 'clickhouse');
@@ -586,7 +592,7 @@ SELECT count() FROM log WHERE hasAllTokens(tags, 'clickhouse');
 └─────────┘
 ```
 
-**Пример с mapKeys**
+**Пример с `mapKeys`**
 
 ```sql title=Query
 SELECT count() FROM log WHERE hasAllTokens(mapKeys(attributes), ['address', 'log_level']);
@@ -633,6 +639,12 @@ SELECT count() FROM log WHERE hasAllTokens(mapValues(attributes), ['192.0.0.1', 
 
 Повторяющиеся токены игнорируются.
 Например, [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] обрабатывается так же, как [&#39;ClickHouse&#39;].
+
+<Note>
+  Если для текстового индекса определён [предобработчик](/ru/reference/engines/table-engines/mergetree-family/textindexes#creating-a-text-index) (например, `lowerUTF8`), `hasAnyTokens` применяет его к `input` и, если `needles` имеет тип [String](/ru/reference/data-types/string), к `needles` перед токенизацией. Если `needles` имеет тип [Array(String)](/ru/reference/data-types/array), его элементы передаются как есть, и предобработчик к ним не применяется.
+  Предобработчик применяется только при использовании текстового индекса, поэтому результаты могут различаться между запросами, использующими текстовый индекс, и запросами, которые его не используют (например, `SETTINGS use_skip_indexes = 0`).
+  Такая несогласованность допускается для повышения удобства полнотекстового поиска.
+</Note>
 
 **Синтаксис**
 
@@ -734,7 +746,7 @@ SELECT count() FROM log WHERE hasAnyTokens(tags, 'clickhouse');
 └─────────┘
 ```
 
-**Пример с mapKeys**
+**Пример с использованием mapKeys**
 
 ```sql title=Query
 SELECT count() FROM log WHERE hasAnyTokens(mapKeys(attributes), ['address', 'log_level']);
@@ -746,7 +758,7 @@ SELECT count() FROM log WHERE hasAnyTokens(mapKeys(attributes), ['address', 'log
 └─────────┘
 ```
 
-**Пример с mapValues**
+**Пример с `mapValues`**
 
 ```sql title=Query
 SELECT count() FROM log WHERE hasAnyTokens(mapValues(attributes), ['192.0.0.1', 'DEBUG']);
@@ -764,11 +776,22 @@ SELECT count() FROM log WHERE hasAnyTokens(mapValues(attributes), ['192.0.0.1', 
 
 Добавленный в: v26.4.0
 
-Проверяет, содержит ли `haystack` все токены из фразы в заданной последовательности.
+Проверяет, содержит ли `input` все токены из `phrase`, идущие подряд.
 
-Перед поиском функция токенизирует аргументы `input` и `phrase` с помощью токенизатора, указанного в необязательном третьем аргументе.
+<Note>
+  Для столбца `input` для оптимальной производительности должен быть определен [текстовый индекс](/ru/reference/engines/table-engines/mergetree-family/textindexes).
+  Если текстовый индекс не определен, функция выполняет полное сканирование столбца, которое на порядки медленнее, чем поиск по индексу.
+</Note>
+
+Перед поиском функция токенизирует аргументы `input` и `phrase` с помощью токенизатора, указанного для текстового индекса.
+Если для столбца не определен текстовый индекс, вместо него используется токенизатор `splitByNonAlpha` — если только токенизатор не передан как необязательный третий аргумент.
 Аргумент токенизатора должен быть одним из следующих: `splitByNonAlpha`, `splitByString`, `ngrams` или `asciiCJK`.
-Если токенизатор не указан, по умолчанию используется `splitByNonAlpha`.
+
+<Note>
+  Когда текстовый индекс определяет [предобработчик](/ru/reference/engines/table-engines/mergetree-family/textindexes#creating-a-text-index) (например, `lowerUTF8`), `hasPhrase` применяет его к `input` и `phrase` перед токенизацией.
+  Предобработчик применяется только при использовании текстового индекса, поэтому результаты могут различаться между запросами, использующими текстовый индекс, и запросами, которые его не используют (например, `SETTINGS use_skip_indexes = 0`).
+  Эта несогласованность допускается для повышения удобства полнотекстового поиска.
+</Note>
 
 В отличие от [`hasToken`](#hasToken), [`hasAnyTokens`](#hasAnyTokens) и [`hasAllTokens`](#hasAllTokens), `hasPhrase` требует, чтобы токены шли в том же порядке
 и без каких-либо токенов между ними. Например, `hasPhrase('the quick brown fox', 'quick fox')` возвращает 0,
@@ -1170,19 +1193,20 @@ SELECT highlight('Hello World', ['hello'], '<b>', '</b>')
 
 Добавленный в: v20.6.0
 
-Как [`like`](#like), но выполняет регистронезависимый поиск.
+Как [`like`](#like), но выполняет регистронезависимый поиск. Поддерживает необязательное предложение `ESCAPE` (см. `like`).
 
 **Синтаксис**
 
 ```sql
-ilike(haystack, pattern)
--- haystack ILIKE pattern
+ilike(haystack, pattern[, escape_character])
+-- haystack ILIKE pattern [ESCAPE 'escape_character']
 ```
 
 **Аргументы**
 
 * `haystack` — строка, в которой выполняется поиск. [`String`](/ru/reference/data-types/string) или [`FixedString`](/ru/reference/data-types/fixedstring)
 * `pattern` — шаблон регулярного выражения LIKE, с которым выполняется сопоставление. [`String`](/ru/reference/data-types/string)
+* `escape_character` — необязательная односимвольная строка, используемая в качестве символа экранирования вместо `\`. По умолчанию: `\`. [`String`](/ru/reference/data-types/string)
 
 **Возвращаемое значение**
 
@@ -1232,17 +1256,27 @@ SELECT ilike('ClickHouse', '%house%');
 Для выражений `LIKE` вида `%needle%` функция работает так же быстро, как функция `position`.
 Все остальные выражения `LIKE` внутренне преобразуются в регулярное выражение и выполняются с производительностью, аналогичной функции `match`.
 
+<div id="escape-clause">
+  ## предложение `ESCAPE`
+</div>
+
+Необязательное предложение `ESCAPE` задаёт пользовательский символ экранирования (это должен быть один ASCII-символ).
+Если он указан, пользовательский символ экранирования заменяет используемую по умолчанию обратную косую черту для экранирования метасимволов `%` и `_`.
+Символ экранирования может экранировать три вещи: `%` (литеральный знак процента), `_` (литеральное подчёркивание) и самого себя (литеральный символ экранирования).
+При использовании пользовательского символа экранирования обратная косая черта не имеет специального значения и интерпретируется как литеральный символ.
+
 **Синтаксис**
 
 ```sql
-like(haystack, pattern)
--- haystack LIKE pattern
+like(haystack, pattern[, escape_character])
+-- haystack LIKE pattern [ESCAPE 'escape_character']
 ```
 
 **Аргументы**
 
 * `haystack` — строка, в которой выполняется поиск. [`String`](/ru/reference/data-types/string) или [`FixedString`](/ru/reference/data-types/fixedstring)
 * `pattern` — шаблон регулярного выражения `LIKE` для поиска совпадений. Может содержать `%` (соответствует любому количеству символов), `_` (соответствует одному символу) и `\` для экранирования. [`String`](/ru/reference/data-types/string)
+* `escape_character` — необязательная строка из одного символа, используемая в качестве символа экранирования вместо `\`. По умолчанию: `\`. [`String`](/ru/reference/data-types/string)
 
 **Возвращаемое значение**
 
@@ -1284,6 +1318,18 @@ SELECT like('ClickHouse', '%SQL%');
 ┌─like('ClickHouse', '%SQL%')─┐
 │                           0 │
 └─────────────────────────────┘
+```
+
+**Предложение `ESCAPE`**
+
+```sql title=Query
+SELECT '50%off' LIKE '50#%off' ESCAPE '#';
+```
+
+```response title=Response
+┌─like('50%off', '50#%off', '#')─┐
+│                              1 │
+└────────────────────────────────┘
 ```
 
 <div id="locate">
@@ -1367,7 +1413,7 @@ match(haystack, pattern)
 **Аргументы**
 
 * `haystack` — Строка, в которой ищется шаблон. [`String`](/ru/reference/data-types/string)
-* `pattern` — Шаблон регулярного выражения. [`const String`](/ru/reference/data-types/string)
+* `pattern` — Шаблон регулярного выражения. Может быть константой или поступать из столбца. [`String`](/ru/reference/data-types/string)
 
 **Возвращаемое значение**
 
@@ -2262,8 +2308,8 @@ SELECT multiSearchFirstPositionCaseInsensitiveUTF8('Здравствуй, мир
 ```
 
 ```response title=Response
-┌─multiSearchFirstPositionCaseInsensitiveUTF8('Здравствуй, мир', ['мир', 'вст', 'Здра'])─┐
-│                                                                                      3 │
+┌─multiSearchFirstPositionCaseInsensitiveUTF8('Здравствуй, мир', ['МИР', 'вст', 'Здра'])─┐
+│                                                                                      1 │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -2283,7 +2329,7 @@ multiSearchFirstPositionUTF8(haystack, [needle1, needle2, ..., needleN])
 
 **Аргументы**
 
-* `haystack` — строка UTF-8, в которой выполняется поиск. [`String`](/ru/reference/data-types/string)
+* `haystack` — UTF-8-строка, в которой выполняется поиск. [`String`](/ru/reference/data-types/string)
 * `needle` — массив UTF-8-подстрок, которые нужно найти. [`Array(String)`](/ru/reference/data-types/array)
 
 **Возвращаемое значение**
@@ -2292,7 +2338,7 @@ multiSearchFirstPositionUTF8(haystack, [needle1, needle2, ..., needleN])
 
 **Примеры**
 
-**Найдите смещение самого левого вхождения в строке UTF-8 &#39;Здравствуй, мир&#39; (&#39;Hello, world&#39;), совпадающего с любой из заданных строк `needle`**
+**Найдите смещение самого левого вхождения в UTF-8-строке &#39;Здравствуй, мир&#39; (&#39;Hello, world&#39;), совпадающего с любой из заданных строк `needle`**
 
 ```sql title=Query
 SELECT multiSearchFirstPositionUTF8('Здравствуй, мир',['мир', 'вст', 'авст'])
@@ -2300,7 +2346,7 @@ SELECT multiSearchFirstPositionUTF8('Здравствуй, мир',['мир', '�
 
 ```response title=Response
 ┌─multiSearchFirstPositionUTF8('Здравствуй, мир', ['мир', 'вст', 'авст'])─┐
-│                                                                       3 │
+│                                                                       4 │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -2626,18 +2672,20 @@ SELECT ngramSearchUTF8('абвгдеёжз', 'гдеёзд')
 
 Добавленный в: v20.6.0
 
-Проверяет, что строка не соответствует шаблону без учёта регистра. Шаблон может содержать специальные символы `%` и `_` для сопоставления по SQL LIKE.
+Проверяет, что строка не соответствует шаблону без учёта регистра. Шаблон может содержать специальные символы `%` и `_` для сопоставления по SQL LIKE. Поддерживает необязательное предложение `ESCAPE` (см. `like`).
 
 **Синтаксис**
 
 ```sql
-notILike(haystack, pattern)
+notILike(haystack, pattern[, escape_character])
+-- haystack NOT ILIKE pattern [ESCAPE 'escape_character']
 ```
 
 **Аргументы**
 
 * `haystack` — Входная строка, в которой выполняется поиск. [`String`](/ru/reference/data-types/string) или [`FixedString`](/ru/reference/data-types/fixedstring)
 * `pattern` — Шаблон SQL LIKE для сопоставления. `%` соответствует любому количеству символов (включая ноль), `_` — ровно одному символу. [`String`](/ru/reference/data-types/string)
+* `escape_character` — Необязательная строка из одного символа, используемая в качестве escape-символа вместо `\`. По умолчанию: `\`. [`String`](/ru/reference/data-types/string)
 
 **Возвращаемое значение**
 
@@ -2663,19 +2711,20 @@ SELECT notILike('ClickHouse', '%house%');
 
 Добавленный в: v1.1.0
 
-Аналогична [`like`](#like), но с отрицанием результата.
+Аналогична [`like`](#like), но с отрицанием результата. Поддерживает необязательное предложение `ESCAPE` (см. `like`).
 
 **Синтаксис**
 
 ```sql
-notLike(haystack, pattern)
--- haystack NOT LIKE pattern
+notLike(haystack, pattern[, escape_character])
+-- haystack NOT LIKE pattern [ESCAPE 'escape_character']
 ```
 
 **Аргументы**
 
 * `haystack` — Строка, в которой выполняется поиск. [`String`](/ru/reference/data-types/string) или [`FixedString`](/ru/reference/data-types/fixedstring)
 * `pattern` — Шаблон `LIKE` для сопоставления. [`String`](/ru/reference/data-types/string)
+* `escape_character` — Необязательная строка из одного символа, используемая в качестве символа экранирования вместо `\`. По умолчанию: `\`. [`String`](/ru/reference/data-types/string)
 
 **Возвращаемое значение**
 

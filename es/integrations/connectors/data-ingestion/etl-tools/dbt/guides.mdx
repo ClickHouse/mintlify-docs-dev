@@ -22,13 +22,13 @@ Esta sección proporciona guías para configurar dbt y el adaptador de ClickHous
 5. Crear un modelo snapshot.
 6. Usar vistas materializadas.
 
-Estas guías están pensadas para usarse junto con el resto de la [documentación](/es/integrations/connectors/data-ingestion/etl-tools/dbt), las [características y configuraciones](/es/integrations/connectors/data-ingestion/etl-tools/dbt/features-and-configurations) y la [referencia de materializaciones](/es/integrations/connectors/data-ingestion/etl-tools/dbt/materializations).
+Estas guías están pensadas para usarse junto con el resto de la [documentación](/es/integrations/connectors/data-ingestion/etl-tools/dbt/index), las [características y configuraciones](/es/integrations/connectors/data-ingestion/etl-tools/dbt/features-and-configurations) y la [referencia de materializaciones](/es/integrations/connectors/data-ingestion/etl-tools/dbt/materializations).
 
 <div id="setup">
   ## Configuración
 </div>
 
-Sigue las instrucciones de la sección [Configuración de dbt y el adaptador de ClickHouse](/es/integrations/connectors/data-ingestion/etl-tools/dbt) para preparar tu entorno.
+Sigue las instrucciones de la sección [Configuración de dbt y el adaptador de ClickHouse](/es/integrations/connectors/data-ingestion/etl-tools/dbt/index) para preparar tu entorno.
 
 **Importante: Lo siguiente se ha probado con Python 3.9.**
 
@@ -407,7 +407,7 @@ Cuando se usa la materialización de vista, un modelo se vuelve a crear como una
   ## Crear una materialización como tabla
 </div>
 
-En el ejemplo anterior, nuestro modelo se materializó como una vista. Aunque esto puede ofrecer un rendimiento suficiente para algunas consultas, los `SELECT` más complejos o las consultas que se ejecutan con frecuencia pueden materializarse mejor como una tabla. Esta materialización resulta útil para los modelos que serán consultados por herramientas de BI, ya que garantiza una experiencia más ágil para los usuarios. En la práctica, esto hace que los resultados de la consulta se almacenen en una nueva tabla, con la sobrecarga de almacenamiento asociada; en efecto, se ejecuta un `INSERT TO SELECT`. Ten en cuenta que esta tabla se reconstruirá cada vez; es decir, no es incremental. Por lo tanto, los conjuntos de resultados grandes pueden dar lugar a tiempos de ejecución prolongados; consulta [dbt Limitations](/es/integrations/connectors/data-ingestion/etl-tools/dbt#limitations).
+En el ejemplo anterior, nuestro modelo se materializó como una vista. Aunque esto puede ofrecer un rendimiento suficiente para algunas consultas, los `SELECT` más complejos o las consultas que se ejecutan con frecuencia pueden materializarse mejor como una tabla. Esta materialización resulta útil para los modelos que serán consultados por herramientas de BI, ya que garantiza una experiencia más ágil para los usuarios. En la práctica, esto hace que los resultados de la consulta se almacenen en una nueva tabla, con la sobrecarga de almacenamiento asociada; en efecto, se ejecuta un `INSERT TO SELECT`. Ten en cuenta que esta tabla se reconstruirá cada vez; es decir, no es incremental. Por lo tanto, los conjuntos de resultados grandes pueden dar lugar a tiempos de ejecución prolongados; consulta [dbt Limitations](/es/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations).
 
 1. Modifica el archivo `actors_summary.sql` para que el parámetro `materialized` se establezca en `table`. Observa cómo se define `ORDER BY` y que usamos el motor de tabla `MergeTree`:
 
@@ -487,7 +487,7 @@ En el ejemplo anterior, nuestro modelo se materializó como una vista. Aunque es
   ## Creación de una materialización incremental
 </div>
 
-El ejemplo anterior creó una tabla para materializar el modelo. Esta tabla se reconstruirá en cada ejecución de dbt. Esto puede resultar inviable y extremadamente costoso para conjuntos de resultados grandes o transformaciones complejas. Para abordar este problema y reducir el tiempo de construcción, dbt ofrece materializaciones incrementales. Esto permite a dbt insertar o actualizar registros en una tabla desde la última ejecución, por lo que resulta adecuado para datos de tipo evento. Internamente, se crea una tabla temporal con todos los registros actualizados y, a continuación, tanto los registros no modificados como los actualizados se insertan en una nueva tabla de destino. Esto conlleva [limitaciones](/es/integrations/connectors/data-ingestion/etl-tools/dbt#limitations) similares para conjuntos de resultados grandes a las del modelo de tabla.
+El ejemplo anterior creó una tabla para materializar el modelo. Esta tabla se reconstruirá en cada ejecución de dbt. Esto puede resultar inviable y extremadamente costoso para conjuntos de resultados grandes o transformaciones complejas. Para abordar este problema y reducir el tiempo de construcción, dbt ofrece materializaciones incrementales. Esto permite a dbt insertar o actualizar registros en una tabla desde la última ejecución, por lo que resulta adecuado para datos de tipo evento. Internamente, se crea una tabla temporal con todos los registros actualizados y, a continuación, tanto los registros no modificados como los actualizados se insertan en una nueva tabla de destino. Esto conlleva [limitaciones](/es/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations) similares para conjuntos de resultados grandes a las del modelo de tabla.
 
 Para superar estas limitaciones en conjuntos grandes, el adaptador admite el modo &#39;inserts&#95;only&#39;, en el que todas las actualizaciones se insertan en la tabla de destino sin crear una tabla temporal (más información a continuación).
 
@@ -683,7 +683,7 @@ Esto se muestra a continuación:
 
 <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_05.png" size="lg" alt="actualizaciones incrementales dbt" />
 
-Esta estrategia puede presentar dificultades en modelos muy grandes. Para obtener más información, consulte [Limitaciones](/es/integrations/connectors/data-ingestion/etl-tools/dbt#limitations).
+Esta estrategia puede presentar dificultades en modelos muy grandes. Para obtener más información, consulte [Limitaciones](/es/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations).
 
 <div id="append-strategy-inserts-only-mode">
   ### Estrategia append (modo de solo inserciones)
@@ -792,9 +792,9 @@ En esta ejecución, solo se añaden directamente las filas nuevas a la tabla `im
   ### Modo de eliminación e inserción (experimental)
 </div>
 
-Históricamente, ClickHouse solo ha ofrecido un soporte limitado para las actualizaciones y eliminaciones, en forma de [mutaciones](/es/reference/statements/alter). Estas pueden consumir muchísimas operaciones de E/S y, por lo general, conviene evitarlas.
+Históricamente, ClickHouse solo ha ofrecido un soporte limitado para las actualizaciones y eliminaciones, en forma de [mutaciones](/es/reference/statements/alter/index). Estas pueden consumir muchísimas operaciones de E/S y, por lo general, conviene evitarlas.
 
-ClickHouse 22.8 introdujo las [eliminaciones ligeras](/es/reference/statements/delete) y ClickHouse 25.7 introdujo las [actualizaciones ligeras](/es/reference/statements/update). Con la introducción de estas funciones, los cambios realizados mediante consultas de actualización individuales, incluso cuando se materializan de forma asíncrona, se reflejan al instante desde la perspectiva del usuario.
+ClickHouse 22.8 introdujo las [eliminaciones ligeras](/es/snippets/delete) y ClickHouse 25.7 introdujo las [actualizaciones ligeras](/es/reference/statements/update). Con la introducción de estas funciones, los cambios realizados mediante consultas de actualización individuales, incluso cuando se materializan de forma asíncrona, se reflejan al instante desde la perspectiva del usuario.
 
 Este modo puede configurarse para un modelo mediante el parámetro `incremental_strategy`, es decir.
 
@@ -1016,7 +1016,7 @@ Para obtener más información sobre los snapshots de dbt, consulte [aquí](http
   ## Uso de seeds
 </div>
 
-dbt permite cargar datos desde archivos CSV. Esta capacidad no es adecuada para cargar exportaciones grandes de una base de datos; está pensada más bien para archivos pequeños que suelen usarse para tablas de códigos y [diccionarios](/es/concepts/features/dictionaries), por ejemplo, para asociar códigos de país con nombres de países. Como ejemplo sencillo, generaremos y luego cargaremos una lista de códigos de género mediante la funcionalidad de seed.
+dbt permite cargar datos desde archivos CSV. Esta capacidad no es adecuada para cargar exportaciones grandes de una base de datos; está pensada más bien para archivos pequeños que suelen usarse para tablas de códigos y [diccionarios](/es/concepts/features/dictionaries/index), por ejemplo, para asociar códigos de país con nombres de países. Como ejemplo sencillo, generaremos y luego cargaremos una lista de códigos de género mediante la funcionalidad de seed.
 
 1. Generamos una lista de códigos de género a partir de nuestro conjunto de datos existente. Desde el directorio de dbt, use `clickhouse-client` para crear el archivo `seeds/genre_codes.csv`:
 

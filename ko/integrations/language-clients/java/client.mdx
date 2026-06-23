@@ -62,7 +62,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   예시:
 
   ```java showLineNumbers
-  Client client = new Client.Builder()
+   Client client = new Client.Builder()
                   .addEndpoint("https://clickhouse-cloud-instance:8443/")
                   .setUsername(user)
                   .setPassword(password)
@@ -78,7 +78,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   password를 통한 인증(authentication)은 `setUsername(String)` 및 `setPassword(String)`을 호출하여 username과 password를 설정해야 합니다:
 
   ```java showLineNumbers
-  Client client = new Client.Builder()
+   Client client = new Client.Builder()
           .addEndpoint("https://clickhouse-cloud-instance:8443/")
           .setUsername(user)
           .setPassword(password)
@@ -88,7 +88,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   액세스 토큰을 통한 인증(authentication)은 `setAccessToken(String)`을 호출하여 액세스 토큰을 설정해야 합니다:
 
   ```java showLineNumbers
-  Client client = new Client.Builder()
+   Client client = new Client.Builder()
           .addEndpoint("https://clickhouse-cloud-instance:8443/")
           .setAccessToken(userAccessToken)
           .build();
@@ -288,19 +288,19 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   서버 측 설정은 클라이언트 생성 시 클라이언트 수준에서 한 번 지정하거나(`Builder`의 `serverSetting` 메서드 참조), 작업 수준에서도 지정할 수 있습니다(작업 설정 클래스의 `serverSetting` 참조).
 
   ```java showLineNumbers
-  try (Client client = new Client.Builder().addEndpoint(Protocol.HTTP, "localhost", mockServer.port(), false)
+   try (Client client = new Client.Builder().addEndpoint(Protocol.HTTP, "localhost", mockServer.port(), false)
           .setUsername("default")
           .setPassword(ClickHouseServerForTest.getPassword())
           .compressClientRequest(true)
 
-          // 클라이언트 수준
+          // Client level
           .serverSetting("max_threads", "10")
           .serverSetting("async_insert", "1")
           .serverSetting("roles", Arrays.asList("role1", "role2"))
 
           .build()) {
 
-  	// 작업 수준
+  	// Operation level
   	QuerySettings querySettings = new QuerySettings();
   	querySettings.serverSetting("session_timezone", "Europe/Zurich");
 
@@ -315,18 +315,20 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   사용자 정의 HTTP headers는 모든 작업(클라이언트 수준) 또는 개별 작업(작업 수준)에 설정할 수 있습니다.
 
   ```java showLineNumbers
+
   QuerySettings settings = new QuerySettings()
       .httpHeader(HttpHeaders.REFERER, clientReferer)
       .setQueryId(qId);
+
   ```
 
-  `setOption` 메서드(`Client.Builder` 또는 작업 설정 클래스)를 통해 옵션을 설정하는 경우, 사용자 지정 헤더 이름에는 `http_header_` 접두사를 붙여야 합니다. 이 경우 `com.clickhouse.client.api.ClientConfigProperties#httpHeader()` 메서드를 사용하면 편리할 수 있습니다.
+  `setOption` 메서드(`Client.Builder` 또는 작업 설정 클래스)를 통해 옵션을 설정하는 경우, 사용자 지정 헤더 이름에는 `http_header_` 접두사를 붙여야 합니다. 이 경우 `com.clickhouse.client.api.ClientConfigProperties#httpHeader()` 메서드를 사용하면 편리합니다.
 
   ## 공통 정의
 
   ### ClickHouseFormat
 
-  [지원되는 포맷](/ko/reference/formats)의 열거형(Enum)입니다. ClickHouse가 지원하는 모든 포맷을 포함합니다.
+  [지원되는 포맷](/ko/reference/formats/index)의 열거형(Enum)입니다. ClickHouse가 지원하는 모든 포맷을 포함합니다.
 
   * `raw` - raw 데이터는 사용자가 직접 트랜스코딩해야 합니다
   * `full` - 클라이언트가 직접 데이터를 트랜스코딩할 수 있으며, 원시 데이터 스트림을 수신합니다
@@ -458,6 +460,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           throw new RuntimeException(e);
       }
   }
+
   ```
 
   ### insert(String tableName, List&lt;?&gt; data, InsertSettings settings)
@@ -479,20 +482,20 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   `settings` - 요청 설정입니다.
 
-  **반환값**
+  **반환 값**
 
   `InsertResponse` 유형의 Future로, 작업 결과 및 서버 측 메트릭 등의 추가 정보를 포함합니다.
 
   **예시**
 
   ```java showLineNumbers
-  // 중요한 단계 (한 번만 수행) - 테이블 스키마에 따라 객체 직렬화기를 사전 컴파일하도록 클래스를 등록합니다.
+  // Important step (done once) - register class to pre-compile object serializer according to the table schema.
   client.register(ArticleViewEvent.class, client.getTableSchema(TABLE_NAME));
 
   List<ArticleViewEvent> events = loadBatch();
 
   try (InsertResponse response = client.insert(TABLE_NAME, events).get()) {
-      // 응답을 처리한 후 닫히며, 요청을 처리한 연결이 해제됩니다.
+      // handle response, then it will be closed and connection that served request will be released.
   }
   ```
 
@@ -507,10 +510,10 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | `setQueryId(String queryId)`                    | 작업에 할당할 쿼리 ID를 설정합니다. 기본값: `null`.                                                  |
   | `setDeduplicationToken(String token)`           | 중복 제거 토큰을 설정합니다. 이 토큰은 서버에 전송되며 쿼리를 식별하는 데 사용할 수 있습니다. 기본값: `null`.                 |
   | `setInputStreamCopyBufferSize(int size)`        | 복사 버퍼 크기입니다. 이 버퍼는 쓰기 작업 중 사용자가 제공한 입력 스트림의 데이터를 출력 스트림으로 복사할 때 사용됩니다. 기본값: `8196`. |
-  | `serverSetting(String name, String value)`      | 작업에 사용할 개별 서버 설정을 지정합니다.                                                            |
+  | `serverSetting(String name, String value)`      | 작업에 대한 개별 서버 설정을 지정합니다.                                                             |
   | `serverSetting(String name, Collection values)` | 작업에 사용할 개별 서버 설정을 여러 값으로 지정합니다. 컬렉션의 항목은 `String` 값이어야 합니다.                         |
   | `setDBRoles(Collection dbRoles)`                | 작업 실행 전에 설정할 DB 역할을 지정합니다. 컬렉션의 항목은 `String` 값이어야 합니다.                              |
-  | `setOption(String option, Object value)`        | raw 포맷으로 구성 옵션을 지정합니다. 이것은 서버 설정이 아닙니다.                                             |
+  | `setOption(String option, Object value)`        | 구성 옵션을 원시 포맷으로 설정합니다. 서버 설정은 아닙니다.                                                  |
 
   ### InsertResponse
 
@@ -520,10 +523,10 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
     이 객체는 연결을 해제하기 위해 가능한 한 빨리 닫아야 합니다. 이전 응답의 데이터를 모두 완전히 읽기 전까지는 해당 연결을 재사용할 수 없기 때문입니다.
   </Note>
 
-  | 메서드                             | 설명                                                    |
-  | ------------------------------- | ----------------------------------------------------- |
-  | `OperationMetrics getMetrics()` | 작업 메트릭이 포함된 객체를 반환합니다.                                |
-  | `String getQueryId()`           | 애플리케이션이 작업 설정을 통해 또는 server가 작업에 할당한 Query id를 반환합니다. |
+  | 메서드                             | 설명                                                 |
+  | ------------------------------- | -------------------------------------------------- |
+  | `OperationMetrics getMetrics()` | 작업 메트릭이 포함된 객체를 반환합니다.                             |
+  | `String getQueryId()`           | 애플리케이션이 작업에 할당한 쿼리 ID(작업 설정 또는 서버를 통해 할당됨)를 반환합니다. |
 
   ## 쿼리 API
 
@@ -542,45 +545,45 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   `sqlQuery` - 단일 SQL 구문입니다. 쿼리는 수정 없이 그대로 서버로 전송됩니다.
 
-  `settings` - 요청 설정.
+  `settings` - 요청 설정입니다.
 
   **반환 값**
 
-  `QueryResponse` 유형의 Future - 결과 데이터셋과 서버 측 메트릭 등의 추가 정보를 포함합니다. 데이터셋을 모두 사용한 후에는 Response 객체를 닫아야 합니다.
+  `QueryResponse` 유형의 Future로, 결과 데이터셋과 서버 측 메트릭 등의 추가 정보를 포함합니다. Response 객체는 데이터셋을 사용한 후 반드시 닫아야 합니다.
 
   **예시**
 
   ```java
   final String sql = "select * from " + TABLE_NAME + " where title <> '' limit 10";
 
-  // 기본 포맷은 RowBinaryWithNamesAndTypesFormatReader이므로 reader가 컬럼에 대한 모든 정보를 가집니다
+  // Default format is RowBinaryWithNamesAndTypesFormatReader so reader have all information about columns
   try (QueryResponse response = client.query(sql).get(3, TimeUnit.SECONDS);) {
 
-      // 데이터에 편리하게 접근하기 위한 reader를 생성합니다
+      // Create a reader to access the data in a convenient way
       ClickHouseBinaryFormatReader reader = client.newBinaryFormatReader(response);
 
       while (reader.hasNext()) {
-          reader.next(); // 스트림에서 다음 레코드를 읽고 파싱합니다
+          reader.next(); // Read the next record from stream and parse it
 
-          // 값 가져오기
+          // get values
           double id = reader.getDouble("id");
           String title = reader.getString("title");
           String url = reader.getString("url");
 
-          // 데이터 수집
+          // collecting data
       }
   } catch (Exception e) {
       log.error("Failed to read data", e);
   }
 
-  // HTTP connection을 최대한 빨리 해제하려면 비즈니스 로직을 읽기 블록 외부에 작성하십시오.
+  // put business logic outside of the reading block to release http connection asap.
   ```
 
   ### query(String sqlQuery, Map&lt;String, Object&gt; queryParams, QuerySettings settings)
 
   `sqlQuery`를 그대로 전송합니다. 또한 서버가 SQL 표현식을 컴파일할 수 있도록 쿼리 매개변수도 함께 전송합니다.
 
-  **시그니처**
+  **서명**
 
   ```java
   CompletableFuture<QueryResponse> query(String sqlQuery, Map<String, Object> queryParams, QuerySettings settings)
@@ -596,37 +599,39 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **반환 값**
 
-  `QueryResponse` 유형의 Future로, 결과 데이터셋과 서버 측 메트릭 등의 추가 정보를 포함합니다. Response 객체는 데이터셋을 사용한 후 반드시 닫아야 합니다.
+  `QueryResponse` 유형의 Future - 결과 데이터셋과 서버 측 메트릭 등의 추가 정보를 포함합니다. Response 객체는 데이터셋을 모두 사용한 후에는 반드시 닫아야 합니다.
 
   **예시**
 
   ```java showLineNumbers
-  // 매개변수를 정의합니다. 요청과 함께 서버로 전송됩니다.
+
+  // define parameters. They will be sent to the server along with the request.
   Map<String, Object> queryParams = new HashMap<>();
   queryParams.put("param1", 2);
 
   try (QueryResponse response =
           client.query("SELECT * FROM " + table + " WHERE col1 >= {param1:UInt32}", queryParams, new QuerySettings()).get()) {
 
-      // 데이터에 편리하게 접근하기 위한 리더를 생성합니다.
+      // Create a reader to access the data in a convenient way
       ClickHouseBinaryFormatReader reader = client.newBinaryFormatReader(response);
 
       while (reader.hasNext()) {
-          reader.next(); // 스트림에서 다음 레코드를 읽고 파싱합니다.
+          reader.next(); // Read the next record from stream and parse it
 
-          // 데이터 읽기
+          // reading data
       }
 
   } catch (Exception e) {
-      log.error("데이터 읽기 실패", e);
+      log.error("Failed to read data", e);
   }
+
   ```
 
   ### queryAll(String sqlQuery)
 
   `RowBinaryWithNamesAndTypes` 포맷으로 데이터를 쿼리합니다. 결과를 컬렉션으로 반환합니다. 읽기 성능은 reader와 동일하지만, 전체 데이터셋을 메모리에 유지해야 하므로 더 많은 메모리가 필요합니다.
 
-  **시그니처**
+  **서명**
 
   ```java
   List<GenericRecord> queryAll(String sqlQuery)
@@ -647,7 +652,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       log.info("Reading whole table and process record by record");
       final String sql = "select * from " + TABLE_NAME + " where title <> ''";
 
-      // 전체 결과 집합(result set)을 읽고 레코드를 하나씩 처리합니다
+      // Read whole result set and process it record by record
       client.queryAll(sql).forEach(row -> {
           double id = row.getDouble("id");
           String title = row.getString("title");
@@ -676,15 +681,15 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | `setUseTimeZone(String timeZone)`                 | `timeZone`을 시간 변환에 사용하도록 서버에 요청합니다. 자세한 내용은 [session&#95;timezone](/ko/reference/settings/session-settings#session_timezone)을 참조하십시오. |
   | `serverSetting(String name, String value)`        | 작업에 대한 개별 서버 설정을 지정합니다.                                                                                                            |
   | `serverSetting(String name, Collection values)`   | 작업에 사용할 개별 서버 설정을 여러 값으로 지정합니다. 컬렉션의 항목은 `String` 값이어야 합니다.                                                                        |
-  | `setDBRoles(Collection dbRoles)`                  | 작업을 실행하기 전에 적용할 DB 역할을 설정합니다. 컬렉션의 항목은 `String` 값이어야 합니다.                                                                          |
-  | `setOption(String option, Object value)`          | 구성 옵션을 원시 포맷으로 설정합니다. 서버 설정은 아닙니다.                                                                                                 |
+  | `setDBRoles(Collection dbRoles)`                  | 작업 실행 전에 설정할 DB 역할을 지정합니다. 컬렉션의 항목은 `String` 값이어야 합니다.                                                                             |
+  | `setOption(String option, Object value)`          | raw 포맷으로 구성 옵션을 지정합니다. 이것은 서버 설정이 아닙니다.                                                                                            |
 
   ### QueryResponse
 
   쿼리 실행 결과를 담는 응답 객체입니다. 클라이언트가 서버로부터 응답을 받은 경우에만 사용할 수 있습니다.
 
   <Note>
-    이 객체는 연결을 반환할 수 있도록 가능한 한 빨리 닫아야 합니다. 이전 응답의 데이터를 모두 끝까지 읽기 전에는 해당 연결을 재사용할 수 없기 때문입니다.
+    이 객체는 연결을 해제하기 위해 가능한 한 빨리 닫아야 합니다. 이전 응답의 데이터를 모두 완전히 읽기 전까지는 해당 연결을 재사용할 수 없기 때문입니다.
   </Note>
 
   | 메서드                             | 설명                                                 |
@@ -719,7 +724,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   `database` - 대상 테이블이 정의된 데이터베이스입니다.
 
-  **반환값**
+  **반환 값**
 
   테이블 컬럼 목록이 담긴 `TableSchema` 객체를 반환합니다.
 
@@ -737,7 +742,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   `sql` - 스키마를 반환할 &quot;SELECT&quot; SQL 문입니다.
 
-  **반환값**
+  **반환 값**
 
   `sql` 표현식에 맞는 컬럼이 포함된 `TableSchema` 객체를 반환합니다.
 
@@ -748,7 +753,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   `schema`를 사용하여 데이터를 쓰고 읽기 위한 Java 클래스의 직렬화(serialization) 및 역직렬화(deserialization) 레이어를 컴파일합니다. 이 메서드는 getter/setter 쌍과 해당 컬럼에 대한 직렬화기 및 역직렬화기를 생성합니다.
   컬럼 매칭은 메서드 이름에서 컬럼 이름을 추출하는 방식으로 수행됩니다. 예를 들어, `getFirstName`은 컬럼 `first_name` 또는 `firstname`에 해당합니다.
 
-  **시그니처**
+  **서명**
 
   ```java
   void register(Class<?> clazz, TableSchema schema)
@@ -790,10 +795,10 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **`ClickHouseBinaryFormatReader` 메서드**
 
-  * `getList(...)` - 모든 `Array(...)`를 `List<T>`로 읽습니다. 타입이 유연한 읽기에 적합한 기본 옵션입니다. 중첩 배열을 지원합니다.
-  * `getByteArray(...)`, `getShortArray(...)`, `getIntArray(...)`, `getLongArray(...)`, `getFloatArray(...)`, `getDoubleArray(...)`, `getBooleanArray(...)` - 기본형과 호환되는 값으로 구성된 1차원 배열에 가장 적합합니다.
-  * `getStringArray(...)` - `Array(String)`용(이름으로 표현된 enum 값 포함).
-  * `getObjectArray(...)` - 중첩 배열을 포함한 모든 `Array(...)` 타입의 요소에 사용할 수 있는 범용 옵션입니다. 널 허용 값을 포함하는 배열과 중첩 배열을 읽을 때 사용합니다.
+  * `getList(...)` - 모든 `Array(...)`를 `List<T>`로 읽습니다. 유연한 타입 읽기에 적합한 기본값입니다. 중첩 배열도 지원합니다.
+  * `getByteArray(...)`, `getShortArray(...)`, `getIntArray(...)`, `getLongArray(...)`, `getFloatArray(...)`, `getDoubleArray(...)`, `getBooleanArray(...)` - 기본형과 호환되는 값으로 이루어진 1차원 배열에 가장 적합합니다.
+  * `getStringArray(...)` - `Array(String)`용(이름으로 표현된 enum 값도 포함).
+  * `getObjectArray(...)` - 중첩 배열을 포함한 모든 `Array(...)` 요소 타입에 사용할 수 있는 범용 옵션입니다. 널 허용 값을 포함하는 배열과 중첩 배열을 읽는 데 사용합니다.
 
   모든 메서드에 대해 인덱스 기반 및 이름 기반 오버로드를 사용할 수 있습니다. 인덱스는 1부터 시작합니다. 인덱스 기반 방식은 컬럼에 직접 접근합니다.
   이름 기반 메서드는 호출할 때마다 인덱스 조회가 필요합니다.
@@ -806,7 +811,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           Object[] uint64 = reader.getObjectArray("uint64_arr"); // Array(UInt64) -> BigInteger[]
           Object[] arr2d = reader.getObjectArray("arr2d");       // Array(Array(Int64)) -> Object[]
 
-          // 중첩 배열은 중첩된 Object[] 형태로 반환됩니다:
+          // nested arrays are returned as nested Object[]:
           Object[] firstInner = (Object[]) arr2d[0];
           Long firstValue = (Long) firstInner[0];
       }
@@ -981,15 +986,15 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
     </Tab>
 
     <Tab title="HTTP 및 헤더">
-      | V1 구성                                                | V2 Builder 메서드                 | 비고                                |
-      | ---------------------------------------------------- | ------------------------------ | --------------------------------- |
-      | `ClickHouseHttpOption#CUSTOM_HEADERS`                | `Client.Builder#httpHeaders`   |                                   |
-      | `ClickHouseHttpOption#CUSTOM_PARAMS`                 | ✗                              | `Client.Builder#serverSetting` 참조 |
-      | `ClickHouseClientOption#CLIENT_NAME`                 | `Client.Builder#setClientName` |                                   |
-      | `ClickHouseHttpOption#CONNECTION_PROVIDER`           | ✗                              |                                   |
-      | `ClickHouseHttpOption#DEFAULT_RESPONSE`              | ✗                              |                                   |
-      | `ClickHouseHttpOption#SEND_HTTP_CLIENT_ID`           | ✗                              |                                   |
-      | `ClickHouseHttpOption#AHC_VALIDATE_AFTER_INACTIVITY` | ✗                              | Apache Http Client 사용 시 항상 활성화됩니다 |
+      | V1 구성                                                | V2 Builder 메서드                 | 비고                                   |
+      | ---------------------------------------------------- | ------------------------------ | ------------------------------------ |
+      | `ClickHouseHttpOption#CUSTOM_HEADERS`                | `Client.Builder#httpHeaders`   |                                      |
+      | `ClickHouseHttpOption#CUSTOM_PARAMS`                 | ✗                              | `Client.Builder#serverSetting` 참조    |
+      | `ClickHouseClientOption#CLIENT_NAME`                 | `Client.Builder#setClientName` |                                      |
+      | `ClickHouseHttpOption#CONNECTION_PROVIDER`           | ✗                              |                                      |
+      | `ClickHouseHttpOption#DEFAULT_RESPONSE`              | ✗                              |                                      |
+      | `ClickHouseHttpOption#SEND_HTTP_CLIENT_ID`           | ✗                              |                                      |
+      | `ClickHouseHttpOption#AHC_VALIDATE_AFTER_INACTIVITY` | ✗                              | Apache Http Client를 사용할 때는 항상 활성화됩니다 |
     </Tab>
 
     <Tab title="포맷 및 쿼리">
@@ -1067,12 +1072,12 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   CompletableFuture<ClickHouseResponse> future;
   try (ClickHousePipedOutputStream requestBody = ClickHouseDataStreamFactory.getInstance()
           .createPipedOutputStream(config)) {
-      // 입력 데이터를 ClickHouse로 전송하는 워커 스레드를 시작합니다
+      // start the worker thread which transfer data from the input into ClickHouse
       future = request.data(requestBody.getInputStream()).execute();
 
-      // inData 스트림에서 requestBody 스트림으로 데이터를 복사합니다
+      // Copy data from inData stream to requestBody stream
 
-      // 응답을 받기 전에 스트림을 닫아야 합니다
+      // We need to close the stream before getting a response
       requestBody.close();
 
       try (ClickHouseResponse response = future.get()) {
@@ -1080,19 +1085,20 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           Assert.assertEquals(summary.getWrittenRows(), numRows, "Num of written rows");
       }
   }
+
   ```
 
   **V2 TSV 포맷 데이터 삽입.**
 
   ```java
   InputStream inData = getInData();
-  InsertSettings settings = new InsertSettings().setInputStreamCopyBufferSize(8198 * 2); // 복사 버퍼 크기 설정
+  InsertSettings settings = new InsertSettings().setInputStreamCopyBufferSize(8198 * 2); // set copy buffer size
   try (InsertResponse response = client.insert(tableName, inData, ClickHouseFormat.TSV, settings).get(30, TimeUnit.SECONDS)) {
 
-    // 이 시점에서 삽입 완료
+    // Insert is complete at this point
 
   } catch (Exception e) {
-   // 예외 처리
+   // Handle exception
   }
   ```
 
@@ -1113,6 +1119,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       String name = record.getString("name");
       LocalDateTime ts = record.getLocalDateTime("ts");
   }
+
   ```
 </View>
 

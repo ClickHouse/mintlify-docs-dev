@@ -140,3 +140,45 @@ SELECT * FROM test_table FINAL ORDER BY key;
   SELECT key, last_value(value_int), last_value(value_string), last_value(value_date)  FROM test_table GROUP BY key; -- 推奨されません。
   ```
 </Note>
+
+<div id="tuple-element-aggregation">
+  ## Tuple 要素の集約
+</div>
+
+`allow_tuple_element_aggregation` 設定を有効にすると、`Tuple` カラムは再帰的にフラット化され、各リーフ要素が独立して coalescing の対象になります。これにより、複数のフィールドを 1 つの `Tuple` カラムに格納しつつ、マージ時には要素単位で coalescing できます。各 `Nullable` サブカラムは、それぞれ独立して最新の非 NULL 値を保持します。
+
+フラット化されたサブカラムにも、通常のカラムと同じルールが適用されます。
+
+* ソートキーまたはパーティションキー内の `Tuple` に属するサブカラムは、coalescing の対象外です。
+* `columns` が指定されている場合、列挙された `Tuple` カラムのサブカラムのみが coalescing されます。
+
+<Note>
+  この設定は変更不可であり、テーブル作成時に指定する必要があります。
+</Note>
+
+```sql
+CREATE TABLE coalescing_tuples
+(
+    key UInt64,
+    data Tuple(
+        value_a Nullable(UInt64),
+        value_b Nullable(String),
+        nested Tuple(
+            value_c Nullable(UInt64)
+        )
+    )
+) ENGINE = CoalescingMergeTree()
+ORDER BY key
+SETTINGS allow_tuple_element_aggregation = 1;
+
+INSERT INTO coalescing_tuples VALUES (1, (100, NULL, (NULL)));
+INSERT INTO coalescing_tuples VALUES (1, (NULL, 'hello', (42)));
+
+SELECT key, data.value_a, data.value_b, data.nested.value_c FROM coalescing_tuples FINAL;
+```
+
+```text
+┌─key─┬─data.value_a─┬─data.value_b─┬─data.nested.value_c─┐
+│   1 │          100 │ hello        │                  42 │
+└─────┴──────────────┴──────────────┴─────────────────────┘
+```

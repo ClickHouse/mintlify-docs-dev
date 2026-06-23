@@ -7,8 +7,6 @@ doc_type: 'guide'
 keywords: ['ClickHouse Cloud', 'SCIM', 'provisionamento', 'Okta', 'SSO', 'SAML', 'provedor de identidade', 'IdP', 'gerenciamento de usuários']
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
-
 import EnterprisePlanFeatureBadge from "/snippets/components/EnterprisePlanFeatureBadge/EnterprisePlanFeatureBadge.jsx";
 import PrivatePreviewBadge from "/snippets/components/PrivatePreviewBadge/PrivatePreviewBadge.jsx";
 
@@ -31,7 +29,7 @@ Este guia mostra como configurar o provisionamento SCIM de ponta a ponta com o *
 Você precisará de:
 
 * A função **Admin** na sua organização do ClickHouse Cloud.
-* [SAML SSO](/pt-BR/cloud/security/saml-setup) já configurado entre seu IdP e o ClickHouse Cloud. O SCIM cria as contas de usuário; essas contas fazem login por SAML, então o SSO precisa estar funcionando antes.
+* [SAML SSO](/pt-BR/products/cloud/guides/security/cloud-access-management/saml-sso-setup) já configurado entre seu IdP e o ClickHouse Cloud. O SCIM cria as contas de usuário; essas contas fazem login por SAML, então o SSO precisa estar funcionando antes.
 * Acesso de superadministrador ao seu tenant do Okta, com permissão para instalar aplicativos e configurar o provisionamento.
 * Uma lista das funções que você quer atribuir por meio do SCIM (por exemplo: Admins, Developers, Read-only). Defina isso com antecedência — você criará grupos correspondentes no Okta.
 
@@ -55,11 +53,11 @@ Você precisará de:
 
     Faça login no **ClickHouse Cloud Console** como administrador da organização e abra **Organization settings → SAML and SCIM settings → SCIM Configuration**.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-01.png" size="lg" alt="Acesse a guia de configuração do SCIM em Organization settings" force />
+    ![Acesse a guia de configuração do SCIM em Organization settings](/images/cloud/security/scim-okta/scim-okta-01.png)
 
     Clique em `Enable SCIM`. O SCIM é liberado assim que o SAML SSO é conectado — se a opção estiver desabilitada, conclua primeiro a configuração do SAML.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-02.png" size="lg" alt="Ative Enable SCIM" force />
+    ![Ative Enable SCIM](/images/cloud/security/scim-okta/scim-okta-02.png)
 
     Uma **URL do endpoint do SCIM** é gerada, no formato:
 
@@ -76,12 +74,14 @@ Você precisará de:
     Localize a seção `Create an API key` e escolha uma data de expiração.
 
     <Tip>
-      **Planeje a rotação.** Recomendamos definir uma expiração de 12 meses e adicionar um lembrete no calendário. O ClickHouse Cloud oferece suporte a até dois tokens SCIM ativos ao mesmo tempo, para que você possa fazer a rotação sem interrupção: gere o novo token, atualize o Okta para usá-lo, confirme que o provisionamento continua funcionando e então revogue o token antigo.
+      **Planeje a rotação**
+
+      Recomendamos definir uma expiração de 12 meses e adicionar um lembrete no calendário. O ClickHouse Cloud oferece suporte a até dois tokens SCIM ativos ao mesmo tempo, para que você possa fazer a rotação sem interrupção: gere o novo token, atualize o Okta para usá-lo, confirme que o provisionamento continua funcionando e então revogue o token antigo.
     </Tip>
 
     Clique em `Generate key`. O token é exibido **uma única vez**, como uma chave (com prefixo `scim_`) e um segredo. Copie ambos imediatamente e armazene-os em um gerenciador de segredos seguro — eles não poderão ser recuperados depois. Se você os perder, revogue o token e gere um novo.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-07.png" size="lg" alt="Gere uma nova chave de API do SCIM" force />
+    ![Gere uma nova chave de API do SCIM](/images/cloud/security/scim-okta/scim-okta-07.png)
   </Step>
 
   <Step>
@@ -108,15 +108,15 @@ Você precisará de:
 
     No **Okta Admin Console**, vá para **Applications → Applications** e procure o aplicativo que você criou ao configurar o SAML SSO para o ClickHouse Cloud. Abra-o.
 
-    Se você ainda não criou o aplicativo SAML, siga primeiro o [guia de configuração do SAML SSO](/pt-BR/cloud/security/saml-setup) — o provisionamento SCIM é configurado no mesmo aplicativo.
+    Se você ainda não criou o aplicativo SAML, siga primeiro o [guia de configuração do SAML SSO](/pt-BR/products/cloud/guides/security/cloud-access-management/saml-sso-setup) — o provisionamento SCIM é configurado no mesmo aplicativo.
 
     Na guia **General**, localize a seção **App Settings** e clique em `Edit`. Em **Provisioning**, selecione `SCIM` e clique em `Save`.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-03.png" size="lg" alt="Defina o modo de provisionamento como SCIM nas configurações do aplicativo no Okta" force />
+    ![Defina o modo de provisionamento como SCIM nas configurações do aplicativo no Okta](/images/cloud/security/scim-okta/scim-okta-03.png)
 
     O aplicativo agora exibe uma guia **Provisioning**.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-05.png" size="lg" alt="A guia Provisioning agora aparece no aplicativo" force />
+    ![A guia Provisioning agora aparece no aplicativo](/images/cloud/security/scim-okta/scim-okta-05.png)
   </Step>
 
   <Step>
@@ -136,13 +136,13 @@ Você precisará de:
       * **Nome de usuário** — a **chave** do token SCIM (ela começa com `scim_`).
       * **Senha** — o **segredo** do token SCIM.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-06.png" size="lg" alt="Insira a URL do conector SCIM e defina o identificador exclusivo como userName" force />
+    ![Insira a URL do conector SCIM e defina o identificador exclusivo como userName](/images/cloud/security/scim-okta/scim-okta-06.png)
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-08.png" size="lg" alt="Insira as credenciais da API para autenticação SCIM" force />
+    ![Insira as credenciais da API para autenticação SCIM](/images/cloud/security/scim-okta/scim-okta-08.png)
 
     Clique em `Test Connector Configuration`. Você deverá ver uma confirmação em verde. Se falhar, vá para [Solução de problemas](#troubleshooting).
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-09.png" size="lg" alt="Teste a conexão SCIM" force />
+    ![Teste a conexão SCIM](/images/cloud/security/scim-okta/scim-okta-09.png)
 
     Clique em `Save`.
   </Step>
@@ -159,11 +159,11 @@ Você precisará de:
     | Desativar usuários             | Ativar    | Remove um usuário do ClickHouse Cloud quando sua atribuição é removida ou ele é desativado no Okta |
     | Sincronizar senha              | Desativar | Não é usado — o login é feito via SAML, não por senha                                              |
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-10.png" size="lg" alt="Ative as ações de Provisioning do SCIM para usuários" force />
+    ![Ative as ações de Provisioning do SCIM para usuários](/images/cloud/security/scim-okta/scim-okta-10.png)
 
     Clique em `Save` e, em seguida, volte para as abas **Sign On** / **Provisioning** do aplicativo para confirmar que as configurações foram aplicadas.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-10b.png" size="lg" alt="Salve as configurações de Provisioning e volte para a aba Sign On" force />
+    ![Salve as configurações de Provisioning e volte para a aba Sign On](/images/cloud/security/scim-okta/scim-okta-10b.png)
   </Step>
 
   <Step>
@@ -183,7 +183,9 @@ Você precisará de:
     Você pode adicionar atributos opcionais, como departamento, gerente e localidade — o ClickHouse Cloud os armazena no perfil do usuário, mas atualmente não os usa para permissões. Tudo o que estiver fora do conjunto padrão do SCIM é ignorado pelo ClickHouse Cloud.
 
     <Warning>
-      **Maiúsculas e minúsculas no e-mail importam.** Certifique-se de que `userName` e `email` no Okta usem a mesma capitalização. O ClickHouse Cloud normaliza os e-mails para minúsculas; divergências entre os dois campos podem causar falhas nos testes.
+      **Maiúsculas e minúsculas no e-mail importam**
+
+      Certifique-se de que `userName` e `email` no Okta usem a mesma capitalização. O ClickHouse Cloud normaliza os e-mails para minúsculas; divergências entre os dois campos podem causar falhas nos testes.
     </Warning>
   </Step>
 
@@ -194,21 +196,21 @@ Você precisará de:
 
     **Crie grupos no Okta.** Para cada mapeamento de função que você configurou anteriormente, crie ou identifique um grupo no Okta com o **mesmo nome de exibição exato**. Por exemplo, se o seu mapeamento diz `ClickHouse-Admins → Admin`, crie um grupo chamado `ClickHouse-Admins` no Okta.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-13.png" size="lg" alt="Crie um novo grupo no Okta" force />
+    ![Crie um novo grupo no Okta](/images/cloud/security/scim-okta/scim-okta-13.png)
 
     Abra o grupo que você acabou de criar e clique em `Assign people` para adicionar um membro.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-14.png" size="lg" alt="Clique em Assign people no grupo" force />
+    ![Clique em Assign people no grupo](/images/cloud/security/scim-okta/scim-okta-14.png)
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-15.png" size="lg" alt="Atribua o usuário ao grupo" force />
+    ![Atribua o usuário ao grupo](/images/cloud/security/scim-okta/scim-okta-15.png)
 
     Em seguida, associe o aplicativo SCIM ao mesmo grupo para que a associação à função e o acesso ao aplicativo permaneçam sincronizados.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-16.png" size="lg" alt="Atribua o aplicativo ao grupo" force />
+    ![Atribua o aplicativo ao grupo](/images/cloud/security/scim-okta/scim-okta-16.png)
 
     **Envie os grupos.** Na guia **Provisioning** do aplicativo, clique em `Push Groups → Find groups by name`, procure seu grupo e clique em `Save`. Repita o processo para cada grupo de função. Cada um deverá exibir **Push Status** como **Active (Pushed)** depois de provisionado.
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-17.png" size="lg" alt="Configure o Group Push por nome na guia Push Groups do aplicativo" force />
+    ![Configure o Group Push por nome na guia Push Groups do aplicativo](/images/cloud/security/scim-okta/scim-okta-17.png)
 
     **Atribua usuários.** Você tem duas opções:
 
@@ -223,9 +225,9 @@ Você precisará de:
   ## Teste a integração
 </div>
 
-Depois que o Provisioning estiver configurado, volte para **Configurações → Usuários e funções** no Console do ClickHouse Cloud para confirmar que os usuários sincronizados apareceram com as funções esperadas.
+Depois que o Provisioning estiver configurado, volte para **Configurações → Users and roles** no Console do ClickHouse Cloud para confirmar que os usuários sincronizados apareceram com as funções esperadas.
 
-<Image img="/images/cloud/security/scim-okta/scim-okta-18.png" size="lg" alt="Verifique a sincronização de usuários em Usuários e funções" force />
+![Verifique a sincronização de usuários em Users and roles](/images/cloud/security/scim-okta/scim-okta-18.png)
 
 Siga este breve plano de teste com um ou dois usuários de teste **antes** de atribuir o acesso à equipe inteira. Cada etapa deve ser concluída em poucos segundos; se isso não acontecer, verifique a fila de tarefas do Okta e a seção de [Solução de problemas](#troubleshooting).
 
@@ -240,7 +242,9 @@ Siga este breve plano de teste com um ou dois usuários de teste **antes** de at
 Se alguma etapa falhar, corrija o problema subjacente antes de continuar — os sintomas normalmente se acumulam.
 
 <Tip>
-  **Onde procurar erros de SCIM no Okta.** Os erros de SCIM aparecem em **Relatórios → Log do sistema**, filtrados pelo seu aplicativo, e na tela **Provisioning → View Logs** do aplicativo. A mensagem de erro retornada pelo ClickHouse Cloud é exibida exatamente como foi retornada — comece por ela.
+  **Onde procurar erros de SCIM no Okta**
+
+  Os erros de SCIM aparecem em **Relatórios → Log do sistema**, filtrados pelo seu aplicativo, e na tela **Provisioning → View Logs** do aplicativo. A mensagem de erro retornada pelo ClickHouse Cloud é exibida exatamente como foi retornada — comece por ela.
 </Tip>
 
 <div id="best-practices">
@@ -251,7 +255,7 @@ Se alguma etapa falhar, corrija o problema subjacente antes de continuar — os 
 
 **Use grupos, não atribuições diretas.** A atribuição direta de usuários ao aplicativo funciona, mas rapidamente fica difícil de auditar. Fazer a atribuição por meio de grupos do Okta significa que as revisões de acesso e as mudanças de função acontecem em um só lugar.
 
-**Revise o log de auditoria.** Toda ação do SCIM — usuário criado, usuário desativado, perfil atualizado — é registrada no log de auditoria do ClickHouse Cloud. Consulte [Audit logging](/pt-BR/cloud/security/audit-logging). Verifique o log periodicamente, especialmente após grandes ondas de provisionamento.
+**Revise o log de auditoria.** Toda ação do SCIM — usuário criado, usuário desativado, perfil atualizado — é registrada no log de auditoria do ClickHouse Cloud. Consulte [Audit logging](/pt-BR/products/cloud/reference/security/audit-logging). Verifique o log periodicamente, especialmente após grandes ondas de provisionamento.
 
 **Defina uma função padrão adequada.** Se um usuário do Okta for atribuído ao aplicativo, mas não estiver em nenhum grupo sincronizado, ele será criado com a **Função padrão**. Escolha a função mais restritiva que ainda permita que o usuário faça *alguma coisa*, para que erros de configuração falhem de forma segura.
 
@@ -315,7 +319,7 @@ Não é possível recuperar tokens. No ClickHouse Cloud Console, em **Configura�
 </div>
 
 **Preciso de SAML SSO para poder usar o SCIM?**
-Sim. O SCIM cria as contas de usuário, mas o ClickHouse Cloud faz a autenticação delas por meio do SAML. Configure primeiro o [SAML SSO](/pt-BR/cloud/security/saml-setup).
+Sim. O SCIM cria as contas de usuário, mas o ClickHouse Cloud faz a autenticação delas por meio do SAML. Configure primeiro o [SAML SSO](/pt-BR/products/cloud/guides/security/cloud-access-management/saml-sso-setup).
 
 **O SCIM funciona com Microsoft Entra ID, OneLogin ou outros IdPs SCIM 2.0?**
 Oficialmente, não — o Okta é o único IdP que testamos e ao qual damos suporte hoje. O endpoint segue o SCIM 2.0 (RFC 7644), mas a autenticação é restrita a Basic Auth, então qualquer IdP que não consiga se autenticar via Basic Auth não funcionará. Outros IdPs SCIM 2.0 compatíveis com Basic Auth podem funcionar na prática, mas não oferecemos nenhuma garantia.

@@ -109,14 +109,14 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   <Info>
     **服务器设置**
 
-    所有服务器设置都应加上 `clickhouse_setting_` 前缀 (与客户端[配置](/zh/integrations/language-clients/java/client#server-settings)中的要求相同) 。
+    所有服务器设置都应加上 `clickhouse_setting_` 前缀 (与客户端[配置](/zh/integrations/language-clients/java/client#server-settings)中的要求相同)。
 
     ```java
     Properties config = new Properties();
     config.setProperty("user", "default");
     config.setProperty("password", getPassword());
 
-    // 设置服务器配置项
+    // set server setting
     config.put(ClientConfigProperties.serverSetting("allow_experimental_time_time64_type"), "1");
 
     Connection conn = Driver.connect("jdbc:ch:http://localhost:8123/", config);
@@ -129,7 +129,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Properties properties = new Properties();
   properties.setProperty("user", "default");
   properties.setProperty("password", getPassword());
-  properties.setProperty("client_name", "my-app-01"); // 当使用 HTTP 协议时，查询日志中将显示为 `http_user_agent`，而非 `client_name`。
+  properties.setProperty("client_name", "my-app-01"); // when http protocol is used it will be `http_user_agent` in the query log but not `client_name`.
 
   Connection conn = Driver.connect("jdbc:ch:http://localhost:8123/", properties);
   ```
@@ -138,10 +138,16 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   ```sql
   jdbc:ch:http://localhost:8123/?user=default&password=password&client_name=my-app-01 
-  // 凭据应通过 `Properties` 传入，此处仅为示例。
+  // credentials shoud be passed in `Properties`. Here it is just for example.
   ```
 
   注意：无需对 JDBC URL 或属性进行 URL 编码，系统会自动完成编码。
+
+  **只读 profile**
+
+  我们有意避免在连接属性中添加默认设置，以防止与只读 profile 产生冲突。
+  但某些用户需要传递格式设置 (例如将 JSON 读取为 String) ，对此我们建议使用 `readonly=2` profile。
+  有关只读 profile 的更多信息，请参阅[此处](/zh/concepts/features/configuration/settings/constraints-on-settings#read-only)。
 
   ### 客户端标识
 
@@ -180,7 +186,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   ## 支持的数据类型
 
-  JDBC 驱动支持与底层 [java client](/zh/integrations/language-clients/java#supported-data-types) 相同的数据格式。
+  JDBC 驱动支持与底层 [java client](/zh/integrations/language-clients/java/index#supported-data-types) 相同的数据格式。
 
   ### JDBC 类型映射
 
@@ -201,15 +207,15 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | Int16         | SMALLINT | java.lang.Short      |
   | Int32         | INTEGER  | java.lang.Integer    |
   | Int64         | BIGINT   | java.lang.Long       |
-  | Int128        | OTHER    | java.math.BigInteger |
-  | Int256        | OTHER    | java.math.BigInteger |
-  | UInt8         | OTHER    | java.lang.Short      |
-  | UInt16        | OTHER    | java.lang.Integer    |
-  | UInt32        | OTHER    | java.lang.Long       |
-  | UInt64        | OTHER    | java.math.BigInteger |
-  | UInt128       | OTHER    | java.math.BigInteger |
-  | UInt256       | OTHER    | java.math.BigInteger |
-  | Float32       | REAL     | java.lang.Float      |
+  | Int128        | NUMERIC  | java.math.BigInteger |
+  | Int256        | NUMERIC  | java.math.BigInteger |
+  | UInt8         | SMALLINT | java.lang.Short      |
+  | UInt16        | INTEGER  | java.lang.Integer    |
+  | UInt32        | BIGINT   | java.lang.Long       |
+  | UInt64        | NUMERIC  | java.math.BigInteger |
+  | UInt128       | NUMERIC  | java.math.BigInteger |
+  | UInt256       | NUMERIC  | java.math.BigInteger |
+  | Float32       | FLOAT    | java.lang.Float      |
   | Float64       | DOUBLE   | java.lang.Double     |
   | Decimal32     | DECIMAL  | java.math.BigDecimal |
   | Decimal64     | DECIMAL  | java.math.BigDecimal |
@@ -217,7 +223,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | Decimal256    | DECIMAL  | java.math.BigDecimal |
   | Bool          | BOOLEAN  | java.lang.Boolean    |
 
-  * 数值类型之间可以相互转换。因此，`Int8` 可以读取为 `Float64`，反之亦然。:
+  * 数值类型之间可以相互转换。因此，`Int8` 可以获取为 `Float64`，反之亦然。:
     * `rs.getObject(1, Float64.class)` 将返回 `Int8` 列的 `Float64` 值。
     * `rs.getLong(1)` 将返回 `Int8` 列的 `Long` 值。
     * 如果 `Int16` 列的值可以放入 `Byte`，`rs.getByte(1)` 就可以返回 `Byte` 值。
@@ -240,8 +246,8 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   | ClickHouse 类型 | JDBC 类型 | Java 类           |
   | ------------- | ------- | ---------------- |
-  | Enum8         | OTHER   | java.lang.String |
-  | Enum16        | OTHER   | java.lang.String |
+  | Enum8         | VARCHAR | java.lang.String |
+  | Enum16        | VARCHAR | java.lang.String |
 
   * `Enum8` 和 `Enum16` 默认会映射为 `java.lang.String`。
   * 枚举值可以通过指定的 getter 方法或 `getObject(columnIndex, Integer.class)` 方法按数值读取。
@@ -269,20 +275,77 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **嵌套类型**
 
-  | ClickHouse 类型 | JDBC 类型         | Java 类                    |
-  | ------------- | --------------- | ------------------------- |
-  | Array         | ARRAY           | java.sql.Array            |
-  | Tuple         | OTHER           | com.clickhouse.data.Tuple |
-  | Map           | JAVA&#95;OBJECT | java.util.Map             |
-  | Nested        | ARRAY           | java.sql.Array            |
+  | ClickHouse 类型 | JDBC 类型 | Java 类                    |
+  | ------------- | ------- | ------------------------- |
+  | Array         | ARRAY   | java.sql.Array            |
+  | Tuple         | OTHER   | com.clickhouse.data.Tuple |
+  | Map           | OTHER   | java.util.Map             |
+  | Nested        | ARRAY   | java.sql.Array            |
 
   * 默认情况下，为了兼容 JDBC，`Array` 会映射为 `java.sql.Array`。这样做还能提供有关返回数组值的更多信息，有助于类型推断。
   * `Array` 实现了 `getResultSet()` 方法，返回一个与原始数组内容相同的 `java.sql.ResultSet`。
   * 集合类型不应读取为 `java.lang.String`，因为这不是表示该数据的有效方式 (例如，数组中的字符串值没有引号) 。
-  * `Map` 会映射为 `JAVA_OBJECT`，因为该值只能通过 `getObject(columnIndex, Class<T>)` 方法读取。
+  * `Map` 会映射为 `OTHER`，因为该值只能通过 `getObject(columnIndex, Class<T>)` 方法读取。
     * `Map` 不是 `java.sql.Struct`，因为它不包含具名列。
   * `Tuple` 会映射为 `Object[]`，因为它可以包含不同类型的值，而使用 `List` 并不成立。
   * 可以通过 `getObject(columnIndex, Array.class)` 方法将 `Tuple` 作为 `Array` 读取。在这种情况下，`Array#baseTypeName` 将返回 `Tuple` 的列定义。
+
+  **数组元素类型元数据**
+
+  `Array.getBaseTypeName()` 返回 ClickHouse 元素类型名称；`Array.getBaseType()` 返回 JDBC 类型代码。
+  JDBC V2 保留了完整的类型签名 (包装类型、类型参数) ，而 V1 会将其去除。
+
+  数组的通用映射规则如下：
+
+  | ClickHouse 类型                              | `getBaseTypeName()`                 | `getBaseType()`       |
+  | ------------------------------------------ | ----------------------------------- | --------------------- |
+  | `Array(<基本类型>)`                            | `<基本类型>`                            | `<JDBC 基本类型>`         |
+  | `Array(<Parameterized Type>(<N>))`         | `<参数化类型>(<N>)`                      | `<基本类型的 JDBC 类型>`     |
+  | `Array(Nullable(<Type>))`                  | `Nullable(<Type>)`                  | `<内部 Type 的 JDBC 类型>` |
+  | `Array(LowCardinality(<Type>))`            | `LowCardinality(<Type>)`            | `<内部 Type 的 JDBC 类型>` |
+  | `Array(Array(...(<类型>)))`                  | `<Type>` (最内层的元素)                   | `<最内层元素的 JDBC 类型>`    |
+  | `Array(Tuple(...))`                        | `Tuple(...)` (完整定义)                 | `OTHER`               |
+  | `Array(Enum8(...))` / `Array(Enum16(...))` | `Enum8(...)` / `Enum16(...)` (完整定义) | `VARCHAR`             |
+
+  以上规则的注意事项：
+
+  * 包装类型 (`Nullable`, `LowCardinality`) 会在 `getBaseTypeName()` 中保留，但 `getBaseType()` 解析得到的是内部类型的 JDBC 代码。
+  * 元数据中的嵌套数组会被展平：`getBaseTypeName()` 返回最内层的非数组元素类型，而不是直接子类型。
+  * 参数化类型 (`FixedString(N)`、完整的 `Enum`/`Tuple` 定义) 会在 `getBaseTypeName()` 中保留其参数。
+
+  **示例：**
+
+  | ClickHouse 类型 (示例)                                                         | `getBaseTypeName()`                                                 | `getBaseType()` |
+  | -------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------- |
+  | Array(Int8)                                                                | Int8                                                                | TINYINT         |
+  | Array(Int16)                                                               | Int16                                                               | SMALLINT        |
+  | Array(Int32)                                                               | Int32                                                               | INTEGER         |
+  | Array(Int64)                                                               | Int64                                                               | BIGINT          |
+  | Array(UInt8)                                                               | UInt8                                                               | SMALLINT        |
+  | Array(UInt16)                                                              | UInt16                                                              | INTEGER         |
+  | Array(UInt32)                                                              | UInt32                                                              | BIGINT          |
+  | Array(UInt64)                                                              | UInt64                                                              | NUMERIC         |
+  | Array(Float32)                                                             | Float32                                                             | FLOAT           |
+  | Array(Float64)                                                             | Float64                                                             | DOUBLE          |
+  | Array(String)                                                              | String                                                              | VARCHAR         |
+  | Array(FixedString(8))                                                      | FixedString(8)                                                      | VARCHAR         |
+  | Array(Bool)                                                                | Bool                                                                | BOOLEAN         |
+  | Array(Date)                                                                | Date                                                                | DATE            |
+  | Array(DateTime)                                                            | 日期时间                                                                | TIMESTAMP       |
+  | Array(UUID)                                                                | UUID                                                                | OTHER           |
+  | Array(Nullable(Int32))                                                     | Nullable(Int32)                                                     | INTEGER         |
+  | Array(Nullable(String))                                                    | Nullable(String)                                                    | VARCHAR         |
+  | Array(LowCardinality(String))                                              | LowCardinality(String)                                              | VARCHAR         |
+  | Array(LowCardinality(Nullable(String)))                                    | LowCardinality(Nullable(String))                                    | VARCHAR         |
+  | Array(Array(Int32))                                                        | Int32                                                               | INTEGER         |
+  | Array(Array(Array(String)))                                                | String                                                              | VARCHAR         |
+  | Array(Tuple(name String, val Int32))                                       | Tuple(name String, val Int32)                                       | OTHER           |
+  | Array(Enum8(&#39;alpha&#39; = 1, &#39;beta&#39; = 2, &#39;gamma&#39; = 3)) | Enum8(&#39;alpha&#39; = 1, &#39;beta&#39; = 2, &#39;gamma&#39; = 3) | VARCHAR         |
+
+  * 在 V2 中，`getBaseTypeName()` 会保留完整的类型签名，包括包装类型 (`Nullable`、`LowCardinality`) 和类型参数 (`FixedString(8)`、完整的 `Enum` 和 `Tuple` 定义)。V1 则会去掉这些内容，只返回基本类型名称。
+  * `Tuple` 数组在 V2 中使用 `OTHER (1111)`，而不是 `STRUCT (2002)`，因为 ClickHouse 元组具有具名字段，而 `java.sql.Struct` 不支持这一点。
+  * `UUID` 数组在 V2 中使用 `OTHER (1111)`，与标量 `UUID` 的映射一致。
+  * `Enum` 值会映射为 `VARCHAR` —— 枚举成员始终通过字符串名称标识，与其底层数值编码无关。
 
   **写入 Array**
 
@@ -326,7 +389,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
                   Object[] arr = (Object[]) array;
                   Arrays.stream(arr).forEach(this::handleArrayElement);
 
-                  // 或通过 `ResultSet` 获取
+                  // or by using `ResultSet`
                   ResultSet resultSet = array.getResultSet();
                   while (resultSet.next()) {
                       // ...
@@ -382,6 +445,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           }
       }
   }
+
   ```
 
   **写入 Map**
@@ -447,7 +511,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   **读取嵌套数据**
 
   使用 `ResultSet#getStruct(columnIndex, StructDescriptor)` 读取 `Nested` 对象。该对象可用于访问任意嵌套深度的嵌套内容。
-  当嵌套元素的确切类型未知时，可使用 `Struct#getResultSet()` 方法，以更统一的方式将嵌套元素作为 `java.sql.ResultSet` 读取。
+  `Struct#getResultSet()` 方法可用于以更统一的方式将嵌套元素作为 `java.sql.ResultSet` 读取。当嵌套元素的确切类型未知时，此方法非常有用。
 
   **示例**
 
@@ -461,7 +525,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
                   Object[] tuple = (Object[]) struct;
                   Arrays.stream(tuple).forEach(this::handleTupleElement);
 
-                  // 或通过 `ResultSet` 获取
+                  // or by using `ResultSet`
                   ResultSet resultSet = struct.getResultSet();
                   while (resultSet.next()) {
                       // ...
@@ -474,11 +538,11 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **地理空间类型**
 
-  | ClickHouse 类型 | JDBC 类型 | Java 类         |
-  | ------------- | ------- | -------------- |
-  | Point         | OTHER   | double[]       |
-  | Ring          | OTHER   | double[][]     |
-  | Polygon       | OTHER   | double[][][]   |
+  | ClickHouse 类型 | JDBC 类型 | Java 类                                         |
+  | ------------- | ------- | ---------------------------------------------- |
+  | Point         | OTHER   | double[]                               |
+  | Ring          | OTHER   | double[][]                     |
+  | Polygon       | OTHER   | double[][][]           |
   | MultiPolygon  | OTHER   | double[][][][] |
 
   **Nullable 与 LowCardinality 类型**
@@ -488,19 +552,74 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **特殊类型**
 
-  | ClickHouse 类型           | JDBC 类型 | Java 类                |
-  | ----------------------- | ------- | --------------------- |
-  | UUID                    | OTHER   | java.util.UUID        |
-  | IPv4                    | OTHER   | java.net.Inet4Address |
-  | IPv6                    | OTHER   | java.net.Inet6Address |
-  | JSON                    | OTHER   | java.lang.String      |
-  | AggregateFunction       | OTHER   | (二进制表示)               |
-  | SimpleAggregateFunction | (包装类型)  | (被包装类)                |
+  | ClickHouse 类型           | JDBC 类型  | Java 类                |
+  | ----------------------- | -------- | --------------------- |
+  | UUID                    | OTHER    | java.util.UUID        |
+  | IPv4                    | OTHER    | java.net.Inet4Address |
+  | IPv6                    | OTHER    | java.net.Inet6Address |
+  | JSON                    | OTHER    | java.lang.String      |
+  | AggregateFunction       | OTHER    | (二进制表示)               |
+  | SimpleAggregateFunction | (所包装的类型) | (所包装的类)               |
 
   * `UUID` 并不是 JDBC 标准类型，但它属于 JDK。默认情况下，`getObject()` 方法返回的是 `java.util.UUID`。
   * 通过 `getObject(columnIndex, String.class)` 方法，可将 `UUID` 作为 `String` 类型读取或写入。
   * `IPv4` 和 `IPv6` 不是 JDBC 标准类型，但它们属于 JDK。默认情况下，`getObject()` 方法会返回 `java.net.Inet4Address` 和 `java.net.Inet6Address`。
   * 通过 `getObject(columnIndex, String.class)` 方法，可以将 `IPv4` 和 `IPv6` 作为 `String` 类型进行读写。
+
+  **JSON 类型**
+
+  JSON 类型默认映射为 `Map<String, Object>`，其中键为 JSON 对象的键，值为 JSON 对象的值。
+  例如：
+
+  ```json
+  {
+      "key1": "value1",
+      "key2": ["value2", "value3"]
+      "key3": {
+          "key4": "value4",
+          "key5": "value5"
+      }
+  }
+  ```
+
+  将映射为：
+
+  ```java
+  Map<String, Object> map = new HashMap<>();
+  map.put("key1", "value1");
+  map.put("key2", Arrays.asList("value2", "value3"));
+  map.put("key3", new HashMap<String, Object>() {{
+      put("key4", "value4");
+      put("key5", "value5");
+  }});
+  ```
+
+  还有一种更便捷的方式，可通过将服务器设置 `jdbc_read_json_as_string=true` 传入连接属性，以 String 形式读取 JSON。
+  这样驱动程序会将 JSON 值作为 String 返回，可使用任意 JSON 库进行解析。
+
+  ```java
+  Properties properties = new Properties();
+  properties.setProperty(
+                  ClientConfigProperties.serverSetting(ServerSettings.OUTPUT_FORMAT_BINARY_WRITE_JSON_AS_STRING),
+                  "1");
+  try (Connection conn = DriverManager.getConnection(url, properties)) {
+       try (ResultSet rs = stmt.executeQuery("SELECT * FROM test_json ORDER BY order")) {
+          while (rs.next()) {
+              String json = rs.getString("json");
+              // ...
+          }
+      }
+  }
+  ```
+
+  从 ClickHouse 25.8 版本起，数值默认不再加引号。对于旧版本，您可以通过将服务器设置传递给连接属性来禁用引号：
+
+  ```java
+  Properties properties = new Properties();
+  properties.put(ClientConfigProperties.serverSetting("output_format_json_quote_64bit_integers"), "0");
+  properties.put(ClientConfigProperties.serverSetting("output_format_json_quote_64bit_floats"), "0");
+  properties.put(ClientConfigProperties.serverSetting("output_format_json_quote_decimals"), "0");
+  ```
 
   ### 处理日期、时间与时区
 
@@ -512,9 +631,9 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   String url = "jdbc:ch://my-server:8123/system";
 
   Properties properties = new Properties();
-  DataSource dataSource = new DataSource(url, properties);//DataSource 或 DriverManager 是主要入口点
+  DataSource dataSource = new DataSource(url, properties);//DataSource or DriverManager are the main entry points
   try (Connection conn = dataSource.getConnection()) {
-  ... // 对连接执行操作
+  ... // do something with the connection
   ```
 
   ## 提供凭据与配置项
@@ -527,21 +646,22 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   info.put("password", "password");
   info.put("database", "some_db");
 
-  //使用 DataSource 创建连接
+  //Creating a connection with DataSource
   DataSource dataSource = new DataSource(url, info);
   try (Connection conn = dataSource.getConnection()) {
-  ... // 对连接执行操作
+  ... // do something with the connection
   }
 
-  //使用 DriverManager 的另一种方式
+  //Alternate approach using the DriverManager
   try (Connection conn = DriverManager.getConnection(url, info)) {
-  ... // 对连接执行操作
+  ... // do something with the connection
   }
   ```
 
   ## 简单语句
 
   ```java showLineNumbers
+
   try (Connection conn = dataSource.getConnection(...);
       Statement stmt = conn.createStatement()) {
       ResultSet rs = stmt.executeQuery("select * from numbers(50000)");
@@ -555,20 +675,20 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   ```java showLineNumbers
   try (PreparedStatement ps = conn.prepareStatement("INSERT INTO mytable VALUES (?, ?)")) {
-      ps.setString(1, "test"); // id（标识符）
-      ps.setObject(2, LocalDateTime.now()); // 时间戳
+      ps.setString(1, "test"); // id
+      ps.setObject(2, LocalDateTime.now()); // timestamp
       ps.addBatch();
       ...
-      ps.executeBatch(); // 将所有待处理数据批量写入 ClickHouse
+      ps.executeBatch(); // stream everything on-hand into ClickHouse
   }
   ```
 
   ## `HikariCP`
 
   ```java showLineNumbers
-  // 连接池对性能提升帮助有限，
-  // 因为底层实现本身已有连接池。
-  // 例如：HttpURLConnection 自带套接字连接池
+  // connection pooling won't help much in terms of performance,
+  // because the underlying implementation has its own pool.
+  // for example: HttpURLConnection has a pool for sockets
   HikariConfig poolConfig = new HikariConfig();
   poolConfig.setConnectionTimeout(5000L);
   poolConfig.setMaximumPoolSize(20);
@@ -580,8 +700,8 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
        Statement s = conn.createStatement();
        ResultSet rs = s.executeQuery("SELECT * FROM system.numbers LIMIT 3")) {
       while (rs.next()) {
-          // 处理行
-          log.info("Integer: {}, String: {}", rs.getInt(1), rs.getString(1));//同一列，但类型不同
+          // handle row
+          log.info("Integer: {}, String: {}", rs.getInt(1), rs.getString(1));//Same column but different types
       }
   }
   ```
@@ -683,9 +803,9 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Properties properties = new Properties();
   properties.setProperty("socket_rcvbuf", "900000");
   try (Connection conn = DriverManager.getConnection(url, properties)) {
-      // 连接将使用 socket_rcvbuf=800000 和 jdbc_ignore_unsupported_values=true
-      // 端点：my-server:8443 协议：http（不安全）
-      // 数据库：default
+      // Connection will use socket_rcvbuf=800000 and jdbc_ignore_unsupported_values=true
+      // Endpoints: my-server:8443 protocol: http (not secure)
+      // Database: default
   }
   ```
 
@@ -699,15 +819,15 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | Int16         | ✅     | SMALLINT     | java.lang.Short      | SMALLINT     | java.lang.Short                           |
   | Int32         | ✅     | INTEGER      | java.lang.Integer    | INTEGER      | java.lang.Integer                         |
   | Int64         | ✅     | BIGINT       | java.lang.Long       | BIGINT       | java.lang.Long                            |
-  | Int128        | ✅     | OTHER        | java.math.BigInteger | OTHER        | java.math.BigInteger                      |
-  | Int256        | ✅     | OTHER        | java.math.BigInteger | OTHER        | java.math.BigInteger                      |
-  | UInt8         | ❌     | OTHER        | java.lang.Short      | OTHER        | com.clickhouse.data.value.UnsignedByte    |
-  | UInt16        | ❌     | OTHER        | java.lang.Integer    | OTHER        | com.clickhouse.data.value.UnsignedShort   |
-  | UInt32        | ❌     | OTHER        | java.lang.Long       | OTHER        | com.clickhouse.data.value.UnsignedInteger |
-  | UInt64        | ❌     | OTHER        | java.math.BigInteger | OTHER        | com.clickhouse.data.value.UnsignedLong    |
-  | UInt128       | ✅     | OTHER        | java.math.BigInteger | OTHER        | java.math.BigInteger                      |
-  | UInt256       | ✅     | OTHER        | java.math.BigInteger | OTHER        | java.math.BigInteger                      |
-  | Float32       | ✅     | REAL         | java.lang.Float      | REAL         | java.lang.Float                           |
+  | Int128        | ✅     | NUMERIC      | java.math.BigInteger | NUMERIC      | java.math.BigInteger                      |
+  | Int256        | ✅     | NUMERIC      | java.math.BigInteger | NUMERIC      | java.math.BigInteger                      |
+  | UInt8         | ❌     | SMALLINT     | java.lang.Short      | SMALLINT     | com.clickhouse.data.value.UnsignedByte    |
+  | UInt16        | ❌     | INTEGER      | java.lang.Integer    | INTEGER      | com.clickhouse.data.value.UnsignedShort   |
+  | UInt32        | ❌     | BIGINT       | java.lang.Long       | BIGINT       | com.clickhouse.data.value.UnsignedInteger |
+  | UInt64        | ❌     | NUMERIC      | java.math.BigInteger | NUMERIC      | com.clickhouse.data.value.UnsignedLong    |
+  | UInt128       | ✅     | NUMERIC      | java.math.BigInteger | NUMERIC      | java.math.BigInteger                      |
+  | UInt256       | ✅     | NUMERIC      | java.math.BigInteger | NUMERIC      | java.math.BigInteger                      |
+  | Float32       | ✅     | FLOAT        | java.lang.Float      | FLOAT        | java.lang.Float                           |
   | Float64       | ✅     | DOUBLE       | java.lang.Double     | DOUBLE       | java.lang.Double                          |
   | Decimal32     | ✅     | DECIMAL      | java.math.BigDecimal | DECIMAL      | java.math.BigDecimal                      |
   | Decimal64     | ✅     | DECIMAL      | java.math.BigDecimal | DECIMAL      | java.math.BigDecimal                      |
@@ -730,14 +850,14 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **日期/时间类型**
 
-  | ClickHouse 类型 | 兼容 V1 | JDBC 类型 (V2) | Java 类 (V2)        | JDBC 类型 (V1) | Java 类 (V1)              |
-  | ------------- | ----- | ------------ | ------------------ | ------------ | ------------------------ |
-  | Date          | ❌     | DATE         | java.sql.Date      | DATE         | java.time.LocalDate      |
-  | Date32        | ❌     | DATE         | java.sql.Date      | DATE         | java.time.LocalDate      |
-  | DateTime      | ❌     | TIMESTAMP    | java.sql.Timestamp | TIMESTAMP    | java.time.OffsetDateTime |
-  | DateTime64    | ❌     | TIMESTAMP    | java.sql.Timestamp | TIMESTAMP    | java.time.OffsetDateTime |
-  | Time          | ✅     | TIME         | java.sql.Time      | 新类型/不受支持     | 新类型/不受支持                 |
-  | Time64        | ✅     | TIME         | java.sql.Time      | 新类型/不受支持     | 新类型/不受支持                 |
+  | ClickHouse 类型 | 兼容 V1 | JDBC 类型 (V2) | Java 类 (V2)        | JDBC 类型 (V1)                    | Java 类 (V1)              |
+  | ------------- | ----- | ------------ | ------------------ | ------------------------------- | ------------------------ |
+  | Date          | ❌     | DATE         | java.sql.Date      | DATE                            | java.time.LocalDate      |
+  | Date32        | ❌     | DATE         | java.sql.Date      | DATE                            | java.time.LocalDate      |
+  | 日期时间          | ❌     | TIMESTAMP    | java.sql.Timestamp | TIMESTAMP&#95;WITH&#95;TIMEZONE | java.time.OffsetDateTime |
+  | DateTime64    | ❌     | TIMESTAMP    | java.sql.Timestamp | TIMESTAMP&#95;WITH&#95;TIMEZONE | java.time.OffsetDateTime |
+  | Time          | ✅     | TIME         | java.sql.Time      | 新类型/不受支持                        | 新类型/不受支持                 |
+  | Time64        | ✅     | TIME         | java.sql.Time      | 新类型/不受支持                        | 新类型/不受支持                 |
 
   * `Time` 和 `Time64` 仅在 V2 中作为新增类型受支持。
   * `DateTime` 和 `DateTime64` 会映射到 `java.sql.Timestamp`，以更好地兼容 JDBC。
@@ -752,12 +872,12 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **嵌套类型**
 
-  | ClickHouse 类型 | 兼容 V1 | JDBC 类型 (V2)    | Java 类 (V2)    | JDBC 类型 (V1) | Java 类 (V1)       |
-  | ------------- | ----- | --------------- | -------------- | ------------ | ----------------- |
-  | Array         | ❌     | ARRAY           | java.sql.Array | ARRAY        | Object[] 或基本类型的数组 |
-  | Tuple         | ❌     | OTHER           | Object[]       | STRUCT       | java.sql.Struct   |
-  | Map           | ❌     | JAVA&#95;OBJECT | java.util.Map  | STRUCT       | java.util.Map     |
-  | Nested        | ❌     | ARRAY           | java.sql.Array | STRUCT       | java.sql.Struct   |
+  | ClickHouse 类型 | 兼容 V1 | JDBC 类型 (V2)    | Java 类 (V2)      | JDBC 类型 (V1) | Java 类 (V1)               |
+  | ------------- | ----- | --------------- | ---------------- | ------------ | ------------------------- |
+  | Array         | ❌     | ARRAY           | java.sql.Array   | ARRAY        | Object[] 或基本类型的数组 |
+  | Tuple         | ❌     | OTHER           | Object[] | STRUCT       | java.sql.Struct           |
+  | Map           | ❌     | JAVA&#95;OBJECT | java.util.Map    | STRUCT       | java.util.Map             |
+  | Nested        | ❌     | ARRAY           | java.sql.Array   | STRUCT       | java.sql.Struct           |
 
   * 在 V2 中，`Array` 默认映射为 `java.sql.Array`，以兼容 JDBC。这样做也能提供有关返回数组值的更多信息，有助于类型推断。
   * 在 V2 中，`Array` 实现了 `getResultSet()` 方法，用于返回一个内容与原始数组相同的 `java.sql.ResultSet`。
@@ -771,11 +891,11 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **地理空间类型**
 
-  | ClickHouse 类型 | 兼容 V1 | JDBC 类型 (V2) | Java 类 (V2)    | JDBC 类型 (V1) | Java 类 (V1)    |
-  | ------------- | ----- | ------------ | -------------- | ------------ | -------------- |
-  | Point         | ✅     | OTHER        | double[]       | OTHER        | double[]       |
-  | Ring          | ✅     | OTHER        | double[][]     | OTHER        | double[][]     |
-  | Polygon       | ✅     | OTHER        | double[][][]   | OTHER        | double[][][]   |
+  | ClickHouse 类型 | 兼容 V1 | JDBC 类型 (V2) | Java 类 (V2)                                    | JDBC 类型 (V1) | Java 类 (V1)                                    |
+  | ------------- | ----- | ------------ | ---------------------------------------------- | ------------ | ---------------------------------------------- |
+  | Point         | ✅     | OTHER        | double[]                               | OTHER        | double[]                               |
+  | Ring          | ✅     | OTHER        | double[][]                     | OTHER        | double[][]                     |
+  | Polygon       | ✅     | OTHER        | double[][][]           | OTHER        | double[][][]           |
   | MultiPolygon  | ✅     | OTHER        | double[][][][] | OTHER        | double[][][][] |
 
   **Nullable 与 LowCardinality 类型**
@@ -807,16 +927,18 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   * V2 仅使用 `Schema` 这一术语来表示数据库。`Catalog` 一词保留供将来使用。
   * V2 对 `DatabaseMetaData.supportsTransactions()` 和 `DatabaseMetaData.supportsSavepoints()` 返回 `false`。后续开发中将对此进行调整。
+  * 在 `DatabaseMetaData.getTypeInfo()` 中，对于不应具有前缀和后缀的数据类型 (例如数值类型) ，`LITERAL_PREFIX` 和 `LITERAL_SUFFIX` 列现在会返回 `null`。
+    在 V1 中，这些列对这类类型会返回非 `null` 值。在生成 SQL 查询时，应使用这些列根据数据类型正确地为字面量值添加引号。
 </View>
 
 <View title="v0.7.x">
-  `clickhouse-jdbc` 实现了标准 JDBC 接口。它基于 [clickhouse-client](/zh/concepts/features/interfaces/client) 构建，提供自定义类型映射、事务支持以及标准同步 `UPDATE` 和 `DELETE` 语句等附加功能，便于与旧版应用程序和工具集成使用。
+  `clickhouse-jdbc` 实现了标准 JDBC 接口。它基于 [clickhouse-client](/zh/integrations/connectors/sql-clients/sql-console) 构建，提供自定义类型映射、事务支持以及标准同步 `UPDATE` 和 `DELETE` 语句等附加功能，便于与旧版应用程序和工具集成使用。
 
   <Note>
     最新版 JDBC (0.7.2) 使用 Client-V1
   </Note>
 
-  `clickhouse-jdbc` API 是同步的，通常会带来更多开销 (例如 SQL 解析、类型映射/转换等) 。如果对性能有较高要求，或希望以更直接的方式访问 ClickHouse，请考虑使用 [clickhouse-client](/zh/concepts/features/interfaces/client)。
+  `clickhouse-jdbc` API 是同步的，通常会带来更多开销 (例如 SQL 解析、类型映射/转换等) 。如果对性能有较高要求，或希望以更直接的方式访问 ClickHouse，请考虑使用 [clickhouse-client](/zh/integrations/connectors/sql-clients/sql-console)。
 
   ## 环境要求
 
@@ -923,7 +1045,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ## 创建连接
 
   ```java
-  String url = "jdbc:ch://my-server/system"; // 默认使用 HTTP 协议和端口 8123
+  String url = "jdbc:ch://my-server/system"; // use http protocol and port 8123 by default
 
   Properties properties = new Properties();
 
@@ -936,6 +1058,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ## 简单语句
 
   ```java showLineNumbers
+
   try (Connection conn = dataSource.getConnection(...);
       Statement stmt = conn.createStatement()) {
       ResultSet rs = stmt.executeQuery("select * from numbers(50000)");
@@ -955,11 +1078,11 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   ```java showLineNumbers
   try (PreparedStatement ps = conn.prepareStatement("insert into mytable(* except (description))")) {
-      ps.setString(1, "test"); // id（标识符）
-      ps.setObject(2, LocalDateTime.now()); // 时间戳
-      ps.addBatch(); // 参数将立即以二进制格式写入缓冲流
+      ps.setString(1, "test"); // id
+      ps.setObject(2, LocalDateTime.now()); // timestamp
+      ps.addBatch(); // parameters will be write into buffered stream immediately in binary format
       ...
-      ps.executeBatch(); // 将所有待发数据流式写入 ClickHouse
+      ps.executeBatch(); // stream everything on-hand into ClickHouse
   }
   ```
 
@@ -970,13 +1093,13 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ```java showLineNumbers
   try (PreparedStatement ps = conn.prepareStatement(
       "insert into mytable select col1, col2 from input('col1 String, col2 DateTime64(3), col3 Int32')")) {
-      // 列定义将被解析，以便驱动程序知道有 3 个参数：col1、col2 和 col3
+      // The column definition will be parsed so the driver knows there are 3 parameters: col1, col2 and col3
       ps.setString(1, "test"); // col1
-      ps.setObject(2, LocalDateTime.now()); // col2，setTimestamp 较慢，不推荐使用
+      ps.setObject(2, LocalDateTime.now()); // col2, setTimestamp is slow and not recommended
       ps.setInt(3, 123); // col3
-      ps.addBatch(); // 参数将立即以二进制格式写入缓冲流
+      ps.addBatch(); // parameters will be write into buffered stream immediately in binary format
       ...
-      ps.executeBatch(); // 将所有待发送数据流式写入 ClickHouse
+      ps.executeBatch(); // stream everything on-hand into ClickHouse
   }
   ```
 
@@ -988,12 +1111,12 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   ```java showLineNumbers
   try (PreparedStatement ps = conn.prepareStatement("insert into mytable values(trim(?),?,?)")) {
-      ps.setString(1, "test"); // id（标识符）
-      ps.setObject(2, LocalDateTime.now()); // 时间戳
-      ps.setString(3, null); // 描述
-      ps.addBatch(); // 将参数追加至查询
+      ps.setString(1, "test"); // id
+      ps.setObject(2, LocalDateTime.now()); // timestamp
+      ps.setString(3, null); // description
+      ps.addBatch(); // append parameters to the query
       ...
-      ps.executeBatch(); // 执行拼装后的查询：insert into mytable values(...)(...)...(...)
+      ps.executeBatch(); // issue the composed query: insert into mytable values(...)(...)...(...)
   }
   ```
 
@@ -1019,7 +1142,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   </Note>
 
   ```java showLineNumbers
-  // 使用 input 函数进行批量插入
+  // batch insert using input function
   try (ClickHouseConnection conn = newConnection(props);
           Statement s = conn.createStatement();
           PreparedStatement stmt = conn.prepareStatement(
@@ -1042,7 +1165,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       ...
   }
 
-  // 使用 bitmap 作为查询参数
+  // use bitmap as query parameter
   try (PreparedStatement stmt = conn.prepareStatement(
       "SELECT bitmapContains(my_bitmap, toUInt32(1)) as v1, bitmapContains(my_bitmap, toUInt32(2)) as v2 from {tt 'ext_table'}")) {
       stmt.setObject(1, ClickHouseExternalTable.builder().name("ext_table")
@@ -1097,25 +1220,25 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | `sslrootcert`        |        |              | SSL/TLS 根证书路径                           |
   | `sslcert`            |        |              | SSL/TLS 证书路径                            |
   | `sslkey`             |        |              | PKCS#8 格式的 RSA 密钥                       |
-  | `key_store_type`     |        | JKS, PKCS12  | 指定 `KeyStore`/`TrustStore` 文件的类型或格式。    |
+  | `key_store_type`     |        | JKS, PKCS12  | 指定 `KeyStore`/`TrustStore` 文件的类型或格式     |
   | `trust_store`        |        |              | `TrustStore` 文件路径                       |
   | `key_store_password` |        |              | 访问 `KeyStore` 配置中指定的 `KeyStore` 文件所需的密码 |
 
   这些属性可确保您的 Java 应用程序通过加密连接与 ClickHouse 服务器通信，从而提升数据传输过程中的安全性。
 
   ```java showLineNumbers
-  String url = "jdbc:ch://your-server:8443/system";
+    String url = "jdbc:ch://your-server:8443/system";
 
     Properties properties = new Properties();
     properties.setProperty("ssl", "true");
-    properties.setProperty("sslmode", "strict"); // NONE 表示信任所有服务器；STRICT 表示仅信任受信任的服务器
+    properties.setProperty("sslmode", "strict"); // NONE to trust all servers; STRICT for trusted only
     properties.setProperty("sslrootcert", "/mine.crt");
     try (Connection con = DriverManager
             .getConnection(url, properties)) {
 
         try (PreparedStatement stmt = con.prepareStatement(
 
-            // 在此处填写您的代码
+            // place your code here
 
         }
     }
@@ -1154,7 +1277,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   * `net.inet.tcp.always_keepalive`: 1
   * `net.ipv4.tcp_keepalive_intvl`: 75
   * `net.ipv4.tcp_keepalive_probes`: 9
-  * `net.ipv4.tcp_keepalive_time`：60 (可考虑将该值从默认的 300 秒下调)
+  * `net.ipv4.tcp_keepalive_time`: 60 (可考虑将该值从默认的 300 秒下调)
 
   2. 修改内核参数后，运行以下命令使更改生效：
 
@@ -1177,7 +1300,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   JDBC 驱动的默认套接字和连接超时时间为 30 秒。可以适当增大超时时间以支持大批量数据的插入操作。在 `ClickHouseClient` 上调用 `options` 方法，并配合 `ClickHouseClientOption` 中定义的 `SOCKET_TIMEOUT` 和 `CONNECTION_TIMEOUT` 选项：
 
   ```java showLineNumbers
-  final int MS_12H = 12 * 60 * 60 * 1000; // 12小时（毫秒）
+  final int MS_12H = 12 * 60 * 60 * 1000; // 12 h in ms
   final String sql = "insert into table_a (c1, c2, c3) select c1, c2, c3 from table_b;";
 
   try (ClickHouseClient client = ClickHouseClient.newInstance(ClickHouseProtocol.HTTP)) {

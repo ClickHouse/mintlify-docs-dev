@@ -41,7 +41,9 @@ ClickHouse にデータが入ったので、いくつかのクエリを実行し
 
 ```sql
 EXPLAIN AST SELECT min(timestamp), max(timestamp) FROM session_events;
+```
 
+```response
 ┌─explain────────────────────────────────────────────┐
 │ SelectWithUnionQuery (children 1)                  │
 │  ExpressionList (children 1)                       │
@@ -80,7 +82,9 @@ ClickHouse には現在、アナライザに 2 つのアーキテクチャがあ
 
 ```sql
 EXPLAIN QUERY TREE passes=0 SELECT min(timestamp) AS minimum_date, max(timestamp) AS maximum_date FROM session_events SETTINGS allow_experimental_analyzer=1;
+```
 
+```response
 ┌─explain────────────────────────────────────────────────────────────────────────────────┐
 │ QUERY id: 0                                                                            │
 │   PROJECTION                                                                           │
@@ -101,7 +105,9 @@ EXPLAIN QUERY TREE passes=0 SELECT min(timestamp) AS minimum_date, max(timestamp
 
 ```sql
 EXPLAIN QUERY TREE passes=20 SELECT min(timestamp) AS minimum_date, max(timestamp) AS maximum_date FROM session_events SETTINGS allow_experimental_analyzer=1;
+```
 
+```response
 ┌─explain───────────────────────────────────────────────────────────────────────────────────┐
 │ QUERY id: 0                                                                               │
 │   PROJECTION COLUMNS                                                                      │
@@ -123,7 +129,7 @@ EXPLAIN QUERY TREE passes=20 SELECT min(timestamp) AS minimum_date, max(timestam
 └───────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-2回の実行を比較すると、別名とプロジェクションの解決を確認できます。
+2回の実行を比較すると、別名とPROJECTIONの解決を確認できます。
 
 <div id="planner">
   ## プランナー
@@ -138,7 +144,9 @@ EXPLAIN PLAN WITH
        FROM session_events
    ) AS total_rows
 SELECT type, min(timestamp) AS minimum_date, max(timestamp) AS maximum_date, count(*) /total_rows * 100 AS percentage FROM session_events GROUP BY type
+```
 
+```response
 ┌─explain──────────────────────────────────────────┐
 │ Expression ((Projection + Before ORDER BY))      │
 │   Aggregating                                    │
@@ -147,7 +155,7 @@ SELECT type, min(timestamp) AS minimum_date, max(timestamp) AS maximum_date, cou
 └──────────────────────────────────────────────────┘
 ```
 
-これでもある程度の情報は得られますが、さらに詳しい情報を取得できます。たとえば、どのカラムに対してプロジェクションが必要なのか、そのカラム名を知りたい場合があります。ヘッダーをクエリに追加できます。
+これでもある程度の情報は得られますが、さらに詳しい情報を取得できます。たとえば、どのカラムに対してPROJECTIONが必要なのか、そのカラム名を知りたい場合があります。ヘッダーをクエリに追加できます。
 
 ```SQL
 EXPLAIN header = 1
@@ -162,7 +170,9 @@ SELECT
    (count(*) / total_rows) * 100 AS percentage
 FROM session_events
 GROUP BY type
+```
 
+```response
 ┌─explain──────────────────────────────────────────┐
 │ Expression ((Projection + Before ORDER BY))      │
 │ Header: type String                              │
@@ -183,7 +193,7 @@ GROUP BY type
 └──────────────────────────────────────────────────┘
 ```
 
-これで、最後の Projection に対して作成する必要があるカラム名 (`minimum_date`、`maximum_date`、`percentage`) はわかりましたが、実行する必要があるすべての actions の詳細も確認したいことがあるでしょう。その場合は、`actions=1` を設定します。
+これで、最後の PROJECTION に対して作成する必要があるカラム名 (`minimum_date`、`maximum_date`、`percentage`) はわかりましたが、実行する必要があるすべての actions の詳細も確認したいことがあるでしょう。その場合は、`actions=1` を設定します。
 
 ```sql
 EXPLAIN actions = 1
@@ -198,7 +208,9 @@ SELECT
    (count(*) / total_rows) * 100 AS percentage
 FROM session_events
 GROUP BY type
+```
 
+```response
 ┌─explain────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Expression ((Projection + Before ORDER BY))                                                                                                │
 │ Actions: INPUT :: 0 -> type String : 0                                                                                                     │
@@ -258,7 +270,9 @@ SELECT
    (count(*) / total_rows) * 100 AS percentage
 FROM session_events
 GROUP BY type;
+```
 
+```response
 ┌─explain────────────────────────────────────────────────────────────────────┐
 │ (Expression)                                                               │
 │ ExpressionTransform × 2                                                    │
@@ -272,7 +286,7 @@ GROUP BY type;
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-括弧内はクエリプランのステップ、その隣はプロセッサーです。有益な情報ですが、グラフ構造であるため、視覚的に表示できると便利です。`graph` 設定を 1 に設定し、出力フォーマットを TSV に指定することができます：
+括弧内はクエリプランのステップ、その隣はプロセッサです。有益な情報ですが、グラフ構造であるため、視覚的に表示できると便利です。`graph` 設定を 1 に設定し、出力フォーマットを TSV に指定することができます：
 
 ```sql
 EXPLAIN PIPELINE graph=1 WITH

@@ -1,5 +1,5 @@
 ---
-title: Projetando um schema para observabilidade
+title: 'Projetando um schema para observabilidade'
 description: 'Projetando um schema para observabilidade'
 keywords: ['observabilidade', 'logs', 'traces', 'métricas', 'OpenTelemetry', 'Grafana', 'OTel']
 slug: /use-cases/observability/schema-design
@@ -21,6 +21,15 @@ Recomendamos que os usuários sempre criem seu próprio schema para logs e trace
 *Descrevemos cada um dos casos de uso acima em detalhes abaixo.*
 
 **Importante:** Embora os usuários sejam incentivados a estender e modificar seu schema para obter compressão ideal e melhor desempenho de consulta, eles devem seguir, sempre que possível, a nomenclatura do schema OTel para colunas principais. O plugin do Grafana para ClickHouse pressupõe a existência de algumas colunas OTel básicas para ajudar na criação de consultas, por exemplo, Timestamp e SeverityText. As colunas obrigatórias para logs e traces estão documentadas aqui [[1]](https://grafana.com/developers/plugin-tools/tutorials/build-a-logs-data-source-plugin#logs-data-frame-format)[[2]](https://grafana.com/docs/grafana/latest/explore/logs-integration/) e [aqui](https://grafana.com/docs/grafana/latest/explore/trace-integration/#data-frame-structure), respectivamente. Você pode optar por alterar esses nomes de colunas, substituindo os padrões na configuração do plugin.
+
+<Tip>
+  **ClickStack inclui um schema padrão otimizado**
+
+  **ClickStack fornece schemas prontos para uso para logs, traces e métricas** que incorporam os recursos mais recentes do ClickHouse (índices de texto para pesquisa de texto completo e de chaves de map, colunas materializadas e arrays ALIAS para filtragem com leitura direta, pesquisas de linhas por número de bloco) e foram submetidos a benchmark para oferecer um forte desempenho pronto para uso para workloads de logging e trace. Use-os como referência para o seu próprio design.
+
+  * DDL canônico: [Tables and schemas used by ClickStack](/pt-BR/clickstack/ingesting-data/schemas).
+  * Receitas de otimização: [ClickStack performance tuning](/pt-BR/clickstack/managing/performance-tuning). Muitas das recomendações nessa página (colunas materializadas, skip indexes, escolha de chave primária, projeções, visões materializadas) se aplicam diretamente a uma configuração feita por você.
+</Tip>
 
 <div id="extracting-structure-with-sql">
   ## Extraindo a estrutura com SQL
@@ -243,7 +252,7 @@ Peak memory usage: 3.16 MiB.
   ## Visões materializadas
 </div>
 
-[visão materializada](/pt-BR/concepts/features/materialized-views) oferecem uma forma mais poderosa de aplicar filtragem e transformações SQL a logs e traces.
+[visão materializada](/pt-BR/concepts/features/materialized-views/index) oferecem uma forma mais poderosa de aplicar filtragem e transformações SQL a logs e traces.
 
 As visões materializadas permitem transferir o custo de computação do tempo de consulta para o momento da inserção. Uma visão materializada no ClickHouse é apenas um gatilho que executa uma consulta em blocos de dados à medida que eles são inseridos em uma tabela. Os resultados dessa consulta são inseridos em uma segunda tabela de &quot;destino&quot;.
 
@@ -259,7 +268,7 @@ A consulta associada à visão materializada pode, teoricamente, ser qualquer co
 
 É importante lembrar que a consulta é apenas um gatilho executado sobre as linhas que estão sendo inseridas em uma tabela (a tabela de origem), com os resultados enviados para uma nova tabela (a tabela de destino).
 
-Para garantir que não persistamos os dados duas vezes (nas tabelas de origem e de destino), podemos alterar a tabela de origem para usar um [Null table engine](/pt-BR/reference/engines/table-engines/special/null), preservando o schema original. Nossos OTel collectors continuarão enviando dados para essa tabela. Por exemplo, para logs, a tabela `otel_logs` se torna:
+Para garantir que não persistamos os dados duas vezes (nas tabelas de origem e de destino), podemos alterar a tabela de origem para usar um [motor de tabela Null](/pt-BR/reference/engines/table-engines/special/null), preservando o schema original. Nossos OTel collectors continuarão enviando dados para essa tabela. Por exemplo, para logs, a tabela `otel_logs` se torna:
 
 ```sql
 CREATE TABLE otel_logs
@@ -639,12 +648,12 @@ Além disso, embora os timestamps se beneficiem da codificação delta em termos
 <Image img="/images/use-cases/observability/observability-12.png" alt="Observabilidade e dicionários" size="md" />
 
 Isso é útil em vários cenários, desde enriquecer dados ingeridos em tempo real sem desacelerar o processo de ingestão até melhorar o desempenho das consultas em geral, com benefício especial para as JOINs.
-Embora junções raramente sejam necessárias em casos de uso de observabilidade, os dicionários ainda podem ser úteis para fins de enriquecimento, tanto no momento da inserção quanto no momento da consulta. Fornecemos exemplos de ambos abaixo.
+Embora junções raramente sejam necessárias em casos de uso de observabilidade, os dicionários ainda podem ser úteis para fins de enriquecimento, tanto no tempo de inserção quanto no tempo de consulta. Fornecemos exemplos de ambos abaixo.
 
 <Info>
   **Acelerando junções**
 
-  Usuários interessados em acelerar junções com dicionários podem encontrar mais detalhes [aqui](/pt-BR/concepts/features/dictionaries).
+  Usuários interessados em acelerar junções com dicionários podem encontrar mais detalhes [aqui](/pt-BR/concepts/features/dictionaries/index).
 </Info>
 
 <div id="insert-time-vs-query-time">
@@ -653,12 +662,12 @@ Embora junções raramente sejam necessárias em casos de uso de observabilidade
 
 Dicionários podem ser usados para enriquecer conjuntos de dados no tempo de consulta ou no tempo de inserção. Cada uma dessas abordagens tem seus próprios prós e contras. Em resumo:
 
-* **Tempo de inserção** - Em geral, isso é apropriado quando o valor de enriquecimento não muda e existe em uma fonte externa que pode ser usada para preencher o dicionário. Nesse caso, enriquecer a linha no momento da inserção evita a consulta ao dicionário no momento da consulta. Isso tem um custo em termos de desempenho de inserção, além de uma sobrecarga adicional de armazenamento, já que os valores enriquecidos serão armazenados como colunas.
-* **Tempo de consulta** - Se os valores em um dicionário mudam com frequência, as consultas no momento da consulta costumam ser mais adequadas. Isso evita a necessidade de atualizar colunas (e reescrever dados) se os valores mapeados mudarem. Essa flexibilidade vem com o custo de uma consulta no momento da consulta. Esse custo normalmente só é perceptível quando a consulta é necessária para muitas linhas, por exemplo, ao usar uma consulta ao dicionário em uma cláusula de filtro. Para enriquecimento de resultados, ou seja, no `SELECT`, essa sobrecarga normalmente não é perceptível.
+* **Tempo de inserção** - Em geral, isso é apropriado quando o valor de enriquecimento não muda e existe em uma fonte externa que pode ser usada para preencher o dicionário. Nesse caso, enriquecer a linha no tempo de inserção evita a consulta ao dicionário no tempo de consulta. Isso tem um custo em termos de desempenho de inserção, além de uma sobrecarga adicional de armazenamento, já que os valores enriquecidos serão armazenados como colunas.
+* **Tempo de consulta** - Se os valores em um dicionário mudam com frequência, as consultas no tempo de consulta costumam ser mais adequadas. Isso evita a necessidade de atualizar colunas (e reescrever dados) se os valores mapeados mudarem. Essa flexibilidade vem com o custo de uma consulta no tempo de consulta. Esse custo normalmente só é perceptível quando a consulta é necessária para muitas linhas, por exemplo, ao usar uma consulta ao dicionário em uma cláusula de filtro. Para enriquecimento de resultados, ou seja, no `SELECT`, essa sobrecarga normalmente não é perceptível.
 
 Recomendamos que os usuários se familiarizem com os conceitos básicos de dicionários. Dicionários fornecem uma tabela de consulta em memória da qual os valores podem ser recuperados usando [funções especializadas](/pt-BR/reference/functions/regular-functions/ext-dict-functions#dictGetAll).
 
-Para exemplos simples de enriquecimento, veja o guia sobre Dicionários [aqui](/pt-BR/concepts/features/dictionaries). Abaixo, focamos em tarefas comuns de enriquecimento de observabilidade.
+Para exemplos simples de enriquecimento, veja o guia sobre Dicionários [aqui](/pt-BR/concepts/features/dictionaries/index). Abaixo, focamos em tarefas comuns de enriquecimento de observabilidade.
 
 <div id="using-ip-dictionaries">
   ### Usando dicionários de IP
@@ -1102,7 +1111,7 @@ Os:     ('Other','0','0','0')
 
 Para ver mais exemplos e detalhes sobre dicionários, recomendamos os seguintes artigos:
 
-* [Tópicos avançados sobre dicionários](/pt-BR/concepts/features/dictionaries#advanced-dictionary-topics)
+* [Tópicos avançados sobre dicionários](/pt-BR/concepts/features/dictionaries/index#advanced-dictionary-topics)
 * [&quot;Como usar dicionários para acelerar consultas&quot;](https://clickhouse.com/blog/faster-queries-dictionaries-clickhouse)
 * [Dicionários](/pt-BR/reference/statements/create/dictionary)
 

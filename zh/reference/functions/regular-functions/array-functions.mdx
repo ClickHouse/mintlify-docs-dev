@@ -286,6 +286,99 @@ SELECT arrayAvg(x, y -> x*y, [2, 3], [2, 3]) AS res;
 6.5
 ```
 
+<div id="arrayBottomK">
+  ## arrayBottomK
+</div>
+
+引入版本：v26.6.0
+
+返回输入数组中最小的 K 个元素组成的数组，并按升序排序。
+如果指定了 lambda 函数 `f`，则按对每个元素应用 `f` 后得到的结果进行比较。
+如果 `f` 接受多个参数，则会将额外的数组传递给 `arrayBottomK`，这些数组中的元素
+分别对应 `f` 的各个参数。
+
+`NULL` 值会被跳过，不会出现在结果中。结果大小最多为 `K`，
+当输入数组中的非 `NULL` 元素少于 `K` 个时，结果可能会更小。
+结果的元素类型是输入元素类型对应的非 Nullable 版本。
+
+`arrayBottomK` 是一个[高阶函数](/zh/reference/functions/regular-functions/overview#higher-order-functions)。
+
+另请参阅：
+
+* `arrayTopK`，它返回最大的 K 个元素。
+* `arrayPartialSort`，它会在位置 `[1..K]` 生成相同的 K 个元素，但
+  也会以未指定的顺序保留其余元素，并且不会跳过 NULL 值。
+
+**语法**
+
+```sql
+arrayBottomK([f,] K, arr [, arr1, ... ,arrN])
+```
+
+**参数**
+
+* `f(arr[, arr1, ... ,arrN])` — 可选。用于计算每个元素排序键的 Lambda 函数。[`Lambda function`](/zh/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
+* `K` — 要返回的最小元素个数。[`(U)Int8/16/32/64`](/zh/reference/data-types/int-uint)
+* `arr` — 一个数组。[`Array(T)`](/zh/reference/data-types/array)
+* `arr1, ... ,arrN` — 当 `f` 接受多个参数时，额外的 `N` 个数组。[`Array(T)`](/zh/reference/data-types/array)
+
+**返回值**
+
+返回 `arr` 中最多 `K` 个值最小的元素 (或 Lambda 计算结果最小的元素) ，并按升序排序。
+会跳过 NULL 值。即使输入类型为 `Nullable(T)`，返回数组的元素类型仍为 `T`。
+
+**示例**
+
+**simple&#95;int**
+
+```sql title=Query
+SELECT arrayBottomK(3, [1, 5, 2, 7, 3])
+```
+
+```response title=Response
+[1,2,3]
+```
+
+**skip&#95;nulls**
+
+```sql title=Query
+SELECT arrayBottomK(3, [1, NULL, 5, 2, NULL, 7])
+```
+
+```response title=Response
+[1,2,5]
+```
+
+**fewer&#95;than&#95;k**
+
+```sql title=Query
+SELECT arrayBottomK(5, [1, NULL, 2])
+```
+
+```response title=Response
+[1,2]
+```
+
+**lambda&#95;simple**
+
+```sql title=Query
+SELECT arrayBottomK((x) -> -x, 2, [5, 9, 1, 3])
+```
+
+```response title=Response
+[9,5]
+```
+
+**lambda&#95;multi**
+
+```sql title=Query
+SELECT arrayBottomK((x, y) -> y, 2, ['a', 'b', 'c'], [3, 1, 2])
+```
+
+```response title=Response
+['b','c']
+```
+
 <div id="arrayCompact">
   ## arrayCompact
 </div>
@@ -2225,15 +2318,15 @@ SELECT arrayNormalizedGini([0.9, 0.3, 0.8, 0.7],[6, 1, 0, 2]);
 **语法**
 
 ```sql
-arrayPartialReverseSort([f,] arr [, arr1, ... ,arrN], limit)
+arrayPartialReverseSort([f,] limit, arr [, arr1, ... ,arrN])
 ```
 
 **参数**
 
 * `f(arr[, arr1, ... ,arrN])` — 应用于数组 `arr` 元素的 lambda 函数。[`Lambda function`](/zh/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
+* `limit` — 排序进行到的索引位置。[`(U)Int*`](/zh/reference/data-types/int-uint)
 * `arr` — 要排序的数组。[`Array(T)`](/zh/reference/data-types/array)
 * `arr1, ... ,arrN` — 当 `f` 接受多个参数时，额外的 N 个数组。[`Array(T)`](/zh/reference/data-types/array)
-* `limit` — 排序进行到的索引位置。[`(U)Int*`](/zh/reference/data-types/int-uint)
 
 **返回值**
 
@@ -2402,15 +2495,15 @@ SELECT arrayPartialShuffle(materialize([1, 2, 3, 4]), 2, 42), arrayPartialShuffl
 **语法**
 
 ```sql
-arrayPartialSort([f,] arr [, arr1, ... ,arrN], limit)
+arrayPartialSort([f,] limit, arr [, arr1, ... ,arrN])
 ```
 
 **参数**
 
 * `f(arr[, arr1, ... ,arrN])` — 用于处理数组 `x` 中元素的 lambda 函数。[`Lambda function`](/zh/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
+* `limit` — 排序将进行到的索引值。[`(U)Int*`](/zh/reference/data-types/int-uint)
 * `arr` — 要排序的数组。[`Array(T)`](/zh/reference/data-types/array)
 * `arr1, ... ,arrN` — 当 `f` 接受多个参数时，额外的 N 个数组。[`Array(T)`](/zh/reference/data-types/array)
-* `limit` — 排序将进行到的索引值。[`(U)Int*`](/zh/reference/data-types/int-uint)
 
 **返回值**
 
@@ -2610,7 +2703,7 @@ arrayPushBack(arr, x)
   - 添加数值时，ClickHouse 会根据数组的数据类型自动设置 `x` 的类型。
   - 可以为 `NULL`。该函数会向数组中添加一个 `NULL` 元素，并将数组元素的类型转换为 `Nullable`。
 
-  有关 ClickHouse 中数据类型的更多信息，请参见 [数据类型](/zh/reference/data-types)。
+  有关 ClickHouse 中数据类型的更多信息，请参见 [数据类型](/zh/reference/data-types/index)。
 </Note>
 
 **返回值**
@@ -2653,7 +2746,7 @@ arrayPushFront(arr, x)
   - 添加数值时，ClickHouse 会根据数组的数据类型自动设置 `x` 的类型。
   - 可以为 `NULL`。该函数会向数组中添加一个 `NULL` 元素，并将数组元素的类型转换为 `Nullable`。
 
-  有关 ClickHouse 中数据类型的更多信息，请参见 [数据类型](/zh/reference/data-types)。
+  有关 ClickHouse 中数据类型的更多信息，请参见 [数据类型](/zh/reference/data-types/index)。
 </Note>
 
 **返回值**
@@ -3087,12 +3180,12 @@ SELECT arrayReverseFill(x, y, z -> x > y AND x < z, [5, 3, 6, 2], [4, 7, 1, 3], 
 **语法**
 
 ```sql
-arrayReverseSort([f,] arr [, arr1, ... ,arrN)
+arrayReverseSort([f,] arr [, arr1, ... ,arrN])
 ```
 
 **参数**
 
-* `f(y1[, y2 ... yN])` — 应用于数组 `x` 元素的 Lambda 函数。 - `arr` — 要排序的数组。[`Array(T)`](/zh/reference/data-types/array) - `arr1, ..., yN` — 可选。当 `f` 接受多个参数时，表示额外的 N 个数组。
+* `f(y1[, y2 ... yN])` — 应用于数组 `x` 元素的 Lambda 函数。 - `arr` — 要排序的数组。[`Array(T)`](/zh/reference/data-types/array) - `arr1, ..., arrN` — 可选。当 `f` 接受多个参数时，表示额外的 N 个数组。
 
 **返回值**
 
@@ -3546,7 +3639,7 @@ arraySort([f,] arr [, arr1, ... ,arrN])
 
 **参数**
 
-* `f(y1[, y2 ... yN])` — 应用于数组 `x` 元素的 lambda 函数。 - `arr` — 要排序的数组。[`Array(T)`](/zh/reference/data-types/array) - `arr1, ..., yN` — 可选。当 `f` 接受多个参数时，表示另外 N 个数组。
+* `f(y1[, y2 ... yN])` — 应用于数组 `x` 元素的 lambda 函数。 - `arr` — 要排序的数组。[`Array(T)`](/zh/reference/data-types/array) - `arr1, ..., arrN` — 可选。当 `f` 接受多个参数时，表示另外 N 个数组。
 
 **返回值**
 
@@ -3709,6 +3802,95 @@ arraySymmetricDifference([1, 2], [1, 2], [1, 3]) AS non_empty_symmetric_differen
 ┌─empty_symmetric_difference─┬─non_empty_symmetric_difference─┐
 │ []                         │ [3,2]                          │
 └────────────────────────────┴────────────────────────────────┘
+```
+
+<div id="arrayTopK">
+  ## arrayTopK
+</div>
+
+引入版本：v26.6.0
+
+返回由输入数组中最大的 K 个元素组成的数组，并按降序排列。
+如果指定了 lambda 函数 `f`，则按照对每个元素应用 `f` 后得到的结果进行比较。
+如果 `f` 接受多个参数，则可以向 `arrayTopK` 传入额外的数组，这些数组中的元素
+分别对应 `f` 的各个参数。
+
+`NULL` 值会被跳过，不会出现在结果中。结果大小最多为 `K`，
+当输入数组中的非 `NULL` 元素少于 `K` 个时，结果可能会更小。
+结果的元素类型是输入元素类型对应的非 Nullable 类型。
+
+`arrayTopK` 是一个[高阶函数](/zh/reference/functions/regular-functions/overview#higher-order-functions)。
+
+另请参阅 `arrayBottomK`，它会返回最小的 K 个元素。
+
+**语法**
+
+```sql
+arrayTopK([f,] K, arr [, arr1, ... ,arrN])
+```
+
+**参数**
+
+* `f(arr[, arr1, ... ,arrN])` — 可选。用于计算每个元素排序键的 lambda 函数。[`lambda 函数`](/zh/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
+* `K` — 要返回的最大元素个数。[`(U)Int8/16/32/64`](/zh/reference/data-types/int-uint)
+* `arr` — 一个数组。[`Array(T)`](/zh/reference/data-types/array)
+* `arr1, ... ,arrN` — 当 `f` 接受多个参数时，额外的 N 个数组。[`Array(T)`](/zh/reference/data-types/array)
+
+**返回值**
+
+返回 `arr` 中最多 `K` 个值最大的元素 (或 Lambda 结果最大的元素) ，并按降序排列。
+会跳过 NULL 值。即使输入类型为 `Nullable(T)`，返回的数组元素类型仍为 `T`。
+
+**示例**
+
+**simple&#95;int**
+
+```sql title=Query
+SELECT arrayTopK(3, [1, 5, 2, 7, 3])
+```
+
+```response title=Response
+[7,5,3]
+```
+
+**skip&#95;nulls**
+
+```sql title=Query
+SELECT arrayTopK(3, [1, NULL, 5, 2, NULL, 7])
+```
+
+```response title=Response
+[7,5,2]
+```
+
+**fewer&#95;than&#95;k**
+
+```sql title=Query
+SELECT arrayTopK(5, [1, NULL, 2])
+```
+
+```response title=Response
+[2,1]
+```
+
+**lambda&#95;simple**
+
+```sql title=Query
+SELECT arrayTopK((x) -> -x, 2, [5, 9, 1, 3])
+```
+
+```response title=Response
+[1,3]
+```
+
+**lambda&#95;multi**
+
+```sql title=Query
+SELECT arrayTopK((x, y) -> y, 2, ['a', 'b', 'c'], [3, 1, 2])
+```
+
+```response title=Response
+['a','c']
 ```
 
 <div id="arrayTranspose">
@@ -5079,7 +5261,7 @@ Introduced in：v1.1.0
 length(x)
 ```
 
-**别名**: `OCTET_LENGTH`
+**别名**: `CARDINALITY`, `OCTET_LENGTH`
 
 **参数**
 
@@ -5259,7 +5441,7 @@ replicate(x, arr)
 
 **参数**
 
-* `x` — 用于填充结果数组的值。[`Any`](/zh/reference/data-types)
+* `x` — 用于填充结果数组的值。[`Any`](/zh/reference/data-types/index)
 * `arr` — 数组。[`Array(T)`](/zh/reference/data-types/array)
 
 **返回值**

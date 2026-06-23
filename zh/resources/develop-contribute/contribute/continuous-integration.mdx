@@ -74,28 +74,61 @@ git push
   ## 风格检查
 </div>
 
-对代码库执行各种风格检查。
-
-Style Check 作业中的基础检查：
+对代码库执行各种风格检查。下面的每个子检查都对应 [`ci/jobs/check_style.py`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/check_style.py) 中的一个 `testname`，并且都可以使用 `--test <name>` 单独运行 (见下文) 。
 
 <div id="cpp">
   ##### cpp
 </div>
 
-使用 [`ci/jobs/scripts/check_style/check_cpp.sh`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/scripts/check_style/check_cpp.sh) 脚本 (也可在本地运行) 执行基于简单正则表达式的代码风格检查。
-如果检查失败，请根据[代码风格指南](/zh/resources/develop-contribute/contribute/style)修复相应的风格问题。
+通过 [`check_cpp.sh`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/scripts/check_style/check_cpp.sh) 进行基于 Regex 的 C++ 风格检查。如果检查失败，请根据[代码风格指南](/zh/resources/develop-contribute/contribute/style)修复相应的风格问题。
 
-<div id="codespell">
-  ##### codespell, aspell
+<div id="whitespace-check">
+  ##### whitespace_check
 </div>
 
-检查语法和拼写错误。
+标记 C++ 中逗号后不用于列对齐的双空格。
 
-<div id="mypy">
-  ##### mypy
+<div id="catch-all">
+  ##### catch_all
 </div>
 
-对 Python 代码进行静态类型检查。
+禁止在析构函数、`main` 和 fuzzer 入口点以外使用 `catch (...)`，因为在其他位置吞掉未知异常并不安全。
+
+<div id="yamllint">
+  ##### yamllint
+</div>
+
+使用 `.yamllint` 检查 `.github/` 下的 YAML 工作流文件。
+
+<div id="xmllint">
+  ##### xmllint
+</div>
+
+对 `tests/` 和 `programs/` 下的 XML 文件进行验证。
+
+<div id="functional-tests-check">
+  ##### functional_tests_check
+</div>
+
+检查无状态测试：对 `event_date` 进行过滤的查询必须使用 `>= yesterday()`，而不能使用 `today()` (以避免在午夜前后出现不稳定情况) ；此外，测试文件名不得包含 `fail`。
+
+<div id="test-numbers-check">
+  ##### test_numbers_check
+</div>
+
+标记无状态测试编号中较大的空缺 (`tests/queries/0_stateless/<NNNNN>_*`) 。
+
+<div id="symlinks">
+  ##### 符号链接
+</div>
+
+检测仓库中的失效符号链接。
+
+<div id="various">
+  ##### 其他
+</div>
+
+通过 [`various_checks.sh`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/scripts/check_style/various_checks.sh) 执行的各项仓库检查：对 `system.query_log` / `system.parts` / 等的查询必须按 `currentDatabase` 过滤，`Replicated*MergeTree` 的 ZooKeeper path 必须包含每个测试各自的前缀，集成测试目录必须包含 `__init__.py`，不得包含 UTF BOM，源码/数据文件不得设置可执行位，第三方 docker-compose image 不得使用 `:latest` 标签，等等。
 
 <div id="running-style-check-locally">
   ### 在本地运行样式检查作业

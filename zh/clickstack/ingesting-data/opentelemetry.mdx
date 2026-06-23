@@ -15,7 +15,7 @@ import { Image } from "/snippets/components/Image.jsx";
   此外还提供托管版 ClickStack — 请参阅 [Managed ClickStack](/zh/clickstack/getting-started/managed)。
 </Tip>
 
-用户可以通过[语言 SDK](/zh/clickstack/ingesting-data/sdks)将数据发送到此 collector，也可以通过采集基础设施指标和日志的数据采集 agent 发送 (例如以 [agent](/zh/clickstack/ingesting-data/collector#collector-roles) 角色运行的 OTel collector，或其他技术，例如 [Fluentd](https://www.fluentd.org/) 或 [Vector](https://vector.dev/)) 。对于希望使用托管 OpenTelemetry 管道的团队，[Bindplane](/zh/clickstack/integration-partners/bindplane) 提供了一种 OpenTelemetry 原生解决方案，并内置原生 ClickStack 目标端，可简化遥测数据的收集、处理和路由。
+用户可以通过[语言 SDK](/zh/clickstack/ingesting-data/sdks/index)将数据发送到此 collector，也可以通过采集基础设施指标和日志的数据采集 agent 发送 (例如以 [agent](/zh/clickstack/ingesting-data/collector#collector-roles) 角色运行的 OTel collector，或其他技术，例如 [Fluentd](https://www.fluentd.org/) 或 [Vector](https://vector.dev/)) 。对于希望使用托管 OpenTelemetry 管道的团队，[Bindplane](/zh/clickstack/integration-partners/bindplane) 提供了一种 OpenTelemetry 原生解决方案，并内置原生 ClickStack 目标端，可简化遥测数据的收集、处理和路由。
 
 <div id="sending-otel-data">
   ## 发送 OpenTelemetry 数据
@@ -42,7 +42,7 @@ import { Image } from "/snippets/components/Image.jsx";
     * **HTTP (OTLP):** `http://localhost:4318`
     * **gRPC (OTLP):** `localhost:4317`
 
-    对于支持 OpenTelemetry 的[语言 SDK](/zh/clickstack/ingesting-data/sdks)和遥测库，您只需在应用程序中设置 `OTEL_EXPORTER_OTLP_ENDPOINT` 环境变量：
+    对于支持 OpenTelemetry 的[语言 SDK](/zh/clickstack/ingesting-data/sdks/index)和遥测库，您只需在应用程序中设置 `OTEL_EXPORTER_OTLP_ENDPOINT` 环境变量：
 
     ```shell
     export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
@@ -63,12 +63,12 @@ import { Image } from "/snippets/components/Image.jsx";
               parse_from: attributes.time_local
               layout: '%Y-%m-%d %H:%M:%S'
     exporters:
-      # HTTP 配置
+      # HTTP setup
       otlphttp/hdx:
         endpoint: 'http://localhost:4318'
         compression: gzip
      
-      # gRPC 配置（备选）
+      # gRPC setup (alternative)
       otlp/hdx:
         endpoint: 'localhost:4317'
         compression: gzip
@@ -79,7 +79,7 @@ import { Image } from "/snippets/components/Image.jsx";
     service:
       telemetry:
         metrics:
-          address: 0.0.0.0:9888 # 已修改，因为同一主机上运行着 2 个 collector
+          address: 0.0.0.0:9888 # Modified as 2 collectors running on same host
       pipelines:
         logs:
           receivers: [filelog]
@@ -97,9 +97,9 @@ import { Image } from "/snippets/components/Image.jsx";
 
     ### 安装 ClickStack OpenTelemetry collector
 
-    ClickStack OTel collector 也可以独立部署，不依赖于栈中的其他组件。
+    ClickStack OTel collector 也可以独立部署，不依赖于技术栈中的其他组件。
 
-    如果你使用的是 [HyperDX-only](/zh/clickstack/deployment/hyperdx-only) 发行版，则需要自行负责将数据发送到 ClickHouse。可通过以下方式实现：
+    如果你使用的是 [HyperDX-only](/zh/clickstack/deployment/hyperdx-only) 发行版，则需要自行负责将数据传送到 ClickHouse。可通过以下方式实现：
 
     * 运行你自己的 OpenTelemetry collector，并将其指向 ClickHouse——见下文。
     * 使用其他工具直接发送到 ClickHouse，例如 [Vector](https://vector.dev/)、[Fluentd](https://www.fluentd.org/) 等，甚至默认的 [OTel contrib collector 发行版](https://github.com/open-telemetry/opentelemetry-collector-contrib)。
@@ -107,19 +107,19 @@ import { Image } from "/snippets/components/Image.jsx";
     <Info>
       **我们建议使用 ClickStack OpenTelemetry collector**
 
-      这样你可以受益于标准化摄取、强制 schema 约束，以及与 HyperDX UI 的开箱即用兼容性。使用默认 schema 可启用自动 source 检测和预配置的列映射。
+      这样你可以受益于标准化摄取、强制执行的 schema，以及与 HyperDX UI 的开箱即用兼容性。使用默认 schema 可启用自动 source 检测和预配置的列映射。
     </Info>
 
-    更多详情，请参阅[“部署 collector”](/zh/clickstack/ingesting-data/collector)。
+    更多详情，请参阅[&quot;部署 collector&quot;](/zh/clickstack/ingesting-data/collector)。
 
     ### 将数据发送到 collector
 
-    要将数据发送到 ClickStack，请将你的 OpenTelemetry instrumentation 指向 OpenTelemetry collector 提供的以下端点：
+    要将数据发送到 ClickStack，请将你的 OpenTelemetry 插桩指向 OpenTelemetry collector 提供的以下端点：
 
     * **HTTP (OTLP):** `http://localhost:4318`
     * **gRPC (OTLP):** `localhost:4317`
 
-    对于支持 OpenTelemetry 的[语言 SDK](/zh/clickstack/ingesting-data/sdks)和 telemetry 库，你只需在应用程序中设置 `OTEL_EXPORTER_OTLP_ENDPOINT` 环境变量：
+    对于支持 OpenTelemetry 的[语言 SDK](/zh/clickstack/ingesting-data/sdks/index)和遥测库，你只需在应用程序中设置 `OTEL_EXPORTER_OTLP_ENDPOINT` 环境变量：
 
     ```shell
     export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
@@ -150,14 +150,14 @@ import { Image } from "/snippets/components/Image.jsx";
               parse_from: attributes.time_local
               layout: '%Y-%m-%d %H:%M:%S'
     exporters:
-      # HTTP 配置
+      # HTTP setup
       otlphttp/hdx:
         endpoint: 'http://localhost:4318'
         headers:
           authorization: <YOUR_API_INGESTION_KEY>
         compression: gzip
      
-      # gRPC 配置（备选方案）
+      # gRPC setup (alternative)
       otlp/hdx:
         endpoint: 'localhost:4317'
         headers:
@@ -170,7 +170,7 @@ import { Image } from "/snippets/components/Image.jsx";
     service:
       telemetry:
         metrics:
-          address: 0.0.0.0:9888 # 已修改，因为同一主机上运行了 2 个 collector
+          address: 0.0.0.0:9888 # Modified as 2 collectors running on same host
       pipelines:
         logs:
           receivers: [filelog]
