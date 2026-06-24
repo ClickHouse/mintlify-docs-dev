@@ -52,7 +52,7 @@ export const SampleDatasetExplorer = ({ categories }) => {
         { title: 'NYPD complaint data', href: '/get-started/sample-datasets/nypd-complaint-data', imgLight: '/images/sample-datasets-grid/nypd-complaint-data-light.jpg', imgDark: '/images/sample-datasets-grid/nypd-complaint-data-dark.jpg' },
         { title: 'OnTime (airline flights)', href: '/get-started/sample-datasets/ontime', imgLight: '/images/sample-datasets-grid/ontime-light.jpg', imgDark: '/images/sample-datasets-grid/ontime-dark.jpg' },
         { title: 'UK property prices', href: '/get-started/sample-datasets/uk-price-paid', imgLight: '/images/sample-datasets-grid/uk-price-paid-light.jpg', imgDark: '/images/sample-datasets-grid/uk-price-paid-dark.jpg' },
-        { title: "What's on the Menu? (NYPL)", href: '/get-started/sample-datasets/menus', imgLight: '/images/sample-datasets-grid/menus-dark.jpg', imgDark: '/images/sample-datasets-grid/menus-light.jpg' },
+        { title: "What's on the Menu? (NYPL)", href: '/get-started/sample-datasets/menus', imgLight: '/images/sample-datasets-grid/menus-light.jpg', imgDark: '/images/sample-datasets-grid/menus-dark.jpg' },
       ],
     },
     {
