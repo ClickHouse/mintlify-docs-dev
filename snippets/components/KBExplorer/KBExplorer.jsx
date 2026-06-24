@@ -124,7 +124,7 @@ export const KBExplorer = ({ index, featured = [] }) => {
     if (e.defaultPrevented) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
     e.preventDefault();
-    window.location.assign(href);
+    window.location.assign(withBase(href));
   };
 
   // Featured articles, in the order listed in `featured`. Each keeps its banner
