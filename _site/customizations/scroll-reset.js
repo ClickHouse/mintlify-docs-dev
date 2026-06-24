@@ -4,19 +4,29 @@
   // With an announcement banner configured, Next.js skips its scroll-to-top
   // on client-side navigation: the banner is position:fixed at the top of the
   // re-rendered segment, so the router considers the new page "already in
-  // viewport" and leaves the scroll position where it was. (Banner-less
-  // Mintlify sites scroll to top as expected; dismissing the banner makes the
-  // bug disappear.) Restore the expected behavior by scrolling to the top
-  // whenever a forward navigation changes the path.
+  // viewport" and leaves the scroll position where it was.
   //
-  // The path is watched from a rAF loop rather than by wrapping
-  // history.pushState — the router can hold a reference to the original
-  // pushState from before this script runs, which would bypass a wrapper.
+  // Patch history.pushState/replaceState at eval time (before Next.js hydration)
+  // to fire a synthetic 'ch:navigate' event on every SPA navigation. This replaces
+  // the rAF polling loop the original used — the loop ran 60fps for the entire page
+  // lifetime; the event fires only on actual navigations.
   //
-  // Back/forward (popstate) is deliberately left alone so the browser and
-  // router can restore the previous scroll position. Cross-page hash links
-  // (/page#anchor) scroll to the anchor once the new page has rendered it,
-  // since the banner bug breaks that scroll too.
+  // Back/forward (popstate) is left alone so the browser and router can restore
+  // the previous scroll position. Cross-page hash links (/page#anchor) scroll to
+  // the anchor once the new page has rendered it.
+
+  (function patchHistory() {
+    function wrap(orig) {
+      return function () {
+        var result = orig.apply(this, arguments);
+        window.dispatchEvent(new Event('ch:navigate'));
+        return result;
+      };
+    }
+    history.pushState = wrap(history.pushState);
+    history.replaceState = wrap(history.replaceState);
+  })();
+
   var lastPath = window.location.pathname;
   var traversed = false;
 
@@ -44,19 +54,16 @@
     }
   }
 
-  function watch() {
+  window.addEventListener('ch:navigate', function () {
     var path = window.location.pathname;
-    if (path !== lastPath) {
-      lastPath = path;
-      if (traversed) {
-        traversed = false;
-      } else if (window.location.hash) {
-        scrollToAnchor(window.location.hash, 180);
-      } else {
-        window.scrollTo(0, 0);
-      }
+    if (path === lastPath) return;
+    lastPath = path;
+    if (traversed) {
+      traversed = false;
+    } else if (window.location.hash) {
+      scrollToAnchor(window.location.hash, 180);
+    } else {
+      window.scrollTo(0, 0);
     }
-    window.requestAnimationFrame(watch);
-  }
-  window.requestAnimationFrame(watch);
+  });
 })();

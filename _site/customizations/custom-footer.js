@@ -126,82 +126,6 @@
     return html;
   }
 
-  function injectStyles() {
-    if (document.getElementById('ch-footer-styles')) return;
-    var style = document.createElement('style');
-    style.id = 'ch-footer-styles';
-    style.textContent = ''
-      + '#' + FOOTER_ID + ' { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }'
-      // On desktop the sidebar is fixed at 19rem wide; match #content-container's
-      // horizontal padding (pl-[32px] / pr-[32px]) so the footer's inner edges
-      // align with the content area used by both doc pages and the home page.
-      + '@media (min-width: 1024px) { #' + FOOTER_ID + ' { padding-left: calc(19rem + 32px) !important; padding-right: 32px !important; } }'
-      + '#' + FOOTER_ID + ' [data-inner] { max-width: 1280px; margin: 0 auto; }'
-      + '#' + FOOTER_ID + ' * { box-sizing: border-box; }'
-      + '#' + FOOTER_ID + ' a { text-decoration: none; transition: color 0.15s, border-color 0.15s; }'
-      // Top section: sitemap + CTA side by side only at wide viewports
-      + '#' + FOOTER_ID + ' [data-top] { display: flex; flex-direction: column; gap: 32px; padding-bottom: 48px; }'
-      + '@media (min-width: 1400px) { #' + FOOTER_ID + ' [data-top] { flex-direction: row; gap: 40px; } }'
-      // Sitemap grid: 2 cols default, 3 at md, 5 only when side-by-side
-      + '#' + FOOTER_ID + ' [data-sitemap] { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; flex: 1; min-width: 0; }'
-      + '@media (min-width: 768px) { #' + FOOTER_ID + ' [data-sitemap] { grid-template-columns: repeat(3, 1fr); } }'
-      + '@media (min-width: 1400px) { #' + FOOTER_ID + ' [data-sitemap] { grid-template-columns: repeat(5, 1fr); } }'
-      // Column headings
-      + '#' + FOOTER_ID + ' [data-sitemap] h3 { font-size: 13px; font-weight: 600; margin: 0 0 12px; }'
-      + '#' + FOOTER_ID + ' [data-sitemap] .ch-sub-heading { margin-top: 24px; }'
-      + '#' + FOOTER_ID + ' [data-sitemap] ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }'
-      + '#' + FOOTER_ID + ' [data-sitemap] a { font-size: 13px; }'
-      // CTA column
-      + '#' + FOOTER_ID + ' [data-cta] { display: flex; flex-direction: column; }'
-      + '@media (min-width: 1400px) { #' + FOOTER_ID + ' [data-cta] { width: 300px; flex-shrink: 0; } }'
-      + '#' + FOOTER_ID + ' [data-cta] p { font-size: 13px; line-height: 1.5; margin: 0 0 20px; }'
-      + '#' + FOOTER_ID + ' [data-cta] form { display: flex; border-radius: 8px; overflow: hidden; margin-bottom: 16px; }'
-      + '#' + FOOTER_ID + ' [data-cta] form input { flex: 1; background: transparent; border: none; padding: 10px 14px; font-size: 13px; outline: none; min-width: 0; }'
-      + '#' + FOOTER_ID + ' [data-cta] form button { background: #fdff75; color: #1c1c1c; border: none; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }'
-      + '#' + FOOTER_ID + ' [data-cta] form button:hover { background: #eaec6a; }'
-      + '#' + FOOTER_ID + ' [data-gh] { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; width: 100%; }'
-      + '#' + FOOTER_ID + ' [data-gh]:hover { border-color: #888 !important; }'
-      // Bottom bar
-      + '#' + FOOTER_ID + ' [data-divider] { margin-bottom: 24px; }'
-      + '#' + FOOTER_ID + ' [data-bottom] { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }'
-      + '#' + FOOTER_ID + ' [data-bottom] a { font-size: 13px; white-space: nowrap; }'
-      + '#' + FOOTER_ID + ' [data-legal] { display: flex; flex-wrap: wrap; gap: 16px; }'
-      + '@media (max-width: 639px) {'
-      + '  #' + FOOTER_ID + ' [data-bottom] { flex-direction: column; text-align: center; }'
-      + '  #' + FOOTER_ID + ' [data-legal] { justify-content: center; }'
-      + '}'
-      // Light mode colors
-      + '#' + FOOTER_ID + ' [data-sitemap] h3 { color: #111; }'
-      + '#' + FOOTER_ID + ' [data-sitemap] a { color: #6b7280; }'
-      + '#' + FOOTER_ID + ' [data-sitemap] a:hover { color: #111; }'
-      + '#' + FOOTER_ID + ' [data-cta] p { color: #6b7280; }'
-      + '#' + FOOTER_ID + ' [data-cta] form { border: 1px solid #d1d5db; }'
-      + '#' + FOOTER_ID + ' [data-cta] form input { color: #111; }'
-      + '#' + FOOTER_ID + ' [data-cta] form input::placeholder { color: #9ca3af; }'
-      + '#' + FOOTER_ID + ' [data-gh] { color: #111; border: 1px solid #d1d5db; }'
-      + '#' + FOOTER_ID + ' [data-divider] { border-top: 1px solid #e5e7eb; }'
-      + '#' + FOOTER_ID + ' [data-copyright] { font-size: 13px; color: #6b7280; }'
-      + '#' + FOOTER_ID + ' [data-bottom] a { color: #6b7280; }'
-      + '#' + FOOTER_ID + ' [data-bottom] a:hover { color: #111; }'
-      + '#' + FOOTER_ID + ' [data-logo] { margin-bottom: 16px; }'
-      + '#' + FOOTER_ID + ' [data-logo] svg * { fill: #111; }'
-      // Dark mode colors
-      + '.dark #' + FOOTER_ID + ' [data-sitemap] h3 { color: #f5f5f5; }'
-      + '.dark #' + FOOTER_ID + ' [data-sitemap] a { color: #a3a3a3; }'
-      + '.dark #' + FOOTER_ID + ' [data-sitemap] a:hover { color: #f5f5f5; }'
-      + '.dark #' + FOOTER_ID + ' [data-cta] p { color: #a3a3a3; }'
-      + '.dark #' + FOOTER_ID + ' [data-cta] form { border-color: #555; }'
-      + '.dark #' + FOOTER_ID + ' [data-cta] form input { color: #fff; }'
-      + '.dark #' + FOOTER_ID + ' [data-cta] form input::placeholder { color: #6b7280; }'
-      + '.dark #' + FOOTER_ID + ' [data-gh] { color: #fff; border-color: #555; }'
-      + '.dark #' + FOOTER_ID + ' [data-divider] { border-color: #333; }'
-      + '.dark #' + FOOTER_ID + ' [data-copyright] { color: #a3a3a3; }'
-      + '.dark #' + FOOTER_ID + ' [data-bottom] a { color: #a3a3a3; }'
-      + '.dark #' + FOOTER_ID + ' [data-bottom] a:hover { color: #f5f5f5; }'
-      + '.dark #' + FOOTER_ID + ' [data-logo] svg * { fill: #fff; }';
-    document.head.appendChild(style);
-  }
-
   function buildFooterHtml() {
     var year = new Date().getFullYear();
 
@@ -290,8 +214,6 @@
     }
 
     // Inject styles and create footer
-    injectStyles();
-
     var wrapper = document.createElement('footer');
     wrapper.id = FOOTER_ID;
     wrapper.style.cssText = 'width:100%;padding:64px 24px 32px;';
