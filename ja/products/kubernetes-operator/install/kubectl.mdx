@@ -28,7 +28,13 @@ sidebarTitle: 'kubectl'
 最新リリースから operator と CRD をインストールします。
 
 ```bash
-kubectl apply -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator.yaml
+kubectl apply --server-side --force-conflicts -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator.yaml
+```
+
+サーバー側の apply が必要です。これは、結合された CRD がクライアント側 apply のサイズ制限を超えるためです。クライアント側 apply のみをサポートする環境では、description を削除した CRD バリアントを使用してください。
+
+```bash
+kubectl apply -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator-stripped-crds.yaml
 ```
 
 これにより、以下が実行されます。
@@ -105,7 +111,7 @@ operator のデプロイメントオプションを設定するには、以下�
 
     ```bash
     make build-installer VERSION=<required operator version> [IMG=<custom registry path>]
-    kubectl apply -f dist/install.yaml
+    kubectl apply --server-side --force-conflicts -f dist/install.yaml
     ```
   </Step>
 </Steps>

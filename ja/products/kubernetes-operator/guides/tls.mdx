@@ -1,5 +1,5 @@
 ---
-position: 5
+position: 6
 slug: /clickhouse-operator/guides/tls
 title: TLS でクラスターを保護する
 keywords: ['kubernetes', 'tls', 'ssl', 'cert-manager', 'security', 'certificates']
@@ -28,15 +28,14 @@ doc_type: 'guide'
   ## オペレーターが想定する証明書の形式
 </div>
 
-TLS は、3 つのキーを含む Secret を `spec.settings.tls.serverCertSecret` で指定することで有効になります。
+TLS は、サーバーの鍵ペアを含む Secret を `spec.settings.tls.serverCertSecret` で指定することで有効になります。
 
-| Secret キー | 内容                      |
-| --------- | ----------------------- |
-| `tls.crt` | PEM エンコードされたサーバー証明書     |
-| `tls.key` | PEM エンコードされた秘密鍵         |
-| `ca.crt`  | PEM エンコードされた CA 証明書チェーン |
+| Secret キー | 内容                  | 必須 |
+| --------- | ------------------- | -- |
+| `tls.crt` | PEM エンコードされたサーバー証明書 | はい |
+| `tls.key` | PEM エンコードされた秘密鍵     | はい |
 
-これは cert-manager が `Certificate` リソースに書き込む形式と完全に同じなので、変換は不要です。オペレーターはこれらを各ポッドの
+これは cert-manager が `Certificate` リソースに書き込む形式と完全に同じなので、変換は不要です。オペレーターはこの鍵ペアを各ポッドの
 `/etc/clickhouse-server/tls/` にマウントし、ClickHouse の `openSSL` 設定に組み込みます。
 
 <Note>
@@ -241,15 +240,16 @@ spec:
 
 Keeper は、セキュアなクライアントポートを `2281` で公開します。Keeper で TLS を有効にすると、**ClickHouse
 クラスターは自動的に TLS 経由で Keeper に接続します**。ClickHouseCluster 側で追加の設定を行う必要は
-ありません。ClickHouse は、TLS が有効な場合は独自の `ca.crt` バンドルを使用して Keeper の証明書を検証し、
-そうでない場合はシステムのデフォルト CA バンドルを使用します。
+ありません。ClickHouse は、システムのトラストストアに加えて、設定した
+[`caBundle`](#custom-ca) を使用して Keeper の証明書を検証します。
 
 <div id="custom-ca">
   ## カスタム CA バンドル
 </div>
 
-ClickHouse がサーバー証明書で使用されている CA とは別の CA を信頼する必要がある場合 (たとえば、
-別の CA によって署名された Keeper を使用する場合) は、`caBundle` を指定します。
+既定では、ClickHouse は接続先のピア (他のレプリカ、Keeper、HTTPS
+Dictionary ソース、S3 など) を **システムのトラストストア** に対して検証します。システムストアにルート証明書が含まれていない自己署名 CA や社内 CA などのプライベート CA も **追加で** 信頼するには、
+`caBundle` を指定します。
 
 ```yaml
 spec:
@@ -263,8 +263,11 @@ spec:
         key: ca.crt
 ```
 
-オペレーターはこのバンドルをマウントし、クライアント側の `openSSL` 検証が
-証明書自身の `ca.crt` ではなく、こちらを参照するようにします。
+オペレーターはこのバンドルをマウントし、`openSSL` クライアントのトラストストア
+(`caConfig`) に追加します。システムのトラストストアも引き続き有効であり、プライベート CA はパブリック
+ルートに**加えて**信頼されるため、パブリックエンドポイントへの接続もそのまま機能します。自己署名の
+セットアップでは、cert-manager が書き込んだ同じ Secret の `ca.crt` キーを `caBundle` で参照してください
+(`cluster_with_ssl` の例のとおり)。
 
 <div id="custom-tls-settings">
   ## TLS 設定のカスタマイズ
@@ -311,15 +314,15 @@ kubectl -n <namespace> get svc <cluster-name>-clickhouse-headless \
 
 ```bash
 kubectl -n <namespace> exec <pod> -- ls /etc/clickhouse-server/tls/
-# ca-bundle.crt  clickhouse-server.crt  clickhouse-server.key
+# clickhouse-server.crt  clickhouse-server.key   (plus custom-ca.crt when caBundle is set)
 ```
 
-| 症状                                   | 考えられる原因                                                                                                                                                                    |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TLS を有効にした後、ポッドが起動しない / ボリュームマウントエラー | 参照先の Secret が存在しないか、`tls.crt`/`tls.key`/`ca.crt` が不足しています。オペレーターは Secret の内容を検証しないため、キー不足は専用の status 条件ではなく、ポッドのボリュームマウント失敗として表面化します。`kubectl describe pod` でポッドを確認してください。 |
-| Webhook がクラスターを拒否する                  | `enabled: true` を設定せずに `required: true` を設定しているか、`serverCertSecret` を設定せずに `enabled: true` を設定しています。                                                                       |
-| クライアントで `certificate verify failed`  | クライアントが CA を信頼していません。Secret の `ca.crt` を渡すか、証明書の `dnsNames` に接続先のホストが含まれていることを確認してください。                                                                                    |
-| 平文クライアントが突然接続できなくなる                  | `required: true` により、ポート `9000`/`8123` が使えなくなっています。クライアントを `9440`/`8443` に切り替えるか、移行中も安全でないポートを開けたままにするには `required: false` を設定してください。                                      |
+| 症状                                   | 考えられる原因                                                                                                                                                                                                                      |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TLS を有効にした後、ポッドが起動しない / ボリュームマウントエラー | 参照先の Secret が存在しないか、`tls.crt`/`tls.key` が不足しています (または、`caBundle` が設定されている場合は、それが参照する Secret またはキーが不足しています) 。オペレーターは Secret の内容を検証しないため、キー不足は専用の status 条件ではなく、ポッドのボリュームマウント失敗として表面化します。`kubectl describe pod` でポッドを確認してください。 |
+| Webhook がクラスターを拒否する                  | `enabled: true` を設定せずに `required: true` を設定しているか、`serverCertSecret` を設定せずに `enabled: true` を設定しています。                                                                                                                         |
+| クライアントで `certificate verify failed`  | クライアントが CA を信頼していません。Secret の `ca.crt` を渡すか、証明書の `dnsNames` に接続先のホストが含まれていることを確認してください。                                                                                                                                      |
+| 平文クライアントが突然接続できなくなる                  | `required: true` により、ポート `9000`/`8123` が使えなくなっています。クライアントを `9440`/`8443` に切り替えるか、移行中も安全でないポートを開けたままにするには `required: false` を設定してください。                                                                                        |
 
 <div id="see-also">
   ## 関連項目

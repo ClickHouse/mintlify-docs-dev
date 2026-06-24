@@ -1,5 +1,5 @@
 ---
-title: 'Python用 chDB のインストール'
+title: 'Python 用の chDB のインストール'
 sidebarTitle: 'Python'
 slug: /chdb/install/python
 description: 'Python用 chDB のインストール方法'
@@ -290,12 +290,12 @@ sess.close()  # 任意 - オブジェクト削除時に自動クローズ
 </div>
 
 ```python
-# カスタム設定を使用したセッション
+# Session with custom settings
 sess = session.Session(
     path="/tmp/analytics_db",
 )
 
-# クエリパフォーマンスの最適化
+# Query performance optimization
 result = sess.query("""
     SELECT product, sum(amount) as total
     FROM sales 
@@ -305,7 +305,7 @@ result = sess.query("""
 """, "JSON")
 ```
 
-関連項目: [test&#95;stateful.py](https://github.com/chdb-io/chdb/blob/main/tests/test_stateful.py)。
+関連項目: [test&#95;stateful.py](https://github.com/chdb-io/chdb-core/blob/main/tests/test_stateful.py)。
 
 <div id="python-db-api-20">
   ### Python DB-API 2.0 インターフェイス
@@ -619,17 +619,17 @@ from typing import List, Tuple, Any
 import json
 
 class DatabaseReader(chdb.PyReader):
-    """データベース類似のデータソース用カスタムリーダー"""
+    """Custom reader for database-like data sources"""
     
     def __init__(self, connection_string: str):
-        # データベース接続をシミュレート
+        # Simulate database connection
         self.data = self._load_data(connection_string)
         self.cursor = 0
         self.batch_size = 1000
         super().__init__(self.data)
     
     def _load_data(self, conn_str):
-        # データベースからの読み込みをシミュレート
+        # Simulate loading from database
         return {
             "id": list(range(1, 10001)),
             "name": [f"user_{i}" for i in range(1, 10001)],
@@ -641,28 +641,28 @@ class DatabaseReader(chdb.PyReader):
         }
     
     def get_schema(self) -> List[Tuple[str, str]]:
-        """明示的な型でテーブルスキーマを定義する"""
+        """Define table schema with explicit types"""
         return [
             ("id", "UInt64"),
             ("name", "String"),
             ("score", "Int64"),
-            ("metadata", "String")  # JSON を文字列として保存
+            ("metadata", "String")  # JSON stored as string
         ]
     
     def read(self, col_names: List[str], count: int) -> List[List[Any]]:
-        """データをバッチで読み込む"""
+        """Read data in batches"""
         if self.cursor >= len(self.data["id"]):
-            return []  # データなし
+            return []  # No more data
         
         end_pos = min(self.cursor + min(count, self.batch_size), len(self.data["id"]))
         
-        # 要求されたカラムのデータを返す
+        # Return data for requested columns
         result = []
         for col in col_names:
             if col in self.data:
                 result.append(self.data[col][self.cursor:end_pos])
             else:
-                # 存在しないカラムを処理する
+                # Handle missing columns
                 result.append([None] * (end_pos - self.cursor))
         
         self.cursor = end_pos
@@ -676,7 +676,7 @@ chDB automatically handles complex nested data structures:
 import pandas as pd
 import chdb
 
-# 混合 JSON オブジェクトを含む DataFrame
+# DataFrame with mixed JSON objects
 df_with_json = pd.DataFrame({
     "user_id": [1, 2, 3, 4],
     "profile": [
@@ -687,7 +687,7 @@ df_with_json = pd.DataFrame({
     ]
 })
 
-# 設定で JSON 推論を制御する
+# Control JSON inference with settings
 result = chdb.query("""
     SELECT 
         user_id,
@@ -696,11 +696,11 @@ result = chdb.query("""
         length(profile.preferences) as pref_count,
         profile.location.city as city
     FROM Python(df_with_json)
-    SETTINGS pandas_analyze_sample = 1000  -- JSON 検出のためにすべての行を解析する
+    SETTINGS pandas_analyze_sample = 1000  -- Analyze all rows for JSON detection
 """, "Pretty")
 print(result)
 
-# 高度な JSON 操作
+# Advanced JSON operations
 complex_json = chdb.query("""
     SELECT 
         user_id,

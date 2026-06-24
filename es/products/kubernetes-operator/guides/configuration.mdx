@@ -84,12 +84,14 @@ spec:
   ## Configuración de almacenamiento
 </div>
 
-Configure el almacenamiento persistente:
+Configure el almacenamiento persistente con `dataVolumeClaimSpec`, un
+`PersistentVolumeClaimSpec` estándar de Kubernetes. El operador lo convierte en un `PersistentVolumeClaim` por
+réplica montado en la ruta de datos `/var/lib/clickhouse`:
 
 ```yaml
 spec:
   dataVolumeClaimSpec:
-    storageClassName: fast-ssd  # Opcional: considera tu clase de almacenamiento según el CSI instalado
+    storageClassName: fast-ssd  # Optional: consider your storage class based on the installed CSI
     resources:
       requests:
         storage: 100Gi
@@ -97,6 +99,118 @@ spec:
 
 <Note>
   El operador solo puede modificar un PVC existente si la clase de almacenamiento asociada admite la expansión de volúmenes.
+</Note>
+
+La adición de discos adicionales en una configuración de varios discos (JBOD), la ejecución sin un
+volumen persistente, la ampliación de la capacidad, las políticas de almacenamiento personalizadas y las reglas sobre lo que no puede
+cambiar después de la creación se tratan en la
+[guía de almacenamiento y volúmenes](/es/products/kubernetes-operator/guides/storage).
+
+<div id="cluster-domain">
+  ## Dominio del clúster
+</div>
+
+`spec.clusterDomain` establece el sufijo DNS de Kubernetes que usa el operador al generar
+los nombres de host completos de los pods de Kubernetes que escribe en la
+configuración de servidor ClickHouse. Su valor predeterminado es `cluster.local` y está disponible tanto en
+`ClickHouseCluster` como en `KeeperCluster`.
+
+```yaml
+spec:
+  clusterDomain: cluster.local   # default; override only for a custom domain
+```
+
+El operador se dirige a cada pod de Kubernetes a través del Service headless como
+`<pod>.<headless-service>.<namespace>.svc.<clusterDomain>`. Ese sufijo se usa en
+dos partes de la configuración generada:
+
+* En un `ClickHouseCluster`, su valor se usa para los nombres del host de las réplicas en
+  `remote_servers` (consultas entre réplicas y consultas `Distributed`).
+* En un `KeeperCluster`, su valor se usa para construir los nombres del host de los nodos de Keeper que
+  ClickHouse utiliza para la coordinación.
+
+<Note>
+  Sobrescriba esto solo cuando el `agente kubelet` de su clúster se ejecute con un `--cluster-domain`
+  distinto de `cluster.local`. Si el valor no coincide con el dominio real del clúster,
+  ClickHouse no podrá resolver los nombres del host de Keeper ni de las réplicas, y la coordinación y
+  las consultas `Distributed` fallarán con errores de resolución de DNS. Establezca el **mismo** valor en el
+  `ClickHouseCluster` y en el `KeeperCluster` al que hace referencia.
+</Note>
+
+<div id="multi-disk-jbod-storage">
+  ### Almacenamiento multidisco (JBOD)
+</div>
+
+`additionalVolumeClaimTemplates` agrega discos adicionales a cada réplica de ClickHouse, además del `dataVolumeClaimSpec` principal, que es necesario para poder usarlos.
+Cada entrada es una plantilla de PVC: un `metadata.name` y una `spec` de PVC.
+Los discos se reconcilian exactamente igual que el disco de datos principal, como `volumeClaimTemplates` de StatefulSet, por lo que el controlador de StatefulSet crea y conserva un PVC por réplica, con el nombre `<name>-<statefulset>-0`.
+
+```yaml
+spec:
+  dataVolumeClaimSpec:
+    storageClassName: fast-ssd
+    resources:
+      requests:
+        storage: 100Gi
+  additionalVolumeClaimTemplates:
+    - metadata:
+        name: disk1
+      spec:
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 100Gi
+    - metadata:
+        name: disk2
+      spec:
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 100Gi
+```
+
+El operador monta cada volumen adicional en `/var/lib/clickhouse/disks/<name>` y lo añade a una configuración de almacenamiento de ClickHouse generada automáticamente.
+Los guiones de un nombre se convierten en guiones bajos en el identificador del disco de ClickHouse; la ruta de montaje conserva el nombre original.
+
+El disco de datos principal y todos los discos adicionales se colocan en un único volumen de la política de almacenamiento `default`, por lo que ClickHouse distribuye las nuevas partes de datos entre todos ellos con un esquema round-robin.
+La capacidad utilizable es la suma de todos los discos, y toda tabla que no defina su propia `storage_policy` (incluidas las tablas `system.*`) usa el conjunto combinado.
+
+<Note>
+  Los nombres de los PVC deben coincidir con `^[a-z]([-a-z0-9]*[a-z0-9])?$` y no deben entrar en conflicto con el nombre del volumen de datos principal.
+  Al igual que el disco de datos principal, el conjunto de discos adicionales queda fijado en el momento de la creación: cualquier intento de añadir, eliminar o renombrar entradas después de la creación se rechaza.
+  Los PVC adicionales se conservan cuando se elimina el clúster, igual que el disco de datos principal.
+  El tamaño de almacenamiento de una entrada existente puede ampliarse si la clase de almacenamiento admite la expansión.
+</Note>
+
+<div id="cluster-domain">
+  ## Dominio del clúster
+</div>
+
+`spec.clusterDomain` establece el sufijo DNS de Kubernetes que el operador usa al generar
+los nombres de host completos de los pods de Kubernetes que escribe en la
+configuración del servidor ClickHouse. Su valor predeterminado es `cluster.local` y existe tanto en
+`ClickHouseCluster` como en `KeeperCluster`.
+
+```yaml
+spec:
+  clusterDomain: cluster.local   # default; override only for a custom domain
+```
+
+El operador accede a cada pod de Kubernetes a través del Service headless como
+`<pod>.<headless-service>.<namespace>.svc.<clusterDomain>`. Ese sufijo se refleja en
+dos partes de la configuración generada:
+
+* En un `ClickHouseCluster`, su valor se utiliza para los nombres del host de las réplicas en
+  `remote_servers` (consultas entre réplicas y consultas `Distributed`).
+* En un `KeeperCluster`, su valor se usa para construir los nombres del host de los nodos de Keeper que
+  ClickHouse utiliza para la coordinación.
+
+<Note>
+  Solo sobrescriba esto cuando el agente kubelet de su clúster se ejecute con un `--cluster-domain`
+  distinto de `cluster.local`. Si el valor no coincide con el dominio real del clúster,
+  ClickHouse no podrá resolver los nombres del host de Keeper ni de las réplicas, y la coordinación y
+  las consultas `Distributed` fallarán con errores de resolución de DNS. Establezca el **mismo** valor en el
+  `ClickHouseCluster` y en el `KeeperCluster` al que hace referencia.
 </Note>
 
 <div id="pod-configuration">
@@ -321,10 +435,6 @@ spec:
   ## Configuración de TLS/SSL
 </div>
 
-Para ver un ejemplo completo —emisión de certificados con cert-manager, conexión de
-clientes a través de puertos seguros y cifrado del tráfico de Keeper—, consulta la
-guía [Protección con TLS](/es/products/kubernetes-operator/guides/tls).
-
 <div id="configure-secure-endpoints">
   ### Configurar endpoints seguros
 </div>
@@ -345,11 +455,10 @@ spec:
   ### Formato del Secret del certificado SSL
 </div>
 
-Se espera que el Secret contenga las siguientes claves:
+Se espera que el Secret contenga el par de claves del server:
 
 * `tls.crt` - certificado del server codificado en PEM
 * `tls.key` - private key codificada en PEM
-* `ca.crt` - cadena de certificados de la CA codificada en PEM
 
 <Note>
   Este formato es compatible con los certificados generados por cert-manager.
@@ -361,10 +470,9 @@ Se espera que el Secret contenga las siguientes claves:
 
 Si KeeperCluster tiene TLS habilitado, ClickHouseCluster usará automáticamente una conexión segura a los nodos de Keeper.
 
-ClickHouseCluster debe poder verificar los certificados de los nodos de Keeper.
-Si ClickHouseCluster tiene TLS habilitado, usa el bundle `ca.crt` para la verificación. De lo contrario, se usa el bundle de CA predeterminado.
+ClickHouseCluster verifica los certificados de los nodos de Keeper con el almacén de confianza del sistema, además de cualquier `caBundle` que configure.
 
-El usuario puede proporcionar una referencia a un bundle de CA personalizado:
+Para confiar en una CA privada (por ejemplo, una CA autofirmada o interna), proporcione una referencia a un bundle de CA personalizado:
 
 ```yaml
 spec:
@@ -440,12 +548,12 @@ stringData:
   ### Política: Observe vs Manage
 </div>
 
-`spec.externalSecret.policy` controla cómo el operador maneja las claves obligatorias que faltan:
+`spec.externalSecret.policy` controla cómo el operador maneja las claves requeridas que faltan:
 
 | Política                   | Comportamiento cuando faltan claves                                                                                                                                                                                                                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Observe` (predeterminada) | La reconciliación queda **bloqueada** hasta que estén presentes todas las claves obligatorias. El operador informa de cada clave que falta —y de la indicación de formato correspondiente— mediante la condición `ExternalSecretValid` (con el motivo `ExternalSecretInvalid`) y un evento `Warning`.        |
-| `Manage`                   | El operador **genera** cualquier clave obligatoria que falte y la vuelve a escribir en el mismo Secret. Resulta útil para el aprovisionamiento inicial: crea un Secret vacío, deja que el operador lo complete y, después, opcionalmente, restringe el acceso. Aun así, el operador nunca elimina el Secret. |
+| `Observe` (predeterminada) | La reconciliación queda **bloqueada** hasta que estén presentes todas las claves requeridas. El operador informa de cada clave que falta —y de la indicación de formato correspondiente— mediante la condición `ExternalSecretValid` (con el motivo `ExternalSecretInvalid`) y un evento `Warning`.        |
+| `Manage`                   | El operador **genera** cualquier clave requerida que falte y la vuelve a escribir en el mismo Secret. Resulta útil para el aprovisionamiento inicial: crea un Secret vacío, deja que el operador lo complete y, después, opcionalmente, restringe el acceso. Aun así, el operador nunca elimina el Secret. |
 
 <Note>
   Incluso con `policy: Manage`, el Secret ya debe existir en el espacio de nombres: el operador nunca crea el Secret por sí mismo; solo escribe las claves generadas en uno ya existente. Si el Secret referenciado no existe, la reconciliación se bloquea con el motivo `ExternalSecretNotFound`, independientemente de la política.
@@ -599,7 +707,7 @@ spec.additionalPorts[0].name: "http" is reserved by the operator
 
 El operador realiza dos tareas independientes con las versiones del clúster:
 
-1. **Sonda de versión** — un `Job` de Kubernetes que ejecuta la imagen de contenedor una vez para detectar la versión en ejecución de ClickHouse / Keeper. La versión detectada se registra en `.status.version` y se utiliza en otros pasos de reconciliación (por ejemplo, la clave de named collections de `External Secret` solo es necesaria a partir de ClickHouse `25.12`).
+1. **Informe de versión** — para `ClickHouseCluster`, un `Job` de Kubernetes ejecuta la imagen de contenedor una vez para detectar la versión de ClickHouse en ejecución; para `KeeperCluster`, el operador lee la versión informada por el servidor desde las réplicas en ejecución. La versión detectada se registra en `.status.version` y se utiliza en otros pasos de reconciliación (por ejemplo, la clave de named collections de `External Secret` solo es necesaria a partir de ClickHouse `25.12`).
 2. **Canal de actualización** — una comprobación periódica del feed público de versiones de ClickHouse (`https://clickhouse.com/data/version_date.tsv`). El operador informa si hay una versión más reciente disponible mediante la condición de estado `VersionUpgraded`. Nunca actualiza el clúster por sí solo; el usuario controla la etiqueta de la imagen.
 
 <div id="upgrade-channel-choosing">
@@ -622,7 +730,7 @@ Valores permitidos (validados por la CRD con el patrón `^(lts|stable|\d+\.\d+)?
 | `lts`                                  | Sigue el canal `lts` de upstream: releases con soporte a largo plazo. Recibe actualizaciones mayores con menos frecuencia y con ventanas de soporte más largas.                                               |
 | `25.8` (o cualquier `<major>.<minor>`) | Fija el canal en una línea major.minor específica. No se proponen actualizaciones mayores más allá de esa línea, aunque exista una versión más reciente en upstream.                                          |
 
-Para production, en general se prefiere fijar el canal a un `<major>.<minor>` explícito (por ejemplo, `25.8`). Esto fija el cluster en la línea de release mayor prevista y permite que el operador muestre una advertencia `WrongReleaseChannel` si alguna réplica se desvía de algún modo a una major distinta, algo especialmente importante cuando la image se referencia mediante un digest (`@sha256:...`) en lugar de un tag legible para humanos. El valor predeterminado vacío es adecuado para clusters de Development en los que los saltos entre versiones major no son una preocupación.
+Para production, en general se prefiere fijar el canal a un `<major>.<minor>` explícito (por ejemplo, `25.8`). Esto fija el cluster en la línea de release mayor prevista y permite que el operador mustre una advertencia `WrongReleaseChannel` si alguna réplica se desvía de algún modo a una major distinta, algo especialmente importante cuando la image se referencia mediante un digest (`@sha256:...`) en lugar de un tag legible para humanos. El valor predeterminado vacío es adecuado para clusters de Development en los que los saltos entre versiones major no son una preocupación.
 
 <div id="version-status-conditions">
   ### Condiciones de estado
@@ -630,18 +738,18 @@ Para production, en general se prefiere fijar el canal a un `<major>.<minor>` ex
 
 Dos condiciones reflejan el resultado de la sonda y de la comprobación de actualización:
 
-| Condición         | Motivo                 | Significado                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ----------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VersionInSync`   | `VersionMatch`         | Todas las réplicas informan la misma versión que la imagen                                                                                                                                                                                                                                                                                                                                                                   |
-| `VersionInSync`   | `VersionMismatch`      | Las réplicas están ejecutando versiones distintas. El evento de advertencia se suprime durante una actualización gradual planificada. Suele aparecer cuando se ha fijado una etiqueta de imagen mutable (por ejemplo, `latest` o una versión major sin más, como `26.3`) y el registry subyacente ha cambiado entre una descarga y otra, por lo que distintas réplicas acabaron con parches diferentes de la misma etiqueta. |
-| `VersionInSync`   | `VersionPending`       | El Job de la sonda de versión aún no ha terminado                                                                                                                                                                                                                                                                                                                                                                            |
-| `VersionInSync`   | `VersionProbeFailed`   | El Job de la sonda falló; el operador no puede determinar la versión en ejecución                                                                                                                                                                                                                                                                                                                                            |
-| `VersionUpgraded` | `UpToDate`             | El cluster está en la versión más reciente disponible en el canal seleccionado                                                                                                                                                                                                                                                                                                                                               |
-| `VersionUpgraded` | `MinorUpdateAvailable` | Hay un parche más reciente disponible en la misma línea `major.minor`                                                                                                                                                                                                                                                                                                                                                        |
-| `VersionUpgraded` | `MajorUpdateAvailable` | Hay una versión `major.minor` más reciente disponible dentro del canal elegido                                                                                                                                                                                                                                                                                                                                               |
-| `VersionUpgraded` | `VersionOutdated`      | La versión en ejecución está desactualizada y ya no recibirá correcciones del canal seleccionado; normalmente porque la línea major se ha retirado de `lts` o `stable` upstream                                                                                                                                                                                                                                              |
-| `VersionUpgraded` | `WrongReleaseChannel`  | La imagen en ejecución no pertenece al `upgradeChannel` seleccionado. Ejemplo: un cluster que ejecuta `26.5` con `upgradeChannel: lts`, ya que `26.5` no forma parte de la línea `lts` upstream.                                                                                                                                                                                                                             |
-| `VersionUpgraded` | `UpgradeCheckFailed`   | El operador no pudo acceder al feed de versiones upstream                                                                                                                                                                                                                                                                                                                                                                    |
+| Condición         | Motivo                 | Significado                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VersionInSync`   | `VersionMatch`         | Todas las réplicas informan la misma versión                                                                                                                                                                                                                                                                                                                                                                    |
+| `VersionInSync`   | `VersionMismatch`      | Las réplicas están ejecutando versiones distintas. Este motivo se suprime durante una actualización gradual planificada. Suele aparecer cuando se ha fijado una etiqueta de imagen mutable (por ejemplo, `latest` o una versión major sin más, como `26.3`) y el registry subyacente ha cambiado entre una descarga y otra, por lo que distintas réplicas acabaron con parches diferentes de la misma etiqueta. |
+| `VersionInSync`   | `VersionPending`       | El Job de la sonda de versión aún no ha terminado, o todavía no se ha observado ninguna versión de réplica de Keeper                                                                                                                                                                                                                                                                                            |
+| `VersionInSync`   | `VersionProbeFailed`   | El Job de la sonda de ClickHouse falló; el operador no puede determinar la versión en ejecución                                                                                                                                                                                                                                                                                                                 |
+| `VersionUpgraded` | `UpToDate`             | El cluster está en la versión más reciente disponible en el canal seleccionado                                                                                                                                                                                                                                                                                                                                  |
+| `VersionUpgraded` | `MinorUpdateAvailable` | Hay un parche más reciente disponible en la misma línea `major.minor`                                                                                                                                                                                                                                                                                                                                           |
+| `VersionUpgraded` | `MajorUpdateAvailable` | Hay una versión `major.minor` más reciente disponible dentro del canal elegido                                                                                                                                                                                                                                                                                                                                  |
+| `VersionUpgraded` | `VersionOutdated`      | La versión en ejecución está desactualizada y ya no recibirá correcciones del canal seleccionado; normalmente porque la línea major se ha retirado de `lts` o `stable` upstream                                                                                                                                                                                                                                 |
+| `VersionUpgraded` | `WrongReleaseChannel`  | La imagen en ejecución no pertenece al `upgradeChannel` seleccionado. Ejemplo: un cluster que ejecuta `26.5` con `upgradeChannel: lts`, ya que `26.5` no forma parte de la línea `lts` upstream.                                                                                                                                                                                                                |
+| `VersionUpgraded` | `UpgradeCheckFailed`   | El operador no pudo acceder al feed de versiones upstream                                                                                                                                                                                                                                                                                                                                                       |
 
 Inspecciónalas con:
 
@@ -652,6 +760,8 @@ kubectl get clickhousecluster sample -o yaml | sed -n '/conditions:/,/^[^ ]/p'
 <div id="version-probe-template">
   ### Sobrescritura del Job de la sonda de versión
 </div>
+
+Esto se aplica solo a `ClickHouseCluster`. `KeeperCluster` ya no ejecuta un Job de sonda de versión; su versión se lee directamente de las réplicas de Keeper en ejecución, por lo que `spec.versionProbeTemplate` está obsoleto y no tiene efecto allí.
 
 La sonda se implementa como un `Job` estándar de Kubernetes. Si su clúster tiene políticas de admisión que exigen Tolerations específicas, selectores de nodo o contextos de seguridad, o si desea limitar cuánto tiempo permanecen los Jobs de sonda completados, sobrescriba la plantilla mediante `spec.versionProbeTemplate`:
 
@@ -697,36 +807,92 @@ Establece `--disable-version-update-checks=true` en entornos aislados de la red 
 </div>
 
 <div id="default-user-password">
-  ### Contraseña predeterminada del usuario
+  ### Contraseña del usuario `default`
 </div>
 
-Configure la contraseña predeterminada del usuario:
+`spec.settings.defaultUserPassword` establece la contraseña del usuario `default`
+integrado. Proporcione el valor de una clave de un Secret (recomendado) o de un ConfigMap que
+cree, en lugar de incluirlo directamente en el CR:
 
 ```yaml
 spec:
   settings:
     defaultUserPassword:
-      passwordType: <password-type> # Predeterminado: password
-      <secret|configMap>:
-        name: <resource name>
-        key: <password>
+      passwordType: password   # default; see "Password types" below
+      secret:                  # exactly one of secret or configMap
+        name: clickhouse-password   # name of the Secret/ConfigMap
+        key: password               # the key inside it, not the password value
+```
+
+Proporcione exactamente uno de `secret` o `configMap`, y en ambos casos `name` (el objeto)
+y `key` (la entrada que contiene la contraseña).
+
+<div id="password-types">
+  #### Tipos de contraseña
+</div>
+
+`passwordType` le indica a ClickHouse cómo interpretar el valor. De forma predeterminada, es
+`password` (texto plano); las alternativas son formas con hash, como
+`password_sha256_hex` y `password_double_sha1_hex`. Se recomienda usar un tipo con hash para que la
+contraseña en texto plano nunca se almacene. Consulte la
+[configuración de usuarios de ClickHouse](https://clickhouse.com/docs/operations/settings/settings-users#user-namepassword)
+para ver la lista completa.
+
+<div id="default-password-secret-example">
+  #### Ejemplo completo con un Secret
+</div>
+
+Crea el Secret y, a continuación, haz referencia a su clave:
+
+```bash
+kubectl create secret generic clickhouse-password \
+  --from-literal=password='your-secure-password'
+```
+
+```yaml
+apiVersion: clickhouse.com/v1alpha1
+kind: ClickHouseCluster
+metadata:
+  name: my-cluster
+spec:
+  settings:
+    defaultUserPassword:
+      passwordType: password
+      secret:
+        name: clickhouse-password
+        key: password
 ```
 
 <Note>
-  No se recomienda usar ConfigMap para almacenar contraseñas en texto plano.
+  Con `passwordType: password`, el `clickhouse-client` del pod de Kubernetes se configura con
+  esta contraseña, lo cual resulta práctico para la depuración.
 </Note>
 
-Cree el secret:
+Si usas una contraseña con hash, almacena el hash en lugar del texto plano:
 
 ```bash
-kubectl create secret generic clickhouse-password --from-literal=password='your-secure-password'
+echo -n 'your-secure-password' | sha256sum   # use the hex digest as the value
+kubectl create secret generic clickhouse-password \
+  --from-literal=password='<sha256-hex-digest>'
+```
+
+```yaml
+spec:
+  settings:
+    defaultUserPassword:
+      passwordType: password_sha256_hex
+      secret:
+        name: clickhouse-password
+        key: password
 ```
 
 <div id="using-configmap-for-user-passwords">
-  #### Uso de ConfigMap para las contraseñas de los usuarios
+  #### Uso de un ConfigMap
 </div>
 
-También puede usar ConfigMap para contraseñas predeterminadas no confidenciales:
+Un ConfigMap funciona de la misma manera, pero su contenido no está protegido como un Secret.
+Úselo solo para valores no confidenciales o con hash previo, como un
+resumen `password_sha256_hex`:
 
 ```yaml
 spec:
@@ -737,6 +903,11 @@ spec:
         name: clickhouse-config
         key: default_password
 ```
+
+<Note>
+  No coloque una contraseña en texto plano en un ConfigMap. Use un Secret para cualquier valor
+  (`passwordType: password`) en texto plano.
+</Note>
 
 <div id="custom-users-in-configuration">
   ### Usuarios personalizados en la configuración
@@ -810,7 +981,7 @@ Cuando está activado, el operador sincroniza las tablas Replicated y de integra
   ### Registro del servidor
 </div>
 
-Configure el registro del servidor de ClickHouse mediante `spec.settings.logger`. Todos los campos son opcionales y tienen valores predeterminados seguros, por lo que incluso un clúster que no modifique registrará en `trace` tanto en la consola del contenedor como en un archivo rotado en disco.
+Configure el registro del ClickHouse server mediante `spec.settings.logger`. Todos los campos son opcionales y tienen valores predeterminados seguros, por lo que incluso un clúster que no modifique registrará en `trace` tanto en la consola del contenedor como en un archivo rotado en disco.
 
 ```yaml
 spec:

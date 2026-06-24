@@ -1,5 +1,5 @@
 ---
-position: 5
+position: 6
 slug: /clickhouse-operator/guides/tls
 title: TLS로 클러스터 보안 설정하기
 keywords: ['kubernetes', 'tls', 'ssl', 'cert-manager', 'security', 'certificates']
@@ -31,17 +31,16 @@ doc_type: 'guide'
   ## 연산자가 기대하는 인증서 형식
 </div>
 
-TLS는 `spec.settings.tls.serverCertSecret`이 3개의 키를 포함한 시크릿을
+TLS는 `spec.settings.tls.serverCertSecret`이 서버 키 쌍을 포함한 시크릿을
 가리키도록 설정해 활성화합니다:
 
-| 시크릿 키     | 내용                              |
-| --------- | ------------------------------- |
-| `tls.crt` | PEM으로 인코딩된 서버 인증서               |
-| `tls.key` | PEM으로 인코딩된 private key          |
-| `ca.crt`  | PEM으로 인코딩된 CA certificate chain |
+| 시크릿 키     | 내용                     | 필수 |
+| --------- | ---------------------- | -- |
+| `tls.crt` | PEM으로 인코딩된 서버 인증서      | 예  |
+| `tls.key` | PEM으로 인코딩된 private key | 예  |
 
 이는 cert-manager가 `Certificate` 리소스에 기록하는 레이아웃과 정확히 같으므로
-변환할 필요가 없습니다. 연산자는 이를 각 파드의
+변환할 필요가 없습니다. 연산자는 키 쌍을 각 파드의
 `/etc/clickhouse-server/tls/`에 마운트하고 ClickHouse의 `openSSL` 구성에 연결합니다.
 
 <Note>
@@ -248,15 +247,17 @@ spec:
 
 Keeper는 보안 클라이언트 포트를 `2281`에서 제공합니다. Keeper에서 TLS가 활성화되면 **ClickHouse 클러스터는 별도 설정 없이
 자동으로 TLS를 통해 Keeper에 연결됩니다** — ClickHouseCluster 측에
-추가로 설정할 것은 없습니다. ClickHouse는 TLS가 활성화된 경우 자체
-`ca.crt` 번들을 사용해 Keeper 인증서를 검증하며, 그렇지 않은 경우에는 시스템 기본 CA 번들을 사용합니다.
+추가로 설정할 것은 없습니다. ClickHouse는 시스템 신뢰 저장소와
+구성한 모든 [`caBundle`](#custom-ca)을 기준으로 Keeper 인증서를 검증합니다.
 
 <div id="custom-ca">
   ## 사용자 지정 CA 번들
 </div>
 
-ClickHouse가 서버 인증서에 포함된 CA와 다른 CA를 신뢰해야 하는 경우(예를 들어
-별도의 CA가 서명한 Keeper를 사용하는 경우), `caBundle`을 지정하십시오:
+기본적으로 ClickHouse는 연결하는 피어(다른 레플리카, Keeper, HTTPS
+딕셔너리 소스, S3, …)를 **시스템 신뢰 저장소**를 기준으로 검증합니다. 시스템 저장소에
+루트 인증서가 없는 자체 서명 또는 내부 CA 같은 사설 CA도 **추가로** 신뢰하려면
+`caBundle`을 지정하십시오:
 
 ```yaml
 spec:
@@ -270,8 +271,11 @@ spec:
         key: ca.crt
 ```
 
-연산자는 이 번들을 마운트하고 클라이언트 측 `openSSL` 검증이 인증서 자체의 `ca.crt` 대신
-이 번들을 참조하도록 설정합니다.
+연산자는 이 번들을 마운트하고 이를 `openSSL` 클라이언트 신뢰 저장소
+(`caConfig`)에 추가합니다. 시스템 신뢰 저장소는 계속 유효하며 — 프라이빗 CA는 공개 루트에 **추가로**
+신뢰되므로 공개 endpoint에 대한 연결도 계속 작동합니다. 자체 서명 설정의 경우,
+cert-manager가 생성한 동일한 시크릿의 `ca.crt` 키를 `caBundle`이 가리키도록 설정하십시오
+(`cluster_with_ssl` 예시와 동일).
 
 <div id="custom-tls-settings">
   ## TLS 설정 사용자 지정
@@ -318,15 +322,15 @@ kubectl -n <namespace> get svc <cluster-name>-clickhouse-headless \
 
 ```bash
 kubectl -n <namespace> exec <pod> -- ls /etc/clickhouse-server/tls/
-# ca-bundle.crt  clickhouse-server.crt  clickhouse-server.key
+# clickhouse-server.crt  clickhouse-server.key   (plus custom-ca.crt when caBundle is set)
 ```
 
-| 증상                                   | 가능한 원인                                                                                                                                                          |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TLS 활성화 후 파드가 시작되지 않음 / 볼륨 마운트 오류 발생 | 참조된 시크릿이 없거나 `tls.crt`/`tls.key`/`ca.crt`가 없습니다. 연산자는 시크릿 내용을 검증하지 않으므로, 키가 누락되면 별도의 상태 조건으로 표시되지 않고 파드 볼륨 마운트 실패로 나타납니다. `kubectl describe pod`로 파드를 확인하십시오. |
-| 웹훅이 클러스터를 거부함                        | `enabled: true` 없이 `required: true`가 설정되었거나, `serverCertSecret` 없이 `enabled: true`가 설정되었습니다.                                                                    |
-| 클라이언트 `certificate verify failed`    | 클라이언트가 CA를 신뢰하지 않습니다. 시크릿의 `ca.crt`를 전달하거나, 인증서의 `dnsNames`에 연결하려는 호스트가 포함되어 있는지 확인하십시오.                                                                        |
-| 평문 클라이언트가 갑자기 연결되지 않음                | `required: true`로 인해 포트 `9000`/`8123`가 제거되었습니다. 클라이언트를 `9440`/`8443`로 전환하거나, 전환 중에도 비보안 포트를 계속 열어 두려면 `required: false`로 설정하십시오.                                |
+| 증상                                   | 가능한 원인                                                                                                                                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TLS 활성화 후 파드가 시작되지 않음 / 볼륨 마운트 오류 발생 | 참조된 시크릿이 없거나 `tls.crt`/`tls.key`가 없거나 (`caBundle`이 설정된 경우) 해당 시크릿 또는 참조된 키가 없습니다. 연산자는 시크릿 내용을 검증하지 않으므로, 키가 누락되면 별도의 상태 조건으로 표시되지 않고 파드 볼륨 마운트 실패로 나타납니다. `kubectl describe pod`로 파드를 확인하십시오. |
+| 웹훅이 클러스터를 거부함                        | `enabled: true` 없이 `required: true`가 설정되었거나, `serverCertSecret` 없이 `enabled: true`가 설정되었습니다.                                                                                                   |
+| 클라이언트 `certificate verify failed`    | 클라이언트가 CA를 신뢰하지 않습니다. 시크릿의 `ca.crt`를 전달하거나, 인증서의 `dnsNames`에 연결하려는 호스트가 포함되어 있는지 확인하십시오.                                                                                                       |
+| 평문 클라이언트가 갑자기 연결되지 않음                | `required: true`로 인해 포트 `9000`/`8123`가 제거되었습니다. 클라이언트를 `9440`/`8443`로 전환하거나, 전환 중에도 비보안 포트를 계속 열어 두려면 `required: false`로 설정하십시오.                                                               |
 
 <div id="see-also">
   ## 관련 항목

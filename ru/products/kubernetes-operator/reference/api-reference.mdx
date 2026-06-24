@@ -10,6 +10,8 @@ sidebarTitle: 'Справочник по API'
 
 В этом документе содержится подробный справочник по API пользовательских ресурсов ClickHouse Operator.
 
+
+
 <div id="additionalport">
   ## AdditionalPort
 </div>
@@ -25,11 +27,30 @@ AdditionalPort задаёт один дополнительный TCP-порт, 
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 
+
+
+<div id="cabundleselector">
+  ## CABundleSelector
+</div>
+
+CABundleSelector выбирает ключ, содержащий набор CA, из объекта Secret в пространстве имен кластера.
+
+| Поле   | Тип    | Описание                                                                  | Обязательно | По умолчанию |
+| ------ | ------ | ------------------------------------------------------------------------- | ----------- | ------------ |
+| `name` | string | Имя Secret в пространстве имен кластера, из которого выбирается значение. | true        |              |
+| `key`  | string | Ключ Secret, который нужно выбрать. Должен быть допустимым ключом Secret. | false       | ca.crt       |
+
+Встречается в:
+
+* [ClusterTLSSpec](#clustertlsspec)
+
+
+
 <div id="clickhousecluster">
   ## ClickHouseCluster
 </div>
 
-ClickHouseCluster — это схема API `clickhouseclusters`.
+ClickHouseCluster — это схема для API `clickhouseclusters`.
 
 <div id="clickhousecluster-api-version-and-kind">
   ### Версия API и Kind
@@ -48,6 +69,8 @@ kind: ClickHouseCluster
 Входит в:
 
 * [ClickHouseClusterList](#clickhouseclusterlist)
+
+
 
 <div id="clickhouseclusterlist">
   ## ClickHouseClusterList
@@ -68,33 +91,33 @@ kind: ClickHouseClusterList
 | ------- | ---------------------------------------------- | -------- | ----------- | ------------ |
 | `items` | массив [ClickHouseCluster](#clickhousecluster) |          | true        |              |
 
-<div id="clickhouseclusterspec">
-  ## ClickHouseClusterSpec
-</div>
+
+
+## ClickHouseClusterSpec {#clickhouseclusterspec}
 
 ClickHouseClusterSpec определяет желаемое состояние ClickHouseCluster.
 
-| Поле                   | Тип                                                                                                                                 | Описание                                                                                                                                                                                                                                                             | Обязательно | По умолчанию  |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------- |
-| `replicas`             | integer                                                                                                                             | Количество реплик в одном сегменте.                                                                                                                                                                                                                                  | false       | 3             |
-| `shards`               | integer                                                                                                                             | Количество сегментов в кластере.                                                                                                                                                                                                                                     | false       | 1             |
-| `keeperClusterRef`     | [KeeperClusterReference](#keeperclusterreference)                                                                                   | Ссылка на KeeperCluster, используемый для координации ClickHouse.<br />Если пространство имен не указано, используется пространство имен ClickHouseCluster.                                                                                                          | true        |               |
-| `podTemplate`          | [PodTemplateSpec](#podtemplatespec)                                                                                                 | Параметры, передаваемые в спецификацию пода ClickHouse.                                                                                                                                                                                                              | false       |               |
-| `containerTemplate`    | [ContainerTemplateSpec](#containertemplatespec)                                                                                     | Параметры, передаваемые в спецификацию контейнера ClickHouse.                                                                                                                                                                                                        | false       |               |
-| `dataVolumeClaimSpec`  | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | Спецификация постоянного хранилища для данных ClickHouse.                                                                                                                                                                                                            | false       |               |
-| `labels`               | object (keys:string, values:string)                                                                                                 | Дополнительные метки, добавляемые к ресурсам.                                                                                                                                                                                                                        | false       |               |
-| `annotations`          | object (keys:string, values:string)                                                                                                 | Дополнительные аннотации, добавляемые к ресурсам.                                                                                                                                                                                                                    | false       |               |
-| `podDisruptionBudget`  | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec)                                                                                 | PodDisruptionBudget настраивает PDB, создаваемый для каждого сегмента.<br />Если значение не задано, оператор по умолчанию использует maxUnavailable=1 для сегментов<br />с одной репликой и minAvailable=1 для сегментов с несколькими репликами.                   | false       |               |
-| `settings`             | [ClickHouseSettings](#clickhousesettings)                                                                                           | Параметры конфигурации для сервера ClickHouse.                                                                                                                                                                                                                       | false       |               |
-| `clusterDomain`        | string                                                                                                                              | ClusterDomain — это суффикс домена кластера Kubernetes, используемый для DNS-разрешения.                                                                                                                                                                             | false       | cluster.local |
-| `upgradeChannel`       | string                                                                                                                              | Канал релизов задает канал выпуска для проверок обновлений мажорных версий.<br />Если значение пустое, будут предлагаться только минорные обновления. Допустимые значения: stable, lts или конкретная версия major.minor (например, 25.8).                          | false       |               |
-| `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate)                                                                                       | Переопределения VersionProbeTemplate для задачи определения версии.                                                                                                                                                                                                  | false       |               |
-| `externalSecret`       | [ExternalSecret](#externalsecret)                                                                                                   | ExternalSecret — это необязательная ссылка на Secret под внешним управлением, содержащий секреты кластера.<br />Этот Secret должен находиться в том же пространстве имен, что и кластер.                                                                             | false       |               |
-| `additionalPorts`      | [AdditionalPort](#additionalport) array                                                                                             | AdditionalPorts объявляет дополнительные TCP-порты, которые нужно открыть в поде ClickHouse и headless Service, управляемом оператором.<br />Оператор только добавляет порты в ресурсы Kubernetes, но не настраивает сервер ClickHouse на прослушивание этих портов. | false       |               |
+| Поле | Тип | Описание | Обязательное | По умолчанию |
+|-------|------|-------------|----------|---------|
+| `replicas` | integer | Количество реплик в одном шарде. | false | 3 |
+| `shards` | integer | Количество шардов в кластере. | false | 1 |
+| `keeperClusterRef` | [KeeperClusterReference](#keeperclusterreference) | Ссылка на KeeperCluster, используемый для координации ClickHouse.<br />Если пространство имён не указано, используется пространство имён ClickHouseCluster. | true |  |
+| `podTemplate` | [PodTemplateSpec](#podtemplatespec) | Параметры, передаваемые в спецификацию пода ClickHouse. | false |  |
+| `containerTemplate` | [ContainerTemplateSpec](#containertemplatespec) | Параметры, передаваемые в спецификацию контейнера ClickHouse. | false |  |
+| `dataVolumeClaimSpec` | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | Спецификация постоянного хранилища для данных ClickHouse. | false |  |
+| `additionalVolumeClaimTemplates` | [PersistentVolumeClaimTemplate](#persistentvolumeclaimtemplate) array | Дополнительные шаблоны PVC для каждого пода для хранилища JBOD / с несколькими дисками.<br />Каждая запись распространяется в volumeClaimTemplate StatefulSet, монтируется по пути /var/lib/clickhouse/disks/<name> и<br />добавляется в сгенерированную политику хранилища JBOD.<br />Набор дисков фиксируется при создании. | false |  |
+| `labels` | object (keys:string, values:string) | Дополнительные метки, добавляемые к ресурсам. | false |  |
+| `annotations` | object (keys:string, values:string) | Дополнительные аннотации, добавляемые к ресурсам. | false |  |
+| `podDisruptionBudget` | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec) | PodDisruptionBudget настраивает PDB, создаваемый для каждого шарда.<br />Если не задано, оператор по умолчанию использует maxUnavailable=1 для шардов с одной репликой<br />и minAvailable=1 для шардов с несколькими репликами. | false |  |
+| `settings` | [ClickHouseSettings](#clickhousesettings) | Параметры конфигурации сервера ClickHouse. | false |  |
+| `clusterDomain` | string | ClusterDomain — суффикс домена кластера Kubernetes, используемый для разрешения DNS. | false | cluster.local |
+| `upgradeChannel` | string | канал релизов указывает канал выпуска для проверки обновлений мажорной версии.<br />Если не задано, будут предлагаться только минорные обновления. Допустимые значения: stable, lts или конкретная версия major.minor (например, 25.8). | false |  |
+| `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate) | VersionProbeTemplate — переопределения для задачи обнаружения версии. | false |  |
+| `externalSecret` | [ExternalSecret](#externalsecret) | ExternalSecret — необязательная ссылка на управляемый извне Secret, содержащий секреты кластера.<br />Secret должен находиться в том же пространстве имён, что и кластер. | false |  |
+| `additionalPorts` | [AdditionalPort](#additionalport) array | AdditionalPorts объявляет дополнительные TCP-порты для открытия на поде ClickHouse и управляемом оператором headless Service.<br />Оператор только добавляет порты в ресурсы Kubernetes, но не настраивает сервер ClickHouse для прослушивания на них. | false |  |
 
 Встречается в:
-
-* [ClickHouseCluster](#clickhousecluster)
+- [ClickHouseCluster](#clickhousecluster)
 
 <div id="clickhouseclusterstatus">
   ## ClickHouseClusterStatus
@@ -118,6 +141,8 @@ ClickHouseClusterStatus определяет наблюдаемое состоя
 
 * [ClickHouseCluster](#clickhousecluster)
 
+
+
 <div id="clickhousesettings">
   ## ClickHouseSettings
 </div>
@@ -137,23 +162,27 @@ ClickHouseSettings определяет параметры настройки с
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 
+
+
 <div id="clustertlsspec">
   ## ClusterTLSSpec
 </div>
 
 ClusterTLSSpec определяет настройки TLS для кластера.
 
-| Поле               | Тип                                                                                                                       | Описание                                                                                                                                                                                                                                                                                                                               | Обязательно | По умолчанию |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ |
-| `enabled`          | boolean                                                                                                                   | Enabled указывает, включен ли TLS, и определяет, нужно ли открывать защищённые порты.                                                                                                                                                                                                                                                  | false       | false        |
-| `required`         | boolean                                                                                                                   | Required указывает, должен ли TLS быть обязательным для всех соединений. Отключает незащищённые порты.                                                                                                                                                                                                                                 | false       | false        |
-| `serverCertSecret` | [LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) | ServerCertSecretRef — ссылка на TLS Secret, содержащий сертификат сервера.<br />Ожидается, что Secret имеет ту же структуру, что и сертификаты, сгенерированные cert-manager:<br />сертификат и приватный ключ должны храниться под ключами &quot;tls.crt&quot; и &quot;tls.key&quot; соответственно.                                  | false       |              |
-| `caBundle`         | [SecretKeySelector](#secretkeyselector)                                                                                   | CABundle — ссылка на TLS Secret, содержащий набор сертификатов CA.<br />Если значение пустое и указан ServerCertSecret, будет использоваться набор CA из сертификата.<br />В противном случае будет использоваться системный набор доверенных сертификатов CA.<br />Если ключ не указан, по умолчанию используется &quot;ca.crt&quot;. | false       |              |
+| Поле               | Тип                                                                                                                       | Описание                                                                                                                                                                                                                                                                                            | Обязательно | По умолчанию |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ |
+| `enabled`          | boolean                                                                                                                   | Enabled указывает, включен ли TLS, и определяет, нужно ли открывать защищённые порты.                                                                                                                                                                                                               | false       | false        |
+| `required`         | boolean                                                                                                                   | Required указывает, должен ли TLS быть обязательным для всех соединений. Отключает незащищённые порты.                                                                                                                                                                                              | false       | false        |
+| `serverCertSecret` | [LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) | ServerCertSecret — ссылка на TLS Secret, содержащий сертификат сервера.<br />Ожидается, что Secret имеет ту же структуру, что и сертификаты, сгенерированные cert-manager,<br />при этом сертификат и приватный ключ хранятся под ключами &quot;tls.crt&quot; и &quot;tls.key&quot; соответственно. | false       |              |
+| `caBundle`         | [CABundleSelector](#cabundleselector)                                                                                     | CABundle — ссылка на ключ Secret, содержащий набор CA, используемый для проверки сертификатов peer.<br />Если значение пустое, используется системный набор доверенных сертификатов CA.<br />Если ключ не указан, по умолчанию используется &quot;ca.crt&quot;.                                     | false       |              |
 
 Используется в:
 
 * [ClickHouseSettings](#clickhousesettings)
 * [KeeperSettings](#keepersettings)
+
+
 
 <div id="configmapkeyselector">
   ## ConfigMapKeySelector
@@ -170,6 +199,8 @@ ConfigMapKeySelector выбирает ключ в ConfigMap.
 
 * [DefaultPasswordSelector](#defaultpasswordselector)
 
+
+
 <div id="containerimage">
   ## ContainerImage
 </div>
@@ -185,6 +216,8 @@ ContainerImage задаёт образ контейнера с указание�
 Встречается в:
 
 * [ContainerTemplateSpec](#containertemplatespec)
+
+
 
 <div id="containertemplatespec">
   ## ContainerTemplateSpec
@@ -208,6 +241,8 @@ ContainerTemplateSpec описывает переопределения конф
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 * [KeeperClusterSpec](#keeperclusterspec)
 
+
+
 <div id="defaultpasswordselector">
   ## DefaultPasswordSelector
 </div>
@@ -224,6 +259,8 @@ DefaultPasswordSelector задает источник пароля пользо�
 
 * [ClickHouseSettings](#clickhousesettings)
 
+
+
 <div id="externalsecret">
   ## ExternalSecret
 </div>
@@ -238,6 +275,8 @@ ExternalSecret — это ссылка на Secret в том же простра
 Встречается в:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
+
+
 
 <div id="externalsecretpolicy">
   ## ExternalSecretPolicy
@@ -254,11 +293,13 @@ ExternalSecretPolicy определяет, как оператор обраба�
 
 * [ExternalSecret](#externalsecret)
 
+
+
 <div id="keepercluster">
   ## KeeperCluster
 </div>
 
-KeeperCluster — схема API `keeperclusters`.
+KeeperCluster — это схема для API `keeperclusters`.
 
 <div id="keepercluster-api-version-and-kind">
   ### Версия API и kind
@@ -277,6 +318,8 @@ kind: KeeperCluster
 Встречается в:
 
 * [KeeperClusterList](#keeperclusterlist)
+
+
 
 <div id="keeperclusterlist">
   ## KeeperClusterList
@@ -297,6 +340,8 @@ kind: KeeperClusterList
 | ------- | -------------------------------------- | -------- | ----------- | ------------ |
 | `items` | массив [KeeperCluster](#keepercluster) |          | true        |              |
 
+
+
 <div id="keeperclusterreference">
   ## KeeperClusterReference
 </div>
@@ -311,6 +356,8 @@ KeeperClusterReference указывает на KeeperCluster, используе
 Встречается в:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
+
+
 
 <div id="keeperclusterspec">
   ## KeeperClusterSpec
@@ -330,11 +377,13 @@ KeeperClusterSpec определяет желаемое состояние Keepe
 | `settings`             | [KeeperSettings](#keepersettings)                                                                                                   | Параметры конфигурации для сервера ClickHouse Keeper.                                                                                                                                                                                                        | false        |               |
 | `clusterDomain`        | string                                                                                                                              | ClusterDomain — это суффикс домена кластера Kubernetes, используемый для DNS-разрешения.                                                                                                                                                                     | false        | cluster.local |
 | `upgradeChannel`       | string                                                                                                                              | UpgradeChannel задаёт канал релизов для проверки обновлений мажорной версии.<br />Если значение пустое, будут предлагаться только минорные обновления. Допустимые значения: stable, lts или конкретная версия major.minor (например, 25.8).                  | false        |               |
-| `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate)                                                                                       | Переопределения VersionProbeTemplate для задачи определения версии.                                                                                                                                                                                          | false        |               |
+| `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate)                                                                                       | Переопределения VersionProbeTemplate для задачи определения версии.<br />Устарело: задачи проверки версии Keeper не используются; это поле сохранено для обратной совместимости.                                                                             | false        |               |
 
 Встречается в:
 
 * [KeeperCluster](#keepercluster)
+
+
 
 <div id="keeperclusterstatus">
   ## KeeperClusterStatus
@@ -342,21 +391,23 @@ KeeperClusterSpec определяет желаемое состояние Keepe
 
 KeeperClusterStatus определяет наблюдаемое состояние KeeperCluster.
 
-| Поле                    | Тип                                                                                                        | Описание                                                                                                                                                                   | Обязательное | По умолчанию |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------ |
-| `conditions`            | [Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) массив |                                                                                                                                                                            | false        |              |
-| `readyReplicas`         | integer                                                                                                    | ReadyReplicas — общее число реплик, готовых обслуживать запросы.                                                                                                           | false        |              |
-| `configurationRevision` | string                                                                                                     | ConfigurationRevision указывает целевую ревизию конфигурации для каждой реплики.                                                                                           | true         |              |
-| `statefulSetRevision`   | string                                                                                                     | StatefulSetRevision указывает целевую ревизию StatefulSet для каждой реплики.                                                                                              | true         |              |
-| `currentRevision`       | string                                                                                                     | CurrentRevision указывает последнюю применённую ревизию спецификации KeeperCluster.                                                                                        | true         |              |
-| `updateRevision`        | string                                                                                                     | UpdateRevision указывает последнюю запрошенную ревизию спецификации KeeperCluster.                                                                                         | true         |              |
-| `observedGeneration`    | integer                                                                                                    | ObservedGeneration указывает последнее поколение, зафиксированное контроллером.                                                                                            | true         |              |
-| `version`               | string                                                                                                     | Version указывает версию, которую сообщает образ контейнера.                                                                                                               | false        |              |
-| `versionProbeRevision`  | string                                                                                                     | VersionProbeRevision — хэш образа последней успешной проверки версии.<br />Когда он совпадает с текущим хэшом образа, кэшированное значение Version используется напрямую. | false        |              |
+| Поле                    | Тип                                                                                                        | Описание                                                                                                                                                                           | Обязательное | По умолчанию |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------ |
+| `conditions`            | [Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) массив |                                                                                                                                                                                    | false        |              |
+| `readyReplicas`         | integer                                                                                                    | ReadyReplicas — общее число реплик, готовых обслуживать запросы.                                                                                                                   | false        |              |
+| `configurationRevision` | string                                                                                                     | ConfigurationRevision указывает целевую ревизию конфигурации для каждой реплики.                                                                                                   | true         |              |
+| `statefulSetRevision`   | string                                                                                                     | StatefulSetRevision указывает целевую ревизию StatefulSet для каждой реплики.                                                                                                      | true         |              |
+| `currentRevision`       | string                                                                                                     | CurrentRevision указывает последнюю применённую ревизию спецификации KeeperCluster.                                                                                                | true         |              |
+| `updateRevision`        | string                                                                                                     | UpdateRevision указывает последнюю запрошенную ревизию спецификации KeeperCluster.                                                                                                 | true         |              |
+| `observedGeneration`    | integer                                                                                                    | ObservedGeneration указывает последнее поколение, зафиксированное контроллером.                                                                                                    | true         |              |
+| `version`               | string                                                                                                     | Version указывает версию, о которой сообщает Keeper server.                                                                                                                        | false        |              |
+| `versionProbeRevision`  | string                                                                                                     | VersionProbeRevision — хэш образа последней успешной проверки версии.<br />Устарело: задачи проверки версии Keeper не используются; это поле сохранено для обратной совместимости. | false        |              |
 
 Встречается в:
 
 * [KeeperCluster](#keepercluster)
+
+
 
 <div id="keepersettings">
   ## KeeperSettings
@@ -373,6 +424,8 @@ KeeperSettings определяет конфигурацию сервера Clic
 Встречается в:
 
 * [KeeperClusterSpec](#keeperclusterspec)
+
+
 
 <div id="loggerconfig">
   ## LoggerConfig
@@ -393,6 +446,26 @@ LoggerConfig задаёт конфигурацию логирования сер
 * [ClickHouseSettings](#clickhousesettings)
 * [KeeperSettings](#keepersettings)
 
+
+
+<div id="namedtemplatemeta">
+  ## NamedTemplateMeta
+</div>
+
+NamedTemplateMeta определяет поддерживаемые параметры метаданных для объектов шаблона, которым требуется имя.
+
+| Поле          | Тип                                 | Описание                                     | Обязательно | По умолчанию |
+| ------------- | ----------------------------------- | -------------------------------------------- | ----------- | ------------ |
+| `name`        | string                              | Имя — это идентификатор ресурса.             | true        |              |
+| `labels`      | object (keys:string, values:string) | Метки, применяемые к объектам шаблона.       | false       |              |
+| `annotations` | object (keys:string, values:string) | annotations, применяемые к объектам шаблона. | false       |              |
+
+Используется в:
+
+* [PersistentVolumeClaimTemplate](#persistentvolumeclaimtemplate)
+
+
+
 <div id="pdbpolicy">
   ## PDBPolicy
 </div>
@@ -408,6 +481,25 @@ PDBPolicy определяет, будут ли создаваться объе�
 Встречается в:
 
 * [PodDisruptionBudgetSpec](#poddisruptionbudgetspec)
+
+
+
+<div id="persistentvolumeclaimtemplate">
+  ## PersistentVolumeClaimTemplate
+</div>
+
+PersistentVolumeClaimTemplate — это именованный шаблон для PersistentVolumeClaim для каждой реплики.
+
+| Поле       | Тип                                                                                                                                 | Описание                                                                                                                                                                                            | Обязательно | По умолчанию |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ |
+| `metadata` | [NamedTemplateMeta](#namedtemplatemeta)                                                                                             | См. документацию Kubernetes API по полям `metadata`.                                                                                                                                                | true        |              |
+| `spec`     | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | `spec` определяет требуемые характеристики тома, запрашиваемого автором пода.<br />Дополнительная информация: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims | true        |              |
+
+Встречается в:
+
+* [ClickHouseClusterSpec](#clickhouseclusterspec)
+
+
 
 <div id="poddisruptionbudgetspec">
   ## PodDisruptionBudgetSpec
@@ -429,11 +521,15 @@ PodDisruptionBudgetSpec настраивает PDB, создаваемый дл�
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 * [KeeperClusterSpec](#keeperclusterspec)
 
+
+
 <div id="podtemplatespec">
   ## PodTemplateSpec
 </div>
 
 PodTemplateSpec описывает переопределения конфигурации подов кластера.
+
+
 
 | Поле                            | Тип                                                                                                                                      | Описание                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Обязательно | По умолчанию |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------ |
@@ -453,10 +549,14 @@ PodTemplateSpec описывает переопределения конфигу
 | `nodeHostnameKey`               | string                                                                                                                                   | NodeHostnameKey — это ключ меток узла.<br />Узлы с меткой с этим ключом и одинаковыми значениями считаются находящимися на одном и том же узле.<br />Укажите его, чтобы включить правила AntiAffinity по умолчанию и распределять реплики из разных сегментов по узлам.<br />Рекомендуется установить значение &quot;kubernetes.io/hostname&quot;                                                                                                                                                                                                                                                                                                                                                                                      | false       |              |
 | `initContainers`                | массив [Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#container-v1-core)                               | InitContainers — это список init-контейнеров, запускаемых до запуска основного контейнера сервера.<br />Объединяется со значениями по умолчанию оператора<br />для контейнеров с тем же именем.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | false       |              |
 
-Используется в:
+
+
+Встречается в:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 * [KeeperClusterSpec](#keeperclusterspec)
+
+
 
 <div id="secretkeyselector">
   ## SecretKeySelector
@@ -464,15 +564,16 @@ PodTemplateSpec описывает переопределения конфигу
 
 SecretKeySelector выбирает ключ объекта Secret.
 
-| Поле   | Тип    | Описание                                                                    | Обязательно | По умолчанию |
-| ------ | ------ | --------------------------------------------------------------------------- | ----------- | ------------ |
-| `name` | string | Имя Secret в пространстве имен кластера, из которого выбирается значение.   | true        |              |
-| `key`  | string | Ключ Secret, который нужно выбрать. Должен быть допустимым ключом Secret.   | true        |              |
+| Поле   | Тип    | Описание                                                                  | Обязательно | По умолчанию |
+| ------ | ------ | ------------------------------------------------------------------------- | ----------- | ------------ |
+| `name` | string | Имя Secret в пространстве имен кластера, из которого выбирается значение. | true        |              |
+| `key`  | string | Ключ Secret, который нужно выбрать. Должен быть допустимым ключом Secret. | true        |              |
 
 Встречается в:
 
-* [ClusterTLSSpec](#clustertlsspec)
 * [DefaultPasswordSelector](#defaultpasswordselector)
+
+
 
 <div id="templatemeta">
   ## TemplateMeta
@@ -490,6 +591,8 @@ TemplateMeta определяет поддерживаемые параметр�
 * [VersionProbePodTemplate](#versionprobepodtemplate)
 * [VersionProbeTemplate](#versionprobetemplate)
 
+
+
 <div id="versionprobecontainer">
   ## VersionProbeContainer
 </div>
@@ -499,7 +602,7 @@ VersionProbeContainer задаёт переопределения для про�
 
 | Поле              | Тип                                                                                                                       | Описание                                                                                                                                                             | Обязательное | По умолчанию  |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------------- |
-| `name`            | string                                                                                                                    | Имя контейнера. Если не указано, оператор задаёт имя контейнера для проверки версии.                                                                                 | true         | version-probe |
+| `name`            | string                                                                                                                    | Имя контейнера. Если поле пустое, оператор задаёт имя контейнера проверки версии.                                                                                    | true         | version-probe |
 | `resources`       | [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core) | Ресурсы, необходимые контейнеру проверки версии для вычислений.<br />Объединяются со значениями оператора по умолчанию через глубокое слияние SMP.                   | false        |               |
 | `securityContext` | [SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#securitycontext-v1-core)           | SecurityContext определяет параметры безопасности для контейнера проверки версии.<br />Объединяется со значениями оператора по умолчанию через глубокое слияние SMP. | false        |               |
 
@@ -507,20 +610,24 @@ VersionProbeContainer задаёт переопределения для про�
 
 * [VersionProbePodSpec](#versionprobepodspec)
 
+
+
 <div id="versionprobejobspec">
   ## VersionProbeJobSpec
 </div>
 
 VersionProbeJobSpec задаёт переопределения на уровне задачи для проверки версии.
 
-| Поле                      | Тип                                                 | Описание                                                                       | Обязательно | По умолчанию |
-| ------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ | ----------- | ------------ |
-| `ttlSecondsAfterFinished` | integer                                             | TTLSecondsAfterFinished ограничивает время существования завершённой задачи.   | false       |              |
-| `template`                | [VersionProbePodTemplate](#versionprobepodtemplate) | Шаблон описывает под, который будет создан для задачи проверки версии.         | false       |              |
+| Поле                      | Тип                                                 | Описание                                                                     | Обязательно | По умолчанию |
+| ------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------- | ----------- | ------------ |
+| `ttlSecondsAfterFinished` | integer                                             | TTLSecondsAfterFinished ограничивает время существования завершённой задачи. | false       |              |
+| `template`                | [VersionProbePodTemplate](#versionprobepodtemplate) | Шаблон описывает под, который будет создан для задачи проверки версии.       | false       |              |
 
 Встречается в:
 
 * [VersionProbeTemplate](#versionprobetemplate)
+
+
 
 <div id="versionprobepodspec">
   ## VersionProbePodSpec
@@ -540,6 +647,8 @@ VersionProbePodSpec задаёт переопределения на уровн�
 
 * [VersionProbePodTemplate](#versionprobepodtemplate)
 
+
+
 <div id="versionprobepodtemplate">
   ## VersionProbePodTemplate
 </div>
@@ -554,6 +663,8 @@ VersionProbePodTemplate описывает переопределения для
 Встречается в:
 
 * [VersionProbeJobSpec](#versionprobejobspec)
+
+
 
 <div id="versionprobetemplate">
   ## VersionProbeTemplate

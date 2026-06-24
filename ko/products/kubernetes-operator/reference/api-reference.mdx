@@ -10,6 +10,8 @@ sidebarTitle: 'API 참조'
 
 이 문서는 ClickHouse Operator의 사용자 정의 리소스에 대한 자세한 API 참조를 제공합니다.
 
+
+
 <div id="additionalport">
   ## AdditionalPort
 </div>
@@ -25,11 +27,30 @@ AdditionalPort는 ClickHouse 파드와 연산자가 관리하는 헤드리스 Se
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 
+
+
+<div id="cabundleselector">
+  ## CABundleSelector
+</div>
+
+CABundleSelector는 클러스터 네임스페이스의 시크릿에서 CA 번들을 담고 있는 키를 선택하는 데 사용됩니다.
+
+| 필드     | 유형     | 설명                              | 필수    | 기본값    |
+| ------ | ------ | ------------------------------- | ----- | ------ |
+| `name` | string | 선택할 시크릿이 있는 클러스터 네임스페이스의 이름입니다. | true  |        |
+| `key`  | string | 선택할 시크릿의 키입니다. 유효한 시크릿 키여야 합니다. | false | ca.crt |
+
+다음 항목에 사용됩니다:
+
+* [ClusterTLSSpec](#clustertlsspec)
+
+
+
 <div id="clickhousecluster">
   ## ClickHouseCluster
 </div>
 
-ClickHouseCluster는 `clickhouseclusters` API의 스키마(Schema)입니다.
+ClickHouseCluster는 `clickhouseclusters` API의 스키마입니다.
 
 <div id="clickhousecluster-api-version-and-kind">
   ### API 버전 및 Kind
@@ -49,11 +70,13 @@ kind: ClickHouseCluster
 
 * [ClickHouseClusterList](#clickhouseclusterlist)
 
+
+
 <div id="clickhouseclusterlist">
   ## ClickHouseClusterList
 </div>
 
-ClickHouseClusterList는 ClickHouseCluster 목록을 포함합니다.
+ClickHouseClusterList에는 ClickHouseCluster 목록이 포함됩니다.
 
 <div id="clickhouseclusterlist-api-version-and-kind">
   ### API 버전과 Kind
@@ -68,33 +91,33 @@ kind: ClickHouseClusterList
 | ------- | ------------------------------------------ | -- | ---- | --- |
 | `items` | [ClickHouseCluster](#clickhousecluster) 배열 |    | true |     |
 
-<div id="clickhouseclusterspec">
-  ## ClickHouseClusterSpec
-</div>
+
+
+## ClickHouseClusterSpec {#clickhouseclusterspec}
 
 ClickHouseClusterSpec는 ClickHouseCluster의 원하는 상태를 정의합니다.
 
-| Field                  | Type                                                                                                                                | Description                                                                                                                                                       | Required | Default       |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------- |
-| `replicas`             | integer                                                                                                                             | 단일 세그먼트의 레플리카 수입니다.                                                                                                                                               | false    | 3             |
-| `shards`               | integer                                                                                                                             | 클러스터의 세그먼트 수입니다.                                                                                                                                                  | false    | 1             |
-| `keeperClusterRef`     | [KeeperClusterReference](#keeperclusterreference)                                                                                   | ClickHouse 코디네이션에 사용되는 KeeperCluster에 대한 참조입니다.<br />네임스페이스를 생략하면 ClickHouseCluster의 네임스페이스가 사용됩니다.                                                               | true     |               |
-| `podTemplate`          | [PodTemplateSpec](#podtemplatespec)                                                                                                 | ClickHouse 파드 사양에 전달되는 매개변수입니다.                                                                                                                                   | false    |               |
-| `containerTemplate`    | [ContainerTemplateSpec](#containertemplatespec)                                                                                     | ClickHouse 컨테이너 사양에 전달되는 매개변수입니다.                                                                                                                                 | false    |               |
-| `dataVolumeClaimSpec`  | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | ClickHouse 데이터용 영구 스토리지 사양입니다.                                                                                                                                    | false    |               |
-| `labels`               | object (keys:string, values:string)                                                                                                 | 리소스에 추가할 레이블입니다.                                                                                                                                                  | false    |               |
-| `annotations`          | object (keys:string, values:string)                                                                                                 | 리소스에 추가할 어노테이션입니다.                                                                                                                                                | false    |               |
-| `podDisruptionBudget`  | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec)                                                                                 | PodDisruptionBudget는 각 세그먼트에 대해 생성되는 PDB를 구성합니다.<br />설정하지 않으면 연산자는 단일 레플리카<br />세그먼트에는 기본적으로 maxUnavailable=1을, 다중 레플리카 세그먼트에는 minAvailable=1을 사용합니다.            | false    |               |
-| `settings`             | [ClickHouseSettings](#clickhousesettings)                                                                                           | ClickHouse 서버의 구성 매개변수입니다.                                                                                                                                        | false    |               |
-| `clusterDomain`        | string                                                                                                                              | ClusterDomain은 DNS 해석에 사용되는 Kubernetes 클러스터 도메인 접미사입니다.                                                                                                           | false    | cluster.local |
-| `upgradeChannel`       | string                                                                                                                              | UpgradeChannel은 메이저 버전 업그레이드 확인에 사용할 릴리스 채널을 지정합니다.<br />비어 있으면 마이너 업데이트만 제안됩니다. 허용되는 값은 stable, lts 또는 특정 major.minor 버전(예: 25.8)입니다.                            | false    |               |
-| `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate)                                                                                       | 버전 감지 Job에 대한 VersionProbeTemplate 재정의입니다.                                                                                                                        | false    |               |
-| `externalSecret`       | [ExternalSecret](#externalsecret)                                                                                                   | ExternalSecret은 클러스터 시크릿이 포함된 외부 관리형 시크릿에 대한 선택적 참조입니다.<br />해당 시크릿은 클러스터와 동일한 네임스페이스에 있어야 합니다.                                                                   | false    |               |
-| `additionalPorts`      | [AdditionalPort](#additionalport) 배열                                                                                                | AdditionalPorts는 ClickHouse 파드와 연산자가 관리하는 헤드리스 Service에 노출할 추가 TCP 포트를 선언합니다.<br />연산자는 Kubernetes 리소스에 포트만 추가하며, ClickHouse 서버가 해당 포트에서 수신 대기하도록 구성하지는 않습니다. | false    |               |
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|---------|
+| `replicas` | integer | 단일 세그먼트의 레플리카 수입니다. | false | 3 |
+| `shards` | integer | 클러스터의 세그먼트 수입니다. | false | 1 |
+| `keeperClusterRef` | [KeeperClusterReference](#keeperclusterreference) | ClickHouse 코디네이션에 사용되는 KeeperCluster에 대한 참조입니다.<br />네임스페이스를 생략하면 ClickHouseCluster의 네임스페이스가 사용됩니다. | true |  |
+| `podTemplate` | [PodTemplateSpec](#podtemplatespec) | ClickHouse 파드 사양에 전달되는 매개변수입니다. | false |  |
+| `containerTemplate` | [ContainerTemplateSpec](#containertemplatespec) | ClickHouse 컨테이너 사양에 전달되는 매개변수입니다. | false |  |
+| `dataVolumeClaimSpec` | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | ClickHouse 데이터용 영구 스토리지 사양입니다. | false |  |
+| `additionalVolumeClaimTemplates` | [PersistentVolumeClaimTemplate](#persistentvolumeclaimtemplate) 배열 | JBOD / 멀티 디스크 스토리지를 위한 파드별 추가 PVC 템플릿입니다.<br />각 항목은 StatefulSet volumeClaimTemplate에 전파되고, /var/lib/clickhouse/disks/<name>에 마운트되며<br />생성된 JBOD 스토리지 정책에 추가됩니다.<br />디스크 세트는 생성 시 고정됩니다. | false |  |
+| `labels` | object (keys:string, values:string) | 리소스에 추가할 레이블입니다. | false |  |
+| `annotations` | object (keys:string, values:string) | 리소스에 추가할 어노테이션입니다. | false |  |
+| `podDisruptionBudget` | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec) | PodDisruptionBudget는 각 세그먼트에 대해 생성되는 PDB를 구성합니다.<br />설정하지 않으면 연산자는 단일 레플리카<br />세그먼트에는 기본적으로 maxUnavailable=1을, 다중 레플리카 세그먼트에는 minAvailable=1을 사용합니다. | false |  |
+| `settings` | [ClickHouseSettings](#clickhousesettings) | ClickHouse 서버의 구성 매개변수입니다. | false |  |
+| `clusterDomain` | string | ClusterDomain은 DNS 해석에 사용되는 Kubernetes 클러스터 도메인 접미사입니다. | false | cluster.local |
+| `upgradeChannel` | string | UpgradeChannel은 메이저 버전 업그레이드 확인에 사용할 릴리스 채널을 지정합니다.<br />비어 있으면 마이너 업데이트만 제안됩니다. 허용되는 값은 stable, lts 또는 특정 major.minor 버전(예: 25.8)입니다. | false |  |
+| `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate) | 버전 감지 Job에 대한 VersionProbeTemplate 재정의입니다. | false |  |
+| `externalSecret` | [ExternalSecret](#externalsecret) | ExternalSecret은 클러스터 시크릿이 포함된 외부 관리형 시크릿에 대한 선택적 참조입니다.<br />해당 시크릿은 클러스터와 동일한 네임스페이스에 있어야 합니다. | false |  |
+| `additionalPorts` | [AdditionalPort](#additionalport) 배열 | AdditionalPorts는 ClickHouse 파드와 연산자가 관리하는 헤드리스 Service에 노출할 추가 TCP 포트를 선언합니다.<br />연산자는 Kubernetes 리소스에 포트만 추가하며, ClickHouse 서버가 해당 포트에서 수신 대기하도록 구성하지는 않습니다. | false |  |
 
 다음 항목에 나타납니다:
-
-* [ClickHouseCluster](#clickhousecluster)
+- [ClickHouseCluster](#clickhousecluster)
 
 <div id="clickhouseclusterstatus">
   ## ClickHouseClusterStatus
@@ -118,6 +141,8 @@ ClickHouseClusterStatus는 ClickHouseCluster의 현재 관찰된 상태를 정�
 
 * [ClickHouseCluster](#clickhousecluster)
 
+
+
 <div id="clickhousesettings">
   ## ClickHouseSettings
 </div>
@@ -137,23 +162,27 @@ ClickHouseSettings는 ClickHouse 서버 설정 옵션을 정의합니다.
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 
+
+
 <div id="clustertlsspec">
   ## ClusterTLSSpec
 </div>
 
 ClusterTLSSpec는 클러스터의 TLS 구성을 정의합니다.
 
-| 필드                 | 유형                                                                                                                        | 설명                                                                                                                                                                                          | 필수    | 기본값   |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----- |
-| `enabled`          | boolean                                                                                                                   | Enabled는 TLS 사용 여부를 나타내며, 보안 포트를 열지 여부를 결정합니다.                                                                                                                                              | false | false |
-| `required`         | boolean                                                                                                                   | Required는 모든 연결에 TLS를 강제할지 지정합니다. 비보안 포트는 비활성화됩니다.                                                                                                                                          | false | false |
-| `serverCertSecret` | [LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) | ServerCertSecretRef는 서버 인증서가 포함된 TLS 시크릿에 대한 참조입니다.<br />이 시크릿은 cert-manager가 생성한 인증서와 동일한 구조를 가져야 하며,<br />인증서와 private key는 각각 &quot;tls.crt&quot; 및 &quot;tls.key&quot; 키에 저장되어 있어야 합니다. | false |       |
-| `caBundle`         | [SecretKeySelector](#secretkeyselector)                                                                                   | CABundle은 CA 번들이 포함된 TLS 시크릿에 대한 참조입니다.<br />비어 있고 ServerCertSecret이 지정된 경우 인증서의 CA 번들을 사용합니다.<br />그렇지 않으면 시스템에서 신뢰하는 CA 번들을 사용합니다.<br />키를 지정하지 않으면 기본값은 &quot;ca.crt&quot;입니다.           | false |       |
+| 필드                 | 유형                                                                                                                        | 설명                                                                                                                                                                                       | 필수    | 기본값   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----- |
+| `enabled`          | boolean                                                                                                                   | Enabled는 TLS 사용 여부를 나타내며, 보안 포트를 열지 여부를 결정합니다.                                                                                                                                           | false | false |
+| `required`         | boolean                                                                                                                   | Required는 모든 연결에 TLS를 강제할지 지정합니다. 비보안 포트는 비활성화됩니다.                                                                                                                                       | false | false |
+| `serverCertSecret` | [LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) | ServerCertSecret은 서버 인증서가 포함된 TLS 시크릿에 대한 참조입니다.<br />이 시크릿은 cert-manager가 생성한 인증서와 동일한 구조를 가져야 하며,<br />인증서와 private key는 각각 &quot;tls.crt&quot; 및 &quot;tls.key&quot; 키에 저장되어 있어야 합니다. | false |       |
+| `caBundle`         | [CABundleSelector](#cabundleselector)                                                                                     | CABundle은 피어 인증서를 검증하는 데 사용되는 CA 번들을 보관하는 시크릿 키에 대한 참조입니다.<br />비어 있으면 시스템에서 신뢰하는 CA 번들을 사용합니다.<br />키를 지정하지 않으면 기본값은 &quot;ca.crt&quot;입니다.                                             | false |       |
 
 다음 항목에 표시됩니다:
 
 * [ClickHouseSettings](#clickhousesettings)
 * [KeeperSettings](#keepersettings)
+
+
 
 <div id="configmapkeyselector">
   ## ConfigMapKeySelector
@@ -170,6 +199,8 @@ ConfigMapKeySelector는 ConfigMap에서 키를 선택합니다.
 
 * [DefaultPasswordSelector](#defaultpasswordselector)
 
+
+
 <div id="containerimage">
   ## ContainerImage
 </div>
@@ -185,6 +216,8 @@ ContainerImage는 리포지토리, 태그 또는 해시를 포함하는 컨테�
 다음 항목에서 사용됩니다:
 
 * [ContainerTemplateSpec](#containertemplatespec)
+
+
 
 <div id="containertemplatespec">
   ## ContainerTemplateSpec
@@ -208,6 +241,8 @@ ContainerTemplateSpec는 클러스터의 컨테이너에 대한 구성 재정의
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 * [KeeperClusterSpec](#keeperclusterspec)
 
+
+
 <div id="defaultpasswordselector">
   ## DefaultPasswordSelector
 </div>
@@ -224,20 +259,24 @@ DefaultPasswordSelector는 기본 사용자 비밀번호의 소스를 선택합�
 
 * [ClickHouseSettings](#clickhousesettings)
 
+
+
 <div id="externalsecret">
   ## ExternalSecret
 </div>
 
 ExternalSecret는 동일한 네임스페이스에 있는 시크릿을 가리키는 참조입니다.
 
-| 필드       | 유형                                            | 설명                                                                                                                           | 필수 여부 | 기본값     |
-| -------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----- | ------- |
-| `name`   | string                                        | 시크릿의 이름입니다.                                                                                                                  | true  |         |
+| 필드       | 유형                                            | 설명                                                                                                                         | 필수 여부 | 기본값     |
+| -------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----- | ------- |
+| `name`   | string                                        | 시크릿의 이름입니다.                                                                                                                | true  |         |
 | `policy` | [ExternalSecretPolicy](#externalsecretpolicy) | 정책은 연산자가 시크릿의 내용을 처리하는 방식을 제어합니다.<br />Observe (기본값): 필수 키가 하나라도 없으면 리컨실리에이션을 차단합니다.<br />Manage: 기존 시크릿에 누락된 필수 키를 생성합니다. | false | Observe |
 
 다음 항목에 나타납니다:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
+
+
 
 <div id="externalsecretpolicy">
   ## ExternalSecretPolicy
@@ -254,11 +293,13 @@ ExternalSecretPolicy는 연산자가 외부 시크릿의 내용을 어떻게 다
 
 * [ExternalSecret](#externalsecret)
 
+
+
 <div id="keepercluster">
   ## KeeperCluster
 </div>
 
-KeeperCluster는 `keeperclusters` API에 대한 스키마입니다.
+KeeperCluster는 `keeperclusters` API의 스키마입니다.
 
 <div id="clickhousecluster-api-version-and-kind">
   ### API 버전 및 Kind
@@ -278,11 +319,13 @@ kind: KeeperCluster
 
 * [KeeperClusterList](#keeperclusterlist)
 
+
+
 <div id="keeperclusterlist">
   ## KeeperClusterList
 </div>
 
-KeeperClusterList는 KeeperCluster 목록을 포함합니다.
+KeeperClusterList에는 KeeperCluster 목록이 포함되어 있습니다.
 
 <div id="clickhousecluster-api-version-and-kind">
   ### API 버전 및 Kind
@@ -296,6 +339,8 @@ kind: KeeperClusterList
 | 필드      | 유형                                 | 설명 | 필수   | 기본값 |
 | ------- | ---------------------------------- | -- | ---- | --- |
 | `items` | [KeeperCluster](#keepercluster) 배열 |    | true |     |
+
+
 
 <div id="keeperclusterreference">
   ## KeeperClusterReference
@@ -312,6 +357,8 @@ KeeperClusterReference는 ClickHouseCluster에서 사용할 KeeperCluster를 식
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 
+
+
 <div id="keeperclusterspec">
   ## KeeperClusterSpec
 </div>
@@ -320,21 +367,23 @@ KeeperClusterSpec는 KeeperCluster의 원하는 상태를 정의합니다.
 
 | Field                  | Type                                                                                                                                | Description                                                                                                                                                                                  | Required | Default       |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------- |
-| `replicas`             | integer                                                                                                                             | cluster의 레플리카 수입니다.                                                                                                                                                                          | false    | 3             |
+| `replicas`             | integer                                                                                                                             | 클러스터의 레플리카 수입니다.                                                                                                                                                                          | false    | 3             |
 | `podTemplate`          | [PodTemplateSpec](#podtemplatespec)                                                                                                 | Keeper 파드 사양에 전달되는 매개변수입니다.                                                                                                                                                                  | false    |               |
 | `containerTemplate`    | [ContainerTemplateSpec](#containertemplatespec)                                                                                     | Keeper 컨테이너 사양에 전달되는 매개변수입니다.                                                                                                                                                                | false    |               |
 | `dataVolumeClaimSpec`  | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | ClickHouse Keeper 데이터용 영구 스토리지 사양입니다.                                                                                                                                                        | false    |               |
 | `labels`               | object (keys:string, values:string)                                                                                                 | 리소스에 추가할 추가 레이블입니다.                                                                                                                                                                          | false    |               |
 | `annotations`          | object (keys:string, values:string)                                                                                                 | 리소스에 추가할 추가 어노테이션입니다.                                                                                                                                                                        | false    |               |
-| `podDisruptionBudget`  | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec)                                                                                 | PodDisruptionBudget는 Keeper cluster용으로 생성되는 PDB를 구성합니다.<br />설정하지 않으면 연산자는 기본적으로 maxUnavailable=replicas/2를 사용합니다.<br />(2F+1 cluster의 quorum 유지); 단일 레플리카 cluster는 maxUnavailable=1을 사용합니다. | false    |               |
+| `podDisruptionBudget`  | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec)                                                                                 | PodDisruptionBudget는 Keeper 클러스터용으로 생성되는 PDB를 구성합니다.<br />설정하지 않으면 연산자는 기본적으로 maxUnavailable=replicas/2를 사용합니다.<br />(2F+1 클러스터의 quorum 유지); 단일 레플리카 클러스터는 maxUnavailable=1을 사용합니다. | false    |               |
 | `settings`             | [KeeperSettings](#keepersettings)                                                                                                   | ClickHouse Keeper server의 구성 매개변수입니다.                                                                                                                                                        | false    |               |
-| `clusterDomain`        | string                                                                                                                              | ClusterDomain은 DNS 해석에 사용되는 Kubernetes cluster 도메인 접미사입니다.                                                                                                                                   | false    | cluster.local |
+| `clusterDomain`        | string                                                                                                                              | ClusterDomain은 DNS 해석에 사용되는 Kubernetes 클러스터 도메인 접미사입니다.                                                                                                                                   | false    | cluster.local |
 | `upgradeChannel`       | string                                                                                                                              | UpgradeChannel은 메이저 버전 업그레이드 확인에 사용할 릴리스 채널을 지정합니다.<br />비어 있으면 마이너 업데이트만 제안됩니다. 허용되는 값은 stable, lts 또는 특정 major.minor 버전(예: 25.8)입니다.                                                       | false    |               |
-| `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate)                                                                                       | 버전 감지 job에 대한 VersionProbeTemplate 재정의입니다.                                                                                                                                                   | false    |               |
+| `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate)                                                                                       | 버전 감지 job에 대한 VersionProbeTemplate 재정의입니다.<br />Deprecated: Keeper 버전 프로브 job은 사용되지 않습니다. 이 필드는 이전 버전과의 호환성을 위해 유지됩니다.                                                                       | false    |               |
 
 다음에 표시됩니다:
 
 * [KeeperCluster](#keepercluster)
+
+
 
 <div id="keeperclusterstatus">
   ## KeeperClusterStatus
@@ -342,21 +391,23 @@ KeeperClusterSpec는 KeeperCluster의 원하는 상태를 정의합니다.
 
 KeeperClusterStatus는 KeeperCluster의 관찰된 상태를 정의합니다.
 
-| 필드                      | 유형                                                                                                     | 설명                                                                                                  | 필수    | 기본값 |
-| ----------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ----- | --- |
-| `conditions`            | [Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) 배열 |                                                                                                     | false |     |
-| `readyReplicas`         | integer                                                                                                | ReadyReplicas는 요청을 처리할 준비가 된 레플리카의 총 개수입니다.                                                         | false |     |
-| `configurationRevision` | string                                                                                                 | ConfigurationRevision은 각 레플리카의 대상 구성 리비전을 나타냅니다.                                                    | true  |     |
-| `statefulSetRevision`   | string                                                                                                 | StatefulSetRevision은 각 레플리카의 대상 StatefulSet 리비전을 나타냅니다.                                             | true  |     |
-| `currentRevision`       | string                                                                                                 | CurrentRevision은 가장 최근에 적용된 KeeperCluster spec 리비전을 나타냅니다.                                          | true  |     |
-| `updateRevision`        | string                                                                                                 | UpdateRevision은 가장 최근에 요청된 KeeperCluster spec 리비전을 나타냅니다.                                           | true  |     |
-| `observedGeneration`    | integer                                                                                                | ObservedGeneration은 컨트롤러가 관찰한 최신 generation을 나타냅니다.                                                 | true  |     |
-| `version`               | string                                                                                                 | Version은 컨테이너 이미지가 보고한 버전을 나타냅니다.                                                                   | false |     |
-| `versionProbeRevision`  | string                                                                                                 | VersionProbeRevision은 마지막으로 성공한 버전 프로브의 이미지 해시입니다.<br />이 값이 현재 이미지 해시와 일치하면 캐시된 Version이 바로 사용됩니다. | false |     |
+| 필드                      | 유형                                                                                                     | 설명                                                                                                                                               | 필수    | 기본값 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----- | --- |
+| `conditions`            | [Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) 배열 |                                                                                                                                                  | false |     |
+| `readyReplicas`         | integer                                                                                                | ReadyReplicas는 요청을 처리할 준비가 된 레플리카의 총 개수입니다.                                                                                                      | false |     |
+| `configurationRevision` | string                                                                                                 | ConfigurationRevision은 각 레플리카의 대상 구성 리비전을 나타냅니다.                                                                                                 | true  |     |
+| `statefulSetRevision`   | string                                                                                                 | StatefulSetRevision은 각 레플리카의 대상 StatefulSet 리비전을 나타냅니다.                                                                                          | true  |     |
+| `currentRevision`       | string                                                                                                 | CurrentRevision은 가장 최근에 적용된 KeeperCluster spec 리비전을 나타냅니다.                                                                                       | true  |     |
+| `updateRevision`        | string                                                                                                 | UpdateRevision은 가장 최근에 요청된 KeeperCluster spec 리비전을 나타냅니다.                                                                                        | true  |     |
+| `observedGeneration`    | integer                                                                                                | ObservedGeneration은 컨트롤러가 관찰한 최신 generation을 나타냅니다.                                                                                              | true  |     |
+| `version`               | string                                                                                                 | Version은 Keeper server가 보고한 버전을 나타냅니다.                                                                                                           | false |     |
+| `versionProbeRevision`  | string                                                                                                 | VersionProbeRevision은 마지막으로 성공한 version probe의 image hash입니다.<br />Deprecated: Keeper version probe Jobs는 사용되지 않으며, 이 필드는 이전 버전과의 호환성을 위해 유지됩니다. | false |     |
 
 다음 항목에 나타납니다:
 
 * [KeeperCluster](#keepercluster)
+
+
 
 <div id="keepersettings">
   ## KeeperSettings
@@ -373,6 +424,8 @@ KeeperSettings는 ClickHouse Keeper 서버 구성을 정의합니다.
 다음에 표시됩니다:
 
 * [KeeperClusterSpec](#keeperclusterspec)
+
+
 
 <div id="loggerconfig">
   ## LoggerConfig
@@ -393,6 +446,26 @@ LoggerConfig는 server 로깅 구성을 정의합니다.
 * [ClickHouseSettings](#clickhousesettings)
 * [KeeperSettings](#keepersettings)
 
+
+
+<div id="namedtemplatemeta">
+  ## NamedTemplateMeta
+</div>
+
+NamedTemplateMeta는 이름이 필요한 템플릿 객체에서 지원되는 메타데이터 설정을 정의합니다.
+
+| 필드            | 유형                              | 설명                     | 필수 여부 | 기본값 |
+| ------------- | ------------------------------- | ---------------------- | ----- | --- |
+| `name`        | string                          | 이름은 리소스 식별자입니다.        | true  |     |
+| `labels`      | 객체 (keys:string, values:string) | 템플릿 객체에 적용되는 레이블입니다.   | false |     |
+| `annotations` | 객체 (keys:string, values:string) | 템플릿 객체에 적용되는 어노테이션입니다. | false |     |
+
+다음 항목에 나타납니다:
+
+* [PersistentVolumeClaimTemplate](#persistentvolumeclaimtemplate)
+
+
+
 <div id="pdbpolicy">
   ## PDBPolicy
 </div>
@@ -409,6 +482,25 @@ PDBPolicy는 PodDisruptionBudget를 생성할지 여부를 제어합니다.
 
 * [PodDisruptionBudgetSpec](#poddisruptionbudgetspec)
 
+
+
+<div id="persistentvolumeclaimtemplate">
+  ## PersistentVolumeClaimTemplate
+</div>
+
+PersistentVolumeClaimTemplate는 레플리카별 PersistentVolumeClaim에 사용하는 이름 있는 템플릿입니다.
+
+| 필드         | 유형                                                                                                                                  | 설명                                                                                                                                                   | 필수   | 기본값 |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---- | --- |
+| `metadata` | [NamedTemplateMeta](#namedtemplatemeta)                                                                                             | `metadata` 필드는 Kubernetes API 문서를 참조하십시오.                                                                                                            | true |     |
+| `spec`     | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | Spec은 파드 작성자가 요청하는 볼륨의 원하는 특성을 정의합니다.<br />자세한 내용은 다음을 참조하십시오: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims | true |     |
+
+다음에 사용됩니다:
+
+* [ClickHouseClusterSpec](#clickhouseclusterspec)
+
+
+
 <div id="poddisruptionbudgetspec">
   ## PodDisruptionBudgetSpec
 </div>
@@ -417,23 +509,27 @@ PodDisruptionBudgetSpec는 클러스터에 대해 생성되는 PDB를 구성합�
 `MinAvailable` 또는 `MaxUnavailable` 중 하나만 설정할 수 있습니다.
 둘 다 설정하지 않으면 연산자가 레플리카 수를 기준으로 안전한 기본값을 선택합니다.
 
-| 필드                           | 유형                                                                                                                                              | 설명                                                                                                                                                    | 필수 여부 | 기본값     |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------- |
+| 필드                           | 유형                                                                                                                                              | 설명                                                                                                                                                  | 필수 여부 | 기본값     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------- |
 | `policy`                     | [PDBPolicy](#pdbpolicy)                                                                                                                         | Policy는 연산자가 PodDisruptionBudget를 생성할지 여부를 제어합니다.<br />설정하지 않으면 기본값은 &quot;Enabled&quot;입니다. PDB를 생성하지 않으려면(예: 개발 환경) &quot;Disabled&quot;로 설정하십시오. | false | Enabled |
-| `minAvailable`               | [IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#intorstring-intstr-util)                                     | MinAvailable은 중단이 발생하는 동안 계속 사용 가능해야 하는 최소 파드 수입니다.                                                                                                   | false |         |
-| `maxUnavailable`             | [IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#intorstring-intstr-util)                                     | MaxUnavailable은 중단이 발생하는 동안 사용 불가 상태가 될 수 있는 최대 파드 수입니다.                                                                                              | false |         |
-| `unhealthyPodEvictionPolicy` | [UnhealthyPodEvictionPolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#unhealthypodevictionpolicytype-v1-policy) | UnhealthyPodEvictionPolicy는 비정상 파드를<br />언제 퇴거 대상으로 간주할지에 대한 기준을 정의합니다.<br />유효한 값은 &quot;IfReady&quot; 및 &quot;AlwaysAllow&quot;입니다.                 | false |         |
+| `minAvailable`               | [IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#intorstring-intstr-util)                                     | MinAvailable은 중단이 발생하는 동안 계속 사용 가능해야 하는 최소 파드 수입니다.                                                                                                 | false |         |
+| `maxUnavailable`             | [IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#intorstring-intstr-util)                                     | MaxUnavailable은 중단이 발생하는 동안 사용 불가 상태가 될 수 있는 최대 파드 수입니다.                                                                                            | false |         |
+| `unhealthyPodEvictionPolicy` | [UnhealthyPodEvictionPolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#unhealthypodevictionpolicytype-v1-policy) | UnhealthyPodEvictionPolicy는 비정상 파드를<br />언제 퇴거 대상으로 간주할지에 대한 기준을 정의합니다.<br />유효한 값은 &quot;IfReady&quot; 및 &quot;AlwaysAllow&quot;입니다.               | false |         |
 
 다음 항목에서 사용됩니다:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 * [KeeperClusterSpec](#keeperclusterspec)
 
+
+
 <div id="podtemplatespec">
   ## PodTemplateSpec
 </div>
 
 PodTemplateSpec는 클러스터의 파드에 적용되는 파드 구성 재정의 항목을 설명합니다.
+
+
 
 | 필드                              | 유형                                                                                                                                   | 설명                                                                                                                                                                                                                                                                                                                               | 필수    | 기본값 |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | --- |
@@ -453,10 +549,14 @@ PodTemplateSpec는 클러스터의 파드에 적용되는 파드 구성 재정�
 | `nodeHostnameKey`               | string                                                                                                                               | NodeHostnameKey는 노드 레이블의 키입니다.<br />이 키를 가진 레이블이 있고 그 값이 동일한 노드는 같은 노드에 있는 것으로 간주됩니다.<br />서로 다른 세그먼트의 레플리카가 여러 노드에 분산되도록 기본 AntiAffinity 규칙을 활성화하려면 이 값을 설정하십시오.<br />&quot;kubernetes.io/hostname&quot;로 설정하는 것을 권장합니다.                                                                                                        | false |     |
 | `initContainers`                | [Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#container-v1-core) 배열                               | InitContainers는 메인 server 컨테이너가 시작되기 전에 실행할 init 컨테이너 목록입니다.<br />이름을 기준으로 연산자의 기본값과 머지됩니다.<br />이름이 동일한 경우.                                                                                                                                                                                                                     | false |     |
 
-다음 항목에 표시됩니다:
+
+
+다음에 나타납니다:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 * [KeeperClusterSpec](#keeperclusterspec)
+
+
 
 <div id="secretkeyselector">
   ## SecretKeySelector
@@ -471,8 +571,9 @@ SecretKeySelector는 시크릿의 키를 선택하는 데 사용됩니다.
 
 다음 항목에 사용됩니다:
 
-* [ClusterTLSSpec](#clustertlsspec)
 * [DefaultPasswordSelector](#defaultpasswordselector)
+
+
 
 <div id="templatemeta">
   ## TemplateMeta
@@ -489,6 +590,8 @@ TemplateMeta는 템플릿 객체에서 지원되는 메타데이터 설정을 �
 
 * [VersionProbePodTemplate](#versionprobepodtemplate)
 * [VersionProbeTemplate](#versionprobetemplate)
+
+
 
 <div id="versionprobecontainer">
   ## VersionProbeContainer
@@ -507,6 +610,8 @@ VersionProbeContainer는 버전 프로브의 컨테이너 수준 재정의를 �
 
 * [VersionProbePodSpec](#versionprobepodspec)
 
+
+
 <div id="versionprobejobspec">
   ## VersionProbeJobSpec
 </div>
@@ -521,6 +626,8 @@ VersionProbeJobSpec는 버전 프로브에 대한 Job 수준의 재정의 설정
 다음 항목에 포함됩니다:
 
 * [VersionProbeTemplate](#versionprobetemplate)
+
+
 
 <div id="versionprobepodspec">
   ## VersionProbePodSpec
@@ -540,6 +647,8 @@ VersionProbePodSpec는 버전 프로브의 파드 수준 재정의를 정의합�
 
 * [VersionProbePodTemplate](#versionprobepodtemplate)
 
+
+
 <div id="versionprobepodtemplate">
   ## VersionProbePodTemplate
 </div>
@@ -554,6 +663,8 @@ VersionProbePodTemplate는 버전 프로브 파드에 적용할 재정의 항목
 다음에서 사용됩니다:
 
 * [VersionProbeJobSpec](#versionprobejobspec)
+
+
 
 <div id="versionprobetemplate">
   ## VersionProbeTemplate

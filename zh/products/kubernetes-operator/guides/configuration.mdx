@@ -84,12 +84,14 @@ spec:
   ## 存储配置
 </div>
 
-配置持久化存储：
+使用 `dataVolumeClaimSpec` (标准 Kubernetes
+`PersistentVolumeClaimSpec`) 配置持久化存储。Operator 会将其转换为每个副本对应的 PersistentVolumeClaim，
+并将其挂载到数据路径 `/var/lib/clickhouse`：
 
 ```yaml
 spec:
   dataVolumeClaimSpec:
-    storageClassName: fast-ssd  # 可选：根据已安装的 CSI 选择合适的存储类名称
+    storageClassName: fast-ssd  # Optional: consider your storage class based on the installed CSI
     resources:
       requests:
         storage: 100Gi
@@ -97,6 +99,115 @@ spec:
 
 <Note>
   仅当底层存储类支持卷扩容时，Operator 才能修改现有的 PVC。
+</Note>
+
+关于在多磁盘 (JBOD) 布局中挂载额外磁盘、在没有持久卷的情况下运行、扩展容量、自定义存储策略，以及创建后哪些内容不能更改的规则，请参阅专门的
+[存储和卷指南](/zh/products/kubernetes-operator/guides/storage)。
+
+<div id="cluster-domain">
+  ## 集群域
+</div>
+
+`spec.clusterDomain` 用于设置 operator 在构建并写入 ClickHouse server
+配置的 pod (容器组) 完全限定主机名时所使用的 Kubernetes DNS 后缀。默认值为 `cluster.local`，并且在
+`ClickHouseCluster` 和 `KeeperCluster` 中都可用。
+
+```yaml
+spec:
+  clusterDomain: cluster.local   # default; override only for a custom domain
+```
+
+operator 会通过无头 Service 按如下格式访问每个 pod (容器组) ：
+`<pod>.<headless-service>.<namespace>.svc.<clusterDomain>`。该后缀会传递到
+生成配置的两个部分中：
+
+* 在 `ClickHouseCluster` 中，其值会用于
+  `remote_servers` 里的副本主机名 (跨副本和 `Distributed` 查询) 。
+* 在 `KeeperCluster` 中，其值会用于构建
+  ClickHouse 用于协调的 Keeper 节点主机名。
+
+<Note>
+  仅当你的集群中 `kubelet` 节点代理使用的 `--cluster-domain`
+  不是 `cluster.local` 时，才应覆盖此值。如果该值与实际的集群域不一致，
+  ClickHouse 将无法解析 Keeper 和副本主机名——协调以及
+  `Distributed` 查询都会因 DNS 解析错误而失败。请在
+  `ClickHouseCluster` 及其引用的 `KeeperCluster` 中设置**相同**的值。
+</Note>
+
+<div id="multi-disk-jbod-storage">
+  ### 多磁盘 (JBOD) 存储
+</div>
+
+`additionalVolumeClaimTemplates` 会为每个 ClickHouse 副本挂载额外磁盘；而要使用这些磁盘，仍必须配置主 `dataVolumeClaimSpec`。
+每一项都是一个 PVC 模板——即一个 `metadata.name` 加上一个 PVC `spec`。
+这些磁盘的协调方式与主数据磁盘完全相同——都作为 StatefulSet 的 `volumeClaimTemplates`——因此 StatefulSet 控制器会为每个副本创建并保留一个 PVC，名称为 `<name>-<statefulset>-0`。
+
+```yaml
+spec:
+  dataVolumeClaimSpec:
+    storageClassName: fast-ssd
+    resources:
+      requests:
+        storage: 100Gi
+  additionalVolumeClaimTemplates:
+    - metadata:
+        name: disk1
+      spec:
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 100Gi
+    - metadata:
+        name: disk2
+      spec:
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 100Gi
+```
+
+operator 会将每个附加卷挂载到 `/var/lib/clickhouse/disks/<name>`，并将其添加到自动生成的 ClickHouse 存储配置中。
+名称中的连字符在 ClickHouse 的磁盘标识符中会转换为下划线；挂载路径则保留原始名称。
+
+主数据磁盘和每个附加磁盘都会被放入 `default` 存储策略中的同一个卷，因此 ClickHouse 会以轮询方式将新的数据分区片段分布到所有这些磁盘上。
+可用容量等于所有磁盘容量之和，且每个未设置自身 `storage_policy` 的表 (包括 `system.*` 表) 都会使用这组组合存储。
+
+<Note>
+  PVC 名称必须匹配 `^[a-z]([-a-z0-9]*[a-z0-9])?$`，并且不得与主数据卷名称冲突。
+  与主数据磁盘一样，附加磁盘集合在创建时即固定：创建后添加、删除或重命名条目都会被拒绝。
+  与主数据磁盘一样，删除集群时会保留附加 PVC。
+  如果存储类支持扩容，则可以扩展现有条目的存储大小。
+</Note>
+
+<div id="cluster-domain">
+  ## 集群域
+</div>
+
+`spec.clusterDomain` 用于设置 operator 在构建其写入 ClickHouse server
+配置中的 pod (容器组) 完全限定主机名时所使用的 Kubernetes DNS 后缀。
+其默认值为 `cluster.local`，并且 `ClickHouseCluster` 和 `KeeperCluster`
+都提供了该字段。
+
+```yaml
+spec:
+  clusterDomain: cluster.local   # default; override only for a custom domain
+```
+
+operator 会通过无头 Service 按以下形式访问每个 pod (容器组) ：
+`<pod>.<headless-service>.<namespace>.svc.<clusterDomain>`。该后缀会传入
+生成配置中的两个部分：
+
+* 对于 `ClickHouseCluster`，其值会用于 `remote_servers` 中的副本主机名
+  (用于跨副本和 `Distributed` 查询) 。
+* 对于 `KeeperCluster`，其值会用于构建 Keeper 节点主机名，
+  ClickHouse 会使用这些主机名进行协调。
+
+<Note>
+  只有在集群的 `kubelet 节点代理` 使用了非 `cluster.local` 的 `--cluster-domain`
+  时，才应覆盖此值。如果该值与实际集群域不一致，
+  ClickHouse 将无法解析 Keeper 和副本主机名——协调以及
+  `Distributed` 查询都会因 DNS 解析错误而失败。请在
+  `ClickHouseCluster` 及其引用的 `KeeperCluster` 上设置**相同**的值。
 </Note>
 
 <div id="pod-configuration">
@@ -153,12 +264,12 @@ Operator 会为每个集群创建一个 [PodDisruptionBudget](https://kubernetes
 
 operator 会根据集群规模选择安全的默认值，因此即使首次执行 `apply`，也能避免意外丢失仲裁。
 
-| 资源                  | 拓扑                      | 默认 PDB                                                                                |
-| ------------------- | ----------------------- | ------------------------------------------------------------------------------------- |
-| `ClickHouseCluster` | `replicas: 1` (单副本分片)   | `maxUnavailable: 1` — 对于单节点集群，允许中断，这样不会阻塞节点排空                                         |
-| `ClickHouseCluster` | `replicas: 2+` (多副本分片)  | `minAvailable: 1` — 每个分片至少必须保持 1 个副本在线                                                |
-| `KeeperCluster`     | `replicas: 1`           | `maxUnavailable: 1` — 对于单节点集群，允许中断，这样不会阻塞节点排空                                         |
-| `KeeperCluster`     | `replicas: 3+`          | `maxUnavailable: replicas/2` — 为 `2F+1` 集群保留 RAFT 仲裁 (3 个副本可容忍 1 个宕机，5 个副本可容忍 2 个宕机)  |
+| 资源                  | 拓扑                     | 默认 PDB                                                                               |
+| ------------------- | ---------------------- | ------------------------------------------------------------------------------------ |
+| `ClickHouseCluster` | `replicas: 1` (单副本分片)  | `maxUnavailable: 1` — 对于单节点集群，允许中断，这样不会阻塞节点排空                                        |
+| `ClickHouseCluster` | `replicas: 2+` (多副本分片) | `minAvailable: 1` — 每个分片至少必须保持 1 个副本在线                                               |
+| `KeeperCluster`     | `replicas: 1`          | `maxUnavailable: 1` — 对于单节点集群，允许中断，这样不会阻塞节点排空                                        |
+| `KeeperCluster`     | `replicas: 3+`         | `maxUnavailable: replicas/2` — 为 `2F+1` 集群保留 RAFT 仲裁 (3 个副本可容忍 1 个宕机，5 个副本可容忍 2 个宕机) |
 
 对于一个包含 3 个分片且 `replicas: 3` 的 ClickHouseCluster，operator 会创建 3 个 PDB，每个分片 1 个，且每个都设置为 `minAvailable: 1`。
 
@@ -321,8 +432,6 @@ spec:
   ## TLS/SSL 配置
 </div>
 
-如需查看端到端示例 (包括使用 cert-manager 签发证书、通过安全端口连接客户端，以及加密 Keeper 流量) ，请参阅 [使用 TLS 进行安全防护](/zh/products/kubernetes-operator/guides/tls) 指南。
-
 <div id="configure-secure-endpoints">
   ### 配置安全端点
 </div>
@@ -343,11 +452,10 @@ spec:
   ### SSL 证书 Secret 格式
 </div>
 
-该 Secret 应包含以下键：
+该 Secret 应包含服务器密钥对：
 
 * `tls.crt` - PEM 编码的服务器证书
 * `tls.key` - PEM 编码的私钥
-* `ca.crt` - PEM 编码的 CA 证书链
 
 <Note>
   此格式兼容由 cert-manager 生成的证书。
@@ -359,10 +467,9 @@ spec:
 
 如果 KeeperCluster 启用了 TLS，ClickHouseCluster 会自动使用与 Keeper 节点的安全连接。
 
-ClickHouseCluster 应能够验证 Keeper 节点的证书。
-如果 ClickHouseCluster 启用了 TLS，则会使用 `ca.crt` 证书包进行验证；否则，将使用默认的 CA 证书包。
+ClickHouseCluster 会根据系统信任存储以及你配置的任何 `caBundle` 来验证 Keeper 节点证书。
 
-用户可以提供自定义 CA 证书包引用：
+要信任私有 CA (例如自签名 CA 或内部 CA) ，请提供自定义 CA 证书包引用：
 
 ```yaml
 spec:
@@ -409,13 +516,13 @@ spec:
 
 Secret 必须包含以下键：
 
-| Key                     | Format                              | When required              |
-| ----------------------- | ----------------------------------- | -------------------------- |
-| `interserver-password`  | 明文密码                                | 始终需要                       |
-| `management-password`   | 明文密码                                | 始终需要                       |
-| `keeper-identity`       | `clickhouse:<password>`             | 始终需要                       |
-| `cluster-secret`        | 明文密码                                | 始终需要                       |
-| `named-collections-key` | 以十六进制编码的 16 字节 AES 密钥 (32 个十六进制字符)  | 仅适用于 ClickHouse `>= 25.12` |
+| Key                     | Format                             | When required              |
+| ----------------------- | ---------------------------------- | -------------------------- |
+| `interserver-password`  | 明文密码                               | 始终需要                       |
+| `management-password`   | 明文密码                               | 始终需要                       |
+| `keeper-identity`       | `clickhouse:<password>`            | 始终需要                       |
+| `cluster-secret`        | 明文密码                               | 始终需要                       |
+| `named-collections-key` | 以十六进制编码的 16 字节 AES 密钥 (32 个十六进制字符) | 仅适用于 ClickHouse `>= 25.12` |
 
 一个完整的 Secret 如下所示：
 
@@ -440,10 +547,10 @@ stringData:
 
 `spec.externalSecret.policy` 用于控制 Operator 如何处理缺失的必需键：
 
-| Policy          | 键缺失时的行为                                                                                                                             |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `Observe` (默认)  | 在所有必需键都存在之前，协调会被**阻塞**。Operator 会通过 `ExternalSecretValid` 条件 (reason 为 `ExternalSecretInvalid`) 和一个 `Warning` 事件，报告每个缺失的键及其对应的格式提示。 |
-| `Manage`        | Operator 会**生成**所有缺失的必需键，并将它们写回同一个 Secret。适用于引导场景：先创建一个空 Secret，让 Operator 将其补齐，然后再按需收紧访问权限。Operator 仍然绝不会删除该 Secret。               |
+| Policy         | 键缺失时的行为                                                                                                                             |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `Observe` (默认) | 在所有必需键都存在之前，协调会被**阻塞**。Operator 会通过 `ExternalSecretValid` 条件 (reason 为 `ExternalSecretInvalid`) 和一个 `Warning` 事件，报告每个缺失的键及其对应的格式提示。 |
+| `Manage`       | Operator 会**生成**所有缺失的必需键，并将它们写回同一个 Secret。适用于引导场景：先创建一个空 Secret，让 Operator 将其补齐，然后再按需收紧访问权限。Operator 仍然绝不会删除该 Secret。               |
 
 <Note>
   即使设置了 `policy: Manage`，该 Secret 也必须已存在于命名空间中——Operator 绝不会自行创建 Secret，它只会将生成的键写入现有的 Secret。 如果引用的 Secret 不存在，则无论采用哪种 policy，协调都会因 `ExternalSecretNotFound` 而被阻塞。
@@ -597,7 +704,7 @@ spec.additionalPorts[0].name: "http" is reserved by the operator
 
 operator 会针对 cluster 版本执行两项彼此独立的操作：
 
-1. **版本探测** — 一个 Kubernetes `Job`，会将容器镜像运行一次，以检测当前运行的 ClickHouse / Keeper 版本。检测到的版本会记录到 `.status.version` 中，并用于其他协调步骤 (例如，名为 `外部 Secret` 的 named-collections key 仅在 ClickHouse `25.12` 及以上版本中才需要) 。
+1. **版本报告** — 对于 `ClickHouseCluster`，一个 Kubernetes `Job` 会将容器镜像运行一次，以检测当前运行的 ClickHouse 版本；对于 `KeeperCluster`，operator 会从正在运行的副本中读取由 server 上报的版本。检测到的版本会记录到 `.status.version` 中，并用于其他协调步骤 (例如，名为 `外部 Secret` 的 named-collections key 仅在 ClickHouse `25.12` 及以上版本中才需要) 。
 2. **升级通道** — 定期检查公开的 ClickHouse 发布源 (`https://clickhouse.com/data/version_date.tsv`) 。operator 会通过 `VersionUpgraded` status condition 报告是否有新版本可用。它绝不会自行升级 cluster——镜像标签始终由用户控制。
 
 <div id="upgrade-channel-choosing">
@@ -628,18 +735,18 @@ spec:
 
 两个 conditions 会体现探测和升级检查的结果：
 
-| Condition         | Reason                 | Meaning                                                                                                                                |
-| ----------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `VersionInSync`   | `VersionMatch`         | 所有副本报告的版本都与镜像一致                                                                                                                        |
-| `VersionInSync`   | `VersionMismatch`      | 各副本运行的版本不同。在计划内的滚动升级期间，该告警事件会被抑制。通常这会在可变镜像标签被固定时出现 (例如 `latest` 或仅指定主次版本的 `26.3`) ，且底层 registry 在多次拉取之间发生了变化，导致不同副本最终落在同一标签对应的不同补丁版本上。 |
-| `VersionInSync`   | `VersionPending`       | 版本探测 Job 尚未完成                                                                                                                          |
-| `VersionInSync`   | `VersionProbeFailed`   | 探测 Job 失败；operator 无法确定当前运行的版本                                                                                                         |
-| `VersionUpgraded` | `UpToDate`             | 该集群使用的是所选通道中当前可用的最新版本                                                                                                                  |
-| `VersionUpgraded` | `MinorUpdateAvailable` | 同一 `major.minor` 系列中有更新的补丁版本可用                                                                                                         |
-| `VersionUpgraded` | `MajorUpdateAvailable` | 所选通道中有更新的 `major.minor` 版本可用                                                                                                           |
-| `VersionUpgraded` | `VersionOutdated`      | 当前运行的版本已过时，不会再从所选通道接收修复——通常是因为该主版本系列已被上游从 `lts` 或 `stable` 中移除                                                                         |
-| `VersionUpgraded` | `WrongReleaseChannel`  | 当前运行的镜像不属于所选的 `upgradeChannel`。例如：某个运行 `26.5` 且设置了 `upgradeChannel: lts` 的集群，因为 `26.5` 不属于上游 `lts` 系列。                                 |
-| `VersionUpgraded` | `UpgradeCheckFailed`   | operator 无法访问上游发布源                                                                                                                     |
+| Condition         | Reason                 | Meaning                                                                                                                              |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `VersionInSync`   | `VersionMatch`         | 所有副本报告的版本都相同                                                                                                                         |
+| `VersionInSync`   | `VersionMismatch`      | 各副本运行的版本不同。在计划内的滚动升级期间，此原因会被抑制。通常这会在可变镜像标签被固定时出现 (例如 `latest` 或仅指定主次版本的 `26.3`) ，且底层 registry 在多次拉取之间发生了变化，导致不同副本最终落在同一标签对应的不同补丁版本上。 |
+| `VersionInSync`   | `VersionPending`       | 版本探测 Job 尚未完成，或者尚未观察到 Keeper 副本版本                                                                                                    |
+| `VersionInSync`   | `VersionProbeFailed`   | ClickHouse 探测 Job 失败；operator 无法确定当前运行的版本                                                                                            |
+| `VersionUpgraded` | `UpToDate`             | 该集群使用的是所选通道中当前可用的最新版本                                                                                                                |
+| `VersionUpgraded` | `MinorUpdateAvailable` | 同一 `major.minor` 系列中有更新的补丁版本可用                                                                                                       |
+| `VersionUpgraded` | `MajorUpdateAvailable` | 所选通道中有更新的 `major.minor` 版本可用                                                                                                         |
+| `VersionUpgraded` | `VersionOutdated`      | 当前运行的版本已过时，不会再从所选通道接收修复——通常是因为该主版本系列已被上游从 `lts` 或 `stable` 中移除                                                                       |
+| `VersionUpgraded` | `WrongReleaseChannel`  | 当前运行的镜像不属于所选的 `upgradeChannel`。例如：某个运行 `26.5` 且设置了 `upgradeChannel: lts` 的集群，因为 `26.5` 不属于上游 `lts` 系列。                               |
+| `VersionUpgraded` | `UpgradeCheckFailed`   | operator 无法访问上游发布源                                                                                                                   |
 
 可使用以下方式检查它们：
 
@@ -650,6 +757,8 @@ kubectl get clickhousecluster sample -o yaml | sed -n '/conditions:/,/^[^ ]/p'
 <div id="version-probe-template">
   ### 覆盖版本探测 Job
 </div>
+
+这仅适用于 `ClickHouseCluster`。`KeeperCluster` 不再运行版本探测 Job——它的版本会直接从正在运行的 Keeper 副本中读取——因此 `spec.versionProbeTemplate` 已弃用，在那里不会产生任何效果。
 
 该探测是通过一个常规的 Kubernetes `Job` 实现的。如果你的集群设置了准入策略，要求指定的 Tolerations、节点选择器或安全上下文，或者你想限制已完成的探测 Job 保留的时间，可以通过 `spec.versionProbeTemplate` 覆盖该模板：
 
@@ -698,33 +807,88 @@ Operator 管理器上的两个标志可在全局范围内控制升级检查循�
   ### 默认用户密码
 </div>
 
-设置默认用户的密码：
+`spec.settings.defaultUserPassword` 用于为内置 `default`
+用户设置密码。请提供你创建的 Secret (推荐) 或 ConfigMap 中某个键的值，
+而不要直接将密码内联写在 CR 中：
 
 ```yaml
 spec:
   settings:
     defaultUserPassword:
-      passwordType: <password-type> # 默认值：password
-      <secret|configMap>:
-        name: <resource name>
-        key: <password>
+      passwordType: password   # default; see "Password types" below
+      secret:                  # exactly one of secret or configMap
+        name: clickhouse-password   # name of the Secret/ConfigMap
+        key: password               # the key inside it, not the password value
+```
+
+只能提供 `secret` 或 `configMap` 其中之一，并且两者都必须同时包含 `name` (对象)
+和 `key` (保存密码的条目) 。
+
+<div id="password-types">
+  #### 密码类型
+</div>
+
+`passwordType` 用于告知 ClickHouse 如何解析该值。其默认值为
+`password` (明文) ；其他可选项为哈希形式，例如
+`password_sha256_hex` 和 `password_double_sha1_hex`。建议优先使用哈希类型，以避免
+存储 明文。完整列表请参见
+[ClickHouse user settings](https://clickhouse.com/docs/operations/settings/settings-users#user-namepassword)。
+
+<div id="default-password-secret-example">
+  #### 使用 Secret 的完整示例
+</div>
+
+先创建 Secret，再引用其中的键：
+
+```bash
+kubectl create secret generic clickhouse-password \
+  --from-literal=password='your-secure-password'
+```
+
+```yaml
+apiVersion: clickhouse.com/v1alpha1
+kind: ClickHouseCluster
+metadata:
+  name: my-cluster
+spec:
+  settings:
+    defaultUserPassword:
+      passwordType: password
+      secret:
+        name: clickhouse-password
+        key: password
 ```
 
 <Note>
-  不建议使用 ConfigMap 存储明文密码。
+  使用 `passwordType: password` 时，pod (容器组) 内的 `clickhouse-client` 会配置
+  为使用该密码，这样在调试时会更方便。
 </Note>
 
-创建 secret：
+对于哈希密码，请存储哈希值而非明文：
 
 ```bash
-kubectl create secret generic clickhouse-password --from-literal=password='your-secure-password'
+echo -n 'your-secure-password' | sha256sum   # use the hex digest as the value
+kubectl create secret generic clickhouse-password \
+  --from-literal=password='<sha256-hex-digest>'
+```
+
+```yaml
+spec:
+  settings:
+    defaultUserPassword:
+      passwordType: password_sha256_hex
+      secret:
+        name: clickhouse-password
+        key: password
 ```
 
 <div id="using-configmap-for-user-passwords">
-  #### 使用 ConfigMap 配置用户密码
+  #### 使用 ConfigMap
 </div>
 
-您也可以使用 ConfigMap 来设置非敏感的默认密码：
+ConfigMap 的作用方式与 Secret 相同，但其内容不像 Secret 那样受到保护。
+仅应用于非敏感或已哈希的值，例如
+`password_sha256_hex` 摘要：
 
 ```yaml
 spec:
@@ -735,6 +899,11 @@ spec:
         name: clickhouse-config
         key: default_password
 ```
+
+<Note>
+  不要将明文密码放在 ConfigMap 中。任何明文
+  (`passwordType: password`) 值都应使用 Secret。
+</Note>
 
 <div id="custom-users-in-configuration">
   ### 配置中的自定义用户

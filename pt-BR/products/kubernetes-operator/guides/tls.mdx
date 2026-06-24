@@ -1,13 +1,13 @@
 ---
-position: 5
+position: 6
 slug: /clickhouse-operator/guides/tls
 title: Protegendo um cluster com TLS
 keywords: ['kubernetes', 'tls', 'ssl', 'cert-manager', 'security', 'certificates']
-description: 'Como proteger um cluster do ClickHouse com TLS usando cert-manager, incluindo conexões de cliente e criptografia do Keeper.'
+description: 'Como proteger um cluster ClickHouse com TLS usando cert-manager, incluindo conexões de cliente e criptografia do Keeper.'
 doc_type: 'guide'
 ---
 
-Este guia mostra como criptografar um cluster do ClickHouse de ponta a ponta: emitir um
+Este guia mostra como criptografar um cluster ClickHouse de ponta a ponta: emitir um
 certificado com [cert-manager](https://cert-manager.io/), habilitar TLS no
 cluster, conectar um cliente pelas portas seguras e estender a criptografia ao
 tráfego de coordenação do Keeper.
@@ -33,17 +33,16 @@ rotacionar esse Secret, mas qualquer ferramenta que grave um Secret no formato e
 </div>
 
 O TLS é habilitado ao apontar `spec.settings.tls.serverCertSecret` para um Secret que
-contém três chaves:
+contém o par de chaves do servidor:
 
-| Chave do Secret | Conteúdo                                       |
-| --------------- | ---------------------------------------------- |
-| `tls.crt`       | certificado do servidor codificado em PEM      |
-| `tls.key`       | chave privada codificada em PEM                |
-| `ca.crt`        | cadeia de certificados da CA codificada em PEM |
+| Chave do Secret | Conteúdo                                  | Obrigatório |
+| --------------- | ----------------------------------------- | ----------- |
+| `tls.crt`       | certificado do servidor codificado em PEM | Sim         |
+| `tls.key`       | chave privada codificada em PEM           | Sim         |
 
 Esse é exatamente o layout que o cert-manager grava para um recurso `Certificate`, portanto não é
-necessária nenhuma conversão. O operator monta esses arquivos em cada pod do Kubernetes em
-`/etc/clickhouse-server/tls/` e os conecta à configuração `openSSL` do ClickHouse.
+necessária nenhuma conversão. O operator monta o par de chaves em cada pod do Kubernetes em
+`/etc/clickhouse-server/tls/` e o conecta à configuração `openSSL` do ClickHouse.
 
 <Note>
   `serverCertSecret` é **obrigatório** quando `tls.enabled: true`. O webhook de
@@ -227,7 +226,7 @@ kubectl -n <namespace> get secret clickhouse-cert \
   ## Criptografando o tráfego do Keeper
 </div>
 
-Ativar TLS no cluster do ClickHouse **não** criptografa a conexão com o Keeper.
+Ativar TLS no cluster ClickHouse **não** criptografa a conexão com o Keeper.
 Ative-o no `KeeperCluster` separadamente — emita um certificado para o
 serviço do Keeper (Etapas 1–2 com os `dnsNames` do serviço do Keeper) e faça referência a ele:
 
@@ -247,16 +246,18 @@ spec:
 ```
 
 O Keeper expõe sua porta segura de cliente em `2281`. Quando o TLS está habilitado no Keeper, **o
-cluster do ClickHouse se conecta a ele por TLS automaticamente** — sem necessidade de configuração extra no
-lado do ClickHouseCluster. O ClickHouse verifica o certificado do Keeper usando seu próprio
-bundle `ca.crt` quando o TLS está habilitado; caso contrário, usa o bundle de CAs padrão do sistema.
+cluster ClickHouse se conecta a ele por TLS automaticamente** — sem necessidade de configuração extra no
+lado do ClickHouseCluster. O ClickHouse verifica o certificado do Keeper no repositório de confiança do sistema,
+além de qualquer [`caBundle`](#custom-ca) que você configurar.
 
 <div id="custom-ca">
   ## Bundle de CA personalizado
 </div>
 
-Se o ClickHouse precisar confiar em uma CA diferente da que está no certificado do servidor (por
-exemplo, Keeper assinado por uma CA separada), forneça um `caBundle`:
+Por padrão, o ClickHouse verifica os peers aos quais se conecta (outras réplicas, Keeper, fontes
+de dicionário HTTPS, S3, …) com base no **repositório de confiança do sistema**. Para **também**
+confiar em uma CA privada — uma CA autoassinada ou interna cuja raiz não está no repositório do sistema —
+forneça um `caBundle`:
 
 ```yaml
 spec:
@@ -270,8 +271,11 @@ spec:
         key: ca.crt
 ```
 
-O operator monta esse bundle de CA e faz a verificação `openSSL` do lado do cliente apontar para
-ele, em vez de usar o próprio `ca.crt` do certificado.
+O operator monta esse bundle e o adiciona ao repositório de confiança do cliente `openSSL`
+(`caConfig`). O repositório de confiança do sistema continua em vigor — sua CA privada é confiável **além das**
+raízes públicas, portanto as conexões com endpoints públicos continuam funcionando. Para uma
+configuração autoassinada, faça `caBundle` apontar para a chave `ca.crt` do mesmo Secret que o cert-manager
+gravou (como no exemplo `cluster_with_ssl`).
 
 <div id="custom-tls-settings">
   ## Personalizando as configurações de TLS
@@ -318,15 +322,15 @@ kubectl -n <namespace> get svc <cluster-name>-clickhouse-headless \
 
 ```bash
 kubectl -n <namespace> exec <pod> -- ls /etc/clickhouse-server/tls/
-# ca-bundle.crt  clickhouse-server.crt  clickhouse-server.key
+# clickhouse-server.crt  clickhouse-server.key   (plus custom-ca.crt when caBundle is set)
 ```
 
-| Sintoma                                                          | Causa provável                                                                                                                                                                                                                                                                                       |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pods do Kubernetes não iniciam / erro de montagem de volume após habilitar TLS | O Secret referenciado está ausente ou não contém `tls.crt`/`tls.key`/`ca.crt`. O operator não valida o conteúdo do Secret — chaves ausentes aparecem como falha na montagem do volume do pod do Kubernetes, não como uma condição de status específica. Inspecione o pod do Kubernetes com `kubectl describe pod`. |
-| Webhook rejeita o cluster                                        | `required: true` definido sem `enabled: true`, ou `enabled: true` sem `serverCertSecret`.                                                                                                                                                                                                            |
-| Cliente `certificate verify failed`                              | O cliente não está confiando na CA. Forneça o `ca.crt` do Secret ou verifique se os `dnsNames` no certificado cobrem o host ao qual você está se conectando.                                                                                                                                         |
-| Um cliente em texto simples de repente não consegue se conectar  | `required: true` removeu as portas `9000`/`8123`. Altere o cliente para `9440`/`8443` ou defina `required: false` para manter as portas inseguras abertas durante a migração.                                                                                                                        |
+| Sintoma                                                                        | Causa provável                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pods do Kubernetes não iniciam / erro de montagem de volume após habilitar TLS | O Secret referenciado está ausente ou não contém `tls.crt`/`tls.key` (ou, quando `caBundle` está definido, o Secret/chave ao qual ele faz referência). O operator não valida o conteúdo do Secret — chaves ausentes aparecem como falha na montagem do volume do pod do Kubernetes, não como uma condição de status específica. Inspecione o pod do Kubernetes com `kubectl describe pod`. |
+| Webhook rejeita o cluster                                                      | `required: true` definido sem `enabled: true`, ou `enabled: true` sem `serverCertSecret`.                                                                                                                                                                                                                                                                                                  |
+| Cliente `certificate verify failed`                                            | O cliente não está confiando na CA. Forneça o `ca.crt` do Secret ou verifique se os `dnsNames` no certificado cobrem o host ao qual você está se conectando.                                                                                                                                                                                                                               |
+| Um cliente em texto simples de repente não consegue se conectar                | `required: true` removeu as portas `9000`/`8123`. Altere o cliente para `9440`/`8443` ou defina `required: false` para manter as portas inseguras abertas durante a migração.                                                                                                                                                                                                              |
 
 <div id="see-also">
   ## Veja também
