@@ -146,7 +146,7 @@ clickhouse client의 결과 출력은 ClickHouse가 전체 테이블 스캔을 �
 
 전통적인 관계형 데이터베이스 관리 시스템에서는 프라이머리 인덱스(primary index)에 테이블의 각 행마다 인덱스 항목 하나가 포함됩니다. 이렇게 하면 이 데이터 세트의 프라이머리 인덱스에는 887만 개의 인덱스 항목이 들어가게 됩니다. 이러한 인덱스는 특정 행을 빠르게 찾을 수 있게 해 주므로, 조회 쿼리와 포인트 업데이트를 매우 효율적으로 수행할 수 있습니다. `B(+)-Tree` 데이터 구조에서 인덱스 항목을 검색하는 평균 시간 복잡도는 `O(log n)`입니다. 더 정확히는 `log_b n = log_2 n / log_2 b`이며, 여기서 `b`는 `B(+)-Tree`의 branching factor이고 `n`은 인덱싱된 행 수입니다. `b`는 일반적으로 수백에서 수천 사이이므로 `B(+)-Trees`는 매우 얕은 구조이며, 레코드를 찾는 데 필요한 디스크 탐색 횟수도 적습니다. 887만 개의 행과 branching factor 1000을 가정하면 평균적으로 2.3회의 디스크 탐색이 필요합니다. 하지만 이러한 기능에는 비용이 따릅니다. 추가적인 디스크 및 메모리 오버헤드가 발생하고, 테이블에 새 행을 추가하고 인덱스에 인덱스 항목을 추가할 때 삽입 비용이 더 커지며, 경우에 따라 B-Tree 리밸런싱도 필요합니다.
 
-B-Tree 인덱스의 이러한 한계를 고려해 ClickHouse의 테이블 엔진은 다른 접근 방식을 사용합니다. ClickHouse의 [MergeTree 엔진 계열](/ko/reference/engines/table-engines/mergetree-family)은 대규모 데이터 볼륨을 처리하도록 설계되고 최적화되었습니다. 이 테이블은 초당 수백만 개의 행 삽입을 수용하고 매우 큰 규모(수백 페타바이트)의 데이터를 저장하도록 설계되었습니다. 데이터는 [파트 단위로](/ko/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage) 테이블에 빠르게 기록되며, 백그라운드에서는 파트를 머지하는 규칙이 적용됩니다. ClickHouse에서는 각 파트가 자체 프라이머리 인덱스를 가집니다. 파트가 머지되면 병합된 파트의 프라이머리 인덱스도 함께 머지됩니다. ClickHouse가 대상으로 하는 초대규모 환경에서는 디스크와 메모리를 매우 효율적으로 사용하는 것이 무엇보다 중요합니다. 따라서 모든 행을 인덱싱하는 대신, 파트의 프라이머리 인덱스는 각 행 그룹(「그래뉼」이라고 함)마다 하나의 인덱스 항목(「mark」라고 함)만 가집니다. 이 기법을 **희소 인덱스**라고 합니다.
+B-Tree 인덱스의 이러한 한계를 고려해 ClickHouse의 테이블 엔진은 다른 접근 방식을 사용합니다. ClickHouse의 [MergeTree 엔진 계열](/ko/reference/engines/table-engines/mergetree-family/index)은 대규모 데이터 볼륨을 처리하도록 설계되고 최적화되었습니다. 이 테이블은 초당 수백만 개의 행 삽입을 수용하고 매우 큰 규모(수백 페타바이트)의 데이터를 저장하도록 설계되었습니다. 데이터는 [파트 단위로](/ko/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage) 테이블에 빠르게 기록되며, 백그라운드에서는 파트를 머지하는 규칙이 적용됩니다. ClickHouse에서는 각 파트가 자체 프라이머리 인덱스를 가집니다. 파트가 머지되면 병합된 파트의 프라이머리 인덱스도 함께 머지됩니다. ClickHouse가 대상으로 하는 초대규모 환경에서는 디스크와 메모리를 매우 효율적으로 사용하는 것이 무엇보다 중요합니다. 따라서 모든 행을 인덱싱하는 대신, 파트의 프라이머리 인덱스는 각 행 그룹(「그래뉼」이라고 함)마다 하나의 인덱스 항목(「mark」라고 함)만 가집니다. 이 기법을 **희소 인덱스**라고 합니다.
 
 희소 인덱싱이 가능한 이유는 ClickHouse가 파트의 행을 기본 키 컬럼을 기준으로 정렬해 디스크에 저장하기 때문입니다. 희소 프라이머리 인덱스(sparse primary index)는 단일 행을 직접 찾는 방식(B-Tree 기반 인덱스처럼) 대신, 인덱스 항목에 대한 이진 검색을 통해 쿼리와 일치할 가능성이 있는 행 그룹을 빠르게 식별할 수 있게 해줍니다. 이렇게 찾아낸 일치 가능성이 있는 행 그룹(그래뉼)은 실제 일치 항목을 찾기 위해 병렬로 ClickHouse 엔진에 스트리밍됩니다. 이러한 인덱스 설계 덕분에 프라이머리 인덱스를 작게 유지할 수 있으며(메인 메모리에 완전히 들어가야 하며, 실제로도 그렇게 되어야 합니다), 동시에 쿼리 실행 시간도 크게 단축할 수 있습니다. 특히 데이터 분석 사용 사례에서 일반적인 범위 쿼리에서 효과적입니다.
 
@@ -391,7 +391,7 @@ ClickHouse는 <a href="/ko/get-started/about/distinctive-features#true-column-or
   <p>
     자가 관리형 ClickHouse 클러스터에서는 예시 테이블의 프라이머리 인덱스 내용을 확인하기 위해 <a href="/ko/reference/functions/table-functions/file" target="_blank">file 테이블 함수</a>를 사용할 수 있습니다.
 
-    이를 위해 먼저 실행 중인 클러스터의 노드 하나에서 프라이머리 인덱스 파일을 <a href="/ko/reference/settings/server-settings/settings#server_configuration_parameters-user_files_path" target="_blank">user&#95;files&#95;path</a>로 복사해야 합니다:
+    이를 위해 먼저 실행 중인 클러스터의 노드 하나에서 프라이머리 인덱스 파일을 <a href="/ko/reference/settings/server-settings/settings#user_files_path" target="_blank">user&#95;files&#95;path</a>로 복사해야 합니다:
 
     <ul>
       <li>1단계: 프라이머리 인덱스 파일이 들어 있는 part 경로 확인</li>
@@ -427,7 +427,7 @@ ClickHouse는 <a href="/ko/get-started/about/distinctive-features#true-column-or
       다음이 반환됩니다.
 
       `240923, http://showtopics.html%3...<br/>
-            4073710, http://mk.ru&pos=3_0`
+                  4073710, http://mk.ru&pos=3_0`
 
       <li>마지막 인덱스 마크 확인</li>
       `SELECT UserID, URL FROM file('primary-hits_UserID_URL.idx', 'RowBinary', 'UserID UInt32, URL String')<br/>LIMIT 1082, 1;`
@@ -498,7 +498,7 @@ Processed 8.19 thousand rows,
 
 이제 ClickHouse client 출력에는 전체 테이블 스캔을 수행하는 대신 8,190개 행만 ClickHouse로 스트리밍된 것으로 표시됩니다.
 
-<a href="/ko/reference/settings/server-settings/settings#server_configuration_parameters-logger" target="_blank">trace 로깅</a>이 활성화되어 있으면 ClickHouse 서버 로그 파일에는 ClickHouse가 `749927693` 값을 가진 UserID 컬럼의 행을 포함할 가능성이 있는 그래뉼을 식별하기 위해 1083개의 UserID 인덱스 마크를 대상으로 <a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1452" target="_blank">이진 검색</a>을 수행했음이 표시됩니다. 여기에는 평균 시간 복잡도 `O(log2 n)`으로 19단계가 필요합니다:
+<a href="/ko/reference/settings/server-settings/settings#logger" target="_blank">trace 로깅</a>이 활성화되어 있으면 ClickHouse 서버 로그 파일에는 ClickHouse가 `749927693` 값을 가진 UserID 컬럼의 행을 포함할 가능성이 있는 그래뉼을 식별하기 위해 1083개의 UserID 인덱스 마크를 대상으로 <a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1452" target="_blank">이진 검색</a>을 수행했음이 표시됩니다. 여기에는 평균 시간 복잡도 `O(log2 n)`으로 19단계가 필요합니다:
 
 ```response highlight={2,7}
 ...Executor): Key condition: (column 0 in [749927693, 749927693])

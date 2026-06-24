@@ -171,40 +171,11 @@ ALTER TABLE tab RESET SETTING max_suspicious_broken_parts;
   ## allow_experimental_reverse_key
 </div>
 
-<ExperimentalBadge />
-
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.12"},{"label": "0"},{"label": "новая настройка"}]}]} />
 
-Включает поддержку сортировки по убыванию в ключах сортировки MergeTree. Эта
-настройка особенно полезна для анализа временных рядов и запросов Top-N,
-поскольку позволяет хранить данные в обратном хронологическом порядке и тем самым оптимизировать
-производительность запросов.
-
-Если включена настройка `allow_experimental_reverse_key`, в предложении `ORDER BY`
-таблицы MergeTree можно задавать сортировку по убыванию. Это позволяет
-использовать более эффективные оптимизации `ReadInOrder` вместо `ReadInReverseOrder`
-для запросов с сортировкой по убыванию.
-
-**Пример**
-
-```sql
-CREATE TABLE example
-(
-time DateTime,
-key Int32,
-value String
-) ENGINE = MergeTree
-ORDER BY (time DESC, key)  -- Сортировка по полю 'time' в порядке убывания
-SETTINGS allow_experimental_reverse_key = 1;
-
-SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
-```
-
-Если в запросе используется `ORDER BY time DESC`, применяется `ReadInOrder`.
-
-**Значение по умолчанию:** false
+Устаревшая настройка, ничего не делает.
 
 <div id="allow_floating_point_partition_key">
   ## allow_floating_point_partition_key
@@ -276,6 +247,20 @@ SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 Отклонять первичные/вторичные индексы и ключи сортировки с одинаковыми выражениями
+
+<div id="allow_tuple_element_aggregation">
+  ## allow_tuple_element_aggregation
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "новая настройка"}]}]} />
+
+Если настройка включена, отдельные элементы в столбцах Tuple участвуют в
+агрегации при слиянии в SummingMergeTree, AggregatingMergeTree и
+CoalescingMergeTree. Вложенные Tuple рекурсивно разворачиваются, так что все
+листовые элементы агрегируются независимо. Эту настройку нельзя изменить,
+и её необходимо указать при создании таблицы.
 
 <div id="allow_vertical_merges_from_compact_to_wide_parts">
   ## allow_vertical_merges_from_compact_to_wide_parts
@@ -372,7 +357,7 @@ SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "minmax, uniq"},{"label": "Автостатистика включена по умолчанию"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": ""},{"label": "новая настройка"}]}]} />
 
 Разделённый запятыми список типов статистики, которые автоматически вычисляются для всех подходящих столбцов.
-Поддерживаются следующие типы статистики: tdigest, countmin, minmax, nullcount, uniq.
+Поддерживаются следующие типы статистики: basic, tdigest, countmin, minmax, uniq.
 
 <div id="background_task_preferred_step_execution_time_ms">
   ## background_task_preferred_step_execution_time_ms
@@ -780,7 +765,7 @@ MergeTree эта настройка игнорируется. Она также 
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "По умолчанию ограничивает размер частей даже при использовании min_age_to_force_merge_seconds"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "Добавлена новая настройка для ограничения максимального количества байт для min_age_to_force_merge."}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "Новая настройка"}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "По умолчанию ограничивает размер частей даже при использовании min_age_to_force_merge_seconds"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "Новая настройка"}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "Добавлена новая настройка для ограничения максимального количества байт для min_age_to_force_merge."}]}]} />
 
 Определяет, должны ли настройки `min_age_to_force_merge_seconds` и
 `min_age_to_force_merge_on_partition_only` учитывать настройку
@@ -1241,6 +1226,33 @@ ALTER TABLE tab MODIFY SETTING exclude_materialize_skip_indexes_on_merge = '';
 
 Для marks используется кодек сжатия; marks достаточно малы и кэшируются, поэтому
 по умолчанию используется сжатие ZSTD(3).
+
+<div id="materialize_projections_on_insert">
+  ## materialize_projections_on_insert
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Новая настройка"}]}]} />
+
+При включении при операциях INSERT создаются новые части с проекциями.
+В противном случае они могут быть созданы явно с помощью [MATERIALIZE PROJECTION](/ru/reference/statements/alter/projection#materialize-projection)
+или при слияниях с [materialize&#95;projections&#95;on&#95;merge](/ru/reference/settings/merge-tree-settings#materialize_projections_on_merge).
+
+<div id="materialize_projections_on_merge">
+  ## materialize_projections_on_merge
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "новая настройка"}]}]} />
+
+Если настройка включена, при слиянии перестраивается проекция, отсутствующая во всех исходных частях (например, если они были
+вставлены с `materialize_projections_on_insert = 0`), чтобы в слитой части эта проекция была.
+
+Слияния по-прежнему объединяют только части с одинаковым набором проекций. Чтобы выполнить дозагрузку проекции во все существующие части,
+используйте явный [MATERIALIZE PROJECTION](/ru/reference/statements/alter/projection#materialize-projection). Проекции
+также создаются при INSERT с помощью [materialize&#95;projections&#95;on&#95;insert](/ru/reference/settings/merge-tree-settings#materialize_projections_on_insert).
 
 <div id="materialize_skip_indexes_on_merge">
   ## materialize_skip_indexes_on_merge
@@ -2706,6 +2718,48 @@ I/O-доступ к диску хранилища. При слиянии час�
 Для первичных ключей высокой мощности, например включающих столбцы временных меток типа
 `DateTime64`, заметного эффекта от этого параметра не ожидается.
 
+<div id="packed_skip_index_max_bytes">
+  ## packed_skip_index_max_bytes
+</div>
+
+<ExperimentalBadge />
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Новая настройка. Упаковывает любой подпоток skip-индекса, чей сериализованный размер на диске не превышает указанное число байт, в единый архив skp_idx.packed для каждой части; более крупные подпотоки остаются в отдельной структуре skp_idx_<name>.idx2 / .mrk2. Решение принимается для каждого подпотока во время записи."}]}]} />
+
+Порог (сериализованный размер на диске в байтах, то есть после сжатия подпотока и цепочки
+хеширования), ниже которого подпоток skip-индекса упаковывается в единый архив `skp_idx.packed`
+для каждой части вместо записи в отдельные файлы `skp_idx_<name>.idx2` / `.mrk2`.
+Подпотоки больше этого значения остаются в прежней структуре с отдельными файлами. Решение
+принимается независимо для каждого подпотока во время записи, поэтому одна часть может содержать
+небольшие индексы (например, `minmax`) в упакованном виде, а большие (например, тяжёлый `bloom_filter`) —
+в отдельных файлах. Установите 0,
+чтобы полностью отключить упаковку (по умолчанию).
+
+Каждый подпоток skip-индекса фактически состоит из файла данных и файла marks; оба буферизуются
+в памяти до порогового значения, прежде чем принимается решение о сбросе на диск. Поэтому
+пиковое потребление памяти при записи масштабируется как `2 * packed_skip_index_max_bytes * (number of substreams that stay
+below the threshold)`.
+
+Полнотекстовые индексы не поддерживаются этой настройкой и никогда не упаковываются.
+
+Упаковка снижает нагрузку на inode, когда для таблицы определено много skip-индексов (например,
+с `add_minmax_index_for_numeric_columns`).
+
+Формат на диске является самоописывающимся: средства чтения обнаруживают `skp_idx.packed` и прозрачно обслуживают упакованные
+подпотоки из него. Изменение этой настройки влияет только на вновь записанные части;
+существующие части сохраняют ту структуру, которая была у них на момент записи.
+
+Известное ограничение: `system.data_skipping_indices.data_uncompressed_bytes` и
+`system.parts.secondary_indices_uncompressed_bytes` сообщают размер в сжатом виде для упакованных
+подпотоков (индекс архива не хранит размеры в несжатом виде). Это лишь косметическая особенность в
+мониторинге с одним функциональным последствием:
+`distributed_index_analysis_min_indexes_bytes_to_activate` сравнивает с
+`data_uncompressed`, поэтому упакованный индекс, который хорошо сжимается (`set` или `bloom_filter` по
+строкам), может не превысить порог активации, даже если реальный размер в несжатом виде превысил бы его.
+В качестве fallback используется обычный план выполнения запроса, а не неправильный результат.
+
 <div id="part_minmax_index_columns">
   ## part_minmax_index_columns
 </div>
@@ -3818,6 +3872,17 @@ Cloud
 Если включено, все реплики пытаются получать данные части, хранящиеся в памяти (например, первичный
 ключ, информацию о партиции и т. д.), с других реплик, где они уже есть.
 
+<div id="shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup">
+  ## shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "новая настройка, которая позволяет SMT при запуске загружать данные частей из реплик вместо S3"}]}]} />
+
+Если настройка включена, все реплики при запуске пытаются получить из других реплик данные частей, хранящиеся в памяти (например, первичный
+ключ, информацию о партиции и т. д.), если они там уже есть.
+
 <div id="shared_merge_tree_update_replica_flags_delay_ms">
   ## shared_merge_tree_update_replica_flags_delay_ms
 </div>
@@ -3970,6 +4035,50 @@ Cloud
 Сколько секунд хранить tmp&#95;-каталоги. Не следует уменьшать это значение,
 поскольку при низком значении этой настройки слияния и мутации могут не
 выполняться.
+
+<div id="text_index_dictionary_block_frontcoding_compression">
+  ## text_index_dictionary_block_frontcoding_compression
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Новая настройка"}]}]} />
+
+Сжатие front-coding по умолчанию для блоков словаря текстового индекса.
+Может быть переопределено явно заданным аргументом индекса `dictionary_block_frontcoding_compression`.
+
+<div id="text_index_dictionary_block_size">
+  ## text_index_dictionary_block_size
+</div>
+
+<SettingsInfoBlock type="NonZeroUInt64" default_value="512" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "512"},{"label": "новая настройка"}]}]} />
+
+Размер блока словаря по умолчанию для текстовых индексов.
+Может быть переопределён явным аргументом индекса `dictionary_block_size`.
+
+<div id="text_index_posting_list_block_size">
+  ## text_index_posting_list_block_size
+</div>
+
+<SettingsInfoBlock type="NonZeroUInt64" default_value="1048576" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1048576"},{"label": "новая настройка"}]}]} />
+
+Размер блока списка вхождений по умолчанию для текстовых индексов (в строках).
+Может быть переопределён явным аргументом индекса `posting_list_block_size`.
+
+<div id="text_index_posting_list_codec">
+  ## text_index_posting_list_codec
+</div>
+
+<SettingsInfoBlock type="TextIndexPostingListCodec" default_value="none" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "none"},{"label": "новая настройка"}]}]} />
+
+Кодек списка вхождений по умолчанию для текстовых индексов.
+Его можно переопределить, явно указав аргумент индекса `posting_list_codec`.
 
 <div id="try_fetch_recompressed_part_timeout">
   ## try_fetch_recompressed_part_timeout

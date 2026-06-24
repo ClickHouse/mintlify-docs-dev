@@ -16,7 +16,7 @@ import { Image } from "/snippets/components/Image.jsx";
 
 ClickHouse는 [스토리지 계층(storage layer)](https://www.vldb.org/pvldb/vol17/p3731-schulze.pdf)이 [LSM 트리](https://en.wikipedia.org/wiki/Log-structured_merge-tree)와 비슷하게 동작하기 때문에, [쿼리](/ko/get-started/about/why-clickhouse-is-so-fast)뿐 아니라 삽입도 빠릅니다:
 
-① [MergeTree 엔진](/ko/reference/engines/table-engines/mergetree-family) 계열 테이블에 데이터를 삽입하면 정렬된 불변의 [데이터 파트](/ko/concepts/core-concepts/parts)가 생성됩니다.
+① [MergeTree 엔진](/ko/reference/engines/table-engines/mergetree-family/index) 계열 테이블에 데이터를 삽입하면 정렬된 불변의 [데이터 파트](/ko/concepts/core-concepts/parts)가 생성됩니다.
 
 ② 모든 데이터 처리는 **백그라운드 파트 병합**으로 넘겨집니다.
 
@@ -30,7 +30,7 @@ ClickHouse는 [스토리지 계층(storage layer)](https://www.vldb.org/pvldb/vo
 
 <br />
 
-파트의 `merge level`은 머지가 한 번 추가로 일어날 때마다 1씩 증가합니다. 레벨이 `0`이면 해당 파트는 새로 생성되었으며 아직 병합되지 않았다는 뜻입니다. 더 큰 파트로 병합된 파트는 [비활성 상태](/ko/reference/system-tables/parts)로 표시되며, [설정 가능한](/ko/reference/settings/merge-tree-settings#old_parts_lifetime) 시간이 지난 뒤 최종적으로 삭제됩니다(기본값은 8분). 시간이 지나면서 이렇게 병합된 파트의 **트리**가 만들어집니다. 그래서 [merge tree](/ko/reference/engines/table-engines/mergetree-family) 테이블이라는 이름이 붙었습니다.
+파트의 `머지 수준`은 머지가 한 번 추가로 일어날 때마다 1씩 증가합니다. 레벨이 `0`이면 해당 파트는 새로 생성되었으며 아직 병합되지 않았다는 뜻입니다. 더 큰 파트로 병합된 파트는 [비활성 상태](/ko/reference/system-tables/parts)로 표시되며, [설정 가능한](/ko/reference/settings/merge-tree-settings#old_parts_lifetime) 시간이 지난 뒤 최종적으로 삭제됩니다(기본값은 8분). 시간이 지나면서 이렇게 병합된 파트의 **트리**가 만들어집니다. 그래서 [merge tree](/ko/reference/engines/table-engines/mergetree-family/index) 테이블이라는 이름이 붙었습니다.
 
 <div id="monitoring-merges">
   ## 머지 모니터링
@@ -131,7 +131,7 @@ ClickHouse는 [이전 예시](/ko/concepts/core-concepts/merges#concurrent-merge
 
 보조 데이터 스키핑 인덱스, 컬럼 통계, 체크섬, MinMax 인덱스와 같은 [데이터 파트의 추가 메타데이터](/ko/concepts/core-concepts/parts)도 머지된 컬럼 파일을 기반으로 다시 생성됩니다. 여기서는 단순화를 위해 이러한 세부 사항을 생략했습니다.
 
-② 단계의 구체적인 동작 방식은 사용 중인 [MergeTree 엔진](/ko/reference/engines/table-engines/mergetree-family)에 따라 달라집니다. 엔진마다 머지를 처리하는 방식이 서로 다르기 때문입니다. 예를 들어, 행이 집계되거나 오래된 경우 대체될 수 있습니다. 앞서 언급했듯이, 이 접근 방식은 **모든 데이터 처리를 백그라운드 머지로 오프로드**하므로 쓰기 작업을 가볍고 효율적으로 유지할 수 있어 **매우 빠른 삽입**이 가능합니다.
+② 단계의 구체적인 동작 방식은 사용 중인 [MergeTree 엔진](/ko/reference/engines/table-engines/mergetree-family/index)에 따라 달라집니다. 엔진마다 머지를 처리하는 방식이 서로 다르기 때문입니다. 예를 들어, 행이 집계되거나 오래된 경우 대체될 수 있습니다. 앞서 언급했듯이, 이 접근 방식은 **모든 데이터 처리를 백그라운드 머지로 오프로드**하므로 쓰기 작업을 가볍고 효율적으로 유지할 수 있어 **매우 빠른 삽입**이 가능합니다.
 
 다음으로, MergeTree 엔진 계열의 특정 엔진별 머지 메커니즘을 간략히 살펴보겠습니다.
 

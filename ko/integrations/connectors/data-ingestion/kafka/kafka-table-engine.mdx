@@ -29,7 +29,7 @@ Kafka 테이블 엔진을 사용하려면 [ClickHouse materialized view](/ko/con
 
 Kafka 테이블 엔진을 사용하면 ClickHouse가 Kafka 토픽에서 직접 읽을 수 있습니다. 토픽의 메시지를 확인하는 용도로는 유용하지만, 이 엔진은 설계상 일회성 조회만 허용합니다. 즉, 테이블에 대해 쿼리가 실행되면 큐에서 데이터를 소비하고 컨슈머 오프셋을 증가시킨 뒤 호출자에게 결과를 반환합니다. 따라서 이러한 오프셋을 재설정하지 않으면 사실상 데이터를 다시 읽을 수 없습니다.
 
-테이블 엔진에서 읽은 데이터를 영속적으로 저장하려면, 그 데이터를 캡처해 다른 테이블에 삽입할 수단이 필요합니다. 트리거 기반 materialized view는 이 기능을 네이티브하게 제공합니다. materialized view는 테이블 엔진에 대한 읽기를 시작하고, 문서 배치를 전달받습니다. TO 절은 데이터의 대상을 결정하며, 일반적으로 [MergeTree 계열](/ko/reference/engines/table-engines/mergetree-family)의 테이블이 사용됩니다. 이 과정은 아래와 같이 시각화할 수 있습니다.
+테이블 엔진에서 읽은 데이터를 영속적으로 저장하려면, 그 데이터를 캡처해 다른 테이블에 삽입할 수단이 필요합니다. 트리거 기반 materialized view는 이 기능을 네이티브하게 제공합니다. materialized view는 테이블 엔진에 대한 읽기를 시작하고, 문서 배치를 전달받습니다. TO 절은 데이터의 대상을 결정하며, 일반적으로 [MergeTree 계열](/ko/reference/engines/table-engines/mergetree-family/index)의 테이블이 사용됩니다. 이 과정은 아래와 같이 시각화할 수 있습니다.
 
 <Image img="/images/integrations/data-ingestion/kafka/kafka_01.png" size="lg" alt="Kafka 테이블 엔진 아키텍처 다이어그램" style={{width: '80%'}} />
 
@@ -78,7 +78,7 @@ USE KafkaEngine;
   ##### 3. 대상 테이블 생성
 </div>
 
-대상 테이블을 준비합니다. 아래 예시에서는 간결함을 위해 축약된 GitHub 스키마를 사용합니다. 이 예시에서는 MergeTree 테이블 엔진을 사용하지만, [MergeTree 엔진 계열](/ko/reference/engines/table-engines/mergetree-family)의 다른 엔진에도 쉽게 적용할 수 있습니다.
+대상 테이블을 준비합니다. 아래 예시에서는 간결함을 위해 축약된 GitHub 스키마를 사용합니다. 이 예시에서는 MergeTree 테이블 엔진을 사용하지만, [MergeTree 엔진 계열](/ko/reference/engines/table-engines/mergetree-family/index)의 다른 엔진에도 쉽게 적용할 수 있습니다.
 
 ```sql
 CREATE TABLE github
@@ -248,7 +248,7 @@ ATTACH TABLE github_queue;
   ##### Kafka 메타데이터 추가
 </div>
 
-원본 Kafka 메시지가 ClickHouse에 수집된 후에도 해당 메타데이터를 계속 추적해 두면 유용할 수 있습니다. 예를 들어, 특정 토픽이나 파티션을 얼마나 소비했는지 파악해야 할 수 있습니다. 이를 위해 Kafka 테이블 엔진은 여러 [가상 컬럼](/ko/reference/engines/table-engines#table_engines-virtual_columns)을 제공합니다. 스키마와 materialized view의 SELECT 문을 수정하면 이러한 값을 대상 테이블의 컬럼으로 영구적으로 저장할 수 있습니다.
+원본 Kafka 메시지가 ClickHouse에 수집된 후에도 해당 메타데이터를 계속 추적해 두면 유용할 수 있습니다. 예를 들어, 특정 토픽이나 파티션을 얼마나 소비했는지 파악해야 할 수 있습니다. 이를 위해 Kafka 테이블 엔진은 여러 [가상 컬럼](/ko/reference/engines/table-engines/index#table_engines-virtual_columns)을 제공합니다. 스키마와 materialized view의 SELECT 문을 수정하면 이러한 값을 대상 테이블의 컬럼으로 영구적으로 저장할 수 있습니다.
 
 먼저 대상 테이블에 컬럼을 추가하기 전에 위에서 설명한 중지 작업을 수행합니다.
 

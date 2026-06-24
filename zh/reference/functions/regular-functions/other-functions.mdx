@@ -351,7 +351,7 @@ blockSerializedSize(x1[, x2[, ...]])
 
 **参数**
 
-* `x1[, x2, ...]` — 任意数量的值，用于获取该值块的未压缩大小。[`Any`](/zh/reference/data-types)
+* `x1[, x2, ...]` — 任意数量的值，用于获取该值块的未压缩大小。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -469,7 +469,7 @@ byteSize(arg1[, arg2, ...])
 
 **参数**
 
-* `arg1[, arg2, ...]` — 用于估算未压缩字节大小的任意数据类型的值。[`Any`](/zh/reference/data-types)
+* `arg1[, arg2, ...]` — 用于估算未压缩字节大小的任意数据类型的值。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -1129,7 +1129,7 @@ SELECT currentSchemas(true)
 currentUser()
 ```
 
-**别名**: `current_user`, `user`
+**别名**: `session_user`, `user`, `current_user`
 
 **参数**
 
@@ -1254,7 +1254,7 @@ defaultValueOfArgumentType(expression)
 
 **参数**
 
-* `expression` — 任意类型的值，或结果为任意类型值的表达式。[`Any`](/zh/reference/data-types)
+* `expression` — 任意类型的值，或结果为任意类型值的表达式。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -1386,7 +1386,7 @@ dumpColumnStructure(x)
 
 **参数**
 
-* `x` — 要获取其描述信息的值。[`Any`](/zh/reference/data-types)
+* `x` — 要获取其描述信息的值。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -1683,7 +1683,7 @@ finalizeAggregation(state)
 
 **返回值**
 
-返回聚合的最终结果。[`Any`](/zh/reference/data-types)
+返回聚合的最终结果。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -1959,12 +1959,13 @@ SELECT a, b FROM tab WHERE (a > 3) AND (b < 3)
 **语法**
 
 ```sql
-formatReadableDecimalSize(x)
+formatReadableDecimalSize(value[, precision])
 ```
 
 **参数**
 
-* `x` — 以字节为单位的大小。[`UInt64`](/zh/reference/data-types/int-uint)
+* `value` — 以字节为单位的大小。[`Int8`](/zh/reference/data-types/int-uint) 或 [`Int16`](/zh/reference/data-types/int-uint) 或 [`Int32`](/zh/reference/data-types/int-uint) 或 [`Int64`](/zh/reference/data-types/int-uint) 或 [`UInt8`](/zh/reference/data-types/int-uint) 或 [`UInt16`](/zh/reference/data-types/int-uint) 或 [`UInt32`](/zh/reference/data-types/int-uint) 或 [`UInt64`](/zh/reference/data-types/int-uint) 或 [`Float32`](/zh/reference/data-types/float) 或 [`Float64`](/zh/reference/data-types/float) 或 [`Decimal`](/zh/reference/data-types/decimal)
+* `precision` — 可选。小数点后的位数。默认值为 2。[`const UInt8`](/zh/reference/data-types/int-uint)
 
 **返回值**
 
@@ -1989,6 +1990,20 @@ SELECT
 └────────────────┴────────────┘
 ```
 
+**使用显式精度**
+
+```sql title=Query
+SELECT
+    formatReadableDecimalSize(192851925, 0) AS no_decimals,
+    formatReadableDecimalSize(192851925, 4) AS four_decimals
+```
+
+```response title=Response
+┌─no_decimals─┬─four_decimals─┐
+│ 193 MB      │ 192.8519 MB   │
+└─────────────┴───────────────┘
+```
+
 <div id="formatReadableQuantity">
   ## formatReadableQuantity
 </div>
@@ -2003,12 +2018,13 @@ SELECT
 **语法**
 
 ```sql
-formatReadableQuantity(x)
+formatReadableQuantity(value[, precision])
 ```
 
 **参数**
 
-* `x` — 要格式化的数值。[`UInt64`](/zh/reference/data-types/int-uint)
+* `value` — 要格式化的数值。[`Int8`](/zh/reference/data-types/int-uint) 或 [`Int16`](/zh/reference/data-types/int-uint) 或 [`Int32`](/zh/reference/data-types/int-uint) 或 [`Int64`](/zh/reference/data-types/int-uint) 或 [`UInt8`](/zh/reference/data-types/int-uint) 或 [`UInt16`](/zh/reference/data-types/int-uint) 或 [`UInt32`](/zh/reference/data-types/int-uint) 或 [`UInt64`](/zh/reference/data-types/int-uint) 或 [`Float32`](/zh/reference/data-types/float) 或 [`Float64`](/zh/reference/data-types/float) 或 [`Decimal`](/zh/reference/data-types/decimal)
+* `precision` — 可选。小数点后的位数。默认为 2。[`const UInt8`](/zh/reference/data-types/int-uint)
 
 **返回值**
 
@@ -2033,6 +2049,20 @@ SELECT
 └────────────────┴───────────────────┘
 ```
 
+**显式指定精度**
+
+```sql title=Query
+SELECT
+    formatReadableQuantity(98765432101234, 0) AS no_decimals,
+    formatReadableQuantity(98765432101234, 4) AS four_decimals
+```
+
+```response title=Response
+┌─no_decimals──┬─four_decimals─────┐
+│ 99 trillion  │ 98.7654 trillion  │
+└──────────────┴───────────────────┘
+```
+
 <div id="formatReadableSize">
   ## formatReadableSize
 </div>
@@ -2047,14 +2077,15 @@ Introduced in: v1.1.0
 **语法**
 
 ```sql
-formatReadableSize(x)
+formatReadableSize(value[, precision])
 ```
 
 **别名**：`FORMAT_BYTES`
 
 **参数**
 
-* `x` — 以字节为单位的大小。[`UInt64`](/zh/reference/data-types/int-uint)
+* `value` — 以字节为单位的大小。[`Int8`](/zh/reference/data-types/int-uint) 或 [`Int16`](/zh/reference/data-types/int-uint) 或 [`Int32`](/zh/reference/data-types/int-uint) 或 [`Int64`](/zh/reference/data-types/int-uint) 或 [`UInt8`](/zh/reference/data-types/int-uint) 或 [`UInt16`](/zh/reference/data-types/int-uint) 或 [`UInt32`](/zh/reference/data-types/int-uint) 或 [`UInt64`](/zh/reference/data-types/int-uint) 或 [`Float32`](/zh/reference/data-types/float) 或 [`Float64`](/zh/reference/data-types/float) 或 [`Decimal`](/zh/reference/data-types/decimal)
+* `precision` — 可选。小数点后的位数。默认为 2。[`const UInt8`](/zh/reference/data-types/int-uint)
 
 **返回值**
 
@@ -2079,15 +2110,31 @@ SELECT
 └────────────────┴────────────┘
 ```
 
+**显式指定精度**
+
+```sql title=Query
+SELECT
+    formatReadableSize(192851925, 0) AS no_decimals,
+    formatReadableSize(192851925, 4) AS four_decimals
+```
+
+```response title=Response
+┌─no_decimals─┬─four_decimals──┐
+│ 184 MiB     │ 183.9179 MiB   │
+└─────────────┴────────────────┘
+```
+
 <div id="formatReadableTimeDelta">
   ## formatReadableTimeDelta
 </div>
 
 引入版本：v20.12.0
 
-给定一个以秒为单位的时间间隔 (delta) ，此函数会将其格式化为包含年/月/日/小时/分钟/秒/毫秒/微秒/纳秒的时间间隔字符串。
+给定一个以秒为单位的时间间隔 (delta) 或 `INTERVAL` 表达式，此函数会将其格式化为包含年/月/日/小时/分钟/秒/毫秒/微秒/纳秒的时间间隔字符串。
 
 此函数接受任何数值类型作为输入，但在内部会将其转换为 `Float64`。对于较大的值，结果可能不够理想。
+
+传入 `INTERVAL` 表达式时，其值会被转换为秒。`MONTH` 及更大的 Interval 单位 (`MONTH`、`QUARTER`、`YEAR`) 不受支持，因为它们并不表示以秒为单位的固定长度时间间隔。
 
 **语法**
 
@@ -2097,7 +2144,7 @@ formatReadableTimeDelta(column[, maximum_unit, minimum_unit])
 
 **参数**
 
-* `column` — 具有数值型时间增量的列。[`Float64`](/zh/reference/data-types/float)
+* `column` — 具有数值型时间增量的列，或 `INTERVAL` 表达式。不支持 `MONTH` 及更大单位的时间间隔。[`Float64`](/zh/reference/data-types/float) 或 [`Interval`](/zh/reference/data-types/int-uint)
 * `maximum_unit` — 可选。要显示的最大单位。可接受的值：`nanoseconds`、`microseconds`、`milliseconds`、`seconds`、`minutes`、`hours`、`days`、`months`、`years`。默认值：`years`。[`const String`](/zh/reference/data-types/string)
 * `minimum_unit` — 可选。要显示的最小单位。所有更小的单位都会被截断。可接受的值：`nanoseconds`、`microseconds`、`milliseconds`、`seconds`、`minutes`、`hours`、`days`、`months`、`years`。如果显式指定的值大于 `maximum_unit`，则会抛出异常。默认值：当 `maximum_unit` 为 `seconds` 或更大单位时，默认值为 `seconds`；否则为 `nanoseconds`。[`const String`](/zh/reference/data-types/string)
 
@@ -2137,6 +2184,18 @@ SELECT
 │      12345 │ 205 minutes and 45 seconds                                      │
 │  432546534 │ 7209108 minutes and 54 seconds                                  │
 └────────────┴─────────────────────────────────────────────────────────────────┘
+```
+
+**使用 INTERVAL 表达式**
+
+```sql title=Query
+SELECT formatReadableTimeDelta(INTERVAL 12345 SECOND) AS time_delta
+```
+
+```response title=Response
+┌─time_delta─────────────────────────┐
+│ 3 hours, 25 minutes and 45 seconds │
+└────────────────────────────────────┘
 ```
 
 <div id="fuzzQuery">
@@ -2569,7 +2628,7 @@ getServerSetting(setting_name')
 
 **返回值**
 
-返回该服务器设置的当前值。[`Any`](/zh/reference/data-types)
+返回该服务器设置的当前值。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -2605,7 +2664,7 @@ getSetting(setting_name)
 
 **返回值**
 
-返回该设置的当前值。[`Any`](/zh/reference/data-types)
+返回该设置的当前值。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -2751,7 +2810,7 @@ getTypeSerializationStreams(col)
 
 **参数**
 
-* `col` — 用于检测数据类型的列，或数据类型的字符串表示形式。[`Any`](/zh/reference/data-types)
+* `col` — 用于检测数据类型的列，或数据类型的字符串表示形式。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -2799,7 +2858,7 @@ globalVariable(name)
 
 **返回值**
 
-返回变量 `name` 的值。[`Any`](/zh/reference/data-types)
+返回变量 `name` 的值。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -3065,11 +3124,11 @@ identity(x)
 
 **参数**
 
-* `x` — 输入值。[`Any`](/zh/reference/data-types)
+* `x` — 输入值。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回原始输入值，不做任何更改。[`Any`](/zh/reference/data-types)
+返回原始输入值，不做任何更改。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -3099,7 +3158,7 @@ ignore(x)
 
 **参数**
 
-* `x` — 一个未使用的输入值，传入它仅仅是为了避免语法错误。[`Any`](/zh/reference/data-types)
+* `x` — 一个未使用的输入值，传入它仅仅是为了避免语法错误。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -3301,11 +3360,11 @@ initializeAggregation(aggregate_function, arg1[, arg2, ...])
 **参数**
 
 * `aggregate_function` — 要初始化的聚合函数名称。[`String`](/zh/reference/data-types/string)
-* `arg1[, arg2, ...]` — 聚合函数的参数。[`Any`](/zh/reference/data-types)
+* `arg1[, arg2, ...]` — 聚合函数的参数。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回传递给该函数的每一行的聚合结果。其返回类型与 `initializeAggregation` 的第一个参数指定的函数返回类型相同。[`Any`](/zh/reference/data-types)
+返回传递给该函数的每一行的聚合结果。其返回类型与 `initializeAggregation` 的第一个参数指定的函数返回类型相同。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -3356,7 +3415,7 @@ isConstant(x)
 
 **参数**
 
-* `x` — 要检查的表达式。[`Any`](/zh/reference/data-types)
+* `x` — 要检查的表达式。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -3478,11 +3537,11 @@ joinGet(join_storage_table_name, value_column, join_keys)
 
 * `join_storage_table_name` — 用于指示在何处执行查找的标识符。系统会在默认数据库中查找该标识符 (请参见配置文件中的参数 `default_database`) 。若要覆盖默认数据库设置，请使用 `USE database_name` 查询，或用点号同时指定数据库和表，例如 `database_name.table_name`。[`String`](/zh/reference/data-types/string)
 * `value_column` — 表中包含所需数据的列名。[`const String`](/zh/reference/data-types/string)
-* `join_keys` — 连接键列表。[`Any`](/zh/reference/data-types)
+* `join_keys` — 连接键列表。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回与键列表对应的值列表。[`Any`](/zh/reference/data-types)
+返回与键列表对应的值列表。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -3553,11 +3612,11 @@ joinGetOrNull(join_storage_table_name, value_column, join_keys)
 
 * `join_storage_table_name` — 用于指明在何处执行查找的标识符。系统会在默认数据库中查找该标识符 (参见配置文件中的参数 default&#95;database) 。若要覆盖默认数据库，请使用 `USE database_name` 查询，或用点号同时指定数据库和表，例如 `database_name.table_name`。[`String`](/zh/reference/data-types/string)
 * `value_column` — 表中包含所需数据的列名。[`const String`](/zh/reference/data-types/string)
-* `join_keys` — 连接键列表。[`Any`](/zh/reference/data-types)
+* `join_keys` — 连接键列表。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回与键列表对应的值列表；如果未找到某个键，则返回 `NULL`。[`Any`](/zh/reference/data-types)
+返回与键列表对应的值列表；如果未找到某个键，则返回 `NULL`。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -3707,20 +3766,20 @@ materialize(x)
 
 **参数**
 
-* `x` — 常量。[`Any`](/zh/reference/data-types)
+* `x` — 常量。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回一个包含该常量值的普通列。[`Any`](/zh/reference/data-types)
+返回一个包含该常量值的普通列。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
 **用法示例**
 
 ```sql title=Query
--- 在下面的示例中，`countMatches` 函数要求第二个参数为常量。
--- 可以使用 `materialize` 函数将常量转换为普通列来调试此行为，
--- 从而验证该函数对非常量参数会抛出错误。
+-- In the example below the `countMatches` function expects a constant second argument.
+-- This behaviour can be debugged by using the `materialize` function to turn a constant into a full column,
+-- verifying that the function throws an error for a non-constant argument.
 
 SELECT countMatches('foobarfoo', 'foo');
 SELECT countMatches('foobarfoo', materialize('foo'));
@@ -3835,13 +3894,13 @@ neighbor(column, offset[, default_value])
 
 **参数**
 
-* `column` — 源列。[`Any`](/zh/reference/data-types)
+* `column` — 源列。[`Any`](/zh/reference/data-types/index)
 * `offset` — 相对于当前行的偏移量。正值向前查找，负值向后查找。[`Integer`](/zh/reference/data-types/int-uint)
-* `default_value` — 可选。如果偏移量超出数据范围，则返回该值。若未指定，则使用该列类型的默认值。[`Any`](/zh/reference/data-types)
+* `default_value` — 可选。如果偏移量超出数据范围，则返回该值。若未指定，则使用该列类型的默认值。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回指定偏移量处的值；如果超出范围，则返回默认值。[`Any`](/zh/reference/data-types)
+返回指定偏移量处的值；如果超出范围，则返回默认值。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -4644,7 +4703,7 @@ FROM
   **已弃用**
 
   每当进入新的数据块时，状态都会被重置。
-  由于这种行为容易出错，该函数已被弃用，建议改用[窗口函数](/zh/reference/functions/window-functions)。
+  由于这种行为容易出错，该函数已被弃用，建议改用[窗口函数](/zh/reference/functions/window-functions/index)。
   你可以使用设置 [`allow_deprecated_error_prone_window_functions`](/zh/reference/settings/session-settings#allow_deprecated_error_prone_window_functions) 来允许使用此函数。
 </Warning>
 
@@ -4657,11 +4716,11 @@ runningAccumulate(agg_state[, grouping])
 **参数**
 
 * `agg_state` — 聚合函数状态。[`AggregateFunction`](/zh/reference/data-types/aggregatefunction)
-* `grouping` — 可选。分组键。如果 `grouping` 的值发生变化，函数状态将被重置。它可以是任意一种定义了相等运算符的受支持数据类型。[`Any`](/zh/reference/data-types)
+* `grouping` — 可选。分组键。如果 `grouping` 的值发生变化，函数状态将被重置。它可以是任意一种定义了相等运算符的受支持数据类型。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回每一行的累积结果。[`Any`](/zh/reference/data-types)
+返回每一行的累积结果。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -4710,7 +4769,7 @@ FROM numbers(5);
 <Warning>
   **已弃用**
 
-  建议改用[窗口函数](/zh/reference/functions/window-functions)。
+  建议改用[窗口函数](/zh/reference/functions/window-functions/index)。
 </Warning>
 
 **语法**
@@ -4759,7 +4818,7 @@ SELECT start, runningConcurrency(start, end) FROM example_table;
 
   该函数仅返回当前正在处理的数据块内的差值。
   由于这种行为容易出错，该函数已被弃用。
-  建议改用[窗口函数](/zh/reference/functions/window-functions)。
+  建议改用[窗口函数](/zh/reference/functions/window-functions/index)。
 
   你可以使用设置 [`allow_deprecated_error_prone_window_functions`](/zh/reference/settings/session-settings#allow_deprecated_error_prone_window_functions) 来允许使用此函数。
 </Warning>
@@ -4778,7 +4837,7 @@ runningDifference(x)
 
 **参数**
 
-* `x` — 要计算逐行差分的列。[`Any`](/zh/reference/data-types)
+* `x` — 要计算逐行差分的列。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -4847,7 +4906,7 @@ WHERE diff != 1;
 
   仅返回当前处理的数据块内的差值。
   由于这种行为容易导致错误，该函数已被弃用。
-  建议改用[窗口函数](/zh/reference/functions/window-functions)。
+  建议改用[窗口函数](/zh/reference/functions/window-functions/index)。
 
   你可以使用设置 `allow_deprecated_error_prone_window_functions` 来允许使用此函数。
 </Warning>
@@ -4860,11 +4919,11 @@ runningDifferenceStartingWithFirstValue(x)
 
 **参数**
 
-* `x` — 用于计算逐行差分的列。[`Any`](/zh/reference/data-types)
+* `x` — 用于计算逐行差分的列。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回相邻值之间的差值；对于第一行，返回该行的值。[`Any`](/zh/reference/data-types)
+返回相邻值之间的差值；对于第一行，返回该行的值。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -5280,7 +5339,7 @@ throwIf(x[, message[, error_code]])
 
 **参数**
 
-* `x` — 要检查的条件。[`Any`](/zh/reference/data-types)
+* `x` — 要检查的条件。[`Any`](/zh/reference/data-types/index)
 * `message` — 可选。自定义错误信息。[`const String`](/zh/reference/data-types/string)
 * `error_code` — 可选。自定义错误代码。[`const Int8/16/32`](/zh/reference/data-types/int-uint)
 
@@ -5318,7 +5377,7 @@ toColumnTypeName(value)
 
 **参数**
 
-* `value` — 要返回其内部数据类型名称的值。[`Any`](/zh/reference/data-types)
+* `value` — 要返回其内部数据类型名称的值。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -5355,7 +5414,7 @@ toTypeName(x)
 
 **参数**
 
-* `x` — 任意类型的值。[`Any`](/zh/reference/data-types)
+* `x` — 任意类型的值。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
@@ -5616,7 +5675,7 @@ transform(x, array_from, array_to[, default])
 
 **返回值**
 
-如果 `x` 与 `array_from` 中的某个元素匹配，则返回 `array_to` 中对应的值；否则返回 `default` (如果提供) 或 `x` (如果未提供 `default`) 。[`Any`](/zh/reference/data-types)
+如果 `x` 与 `array_from` 中的某个元素匹配，则返回 `array_to` 中对应的值；否则返回 `default` (如果提供) 或 `x` (如果未提供 `default`) 。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -5835,11 +5894,11 @@ variantElement(variant, type_name[, default_value])
 
 * `variant` — Variant 列。[`Variant`](/zh/reference/data-types/variant)
 * `type_name` — 要提取的 Variant 类型名称。[`String`](/zh/reference/data-types/string)
-* `default_value` — 如果 `variant` 中不存在指定的 Variant 类型，则使用该默认值。可以是任意类型。可选。[`Any`](/zh/reference/data-types)
+* `default_value` — 如果 `variant` 中不存在指定的 Variant 类型，则使用该默认值。可以是任意类型。可选。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回从 Variant 列中提取出的指定 Variant 类型的列。[`Any`](/zh/reference/data-types)
+返回从 Variant 列中提取出的指定 Variant 类型的列。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -5957,7 +6016,7 @@ visibleWidth(x)
 
 **参数**
 
-* `x` — 任意数据类型的值。[`Any`](/zh/reference/data-types)
+* `x` — 任意数据类型的值。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 

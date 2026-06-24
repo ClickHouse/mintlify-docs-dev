@@ -42,26 +42,26 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
     [nats_password = 'password',]
     [nats_token = 'clickhouse',]
     [nats_credential_file = '/var/nats_credentials',]
-    [nats_startup_connect_tries = '5']
+    [nats_startup_connect_tries = 5,]
     [nats_max_rows_per_message = 1,]
     [nats_handle_error_mode = 'default']
 ```
 
 Parâmetros obrigatórios:
 
-* `nats_url` – host:port (por exemplo, `localhost:5672`).
+* `nats_url` – host:port (por exemplo, `localhost:4222`).
 * `nats_subjects` – Lista de subjects da tabela NATS para assinar/publicar. Suporta subjects curinga como `foo.*.bar` ou `baz.>`
-* `nats_format` – Formato da mensagem. Usa a mesma notação da função SQL `FORMAT`, como `JSONEachRow`. Para mais informações, consulte a seção [Formatos](/pt-BR/reference/formats).
+* `nats_format` – Formato da mensagem. Usa a mesma notação da função SQL `FORMAT`, como `JSONEachRow`. Para mais informações, consulte a seção [Formatos](/pt-BR/reference/formats/index).
 
 Parâmetros opcionais:
 
 * `nats_schema` – Parâmetro que deve ser usado se o formato exigir uma definição de schema. Por exemplo, [Cap&#39;n Proto](https://capnproto.org/) exige o caminho para o arquivo de schema e o nome do objeto raiz `schema.capnp:Message`.
 * `nats_stream` – O nome de um stream existente no NATS JetStream.
-* `nats_consumer` – O nome de um pull consumer durável existente no NATS JetStream.
+* `nats_consumer_name` – O nome de um pull consumer durável existente no NATS JetStream.
 * `nats_num_consumers` – O número de consumers por tabela. Padrão: `1`. Especifique mais consumers se a taxa de transferência de um consumer for insuficiente, somente para NATS Core.
 * `nats_queue_group` – Nome do queue group dos assinantes NATS. O padrão é o nome da tabela.
 * `nats_max_reconnect` – Obsoleto e sem efeito; a reconexão é realizada permanentemente com o timeout `nats_reconnect_wait`.
-* `nats_reconnect_wait` – Tempo de espera, em milissegundos, entre cada tentativa de reconexão. Padrão: `5000`.
+* `nats_reconnect_wait` – Tempo de espera, em milissegundos, entre cada tentativa de reconexão. Padrão: `2000`.
 * `nats_server_list` - Lista de servidores para conexão. Pode ser especificada para conectar a um cluster NATS.
 * `nats_skip_broken_messages` - Tolerância do parser de mensagens NATS a mensagens incompatíveis com o schema por bloco. Padrão: `0`. Se `nats_skip_broken_messages = N`, o engine ignora *N* mensagens NATS que não podem ser analisadas (uma mensagem equivale a uma linha de dados).
 * `nats_max_block_size` - Número de linhas coletadas por poll(s) para descarregar dados do NATS. Padrão: [max&#95;insert&#95;block&#95;size](/pt-BR/reference/settings/session-settings#max_insert_block_size).
@@ -188,7 +188,7 @@ Observação: as colunas virtuais `_raw_message` e `_error` são preenchidas ape
   ## Suporte a formatos de dados
 </div>
 
-O engine NATS oferece suporte a todos os [formatos](/pt-BR/reference/formats) compatíveis com o ClickHouse.
+O engine NATS oferece suporte a todos os [formatos](/pt-BR/reference/formats/index) compatíveis com o ClickHouse.
 O número de linhas em uma mensagem NATS depende de o formato ser baseado em linhas ou em blocos:
 
 * Para formatos baseados em linhas, o número de linhas em uma mensagem NATS pode ser controlado pela configuração `nats_max_rows_per_message`.

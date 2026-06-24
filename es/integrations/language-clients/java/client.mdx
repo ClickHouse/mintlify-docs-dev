@@ -62,7 +62,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Ejemplo:
 
   ```java showLineNumbers
-  Client client = new Client.Builder()
+   Client client = new Client.Builder()
                   .addEndpoint("https://clickhouse-cloud-instance:8443/")
                   .setUsername(user)
                   .setPassword(password)
@@ -78,7 +78,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   La autenticación mediante contraseña requiere configurar el nombre de usuario y la contraseña llamando a `setUsername(String)` y `setPassword(String)`:
 
   ```java showLineNumbers
-  Client client = new Client.Builder()
+   Client client = new Client.Builder()
           .addEndpoint("https://clickhouse-cloud-instance:8443/")
           .setUsername(user)
           .setPassword(password)
@@ -88,7 +88,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   La autenticación mediante un token de acceso requiere establecer el token de acceso llamando a `setAccessToken(String)`:
 
   ```java showLineNumbers
-  Client client = new Client.Builder()
+   Client client = new Client.Builder()
           .addEndpoint("https://clickhouse-cloud-instance:8443/")
           .setAccessToken(userAccessToken)
           .build();
@@ -149,7 +149,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       | `useBearerTokenAuth(String bearerToken)`             | `bearerToken` - un token Bearer codificado                             | Especifica si se debe usar la autenticación Bearer y qué token usar. El token se enviará tal cual.                                                                                      | -              | `bearer_token`        |
     </Tab>
 
-    <Tab title="Timeouts & reintentos">
+    <Tab title="Tiempos de espera & reintentos">
       | Método                                                       | Argumentos                                                                | Descripción                                                                                                      | Predeterminado                                               | Clave                        |
       | ------------------------------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------- |
       | `setConnectTimeout(long timeout, ChronoUnit unit)`           | `timeout` - valor del tiempo de espera<br />`unit` - unidad de tiempo     | Establece el tiempo de espera para iniciar cualquier conexión saliente.                                          | -                                                            | `connection_timeout`         |
@@ -290,19 +290,19 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Los ajustes del lado del servidor pueden configurarse a nivel de cliente una sola vez durante la creación (consulte el método `serverSetting` de `Builder`) y a nivel de operación (consulte `serverSetting` en la clase de ajustes de operación).
 
   ```java showLineNumbers
-  try (Client client = new Client.Builder().addEndpoint(Protocol.HTTP, "localhost", mockServer.port(), false)
+   try (Client client = new Client.Builder().addEndpoint(Protocol.HTTP, "localhost", mockServer.port(), false)
           .setUsername("default")
           .setPassword(ClickHouseServerForTest.getPassword())
           .compressClientRequest(true)
 
-          // Nivel de cliente
+          // Client level
           .serverSetting("max_threads", "10")
           .serverSetting("async_insert", "1")
           .serverSetting("roles", Arrays.asList("role1", "role2"))
 
           .build()) {
 
-  	// Nivel de operación
+  	// Operation level
   	QuerySettings querySettings = new QuerySettings();
   	querySettings.serverSetting("session_timezone", "Europe/Zurich");
 
@@ -317,9 +317,11 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Se pueden configurar HTTP headers personalizados para todas las operaciones (nivel de cliente) o para una sola (nivel de operación).
 
   ```java showLineNumbers
+
   QuerySettings settings = new QuerySettings()
       .httpHeader(HttpHeaders.REFERER, clientReferer)
       .setQueryId(qId);
+
   ```
 
   Cuando las opciones se configuran mediante el método `setOption` (ya sea en `Client.Builder` o en la clase de configuración de operaciones), el nombre del encabezado personalizado debe llevar el prefijo `http_header_`. El método `com.clickhouse.client.api.ClientConfigProperties#httpHeader()` puede ser de utilidad en este caso.
@@ -328,7 +330,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   ### ClickHouseFormat
 
-  Enum de [formatos compatibles](/es/reference/formats). Incluye todos los formatos admitidos por ClickHouse.
+  Enum de [formatos compatibles](/es/reference/formats/index). Incluye todos los formatos admitidos por ClickHouse.
 
   * `raw` - el usuario debe transcodificar los datos sin procesar
   * `full` - el cliente puede transcodificar datos por su cuenta y acepta un flujo de datos sin procesar
@@ -460,6 +462,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           throw new RuntimeException(e);
       }
   }
+
   ```
 
   ### insert(String tableName, List&lt;?&gt; data, InsertSettings settings)
@@ -488,13 +491,13 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   **Ejemplos**
 
   ```java showLineNumbers
-  // Paso importante (se realiza una vez) - registrar la clase para precompilar el serializador de objetos según el esquema de la tabla.
+  // Important step (done once) - register class to pre-compile object serializer according to the table schema.
   client.register(ArticleViewEvent.class, client.getTableSchema(TABLE_NAME));
 
   List<ArticleViewEvent> events = loadBatch();
 
   try (InsertResponse response = client.insert(TABLE_NAME, events).get()) {
-      // gestionar la respuesta; luego se cerrará y la conexión que atendió la solicitud será liberada.
+      // handle response, then it will be closed and connection that served request will be released.
   }
   ```
 
@@ -511,7 +514,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | `setInputStreamCopyBufferSize(int size)`        | Tamaño del búfer de copia. El búfer se utiliza durante las operaciones de escritura para copiar datos del flujo de entrada proporcionado por el usuario a un flujo de salida. Valor predeterminado: `8196`. |
   | `serverSetting(String name, String value)`      | Establece ajustes de servidor individuales para una operación.                                                                                                                                              |
   | `serverSetting(String name, Collection values)` | Establece opciones de configuración individuales del servidor con varios valores para una operación. Los elementos de la colección deben ser valores `String`.                                              |
-  | `setDBRoles(Collection dbRoles)`                | Establece los roles de DB que deben establecerse antes de ejecutar una operación. Los elementos de la colección deben ser valores `String`.                                                                 |
+  | `setDBRoles(Collection dbRoles)`                | Establece los roles de DB que deben configurarse antes de ejecutar una operación. Los elementos de la colección deben ser valores `String`.                                                                 |
   | `setOption(String option, Object value)`        | Establece una opción de configuración en formato raw. No se trata de un ajuste del servidor.                                                                                                                |
 
   ### InsertResponse
@@ -519,7 +522,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Objeto de respuesta que contiene el resultado de la operación de inserción. Solo está disponible si el cliente recibió una respuesta del servidor.
 
   <Note>
-    Este objeto debe cerrarse lo antes posible para liberar la conexión, ya que no podrá reutilizarse hasta que se hayan leído por completo todos los datos de la respuesta anterior.
+    Este objeto debe cerrarse lo antes posible para liberar una conexión, ya que esta no puede reutilizarse hasta que se hayan leído por completo todos los datos de la respuesta anterior.
   </Note>
 
   | Método                          | Descripción                                                                                                                         |
@@ -555,27 +558,27 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ```java
   final String sql = "select * from " + TABLE_NAME + " where title <> '' limit 10";
 
-  // El formato predeterminado es RowBinaryWithNamesAndTypesFormatReader, por lo que el lector tiene toda la información sobre las columnas
+  // Default format is RowBinaryWithNamesAndTypesFormatReader so reader have all information about columns
   try (QueryResponse response = client.query(sql).get(3, TimeUnit.SECONDS);) {
 
-      // Crear un lector para acceder a los datos de forma cómoda
+      // Create a reader to access the data in a convenient way
       ClickHouseBinaryFormatReader reader = client.newBinaryFormatReader(response);
 
       while (reader.hasNext()) {
-          reader.next(); // Leer el siguiente registro del stream y procesarlo
+          reader.next(); // Read the next record from stream and parse it
 
-          // obtener valores
+          // get values
           double id = reader.getDouble("id");
           String title = reader.getString("title");
           String url = reader.getString("url");
 
-          // recopilando datos
+          // collecting data
       }
   } catch (Exception e) {
       log.error("Failed to read data", e);
   }
 
-  // Colocar la lógica de negocio fuera del bloque de lectura para liberar la conexión HTTP lo antes posible.
+  // put business logic outside of the reading block to release http connection asap.
   ```
 
   ### query(String sqlQuery, Map&lt;String, Object&gt; queryParams, QuerySettings settings)
@@ -594,7 +597,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   `queryParams` - mapa de variables para completar la expresión SQL en el servidor.
 
-  `settings` - configuración de la solicitud.
+  `settings` - parámetros de la solicitud.
 
   **Valor de retorno**
 
@@ -603,25 +606,27 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   **Ejemplos**
 
   ```java showLineNumbers
-  // definir parámetros. Se enviarán al servidor junto con la solicitud.
+
+  // define parameters. They will be sent to the server along with the request.
   Map<String, Object> queryParams = new HashMap<>();
   queryParams.put("param1", 2);
 
   try (QueryResponse response =
           client.query("SELECT * FROM " + table + " WHERE col1 >= {param1:UInt32}", queryParams, new QuerySettings()).get()) {
 
-      // Crear un lector para acceder a los datos de forma cómoda
+      // Create a reader to access the data in a convenient way
       ClickHouseBinaryFormatReader reader = client.newBinaryFormatReader(response);
 
       while (reader.hasNext()) {
-          reader.next(); // Leer el siguiente registro del stream y parsearlo
+          reader.next(); // Read the next record from stream and parse it
 
-          // lectura de datos
+          // reading data
       }
 
   } catch (Exception e) {
       log.error("Failed to read data", e);
   }
+
   ```
 
   ### queryAll(String sqlQuery)
@@ -649,7 +654,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       log.info("Reading whole table and process record by record");
       final String sql = "select * from " + TABLE_NAME + " where title <> ''";
 
-      // Leer el conjunto de resultados completo y procesarlo registro por registro
+      // Read whole result set and process it record by record
       client.queryAll(sql).forEach(row -> {
           double id = row.getDouble("id");
           String title = row.getString("title");
@@ -677,7 +682,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | `setUseServerTimeZone(Boolean useServerTimeZone)` | La zona horaria del servidor (consulte la configuración del cliente) se utilizará para interpretar los tipos de fecha/hora en el resultado de una operación. Valor predeterminado: `false`. |
   | `setUseTimeZone(String timeZone)`                 | Solicita al servidor que use `timeZone` para la conversión de tiempo. Consulte [session&#95;timezone](/es/reference/settings/session-settings#session_timezone).                               |
   | `serverSetting(String name, String value)`        | Establece ajustes individuales del servidor para una operación.                                                                                                                             |
-  | `serverSetting(String name, Collection values)`   | Establece configuraciones individuales del servidor con varios valores para una operación. Los elementos de la colección deben ser valores `String`.                                        |
+  | `serverSetting(String name, Collection values)`   | Establece opciones de configuración individuales del servidor con varios valores para una operación. Los elementos de la colección deben ser valores `String`.                              |
   | `setDBRoles(Collection dbRoles)`                  | Establece los roles de DB que deben configurarse antes de ejecutar una operación. Los elementos de la colección deben ser valores `String`.                                                 |
   | `setOption(String option, Object value)`          | Establece una opción de configuración en formato raw. No es una configuración del servidor.                                                                                                 |
 
@@ -808,7 +813,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           Object[] uint64 = reader.getObjectArray("uint64_arr"); // Array(UInt64) -> BigInteger[]
           Object[] arr2d = reader.getObjectArray("arr2d");       // Array(Array(Int64)) -> Object[]
 
-          // los arrays anidados se devuelven como Object[] anidados:
+          // nested arrays are returned as nested Object[]:
           Object[] firstInner = (Object[]) arr2d[0];
           Long firstValue = (Long) firstInner[0];
       }
@@ -822,8 +827,8 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   * `getStringArray(...)` - para `Array(String)` (y valores de `enum` representados por nombres).
   * `getObjectArray(...)` - opción genérica para cualquier tipo de elemento de `Array(...)`, incluidos los arrays anidados. Úsela para leer arrays con valores que admiten NULL y arrays anidados.
 
-  Las sobrecargas basadas en índice y en nombre están disponibles para todos los métodos. El índice es base 1. Las basadas en índice realizan acceso directo a una columna.
-  Los métodos basados en nombre requieren una búsqueda por índice en cada llamada.
+  Las sobrecargas basadas en índice y en nombre están disponibles para todos los métodos. El índice es base 1. Las sobrecargas basadas en índice realizan acceso directo a una columna.
+  Los métodos basados en nombre requieren una búsqueda por índice en cada invocación.
 
   ```java
   try (QueryResponse response = client.query("SELECT * FROM my_table").get()) {
@@ -934,7 +939,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       | `ClickHouseClientOption#PROXY_PASSWORD` | `Client.Builder#setProxyCredentials` |             |
     </Tab>
 
-    <Tab title="Tiempos de espera & reintentos">
+    <Tab title="Timeouts & reintentos">
       | Configuración de V1                             | Método Builder de V2                 | Comentarios                     |
       | ----------------------------------------------- | ------------------------------------ | ------------------------------- |
       | `ClickHouseClientOption#MAX_EXECUTION_TIME`     | `Client.Builder#setExecutionTimeout` |                                 |
@@ -983,7 +988,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       | `ClickHouseClientOption#MAX_CORE_THREAD_TTL`                   | ✗                                     |                                       |
     </Tab>
 
-    <Tab title="HTTP y encabezados">
+    <Tab title="HTTP & Encabezados">
       | Configuración de V1                                  | Método del builder de V2       | Comentarios                                              |
       | ---------------------------------------------------- | ------------------------------ | -------------------------------------------------------- |
       | `ClickHouseHttpOption#CUSTOM_HEADERS`                | `Client.Builder#httpHeaders`   |                                                          |
@@ -1071,12 +1076,12 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   CompletableFuture<ClickHouseResponse> future;
   try (ClickHousePipedOutputStream requestBody = ClickHouseDataStreamFactory.getInstance()
           .createPipedOutputStream(config)) {
-      // inicia el hilo de trabajo que transfiere datos desde la entrada a ClickHouse
+      // start the worker thread which transfer data from the input into ClickHouse
       future = request.data(requestBody.getInputStream()).execute();
 
-      // Copia los datos del flujo inData al flujo requestBody
+      // Copy data from inData stream to requestBody stream
 
-      // Es necesario cerrar el flujo antes de obtener una respuesta
+      // We need to close the stream before getting a response
       requestBody.close();
 
       try (ClickHouseResponse response = future.get()) {
@@ -1084,19 +1089,20 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           Assert.assertEquals(summary.getWrittenRows(), numRows, "Num of written rows");
       }
   }
+
   ```
 
   **V2 Insertar datos con formato TSV.**
 
   ```java
   InputStream inData = getInData();
-  InsertSettings settings = new InsertSettings().setInputStreamCopyBufferSize(8198 * 2); // establecer el tamaño del búfer de copia
+  InsertSettings settings = new InsertSettings().setInputStreamCopyBufferSize(8198 * 2); // set copy buffer size
   try (InsertResponse response = client.insert(tableName, inData, ClickHouseFormat.TSV, settings).get(30, TimeUnit.SECONDS)) {
 
-    // La inserción se completa en este punto
+    // Insert is complete at this point
 
   } catch (Exception e) {
-   // Gestionar excepción
+   // Handle exception
   }
   ```
 
@@ -1117,6 +1123,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       String name = record.getString("name");
       LocalDateTime ts = record.getLocalDateTime("ts");
   }
+
   ```
 </View>
 

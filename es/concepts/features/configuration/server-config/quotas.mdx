@@ -118,21 +118,44 @@ Si se supera el límite durante al menos un intervalo de tiempo, se lanza una ex
 Las QUOTAS pueden usar la función de &quot;clave de QUOTA&quot; para hacer un seguimiento de los recursos de varias claves de forma independiente. Este es un ejemplo de ello:
 
 ```xml
-<!-- Para el diseñador de informes globales. -->
+<!-- For the global reports designer. -->
 <web_global>
-    <!-- keyed – La "key" de quota_key se pasa en el parámetro de consulta,
-            y la QUOTA se rastrea por separado para cada valor de clave.
-        Por ejemplo, puede pasar un nombre de usuario como clave,
-            de modo que la QUOTA se contabilice por separado para cada nombre de usuario.
-        El uso de claves solo tiene sentido si quota_key es transmitido por el programa, no por un usuario.
+    <!-- keyed – The quota_key "key" is passed in the query parameter,
+            and the quota is tracked separately for each key value.
+        For example, you can pass a username as the key,
+            so the quota will be counted separately for each username.
+        Using keys makes sense only if quota_key is transmitted by the program, not by a user.
 
-        También puede escribir <keyed_by_ip />, de modo que la dirección IP se utilice como clave de QUOTA.
-        (Pero tenga en cuenta que los usuarios pueden cambiar la dirección IPv6 con bastante facilidad.)
+        You can also write <keyed_by_ip />, so the IP address is used as the quota key.
+        (But keep in mind that users can change the IPv6 address fairly easily.)
+
+        Instead of <keyed_by_ip /> you can use <keyed_by_forwarded_ip />, so the address
+        from the X-Forwarded-For header is used as the quota key.
+
+        For both <keyed_by_ip /> and <keyed_by_forwarded_ip /> you can additionally specify
+        <ipv4_prefix_bits> and <ipv6_prefix_bits> to group clients by subnet instead of by a
+        single address: the IP address is masked to the given prefix length before being used
+        as the quota key. For example, <ipv4_prefix_bits>24</ipv4_prefix_bits> shares one bucket
+        across a /24 IPv4 subnet, and <ipv6_prefix_bits>64</ipv6_prefix_bits> across a /64 IPv6
+        subnet. These elements can only be used together with <keyed_by_ip /> or
+        <keyed_by_forwarded_ip />.
     -->
     <keyed />
 ```
 
-Al usar la sintaxis DDL, también puede asociar las QUOTAS al hash normalizado de la consulta, de modo que cada patrón de consulta distinto tenga su propio bucket de QUOTA independiente:
+También puede asociar las QUOTAS al hash de la consulta normalizada, de modo que cada patrón de consulta distinto tenga su propio bucket de QUOTA independiente. En la configuración XML, esto se escribe como `<keyed_by_normalized_query_hash />`:
+
+```xml
+<my_quota>
+    <keyed_by_normalized_query_hash />
+    <interval>
+        <duration>3600</duration>
+        <queries>100</queries>
+    </interval>
+</my_quota>
+```
+
+Esto mismo se puede expresar con la sintaxis DDL:
 
 ```sql
 CREATE QUOTA my_quota KEYED BY normalized_query_hash FOR INTERVAL 1 hour MAX queries = 100 TO my_user;

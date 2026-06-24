@@ -2,10 +2,13 @@
 title: ClickHouseで最も負荷の高いクエリを特定する方法
 description: ClickHouseの`query_log`テーブルを使って、分散ノード全体でメモリ消費量とCPU負荷が最も高いクエリを特定する方法を学びます。
 date: 2023-03-26
-slug: find-expensive-queries
 tags: ['パフォーマンスと最適化']
 keywords: ['負荷の高いクエリ']
 ---
+
+{frontMatter.description}
+
+{/* truncate */}
 
 <div id="answer">
   ## 回答
@@ -97,6 +100,12 @@ FROM s3Cluster('default','https://clickhouse-public-datasets.s3.amazonaws.com/yo
 
 クラスター化された ClickHouse 環境 (ClickHouse Cloud など) では、`initial_query_id` は、リクエストを受け取ったノードから開始された分散クエリ実行における元のクエリの ID を表します。
 一方、`query_id` フィールドには、別のノードで実行された子クエリの ID が入ります。
+
+<Info>
+  **`query_id` の値が異なる原因は、分散実行だけではありません**
+
+  1 つのクエリが内部サブクエリを生成することもあり、それらはそれぞれ独自の `query_id` と `is_initial_query = 0` で記録されます。特によくあるのは、ClickHouse が [ビュー](/ja/reference/system-tables/query_views_log) を評価するために実行する内部クエリです。これらの内部識別子は ClickHouse によって割り当てられるため、クライアントに報告される ID と同じ形式にならない場合があります。ビュー関連の処理では、`queryView...` のようなラベルを含む `query_id` が表示されることがあります。送信したクエリそのものを正確に対象にしたい場合は、`is_initial_query = 1` (または `query_id = initial_query_id`) で絞り込んでください。これは `query_log` のサーバー側の動作であり、Cloud SQL Console を含むどのクライアントからでも同じです。
+</Info>
 
 上記のクエリに `query_id` を追加すると、`initial_query_id` = `a7262fa2-bd8b-4b51-a359-621ccf282417` と `hostname()` を基準に検索対象を絞り込めます。
 

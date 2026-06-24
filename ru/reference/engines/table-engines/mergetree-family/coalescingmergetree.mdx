@@ -140,3 +140,45 @@ SELECT * FROM test_table FINAL ORDER BY key;
   SELECT key, last_value(value_int), last_value(value_string), last_value(value_date)  FROM test_table GROUP BY key; -- Не рекомендуется.
   ```
 </Note>
+
+<div id="tuple-element-aggregation">
+  ## Агрегация элементов Tuple
+</div>
+
+Когда включена настройка `allow_tuple_element_aggregation`, столбцы `Tuple` рекурсивно разворачиваются, так что каждый конечный элемент независимо участвует в коалесценции. Это позволяет хранить несколько полей в одном столбце `Tuple`, а при слияниях выполнять для них поэлементную коалесценцию — каждый подстолбец `Nullable` независимо сохраняет последнее значение, отличное от NULL.
+
+К развёрнутым подстолбцам применяются те же правила, что и к обычным столбцам:
+
+* Подстолбцы, входящие в `Tuple` в ключе сортировки или ключе партиционирования, исключаются из коалесценции.
+* Если указан `columns`, коалесценции подвергаются только подстолбцы перечисленных столбцов `Tuple`.
+
+<Note>
+  Эта настройка не может быть изменена и должна быть указана при создании таблицы.
+</Note>
+
+```sql
+CREATE TABLE coalescing_tuples
+(
+    key UInt64,
+    data Tuple(
+        value_a Nullable(UInt64),
+        value_b Nullable(String),
+        nested Tuple(
+            value_c Nullable(UInt64)
+        )
+    )
+) ENGINE = CoalescingMergeTree()
+ORDER BY key
+SETTINGS allow_tuple_element_aggregation = 1;
+
+INSERT INTO coalescing_tuples VALUES (1, (100, NULL, (NULL)));
+INSERT INTO coalescing_tuples VALUES (1, (NULL, 'hello', (42)));
+
+SELECT key, data.value_a, data.value_b, data.nested.value_c FROM coalescing_tuples FINAL;
+```
+
+```text
+┌─key─┬─data.value_a─┬─data.value_b─┬─data.nested.value_c─┐
+│   1 │          100 │ hello        │                  42 │
+└─────┴──────────────┴──────────────┴─────────────────────┘
+```

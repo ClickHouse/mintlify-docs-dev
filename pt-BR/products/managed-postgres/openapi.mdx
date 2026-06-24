@@ -1,7 +1,7 @@
 ---
 slug: /cloud/managed-postgres/openapi
 sidebarTitle: 'OpenAPI'
-title: Managed Postgres OpenAPI
+title: 'Managed Postgres OpenAPI'
 description: 'Controle seus serviços do Managed Postgres com nossa OpenAPI'
 keywords: ['managed postgres', 'openapi', 'api', 'curl', 'tutorial', 'linha de comando', 'query insights', 'consultas lentas']
 doc_type: 'guide'
@@ -9,9 +9,9 @@ doc_type: 'guide'
 
 import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
 
-<BetaBadge />
+<BetaBadge link="https://clickhouse.com/cloud/postgres" galaxyTrack={true} galaxyEvent="docs.managed-postgres.openapi-beta" />
 
-Use a [OpenAPI do ClickHouse](/pt-BR/products/cloud/features/admin-features/api) para
+Use a [OpenAPI do ClickHouse](/pt-BR/products/cloud/features/admin-features/api/index) para
 controlar programaticamente seus serviços de Managed Postgres da mesma forma que os serviços do ClickHouse. A
 mesma API também expõe um [endpoint do Prometheus] para coleta de métricas do serviço.
 Já conhece a [OpenAPI]? Obtenha suas [chaves de API] e vá direto para a
@@ -43,40 +43,41 @@ Em seguida, você precisará do Organization ID da sua organização.
 3. Clique no ícone de cópia à direita de **Organization ID** para copiá-lo diretamente
    para a área de transferência.
 
-{/*
+Agora você já pode usá-lo nas suas requisições, assim:
 
-  TODO: Descomentar e inserir a saída de exemplo correta quando a API for lançada.
+```bash
+ORG_ID=myorgid
 
-  Agora você já pode usá-lo nas suas requisições, assim:
-
-  ```bash
-  ORG_ID=myorgid
-
-  curl -s --user "$KEY_ID:$KEY_SECRET" \
+curl -s --user "$KEY_ID:$KEY_SECRET" \
     "https://api.clickhouse.cloud/v1/organizations/$ORG_ID/postgres" | jq
-  ```
+```
 
-  Agora você fez sua primeira requisição à API do Postgres: a [list API] acima lista todos os
-  servidores Postgres da sua organização. A saída deve ser algo
-  como:
+Agora você fez sua primeira requisição à API do Postgres: a [list API] acima lista todos os
+servidores Postgres da sua organização. A saída deve ser algo
+como:
 
-  ```json
-  {
+```json
+{
   "result": [
     {
-      "id": "c0d0b15d-5e8b-431d-8943-51b6e233e0b1",
-      "name": "Organização do cliente",
-      "createdAt": "2026-03-24T14:21:31Z",
-      "privateEndpoints": [],
-      "enableCoreDumps": true
+      "id": "ee2fef9f-b443-8ad0-8c9b-724390cdb826",
+      "name": "oltp",
+      "provider": "aws",
+      "region": "eu-west-2",
+      "postgresVersion": "18",
+      "size": "r6gd.medium",
+      "storageSize": 59,
+      "haType": "none",
+      "tags": [],
+      "isPrimary": true,
+      "state": "running",
+      "createdAt": "2026-05-25T16:42:16+00:00"
     }
   ],
   "requestId": "c128d830-5769-4c82-8235-f79aa69d1ebf",
   "status": 200
-  }
-  ```
-
-  */}
+}
+```
 
 <div id="crud">
   ## CRUD
@@ -97,7 +98,6 @@ da solicitação:
 * `region`: Região na rede do provedor onde o
   serviço será implantado
 * `size`: Tamanho da VM
-* `storageSize`: Tamanho de armazenamento da VM
 
 Consulte a documentação da [create API] para ver os valores possíveis dessas propriedades. Além
 disso, vamos especificar o Postgres 18 em vez da versão padrão, 17:
@@ -108,8 +108,7 @@ create_data='{
   "provider": "aws",
   "region": "us-west-2",
   "postgresVersion": "18",
-  "size": "r8gd.large",
-  "storageSize": 118
+  "size": "r8gd.large"
 }'
 ```
 
@@ -128,7 +127,7 @@ incluindo os dados de conexão:
 ```json
 {
   "result": {
-    "id": "pg7myrd1j06p3gx4zrm2ze8qz6",
+    "id": "67b4bc12-8582-45d0-8806-fe9b2e5a54e6",
     "name": "my postgres",
     "provider": "aws",
     "region": "us-west-2",
@@ -156,7 +155,7 @@ incluindo os dados de conexão:
 Use o `id` da resposta para obter o serviço novamente:
 
 ```bash
-PG_ID=pg7myrd1j06p3gx4zrm2ze8qz6
+PG_ID=67b4bc12-8582-45d0-8806-fe9b2e5a54e6
 curl -s --user "$KEY_ID:$KEY_SECRET" \
     "https://api.clickhouse.cloud/v1/organizations/$ORG_ID/postgres/$PG_ID" \
     | jq
@@ -189,7 +188,7 @@ psql (18.3)
 SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off, ALPN: postgresql)
 Type "help" for help.
 
-postgres=# 
+postgres=#
 ```
 
 Digite `\q` para sair do [psql].
@@ -213,7 +212,7 @@ Os dados retornados devem incluir as novas tags:
 
 ```json
 {
-  "id": "$PG_ID",
+  "id": "67b4bc12-8582-45d0-8806-fe9b2e5a54e6",
   "name": "my postgres",
   "provider": "aws",
   "region": "us-west-2",
@@ -236,25 +235,36 @@ Os dados retornados devem incluir as novas tags:
 }
 ```
 
+A OpenAPI fornece endpoints adicionais para atualizar propriedades não suportadas
+pela [API de patch]. Por exemplo, para atualizar a [configuração do Postgres],
+use a [config API]:
+
+```bash
+curl -s --user "$KEY_ID:$KEY_SECRET" -H 'Content-Type: application/json' \
+    "https://api.clickhouse.cloud/v1/organizations/$ORG_ID/postgres/$PG_ID/config" \
+    -d '{"pgConfig": {"max_connections": "42"}, "pgBouncerConfig": {}}' | jq
+```
+
+A saída mostrará a configuração atualizada, bem como uma mensagem que descreve
+as consequências da alteração:
+
+```json
+{
+  "result":{
+    "pgConfig": {
+      "max_connections": "42"
+    },
+    "pgBouncerConfig": {},
+    "message": "The changes in the following parameters require a database restart to take effect: max_connections. You can restart the database by using the restart endpoint."
+  },
+  "requestId":"fdec06f2-66f7-45b4-9f82-0c051aba20aa",
+  "status": 200
+}
+```
+
 {/*
 
-  TODO: Expandir quando isso for implementado.
-
-  A OpenAPI fornece endpoints adicionais para atualizar propriedades não suportadas
-  pela [patch API]. Por exemplo, para atualizar a [configuração do Postgres],
-  use a [config API]:
-
-  ```bash
-  curl -s --user "$KEY_ID:$KEY_SECRET" -H 'Content-Type: application/json' \
-    "https://api.clickhouse.cloud/v1/organizations/$ORG_ID/postgres/$PG_ID/config" \
-    -d '{"max_connections": "42"}'
-  ```
-
-  A saída mostrará a configuração atualizada:
-
-  ```json
-  {"max_connections": "42"}
-  ```
+  TODO: Descomente e insira a saída de exemplo correta quando a API estiver disponível.
 
   Outras APIs de atualização incluem:
 
@@ -433,15 +443,11 @@ de CPU em modo usuário e do sistema, workers paralelos, JIT e WAL — os mesmos
 O exemplo resume ambos os objetos por brevidade; a API retorna o conjunto completo
 de contadores documentado em [contadores por execução].
 
-[ClickHouse OpenAPI]: /products/cloud/features/admin-features/api "API do Cloud"
+[OpenAPI do ClickHouse]: /products/cloud/features/admin-features/api/index "API do Cloud"
 
 [OpenAPI]: https://www.openapis.org "Iniciativa OpenAPI"
 
 [chaves de API]: /products/cloud/features/admin-features/api/openapi "Gerenciar chaves de API"
-
-[endpoint do Prometheus]: /products/managed-postgres/monitoring/prometheus "Endpoint do Prometheus do Managed Postgres"
-
-[referência de métricas]: /products/managed-postgres/monitoring/metrics "Referência de métricas do Managed Postgres"
 
 [pg-openapi]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres "Especificação OpenAPI para ClickHouse Cloud: Postgres"
 
@@ -451,7 +457,7 @@ de contadores documentado em [contadores por execução].
 
 [psql]: https://www.postgresql.org/docs/current/app-psql.html "Documentação do PostgreSQL: psql — terminal interativo do PostgreSQL"
 
-[patch API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServicePatch "Atualizar um serviço PostgreSQL"
+[API de patch]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServicePatch "Atualizar um serviço PostgreSQL"
 
 [RFC 7396]: https://www.rfc-editor.org/rfc/rfc7396 "RFC 7396: JSON Merge Patch"
 
@@ -459,7 +465,11 @@ de contadores documentado em [contadores por execução].
 
 [config API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceSetConfig "Atualizar a configuração de um serviço Postgres"
 
-[delete API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceDelete "Excluir um serviço PostgreSQL"
+[API de exclusão]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceDelete "Excluir um serviço PostgreSQL"
+
+[endpoint do Prometheus]: /products/managed-postgres/monitoring/prometheus "Endpoint do Prometheus do Managed Postgres"
+
+[referência de métricas]: /products/managed-postgres/monitoring/metrics "Referência de métricas do Managed Postgres"
 
 [Query Insights]: /products/managed-postgres/monitoring/query-insights "Query Insights do Postgres"
 

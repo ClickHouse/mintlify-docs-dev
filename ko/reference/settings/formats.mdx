@@ -168,6 +168,16 @@ DateTime64 값의 후행 0을 동적으로 제거하여 출력 스케일을 [0, 
 
 AvroConfluent 포맷에서 사용하는 Confluent 스키마 레지스트리 HTTP 클라이언트의 연결 타임아웃(초)입니다. 스키마 가져오기와 스키마 등록 모두에 사용됩니다. 값은 0보다 커야 하며 600(10분)보다 작아야 합니다.
 
+<div id="format_avro_schema_registry_max_retries">
+  ## format_avro_schema_registry_max_retries
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="5" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "5"},{"label": "Confluent 스키마 레지스트리와 통신할 때 발생하는 일시적 장애(전송 timeout, 연결 거부, DNS 오류, HTTP 5xx/408/429)에 대한 최대 재시도 횟수를 제어하는 새로운 설정입니다. 재시도를 비활성화하려면 0으로 설정하십시오. 이전 동작(재시도 없음)은 `compatibility = '26.5'`로 유지됩니다."}]}]} />
+
+AvroConfluent 포맷의 경우: Confluent 스키마 레지스트리와 통신할 때 발생하는 일시적 장애(전송 timeout, 연결 거부, DNS 오류, HTTP 5xx/408/429)에 대한 최대 재시도 횟수입니다. 재시도를 비활성화하려면 0으로 설정하십시오. 허용되는 최대값은 20입니다. 스키마 검증 오류(HTTP 409, 잘못된 Avro JSON)는 재시도하지 않습니다.
+
 <div id="format_avro_schema_registry_receive_timeout">
   ## format_avro_schema_registry_receive_timeout
 </div>
@@ -177,6 +187,16 @@ AvroConfluent 포맷에서 사용하는 Confluent 스키마 레지스트리 HTTP
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "AvroConfluent 포맷에서 사용하는 Confluent 스키마 레지스트리 HTTP 클라이언트의 수신 타임아웃(초)을 제어하는 새로운 설정입니다."}]}]} />
 
 AvroConfluent 포맷에서 사용하는 Confluent 스키마 레지스트리 HTTP 클라이언트의 수신 타임아웃(초)입니다. 스키마 가져오기와 스키마 등록 모두에 사용됩니다. 0보다 크고 600(10분)보다 작아야 합니다.
+
+<div id="format_avro_schema_registry_retry_initial_backoff_ms">
+  ## format_avro_schema_registry_retry_initial_backoff_ms
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="100" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "100"},{"label": "실패한 Confluent 스키마 레지스트리 요청을 재시도하기 전에 적용할 초기 백오프(밀리초)를 제어하는 새로운 설정입니다. 백오프는 재시도할 때마다 2배로 증가하며 최대 10초까지 적용됩니다. `format_avro_schema_registry_max_retries = 0`일 때는 효과가 없습니다(`compatibility = '26.5'`로 26.6 이전 동작을 복원할 수 있음)."}]}]} />
+
+AvroConfluent 포맷의 경우: 실패한 Confluent 스키마 레지스트리 요청을 재시도하기 전에 적용되는 초기 백오프 시간(밀리초)입니다. 백오프는 이후 재시도할 때마다 2배로 증가하며 최대 10초까지 적용됩니다. 값은 0보다 커야 하며 60000 이하여야 합니다.
 
 <div id="format_avro_schema_registry_send_timeout">
   ## format_avro_schema_registry_send_timeout
@@ -826,6 +846,23 @@ CustomSeparated format의 끝에 있는 빈 줄을 건너뜁니다
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.5"},{"label": "0"},{"label": "필요한 경우 생략된 필드에 타입 기본값을 적용하지 않음"}]}]} />
 
 생략된 필드를 강제로 NULL 값으로 초기화합니다
+
+<div id="input_format_geojson_unsupported_geometry_handling">
+  ## input_format_geojson_unsupported_geometry_handling
+</div>
+
+<SettingsInfoBlock type="GeoJSONUnsupportedGeometryHandling" default_value="throw" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "throw"},{"label": "`Geometry` 타입으로 표현할 수 없는 GeoJSON geometry 타입(`GeometryCollection`, `MultiPoint`)의 처리 방식을 제어하는 새로운 설정"}]}]} />
+
+`GeoJSON` 입력을 읽는 동안 ClickHouse의 `Geometry` 타입(예: `GeometryCollection` 또는 `MultiPoint`)으로 표현할 수 없는 유효한 `GeoJSON` geometry 타입을 `geometry` 컬럼에 저장해야 하는 경우의 동작을 제어합니다.
+
+가능한 값:
+
+* `'throw'` (기본값) — 예외를 발생시킵니다.
+* `'null'` — `geometry` 컬럼에 `NULL` 값을 삽입하고 파싱을 계속합니다.
+
+이는 `geometry` 컬럼이 구체화된 경우에만 적용됩니다. 요청된 출력 컬럼이 아닌 경우 이러한 geometry는 형식이 올바른지만 검증되며, 이 처리 동작이 수행되지는 않습니다.
 
 <div id="input_format_hive_text_allow_variable_number_of_columns">
   ## input_format_hive_text_allow_variable_number_of_columns
@@ -1936,6 +1973,18 @@ INTO OUTFILE 사용 시 상위 디렉터리가 아직 없으면 자동으로 생
 JSON 컬럼을 파싱할 때 각 컬럼에서 생성할 수 있는 동적 서브컬럼의 최대 개수입니다.
 데이터 타입에 지정된 동적 매개변수와 관계없이 파싱 중 동적 서브컬럼의 수를 제어할 수 있습니다.
 
+<div id="output_format_always_write_decimal_point_in_float_and_decimal">
+  ## output_format_always_write_decimal_point_in_float_and_decimal
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "값이 정수이더라도 텍스트 형식에서 부동소수점 및 Decimal 숫자에 항상 소수점을 출력하도록 하는 새로운 설정입니다."}]}]} />
+
+값이 정수이더라도 텍스트 형식에서 부동소수점 및 Decimal 숫자에 항상 소수점을 출력합니다. 예를 들어 `1` 대신 `1.`을 출력합니다.
+
+기본적으로 비활성화되어 있습니다.
+
 <div id="output_format_arrow_compression_method">
   ## output_format_arrow_compression_method
 </div>
@@ -2131,6 +2180,63 @@ true로 설정하면 CSV 형식의 튜플이 별도의 컬럼으로 직렬화되
 Decimal 값을 출력할 때 소수점 이하 끝의 0도 함께 출력합니다. 예: 1.23 대신 1.230000.
 
 기본적으로 비활성화되어 있습니다.
+
+<div id="output_format_float_precision">
+  ## output_format_float_precision
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "부동소수점 출력의 소수 자릿수를 제어하는 새로운 설정"}]}]} />
+
+0이 아니면 부동소수점 출력(`Float32`, `Float64`, `BFloat16`)을 소수점 이하 최대 지정된 자릿수까지만 포맷합니다(소수점 이하 끝의 0은 제거됨).
+0이면(기본값) 가장 짧은 round-trip 표현을 사용합니다.
+
+고정 소수점 표기로 표현하기에 너무 큰 값과, 요청된 precision으로 반올림하면 모든 유효 자릿수가 사라질 정도로 매우 작은 값(가수가 `±0`이 되는 경우)은 대신 과학적 표기법으로 출력됩니다. 이러한 폴백 상황에서는 가수에 요청된 fractional digits 수보다 더 많은 자릿수가 포함될 수 있습니다.
+
+유효 범위: 0~100입니다.
+
+<div id="output_format_image_height">
+  ## output_format_image_height
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "PNG와 같은 이미지 출력 형식의 출력 이미지 높이를 제어하는 새로운 설정입니다."}]}]} />
+
+`PNG`와 같은 이미지 출력 형식에서 출력 이미지의 높이를 픽셀 단위로 지정합니다.
+
+기본값: 1024.
+
+<div id="output_format_image_terminal_mode">
+  ## output_format_image_terminal_mode
+</div>
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": ""},{"label": "PNG와 같은 이미지 출력 형식을 원시 이미지 바이트로 쓰는 대신 인라인 이미지 프로토콜을 사용해 터미널에 직접 렌더링할지 제어하는 새로운 설정입니다."}]}]} />
+
+`PNG`와 같은 이미지 출력 형식의 경우, 원시 이미지 바이트를 쓰는 대신 인라인 이미지 프로토콜을 사용하여 이미지를 터미널에 직접 출력합니다.
+
+가능한 값:
+
+* &#96;&#96; (빈 값) — 원시 이미지 바이트를 씁니다(기본값).
+* `iterm` — iTerm2 인라인 이미지 프로토콜을 사용합니다.
+* `kitty` — Kitty 그래픽 프로토콜을 사용합니다.
+* `sixel` — Sixel 프로토콜을 사용합니다.
+* `auto` — 출력 대상이 터미널이면 터미널 기능을 감지하여 `iterm`, `kitty`, `sixel`을 이 순서대로 사용하고, 그렇지 않으면 원시 이미지 바이트를 씁니다.
+
+기본값: &#96;&#96; (빈 값).
+
+<div id="output_format_image_width">
+  ## output_format_image_width
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "PNG와 같은 이미지 출력 형식의 출력 이미지 너비를 제어하는 새로운 설정입니다."}]}]} />
+
+`PNG`와 같은 이미지 출력 형식에서 출력 이미지의 너비를 픽셀 단위로 지정합니다.
+
+기본값: 1024.
 
 <div id="output_format_json_array_of_rows">
   ## output_format_json_array_of_rows
@@ -2845,6 +2951,8 @@ Pretty 형식으로 표시되는 데이터가 여러 청크로 나뉘어 도착�
 
 격자 테두리를 출력할 때 사용하는 문자 집합입니다. 사용할 수 있는 문자 집합: ASCII, UTF-8(기본값).
 
+interactive mode에서는 이 설정을 명시적으로 지정하지 않은 경우, 터미널이 UTF-8을 지원하지 않으면(`LC_ALL`, `LC_CTYPE`, `LANG` 환경 변수를 기준으로 판단) `clickhouse-client`가 자동으로 `ASCII`로 전환합니다.
+
 <div id="output_format_pretty_highlight_digit_groups">
   ## output_format_pretty_highlight_digit_groups
 </div>
@@ -2985,6 +3093,18 @@ Pretty 출력 형식에서 각 행 앞에 행 번호를 추가합니다
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.1"},{"label": "1000"},{"label": "새로운 설정"}]}]} />
 
 이전 출력 후 지정된 밀리초보다 더 많은 시간이 지나면 대기 중인 블록을 Pretty 형식으로 출력합니다.
+
+<div id="output_format_pretty_use_nbsp_for_padding">
+  ## output_format_pretty_use_nbsp_for_padding
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "새 설정입니다. 활성화하면 `Pretty` 출력의 패딩이 `U+00A0`로 렌더링되므로, 일반 공백이 연속된 부분을 압축하는 도구를 거쳐 복사하여 붙여넣어도 유지됩니다."}]}]} />
+
+활성화하면 `Pretty` 출력 형식의 패딩이 ASCII 공백 대신 `U+00A0`로 렌더링됩니다.
+고정폭 글꼴에서는 출력이 시각적으로 동일하게 보이지만, 일반 공백이 연속된 부분을 압축하거나 잘라내는 도구를 거쳐도 패딩이 유지됩니다.
+`output_format_pretty_grid_charset`이 `UTF-8`일 때만 적용됩니다.
 
 <div id="output_format_protobuf_nullables_with_google_wrappers">
   ## output_format_protobuf_nullables_with_google_wrappers

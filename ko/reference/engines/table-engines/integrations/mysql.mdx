@@ -15,8 +15,8 @@ MySQL 엔진을 사용하면 원격 MySQL 서버에 저장된 데이터에 대�
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 (
-    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1] [TTL expr1],
-    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2] [TTL expr2],
+    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1],
+    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2],
     ...
 ) ENGINE = MySQL({host:port, database, table, user, password[, replace_query, on_duplicate_clause] | named_collection[, option=value [,..]]})
 SETTINGS
@@ -25,7 +25,8 @@ SETTINGS
     [ connection_wait_timeout=5, ]
     [ connection_auto_close=true, ]
     [ connect_timeout=10, ]
-    [ read_write_timeout=300 ]
+    [ read_write_timeout=300, ]
+    [ enable_compression=false ]
 ;
 ```
 
@@ -207,6 +208,37 @@ Possible values:
 * 양의 정수.
 
 기본값: `300`.
+
+<div id="enable-compression">
+  ### `enable_compression`
+</div>
+
+MySQL 프로토콜 연결에서 압축을 활성화합니다.
+
+기본값: `false`.
+
+이 설정은 다음에 적용됩니다.
+
+* `MySQL` 테이블 엔진;
+* `MySQL` 데이터베이스 엔진;
+* `mysql` 테이블 함수;
+* MySQL 통합에 사용되는 이름이 지정된 컬렉션.
+
+활성화되면 ClickHouse가 해당 연결에 대해 압축을 요청합니다.
+
+예시:
+
+```sql
+CREATE TABLE mysql_engine_compression
+(
+    id UInt32,
+    name String,
+    age UInt32,
+    money UInt32
+)
+ENGINE = MySQL('mysql80:3306', 'clickhouse', 'test_table', 'root', 'password')
+SETTINGS enable_compression = 1;
+```
 
 <div id="see-also">
   ## 관련 항목

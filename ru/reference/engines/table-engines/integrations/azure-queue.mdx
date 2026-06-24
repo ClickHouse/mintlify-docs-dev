@@ -104,17 +104,19 @@ SETTINGS
 
 `SELECT` не особенно полезен для потокового импорта (кроме отладки), потому что каждый файл можно импортировать только один раз. Гораздо практичнее организовать обработку в реальном времени с помощью [materialized views](/ru/reference/statements/create/view). Для этого:
 
-1. С помощью движка создайте таблицу для чтения из указанного пути в S3 и рассматривайте её как поток данных.
+1. С помощью движка создайте таблицу для чтения из указанного пути в Azure Blob Storage и рассматривайте её как поток данных.
 2. Создайте таблицу с нужной структурой.
 3. Создайте materialized view, которое преобразует данные из движка и помещает их в ранее созданную таблицу.
 
 После подключения `MATERIALIZED VIEW` к движку начинается фоновый сбор данных.
 
+Аргументы движка имеют вид `AzureQueue(connection_string, container_name, blobpath, format[, compression])`.
+
 Пример:
 
 ```sql
 CREATE TABLE azure_queue_engine_table (key UInt64, data String)
-  ENGINE=AzureQueue('<endpoint>', 'CSV', 'gzip')
+  ENGINE=AzureQueue('DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite1:10000/devstoreaccount1/;', 'testcontainer', '*', 'CSV')
   SETTINGS
       mode = 'unordered';
 
@@ -134,7 +136,7 @@ SELECT * FROM stats ORDER BY key;
 * `_path` — путь к файлу.
 * `_file` — имя файла.
 
-Подробнее о виртуальных столбцах см. [здесь](/ru/reference/engines/table-engines#table_engines-virtual_columns).
+Подробнее о виртуальных столбцах см. [здесь](/ru/reference/engines/table-engines/index#table_engines-virtual_columns).
 
 <div id="introspection">
   ## Интроспекция

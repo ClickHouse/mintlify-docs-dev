@@ -28,7 +28,13 @@ sidebarTitle: 'kubectl'
 从最新发布版本中安装 operator 和 CRD：
 
 ```bash
-kubectl apply -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator.yaml
+kubectl apply --server-side --force-conflicts -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator.yaml
+```
+
+需要使用服务器端 apply，因为合并后的 CRD 超出了客户端 apply 的大小限制。对于仅支持客户端 apply 的环境，请使用移除了 description 的 CRD Variant：
+
+```bash
+kubectl apply -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator-stripped-crds.yaml
 ```
 
 这将会：
@@ -105,7 +111,7 @@ keeperclusters.clickhouse.com        2025-01-06T00:00:00Z
 
     ```bash
     make build-installer VERSION=<required operator version> [IMG=<custom registry path>]
-    kubectl apply -k dist/install.yaml
+    kubectl apply --server-side --force-conflicts -f dist/install.yaml
     ```
   </Step>
 </Steps>

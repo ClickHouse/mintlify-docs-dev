@@ -12,7 +12,7 @@ ClickHouse ofrece [compatibilidad completa con `JOIN`](https://clickhouse.com/bl
 
 * Para un rendimiento óptimo, conviene reducir el número de `JOIN` en las consultas, especialmente en cargas de trabajo analíticas en tiempo real donde se requiere latencia de milisegundos. Intenta no superar los 3 o 4 joins por consulta. En la [sección de modelado de datos](/es/guides/clickhouse/data-modelling/schema-design) detallamos varios cambios para minimizar los joins, como la desnormalización, los diccionarios y las vistas materializadas.
 * A partir de ClickHouse 24.12, el planificador de consultas reordena automáticamente los joins entre dos tablas para situar la tabla más pequeña en el lado derecho y así obtener un rendimiento óptimo. En la versión 25.9, esto se amplió para optimizar el orden de join en consultas que combinan tres o más tablas.
-* Si tu consulta requiere un direct join, es decir, un `LEFT ANY JOIN`, como se muestra a continuación, recomendamos usar [Dictionaries](/es/concepts/features/dictionaries) siempre que sea posible.
+* Si tu consulta requiere un direct join, es decir, un `LEFT ANY JOIN`, como se muestra a continuación, recomendamos usar [Dictionaries](/es/concepts/features/dictionaries/index) siempre que sea posible.
 
 <Image img="/images/guides/joins-1.png" size="sm" alt="LEFT ANY JOIN" />
 
@@ -23,7 +23,9 @@ SELECT count()
 FROM stackoverflow.posts AS p
 ANY INNER `JOIN` stackoverflow.comments AS c ON p.Id = c.PostId
 WHERE (p.Title != '') AND (p.Title NOT ILIKE '%clickhouse%') AND (p.Body NOT ILIKE '%clickhouse%') AND (c.Text ILIKE '%clickhouse%')
+```
 
+```response
 ┌─count()─┐
 │       86 │
 └─────────┘
@@ -44,6 +46,9 @@ WHERE (Title != '') AND (Title NOT ILIKE '%clickhouse%') AND (Body NOT ILIKE '%c
         FROM stackoverflow.comments
         WHERE Text ILIKE '%clickhouse%'
 ))
+```
+
+```response
 ┌─count()─┐
 │       86 │
 └─────────┘
@@ -61,7 +66,9 @@ SELECT countIf(VoteTypeId = 2) AS upvotes
 FROM stackoverflow.posts AS p
 INNER JOIN stackoverflow.votes AS v ON p.Id = v.PostId
 WHERE has(arrayFilter(t -> (t != ''), splitByChar('|', p.Tags)), 'java') AND (p.CreationDate >= '2020-01-01')
+```
 
+```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
@@ -76,7 +83,9 @@ SELECT countIf(VoteTypeId = 2) AS upvotes
 FROM stackoverflow.votes AS v
 INNER JOIN stackoverflow.posts AS p ON v.PostId = p.Id
 WHERE has(arrayFilter(t -> (t != ''), splitByChar('|', p.Tags)), 'java') AND (p.CreationDate >= '2020-01-01')
+```
 
+```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
@@ -91,7 +100,9 @@ SELECT countIf(VoteTypeId = 2) AS upvotes
 FROM stackoverflow.votes AS v
 INNER JOIN stackoverflow.posts AS p ON v.PostId = p.Id
 WHERE has(arrayFilter(t -> (t != ''), splitByChar('|', p.Tags)), 'java') AND (p.CreationDate >= '2020-01-01') AND (v.CreationDate >= '2020-01-01')
+```
 
+```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
@@ -110,7 +121,9 @@ WHERE (VoteTypeId = 2) AND (PostId IN (
         FROM stackoverflow.posts
         WHERE (CreationDate >= '2020-01-01') AND has(arrayFilter(t -> (t != ''), splitByChar('|', Tags)), 'java')
 ))
+```
 
+```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘

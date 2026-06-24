@@ -73,18 +73,18 @@ ClickHouse는 [파트를 머지](https://clickhouse.com/blog/asynchronous-data-i
 단일 ClickHouse 서버는 여러 개의 [백그라운드 머지 스레드](/ko/reference/settings/server-settings/settings#background_pool_size)를 사용해 동시에 [파트 병합](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#more-parts--more-background-part-merges:~:text=to%20execute%20concurrent-,part%20merges,-.%20Each%20thread%20executes)을 실행합니다. 각 스레드는 다음과 같은 루프를 실행합니다.
 
 ```bash
-① 다음에 머지할 파트를 결정하고, 해당 파트를 블록으로 메모리에 로드합니다.
+① Decide which parts to merge next, and load these parts as blocks into memory.
 
-② 메모리에 로드된 블록을 더 큰 블록으로 머지합니다.
+② Merge the loaded blocks in memory into a larger block.
 
-③ 머지된 블록을 디스크의 새 파트에 씁니다.
+③ Write the merged block into a new part on disk.
 
-①로 이동
+Go to ①
 ```
 
 CPU 코어 수와 RAM 크기를 [늘리면](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#hardware-size) 백그라운드 머지 처리량이 증가합니다.
 
-더 큰 파트로 병합된 파트는 [비활성](/ko/reference/system-tables/parts) 상태로 표시되며, [설정 가능한](/ko/reference/settings/merge-tree-settings#old_parts_lifetime) 시간이 몇 분 지난 뒤 최종적으로 삭제됩니다. 시간이 지나면서 병합된 파트로 이루어진 트리가 형성되며(그래서 [`MergeTree`](/ko/reference/engines/table-engines/mergetree-family) 테이블이라는 이름이 붙었습니다).
+더 큰 파트로 병합된 파트는 [비활성](/ko/reference/system-tables/parts) 상태로 표시되며, [설정 가능한](/ko/reference/settings/merge-tree-settings#old_parts_lifetime) 시간이 몇 분 지난 뒤 최종적으로 삭제됩니다. 시간이 지나면서 병합된 파트로 이루어진 트리가 형성되며(그래서 [`MergeTree`](/ko/reference/engines/table-engines/mergetree-family/index) 테이블이라는 이름이 붙었습니다).
 
 <div id="insert-parallelism">
   ### 삽입 병렬성
@@ -144,7 +144,7 @@ S3 테이블 함수를 사용하는 쿼리의 성능 최적화는 두 가지 경
   ## 포맷
 </div>
 
-ClickHouse는 `s3` 함수와 `S3` 엔진을 사용해 [지원되는 포맷](/ko/reference/formats#formats-overview)으로 S3 버킷에 저장된 파일을 읽을 수 있습니다. 원시 파일을 읽는 경우, 이러한 포맷 중 일부는 뚜렷한 장점이 있습니다.
+ClickHouse는 `s3` 함수와 `S3` 엔진을 사용해 [지원되는 포맷](/ko/reference/formats/index#formats-overview)으로 S3 버킷에 저장된 파일을 읽을 수 있습니다. 원시 파일을 읽는 경우, 이러한 포맷 중 일부는 뚜렷한 장점이 있습니다.
 
 * Native, Parquet, CSVWithNames, TabSeparatedWithNames처럼 컬럼 이름이 인코딩된 포맷은 `s3` 함수에서 컬럼 이름을 지정할 필요가 없으므로 쿼리를 더 간결하게 작성할 수 있습니다. 컬럼 이름을 통해 이 정보를 유추할 수 있기 때문입니다.
 * 포맷마다 읽기 및 쓰기 처리량 측면의 성능이 다릅니다. Native와 Parquet는 이미 컬럼 지향적이며 더 압축된 구조이므로 읽기 성능에 가장 적합한 포맷입니다. 또한 Native 형식은 ClickHouse가 메모리에 데이터를 저장하는 방식과도 잘 맞기 때문에, 데이터가 ClickHouse로 스트리밍될 때 처리 오버헤드를 줄일 수 있습니다.

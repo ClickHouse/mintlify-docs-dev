@@ -73,18 +73,18 @@ ClickHouse は、[圧縮サイズ](/ja/reference/settings/merge-tree-settings#ma
 単一の ClickHouse サーバーは、複数の[バックグラウンドマージスレッド](/ja/reference/settings/server-settings/settings#background_pool_size)を使って、[パーツマージ](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#more-parts--more-background-part-merges:~:text=to%20execute%20concurrent-,part%20merges,-.%20Each%20thread%20executes)を同時実行します。各スレッドは次のループを実行します。
 
 ```bash
-① 次にマージするパーツを決定し、それらのパーツをブロックとしてメモリに読み込む。
+① Decide which parts to merge next, and load these parts as blocks into memory.
 
-② メモリに読み込んだブロックをマージして、より大きなブロックにまとめる。
+② Merge the loaded blocks in memory into a larger block.
 
-③ マージされたブロックをディスク上の新しいパーツに書き込む。
+③ Write the merged block into a new part on disk.
 
-①に戻る
+Go to ①
 ```
 
 [増やす](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#hardware-size)と、CPU コア数と RAM 容量に応じて、バックグラウンドマージのスループットも向上することに注意してください。
 
-より大きなパーツへマージされたパーツには [inactive](/ja/reference/system-tables/parts) のマークが付き、最終的には[設定可能な](/ja/reference/settings/merge-tree-settings#old_parts_lifetime)分数が経過すると削除されます。時間の経過とともに、これによりマージ済みパーツのツリーが形成されます (これが [`MergeTree`](/ja/reference/engines/table-engines/mergetree-family) テーブルという名前の由来です) 。
+より大きなパーツへマージされたパーツには [inactive](/ja/reference/system-tables/parts) のマークが付き、最終的には[設定可能な](/ja/reference/settings/merge-tree-settings#old_parts_lifetime)分数が経過すると削除されます。時間の経過とともに、これによりマージ済みパーツのツリーが形成されます (これが [`MergeTree`](/ja/reference/engines/table-engines/mergetree-family/index) テーブルという名前の由来です) 。
 
 <div id="insert-parallelism">
   ### 挿入の並列度
@@ -144,7 +144,7 @@ S3 table function を使用するクエリのパフォーマンス最適化は�
   ## フォーマット
 </div>
 
-ClickHouse は、`s3` 関数と `S3` エンジンを使って、S3 バケットに保存されたファイルを[対応フォーマット](/ja/reference/formats#formats-overview)で読み取ることができます。生ファイルを読み取る場合、これらのフォーマットの一部には特有の利点があります。
+ClickHouse は、`s3` 関数と `S3` エンジンを使って、S3 バケットに保存されたファイルを[対応フォーマット](/ja/reference/formats/index#formats-overview)で読み取ることができます。生ファイルを読み取る場合、これらのフォーマットの一部には特有の利点があります。
 
 * Native、Parquet、CSVWithNames、TabSeparatedWithNames のようにカラム名がエンコードされているフォーマットでは、`s3` 関数でカラム名を指定する必要がないため、クエリをより簡潔に記述できます。これは、カラム名から必要な情報を推定できるためです。
 * フォーマットによって、読み取りおよび書き込みのスループット性能は異なります。Native と Parquet は、もともとカラム指向でコンパクトでもあるため、読み取り性能の面で最適なフォーマットです。また、Native フォーマットは ClickHouse のメモリ内データ配置との親和性も高く、データを ClickHouse にストリーミングする際の処理オーバーヘッドをさらに低減できます。
