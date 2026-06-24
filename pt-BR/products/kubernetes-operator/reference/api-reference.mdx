@@ -10,8 +10,6 @@ sidebarTitle: 'Referência da API'
 
 Este documento fornece uma referência detalhada da API dos recursos personalizados do ClickHouse Operator.
 
-
-
 <div id="additionalport">
   ## AdditionalPort
 </div>
@@ -27,24 +25,20 @@ Aparece em:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 
-
-
 <div id="cabundleselector">
   ## CABundleSelector
 </div>
 
 CABundleSelector seleciona uma chave que contém um bundle de CA de um Secret no Espaço de nomes do cluster.
 
-| Campo  | Tipo     | Descrição                                                                  | Obrigatório | Padrão |
-| ------ | -------- | -------------------------------------------------------------------------- | ----------- | ------ |
-| `name` | `string` | O nome do Secret no Espaço de nomes do cluster de onde selecionar.         | true        |        |
-| `key`  | `string` | A chave do Secret de onde selecionar. Deve ser uma chave de Secret válida. | false       | ca.crt |
+| Campo  | Tipo   | Descrição                                                                   | Obrigatório | Padrão |
+| ------ | ------ | --------------------------------------------------------------------------- | ----------- | ------ |
+| `name` | string | O nome do Secret no Espaço de nomes do cluster de onde selecionar.          | true        |        |
+| `key`  | string | A chave do Secret de onde selecionar.  Deve ser uma chave de Secret válida. | false       | ca.crt |
 
 Aparece em:
 
 * [ClusterTLSSpec](#clustertlsspec)
-
-
 
 <div id="clickhousecluster">
   ## ClickHouseCluster
@@ -70,8 +64,6 @@ Aparece em:
 
 * [ClickHouseClusterList](#clickhouseclusterlist)
 
-
-
 <div id="clickhouseclusterlist">
   ## ClickHouseClusterList
 </div>
@@ -91,33 +83,34 @@ kind: ClickHouseClusterList
 | ------- | ------------------------------------------------ | --------- | ----------- | ------ |
 | `items` | array de [ClickHouseCluster](#clickhousecluster) |           | true        |        |
 
-
-
-## ClickHouseClusterSpec {#clickhouseclusterspec}
+<div id="clickhouseclusterspec">
+  ## ClickHouseClusterSpec
+</div>
 
 ClickHouseClusterSpec define o estado desejado do ClickHouseCluster.
 
-| Field | Type | Description | Required | Default |
-|-------|------|-------------|----------|---------|
-| `replicas` | integer | Número de réplicas no shard único. | false | 3 |
-| `shards` | integer | Número de shards no cluster. | false | 1 |
-| `keeperClusterRef` | [KeeperClusterReference](#keeperclusterreference) | Referência ao KeeperCluster utilizado para coordenação do ClickHouse.<br />Quando o Espaço de nomes é omitido, o Espaço de nomes do ClickHouseCluster é utilizado. | true |  |
-| `podTemplate` | [PodTemplateSpec](#podtemplatespec) | Parâmetros passados para a especificação do pod do Kubernetes do ClickHouse. | false |  |
-| `containerTemplate` | [ContainerTemplateSpec](#containertemplatespec) | Parâmetros passados para a especificação do contêiner do ClickHouse. | false |  |
-| `dataVolumeClaimSpec` | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | Especificação do armazenamento persistente para os dados do ClickHouse. | false |  |
-| `additionalVolumeClaimTemplates` | [PersistentVolumeClaimTemplate](#persistentvolumeclaimtemplate) array | Templates de PVC adicionais por pod do Kubernetes para armazenamento JBOD / multi-disco.<br />Cada entrada é propagada no volumeClaimTemplate do StatefulSet, montada em /var/lib/clickhouse/disks/<name> e<br />adicionada à storage policy JBOD gerada.<br />O conjunto de disks é fixado na criação. | false |  |
-| `labels` | object (keys:string, values:string) | Labels adicionais que são adicionados aos recursos. | false |  |
-| `annotations` | object (keys:string, values:string) | Anotações adicionais que são adicionadas aos recursos. | false |  |
-| `podDisruptionBudget` | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec) | PodDisruptionBudget configura o PDB criado para cada shard.<br />Quando não definido, o operador usa como padrão maxUnavailable=1 para shards<br />de réplica única e minAvailable=1 para shards com múltiplas réplicas. | false |  |
-| `settings` | [ClickHouseSettings](#clickhousesettings) | Parâmetros de configuração para o servidor ClickHouse. | false |  |
-| `clusterDomain` | string | ClusterDomain é o sufixo de domínio do cluster Kubernetes utilizado para resolução de DNS. | false | cluster.local |
-| `upgradeChannel` | string | UpgradeChannel especifica o canal de lançamento para verificações de atualização de versão principal.<br />Quando vazio, apenas atualizações menores serão propostas. Os valores permitidos são: stable, lts ou uma versão major.minor específica (ex.: 25.8). | false |  |
-| `versionProbeTemplate` | [VersionProbeTemplate](#versionprobetemplate) | Substituições do VersionProbeTemplate para o Job de detecção de versão. | false |  |
-| `externalSecret` | [ExternalSecret](#externalsecret) | ExternalSecret é uma referência opcional a um Secret gerenciado externamente contendo segredos do cluster.<br />O secret deve residir no mesmo Espaço de nomes que o cluster. | false |  |
-| `additionalPorts` | [AdditionalPort](#additionalport) array | AdditionalPorts declara portas TCP extras a serem expostas no Pod do ClickHouse e no Service headless gerenciado pelo operador.<br />O operador apenas adiciona as portas aos recursos do Kubernetes, não configura o servidor ClickHouse para escutá-las. | false |  |
+| Field                            | Type                                                                                                                                | Description                                                                                                                                                                                                                                                                                           | Required | Default       |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------- |
+| `replicas`                       | integer                                                                                                                             | Número de réplicas no shard único.                                                                                                                                                                                                                                                                    | false    | 3             |
+| `shards`                         | integer                                                                                                                             | Número de shards no cluster.                                                                                                                                                                                                                                                                          | false    | 1             |
+| `keeperClusterRef`               | [KeeperClusterReference](#keeperclusterreference)                                                                                   | Referência ao KeeperCluster utilizado para coordenação do ClickHouse.<br />Quando Espaço de nomes é omitido, o Espaço de nomes do ClickHouseCluster é utilizado.                                                                                                                                      | true     |               |
+| `podTemplate`                    | [PodTemplateSpec](#podtemplatespec)                                                                                                 | Parâmetros passados para a especificação do pod do Kubernetes do ClickHouse.                                                                                                                                                                                                                         | false    |               |
+| `containerTemplate`              | [ContainerTemplateSpec](#containertemplatespec)                                                                                     | Parâmetros passados para a especificação do contêiner do ClickHouse.                                                                                                                                                                                                                                  | false    |               |
+| `dataVolumeClaimSpec`            | [PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#persistentvolumeclaimspec-v1-core) | Especificação do armazenamento persistente para os dados do ClickHouse.                                                                                                                                                                                                                               | false    |               |
+| `additionalVolumeClaimTemplates` | [PersistentVolumeClaimTemplate](#persistentvolumeclaimtemplate) array                                                               | Templates de PVC adicionais por pod do Kubernetes para armazenamento JBOD / multi-disco.<br />Cada entrada é propagada no volumeClaimTemplate do StatefulSet, montada em `/var/lib/clickhouse/disks/<name>` e<br />adicionada à policy de armazenamento JBOD gerada.<br />O conjunto de discos é fixado na criação. | false    |               |
+| `labels`                         | object (keys:string, values:string)                                                                                                 | Rótulos adicionais que são adicionadas aos recursos.                                                                                                                                                                                                                                                  | false    |               |
+| `annotations`                    | object (keys:string, values:string)                                                                                                 | Anotações adicionais que são adicionadas aos recursos.                                                                                                                                                                                                                                                | false    |               |
+| `podDisruptionBudget`            | [PodDisruptionBudgetSpec](#poddisruptionbudgetspec)                                                                                 | PodDisruptionBudget configura o PDB criado para cada shard.<br />Quando não definido, o operador usa como padrão maxUnavailable=1 para shards<br />de réplica única e minAvailable=1 para shards com múltiplas réplicas.                                                                              | false    |               |
+| `settings`                       | [ClickHouseSettings](#clickhousesettings)                                                                                           | Parâmetros de configuração para o servidor ClickHouse.                                                                                                                                                                                                                                                | false    |               |
+| `clusterDomain`                  | string                                                                                                                              | ClusterDomain é o sufixo de domínio do cluster Kubernetes utilizado para resolução de DNS.                                                                                                                                                                                                            | false    | cluster.local |
+| `upgradeChannel`                 | string                                                                                                                              | UpgradeChannel especifica o canal de lançamento para verificações de atualização de versão principal.<br />Quando vazio, apenas atualizações menores serão propostas. Os valores permitidos são: stable, lts ou uma versão major.minor específica (ex.: 25.8).                                        | false    |               |
+| `versionProbeTemplate`           | [VersionProbeTemplate](#versionprobetemplate)                                                                                       | Substituições do VersionProbeTemplate para o Job de detecção de versão.                                                                                                                                                                                                                               | false    |               |
+| `externalSecret`                 | [ExternalSecret](#externalsecret)                                                                                                   | ExternalSecret é uma referência opcional a um Secret gerenciado externamente contendo segredos do cluster.<br />O secret deve residir no mesmo Espaço de nomes que o cluster.                                                                                                                         | false    |               |
+| `additionalPorts`                | [AdditionalPort](#additionalport) array                                                                                             | AdditionalPorts declara portas TCP extras a serem expostas no Pod do ClickHouse e no Service headless gerenciado pelo operador.<br />O operador apenas adiciona as portas aos recursos do Kubernetes, não configura o servidor ClickHouse para escutá-las.                                            | false    |               |
 
 Aparece em:
-- [ClickHouseCluster](#clickhousecluster)
+
+* [ClickHouseCluster](#clickhousecluster)
 
 <div id="clickhouseclusterstatus">
   ## ClickHouseClusterStatus
@@ -141,8 +134,6 @@ Aparece em:
 
 * [ClickHouseCluster](#clickhousecluster)
 
-
-
 <div id="clickhousesettings">
   ## ClickHouseSettings
 </div>
@@ -162,8 +153,6 @@ Aparece em:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 
-
-
 <div id="clustertlsspec">
   ## ClusterTLSSpec
 </div>
@@ -182,8 +171,6 @@ Aparece em:
 * [ClickHouseSettings](#clickhousesettings)
 * [KeeperSettings](#keepersettings)
 
-
-
 <div id="configmapkeyselector">
   ## ConfigMapKeySelector
 </div>
@@ -198,8 +185,6 @@ ConfigMapKeySelector seleciona uma chave de um ConfigMap.
 Aparece em:
 
 * [DefaultPasswordSelector](#defaultpasswordselector)
-
-
 
 <div id="containerimage">
   ## ContainerImage
@@ -216,8 +201,6 @@ ContainerImage define uma imagem de contêiner com repositório, tag ou hash.
 Aparece em:
 
 * [ContainerTemplateSpec](#containertemplatespec)
-
-
 
 <div id="containertemplatespec">
   ## ContainerTemplateSpec
@@ -241,13 +224,11 @@ Aparece em:
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 * [KeeperClusterSpec](#keeperclusterspec)
 
-
-
 <div id="defaultpasswordselector">
   ## DefaultPasswordSelector
 </div>
 
-DefaultPasswordSelector seleciona a origem da senha padrão do usuário.
+DefaultPasswordSelector seleciona a origem da senha do usuário padrão.
 
 | Campo          | Tipo                                          | Descrição                                                                                                                                                            | Obrigatório | Padrão   |
 | -------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------- |
@@ -258,8 +239,6 @@ DefaultPasswordSelector seleciona a origem da senha padrão do usuário.
 Aparece em:
 
 * [ClickHouseSettings](#clickhousesettings)
-
-
 
 <div id="externalsecret">
   ## ExternalSecret
@@ -276,8 +255,6 @@ Aparece em:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 
-
-
 <div id="externalsecretpolicy">
   ## ExternalSecretPolicy
 </div>
@@ -292,8 +269,6 @@ ExternalSecretPolicy controla como o operador trata o conteúdo do Secret extern
 Aparece em:
 
 * [ExternalSecret](#externalsecret)
-
-
 
 <div id="keepercluster">
   ## KeeperCluster
@@ -319,8 +294,6 @@ Aparece em:
 
 * [KeeperClusterList](#keeperclusterlist)
 
-
-
 <div id="keeperclusterlist">
   ## KeeperClusterList
 </div>
@@ -340,8 +313,6 @@ kind: KeeperClusterList
 | ------- | ------------------------------------- | --------- | ----------- | ------ |
 | `items` | [KeeperCluster](#keepercluster) array |           | true        |        |
 
-
-
 <div id="keeperclusterreference">
   ## KeeperClusterReference
 </div>
@@ -356,8 +327,6 @@ KeeperClusterReference identifica o KeeperCluster utilizado por um ClickHouseClu
 Aparece em:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
-
-
 
 <div id="keeperclusterspec">
   ## KeeperClusterSpec
@@ -383,8 +352,6 @@ Aparece em:
 
 * [KeeperCluster](#keepercluster)
 
-
-
 <div id="keeperclusterstatus">
   ## KeeperClusterStatus
 </div>
@@ -407,8 +374,6 @@ Aparece em:
 
 * [KeeperCluster](#keepercluster)
 
-
-
 <div id="keepersettings">
   ## KeeperSettings
 </div>
@@ -424,8 +389,6 @@ KeeperSettings define as configurações do servidor ClickHouse Keeper.
 Aparece em:
 
 * [KeeperClusterSpec](#keeperclusterspec)
-
-
 
 <div id="loggerconfig">
   ## LoggerConfig
@@ -446,8 +409,6 @@ Aparece em:
 * [ClickHouseSettings](#clickhousesettings)
 * [KeeperSettings](#keepersettings)
 
-
-
 <div id="namedtemplatemeta">
   ## NamedTemplateMeta
 </div>
@@ -463,8 +424,6 @@ NamedTemplateMeta define as configurações de metadados compatíveis para objet
 Aparece em:
 
 * [PersistentVolumeClaimTemplate](#persistentvolumeclaimtemplate)
-
-
 
 <div id="pdbpolicy">
   ## PDBPolicy
@@ -482,8 +441,6 @@ Aparece em:
 
 * [PodDisruptionBudgetSpec](#poddisruptionbudgetspec)
 
-
-
 <div id="persistentvolumeclaimtemplate">
   ## PersistentVolumeClaimTemplate
 </div>
@@ -498,8 +455,6 @@ PersistentVolumeClaimTemplate é um template nomeado para um PersistentVolumeCla
 Aparece em:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
-
-
 
 <div id="poddisruptionbudgetspec">
   ## PodDisruptionBudgetSpec
@@ -521,15 +476,11 @@ Aparece em:
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 * [KeeperClusterSpec](#keeperclusterspec)
 
-
-
 <div id="podtemplatespec">
   ## PodTemplateSpec
 </div>
 
 PodTemplateSpec descreve as substituições da configuração de pod do Kubernetes para os pods do Kubernetes do cluster.
-
-
 
 | Campo                           | Tipo                                                                                                                                    | Descrição                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Obrigatório | Padrão |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------ |
@@ -549,14 +500,10 @@ PodTemplateSpec descreve as substituições da configuração de pod do Kubernet
 | `nodeHostnameKey`               | string                                                                                                                                  | NodeHostnameKey é a chave dos rótulos do nó.<br />Nós que têm um rótulo com essa chave e valores idênticos são considerados como estando no mesmo nó.<br />Defina-o para habilitar as regras padrão de AntiAffinity e distribuir réplicas de shards diferentes entre os nós.<br />Recomenda-se defini-lo como &quot;kubernetes.io/hostname&quot;                                                                                                                                                                                                                                                                                                                                                                                                    | false       |        |
 | `initContainers`                | [Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#container-v1-core) array                               | InitContainers é a lista de contêineres de inicialização executados antes de o contêiner principal do servidor ser iniciado.<br />Mesclado com os padrões do operador por nome.<br />com o mesmo nome.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | false       |        |
 
-
-
 Aparece em:
 
 * [ClickHouseClusterSpec](#clickhouseclusterspec)
 * [KeeperClusterSpec](#keeperclusterspec)
-
-
 
 <div id="secretkeyselector">
   ## SecretKeySelector
@@ -573,8 +520,6 @@ Aparece em:
 
 * [DefaultPasswordSelector](#defaultpasswordselector)
 
-
-
 <div id="templatemeta">
   ## TemplateMeta
 </div>
@@ -590,8 +535,6 @@ Aparece em:
 
 * [VersionProbePodTemplate](#versionprobepodtemplate)
 * [VersionProbeTemplate](#versionprobetemplate)
-
-
 
 <div id="versionprobecontainer">
   ## VersionProbeContainer
@@ -610,8 +553,6 @@ Aparece em:
 
 * [VersionProbePodSpec](#versionprobepodspec)
 
-
-
 <div id="versionprobejobspec">
   ## VersionProbeJobSpec
 </div>
@@ -627,8 +568,6 @@ Aparece em:
 
 * [VersionProbeTemplate](#versionprobetemplate)
 
-
-
 <div id="versionprobepodspec">
   ## VersionProbePodSpec
 </div>
@@ -636,18 +575,16 @@ Aparece em:
 VersionProbePodSpec define substituições no nível de pod do Kubernetes para a sonda de versão.
 Os nomes dos campos e as tags JSON correspondem a corev1.PodSpec para compatibilidade com strategic merge patch.
 
-| Campo             | Tipo                                                                                                                  | Descrição                                                                                                                                                                                                             | Obrigatório | Padrão |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------ |
+| Campo             | Tipo                                                                                                                  | Descrição                                                                                                                                                                                                                           | Obrigatório | Padrão |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------ |
 | `nodeSelector`    | object (keys:string, values:string)                                                                                   | NodeSelector restringe o pod do Kubernetes da sonda de versão aos nós com rótulos correspondentes.                                                                                                                                  | false       |        |
 | `tolerations`     | [Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#toleration-v1-core) array           | Tolerations do pod do Kubernetes da sonda de versão.                                                                                                                                                                                | false       |        |
-| `securityContext` | [PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#podsecuritycontext-v1-core) | SecurityContext contém atributos de segurança no nível do pod do Kubernetes para o pod do Kubernetes da sonda de versão.                                                                                                                          | false       |        |
+| `securityContext` | [PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#podsecuritycontext-v1-core) | SecurityContext contém atributos de segurança no nível do pod do Kubernetes para o pod do Kubernetes da sonda de versão.                                                                                                            | false       |        |
 | `containers`      | [VersionProbeContainer](#versionprobecontainer) array                                                                 | Substituições dos containers do pod do Kubernetes da sonda de versão.<br />O campo name é opcional — o operador o preenche com o container padrão.<br />Também é possível especificar um container adicional com um nome diferente. | false       |        |
 
 Aparece em:
 
 * [VersionProbePodTemplate](#versionprobepodtemplate)
-
-
 
 <div id="versionprobepodtemplate">
   ## VersionProbePodTemplate
@@ -663,8 +600,6 @@ VersionProbePodTemplate descreve substituições para o pod do Kubernetes de son
 Aparece em:
 
 * [VersionProbeJobSpec](#versionprobejobspec)
-
-
 
 <div id="versionprobetemplate">
   ## VersionProbeTemplate
