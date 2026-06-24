@@ -159,9 +159,8 @@
       var logoLink = document.createElement('a');
       logoLink.id = LOGO_ID;
       logoLink.href = localizeUrl('/');
-      logoLink.style.cssText = 'display:flex;align-items:center;flex-shrink:0;text-decoration:none;';
-      logoLink.innerHTML = '<img src="' + BASE + '/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs" style="height:2rem;">'
-        + '<img src="' + BASE + '/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs" style="height:2rem;">';
+      logoLink.innerHTML = '<img src="' + BASE + '/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs">'
+        + '<img src="' + BASE + '/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs">';
       navbar.insertBefore(logoLink, navbar.firstChild);
       updateLogoTheme();
     }
