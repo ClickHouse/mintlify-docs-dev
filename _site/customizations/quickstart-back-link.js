@@ -48,6 +48,16 @@
     clone.style.width = 'fit-content';
     clone.style.marginBottom = '0.75rem';
     clone.removeAttribute('aria-hidden');
+
+    // Fix href for basePath deployments (e.g. /docs prefix in production).
+    var base = window.location.pathname.startsWith('/docs') ? '/docs' : '';
+    var dest = base + '/get-started/quickstarts/home';
+    clone.setAttribute('href', dest);
+    clone.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.location.href = dest;
+    });
+
     header.insertBefore(clone, header.firstChild);
   }
 
