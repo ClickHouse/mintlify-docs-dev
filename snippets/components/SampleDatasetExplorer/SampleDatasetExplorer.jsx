@@ -215,18 +215,17 @@ export const SampleDatasetExplorer = ({ categories }) => {
         .sde-back {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          font-size: 0.875rem;
-          font-weight: 600;
-          padding: 6px 12px;
-          border-radius: 9999px;
+          gap: 0;
           cursor: pointer;
           background: transparent;
-          border: 1px solid rgba(156,163,175,0.5);
+          border: none;
+          padding: 0;
           color: inherit;
-          transition: all 0.2s ease;
+          opacity: 0.5;
+          transition: opacity 0.2s ease;
+          font-size: 0;
         }
-        .sde-back:hover { border-color: ${ACCENT}; }
+        .sde-back:hover { opacity: 1; }
         .sde-detail-title {
           font-size: 1.5rem;
           font-weight: 600;
@@ -270,11 +269,10 @@ export const SampleDatasetExplorer = ({ categories }) => {
       ) : (
         <div className="sde-view" key={selected.id}>
           <div className="mb-6">
-            <button type="button" className="sde-back" onClick={() => setSelectedId(null)}>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 4L6 8l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            <button type="button" className="sde-back" onClick={() => setSelectedId(null)} aria-label="Back to all categories">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              All categories
             </button>
           </div>
 
