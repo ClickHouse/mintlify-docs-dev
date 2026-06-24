@@ -207,15 +207,22 @@
     setupHomepageNavbar();
     patchTabButtons();
     styleDropdownHeaders();
-    requestAnimationFrame(markNavbarReady);
+    markNavbarReady();
 
+    // Debounce: batch rapid React re-renders into one RAF flush so repeated
+    // querySelectorAll calls don't thrash the main thread on every DOM change.
+    var rafId = null;
     var observer = new MutationObserver(function () {
-      applyHomepageClass();
-      setupHomepageNavbar();
-      updateLogoTheme();
-      patchTabButtons();
-      styleDropdownHeaders();
-      requestAnimationFrame(markNavbarReady);
+      if (rafId) return;
+      rafId = requestAnimationFrame(function () {
+        rafId = null;
+        applyHomepageClass();
+        setupHomepageNavbar();
+        updateLogoTheme();
+        patchTabButtons();
+        styleDropdownHeaders();
+        markNavbarReady();
+      });
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
