@@ -207,15 +207,23 @@
     setupHomepageNavbar();
     patchTabButtons();
     styleDropdownHeaders();
-    requestAnimationFrame(markNavbarReady);
+    markNavbarReady();
 
+    // Debounce the observer so rapid React re-renders don't thrash the main
+    // thread with repeated querySelectorAll calls — each flush still runs all
+    // work, but at most once per animation frame rather than once per DOM node.
+    var rafId = null;
     var observer = new MutationObserver(function () {
-      applyHomepageClass();
-      setupHomepageNavbar();
-      updateLogoTheme();
-      patchTabButtons();
-      styleDropdownHeaders();
-      requestAnimationFrame(markNavbarReady);
+      if (rafId) return;
+      rafId = requestAnimationFrame(function () {
+        rafId = null;
+        applyHomepageClass();
+        setupHomepageNavbar();
+        updateLogoTheme();
+        patchTabButtons();
+        styleDropdownHeaders();
+        markNavbarReady();
+      });
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
