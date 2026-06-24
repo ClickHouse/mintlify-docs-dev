@@ -9,6 +9,8 @@
 
 export const SampleDatasetExplorer = ({ categories }) => {
   const ACCENT = '#FAFF69';
+  const assetBase = (typeof window !== 'undefined' && window.location.pathname.startsWith('/docs')) ? '/docs' : '';
+  const withBase = (p) => p && p.startsWith('/') ? assetBase + p : p;
 
   // Each category: id, title (shown beneath the banner image), an icon used for
   // its child cards, the two banner images, and the child dataset pages.
@@ -111,8 +113,8 @@ export const SampleDatasetExplorer = ({ categories }) => {
   // banner art, dark mode shows the *light* (yellow) art.
   const Banner = ({ cat, className }) => (
     <>
-      <img className={`sde-img-dark ${className || ''}`} src={cat.imgDark} alt={cat.title} />
-      <img className={`sde-img-light ${className || ''}`} src={cat.imgLight} alt={cat.title} />
+      <img className={`sde-img-dark ${className || ''}`} src={withBase(cat.imgDark)} alt={cat.title} />
+      <img className={`sde-img-light ${className || ''}`} src={withBase(cat.imgLight)} alt={cat.title} />
     </>
   );
 
@@ -287,8 +289,8 @@ export const SampleDatasetExplorer = ({ categories }) => {
                 style={{ animationDelay: `${i * 50}ms` }}
               >
                 <span className="sde-tile-media">
-                  {ds.imgDark && <img className="sde-img-dark" src={ds.imgDark} alt={ds.title} />}
-                  {ds.imgLight && <img className="sde-img-light" src={ds.imgLight} alt={ds.title} />}
+                  {ds.imgDark && <img className="sde-img-dark" src={withBase(ds.imgDark)} alt={ds.title} />}
+                  {ds.imgLight && <img className="sde-img-light" src={withBase(ds.imgLight)} alt={ds.title} />}
                   <span className="sde-tile-hint">
                     <span className="sde-explore">
                       View dataset
