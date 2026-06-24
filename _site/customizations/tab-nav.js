@@ -13,15 +13,20 @@
   // /<locale> and mirrors the English paths beneath it.
   var LOCALES = ['es', 'ja', 'ko', 'pt-BR', 'ru', 'zh'];
 
+  // '' at root (.app, mint dev); '/docs' on the subpath deploy
+  var BASE = /^\/docs(\/|$)/.test(window.location.pathname) ? '/docs' : '';
+  function stripBase(p) { return (BASE && p.indexOf(BASE) === 0) ? (p.slice(BASE.length) || '/') : p; }
+
   function currentLocale() {
-    var seg = window.location.pathname.split('/')[1] || '';
+    var seg = stripBase(window.location.pathname).split('/')[1] || '';
     return LOCALES.indexOf(seg) !== -1 ? seg : '';
   }
 
-  // Keep navigation within the active locale: '/' -> '/es', '/x/y' -> '/es/x/y'.
+  // Keep navigation within the active locale and base path.
   function localizeUrl(url) {
     var locale = currentLocale();
-    return locale ? '/' + locale + (url === '/' ? '' : url) : url;
+    var localized = locale ? '/' + locale + (url === '/' ? '' : url) : url;
+    return BASE + localized;
   }
 
   function patchTabButtons() {
@@ -95,7 +100,7 @@
   // Each locale has its own homepage at /<locale> (e.g. /es, /ja); treat those
   // the same as the English homepage at /.
   function isHomePath() {
-    var path = window.location.pathname.replace(/\/+$/, '') || '/';
+    var path = stripBase(window.location.pathname).replace(/\/+$/, '') || '/';
     return path === '/' || LOCALES.indexOf(path.slice(1)) !== -1;
   }
 
@@ -155,8 +160,8 @@
       logoLink.id = LOGO_ID;
       logoLink.href = localizeUrl('/');
       logoLink.style.cssText = 'display:flex;align-items:center;flex-shrink:0;text-decoration:none;';
-      logoLink.innerHTML = '<img src="/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs" style="height:2rem;">'
-        + '<img src="/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs" style="height:2rem;">';
+      logoLink.innerHTML = '<img src="' + BASE + '/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs" style="height:2rem;">'
+        + '<img src="' + BASE + '/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs" style="height:2rem;">';
       navbar.insertBefore(logoLink, navbar.firstChild);
       updateLogoTheme();
     }
