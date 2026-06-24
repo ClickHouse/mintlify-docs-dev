@@ -215,15 +215,16 @@ export const SampleDatasetExplorer = ({ categories }) => {
         .sde-back {
           display: inline-flex;
           align-items: center;
-          gap: 0;
+          gap: 4px;
           cursor: pointer;
           background: transparent;
           border: none;
           padding: 0;
           color: inherit;
           opacity: 0.5;
+          font-size: 0.875rem;
+          font-weight: 500;
           transition: opacity 0.2s ease;
-          font-size: 0;
         }
         .sde-back:hover { opacity: 1; }
         .sde-detail-title {
@@ -269,10 +270,11 @@ export const SampleDatasetExplorer = ({ categories }) => {
       ) : (
         <div className="sde-view" key={selected.id}>
           <div className="mb-6">
-            <button type="button" className="sde-back" onClick={() => setSelectedId(null)} aria-label="Back to all categories">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <button type="button" className="sde-back" onClick={() => setSelectedId(null)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
+              All categories
             </button>
           </div>
 
