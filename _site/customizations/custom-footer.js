@@ -156,8 +156,12 @@
       + '#' + FOOTER_ID + ' [data-cta] p { font-size: 13px; line-height: 1.5; margin: 0 0 20px; }'
       + '#' + FOOTER_ID + ' [data-cta] form { display: flex; border-radius: 8px; overflow: hidden; margin-bottom: 16px; }'
       + '#' + FOOTER_ID + ' [data-cta] form input { flex: 1; background: transparent; border: none; padding: 10px 14px; font-size: 13px; outline: none; min-width: 0; }'
-      + '#' + FOOTER_ID + ' [data-cta] form button { background: #fdff75; color: #1c1c1c; border: none; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }'
-      + '#' + FOOTER_ID + ' [data-cta] form button:hover { background: #eaec6a; }'
+      + '#' + FOOTER_ID + ' [data-cta] form button { background: #fdff75; color: #1c1c1c; border: none; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s, opacity 0.15s; }'
+      + '#' + FOOTER_ID + ' [data-cta] form button:hover:not(:disabled) { background: #eaec6a; }'
+      + '#' + FOOTER_ID + ' [data-cta] form button:disabled { opacity: 0.6; cursor: default; }'
+      + '#' + FOOTER_ID + ' .ch-signup-msg { font-size: 12px; margin: 6px 0 0; }'
+      + '#' + FOOTER_ID + ' .ch-signup-success { color: #22c55e; }'
+      + '#' + FOOTER_ID + ' .ch-signup-error { color: #ef4444; }'
       + '#' + FOOTER_ID + ' [data-gh] { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; width: 100%; }'
       + '#' + FOOTER_ID + ' [data-gh]:hover { border-color: #888 !important; }'
       // Bottom bar
@@ -223,8 +227,8 @@
         + '<div data-cta>'
           + '<div data-logo style="margin-bottom:16px;">' + logoSvg + '</div>'
           + '<p>Stay informed on feature releases, product roadmap, support, and cloud offerings!</p>'
-          + '<form onsubmit="return false;">'
-            + '<input type="email" placeholder="Email address" />'
+          + '<form data-signup>'
+            + '<input type="email" placeholder="Email address" autocomplete="email" />'
             + '<button type="submit">Sign up</button>'
           + '</form>'
           + '<a data-gh href="https://github.com/ClickHouse/ClickHouse" target="_blank" rel="noopener noreferrer">'
@@ -241,6 +245,94 @@
         + '<div data-legal>' + legalHtml + '</div>'
       + '</div>'
     + '</div>';
+  }
+
+  var mktoScriptLoading = false;
+  var mktoReadyQueue = [];
+
+  function ensureMarketoScript(callback) {
+    if (window.MktoForms2) { callback(); return; }
+    mktoReadyQueue.push(callback);
+    if (mktoScriptLoading) return;
+    mktoScriptLoading = true;
+    var s = document.createElement('script');
+    s.src = 'https://discover.clickhouse.com/js/forms2/js/forms2.min.js';
+    s.onload = function () {
+      var q = mktoReadyQueue.slice();
+      mktoReadyQueue = [];
+      q.forEach(function (fn) { fn(); });
+    };
+    s.onerror = function () {
+      var q = mktoReadyQueue.slice();
+      mktoReadyQueue = [];
+      q.forEach(function (fn) { fn(new Error('script load failed')); });
+    };
+    document.head.appendChild(s);
+  }
+
+  function submitToMarketo(email, onSuccess, onError) {
+    ensureMarketoScript(function (err) {
+      if (err) { onError(); return; }
+      try {
+        var sink = document.createElement('div');
+        sink.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;';
+        document.body.appendChild(sink);
+        window.MktoForms2.loadForm('//discover.clickhouse.com', '238-FPC-317', 1122, function (form) {
+          form.vals({ Email: email, 'loc__c': 'docs-footer' });
+          form.onSuccess(function () {
+            if (sink.parentNode) sink.parentNode.removeChild(sink);
+            onSuccess();
+            return false;
+          });
+          form.submit();
+        });
+      } catch (e) {
+        onError();
+      }
+    });
+  }
+
+  function attachSignupHandler(footerEl) {
+    var form = footerEl.querySelector('form[data-signup]');
+    if (!form || form._chBound) return;
+    form._chBound = true;
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var input = form.querySelector('input[type="email"]');
+      var btn = form.querySelector('button[type="submit"]');
+      var email = (input.value || '').trim();
+
+      // Clear previous messages
+      var old = form.parentNode.querySelector('.ch-signup-msg');
+      if (old) old.parentNode.removeChild(old);
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        var errMsg = document.createElement('p');
+        errMsg.className = 'ch-signup-msg ch-signup-error';
+        errMsg.textContent = 'Please enter a valid email address.';
+        form.parentNode.insertBefore(errMsg, form.nextSibling);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Signing up…';
+
+      submitToMarketo(email, function () {
+        form.style.display = 'none';
+        var ok = document.createElement('p');
+        ok.className = 'ch-signup-msg ch-signup-success';
+        ok.textContent = 'Thanks for subscribing!';
+        form.parentNode.insertBefore(ok, form.nextSibling);
+      }, function () {
+        btn.disabled = false;
+        btn.textContent = 'Sign up';
+        var errMsg = document.createElement('p');
+        errMsg.className = 'ch-signup-msg ch-signup-error';
+        errMsg.textContent = 'Something went wrong. Please try again.';
+        form.parentNode.insertBefore(errMsg, form.nextSibling);
+      });
+    });
   }
 
   function findFooterTarget() {
@@ -301,6 +393,7 @@
     // a full-width block below the sidebar + content row.
     var target = findFooterTarget() || contentContainer;
     target.appendChild(wrapper);
+    attachSignupHandler(wrapper);
     return true;
   }
 
