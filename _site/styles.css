@@ -33,6 +33,38 @@ html:not(.dark) .ch-usecase-arrow {
 .dark .ch-usecase-arrow {
     color: #FCFF74;
 }
+/* Homepage content hidden until React has mounted and child effects have settled.
+   Double-RAF in PageWrapper ensures FullWidthDivider's own RAF fires first. */
+.ch-page-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+.ch-page-visible {
+    opacity: 1;
+    transition: opacity 0.1s ease-out;
+}
+/* Overlay image drop shadow (hero cards with overlayImg) */
+.ch-overlay-shadow {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.18);
+}
+/* MCP icon — mask-size/repeat extracted from inline style; URL stays inline */
+.ch-mcp-icon {
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+}
+/* Nav logo injected by tab-nav.js */
+#ch-homepage-logo {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+#ch-hp-logo-light,
+#ch-hp-logo-dark {
+    height: 2rem;
+}
 
 html {
     scrollbar-gutter: stable;
@@ -110,6 +142,17 @@ body[data-scroll-locked] {
    in the same x position throughout. */
 #navbar-transition-maple:not(:has(#ch-navbar-cta)) {
     padding-right: calc(48px + 206px) !important;
+}
+
+/* Navbar hidden on initial paint; revealed by tab-nav.js once both the logo
+   (homepage) and CTA have been injected. Hiding during injection means no
+   layout shifts are visible regardless of injection order or timing. */
+#navbar-transition-maple {
+    opacity: 0;
+}
+#navbar-transition-maple.ch-navbar-ready {
+    opacity: 1;
+    transition: opacity 0.15s ease-out;
 }
 
 /* ============================================
@@ -2692,8 +2735,8 @@ button#localization-select-trigger::before {
     height: 1.1em;
     flex-shrink: 0;
     background-color: currentColor;
-    -webkit-mask: url("https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/icon-language-picker.svg") no-repeat center / contain;
-    mask: url("https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/icon-language-picker.svg") no-repeat center / contain;
+    -webkit-mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIvPjxwb2x5bGluZSBwb2ludHM9IjI0MCAyMTYgMTg0IDEwNCAxMjggMjE2IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjE2Ii8+PGxpbmUgeDE9IjE0NCIgeTE9IjE4NCIgeDI9IjIyNCIgeTI9IjE4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIxNiIvPjxsaW5lIHgxPSI5NiIgeTE9IjMyIiB4Mj0iOTYiIHkyPSI1NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIxNiIvPjxsaW5lIHgxPSIzMiIgeTE9IjU2IiB4Mj0iMTYwIiB5Mj0iNTYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMTYiLz48cGF0aCBkPSJNMTI4LDU2YTk2LDk2LDAsMCwxLTk2LDk2IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjE2Ii8+PHBhdGggZD0iTTY5LjQ3LDg4QTk2LDk2LDAsMCwwLDE2MCwxNTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMTYiLz48L3N2Zz4=") no-repeat center / contain;
+    mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTYgMjU2Ij48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0ibm9uZSIvPjxwb2x5bGluZSBwb2ludHM9IjI0MCAyMTYgMTg0IDEwNCAxMjggMjE2IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjE2Ii8+PGxpbmUgeDE9IjE0NCIgeTE9IjE4NCIgeDI9IjIyNCIgeTI9IjE4NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIxNiIvPjxsaW5lIHgxPSI5NiIgeTE9IjMyIiB4Mj0iOTYiIHkyPSI1NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIxNiIvPjxsaW5lIHgxPSIzMiIgeTE9IjU2IiB4Mj0iMTYwIiB5Mj0iNTYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMTYiLz48cGF0aCBkPSJNMTI4LDU2YTk2LDk2LDAsMCwxLTk2LDk2IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjE2Ii8+PHBhdGggZD0iTTY5LjQ3LDg4QTk2LDk2LDAsMCwwLDE2MCwxNTIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMTYiLz48L3N2Zz4=") no-repeat center / contain;
 }
 
 /* ============================================

@@ -9,6 +9,8 @@
 
 export const SampleDatasetExplorer = ({ categories }) => {
   const ACCENT = '#FAFF69';
+  const assetBase = (typeof window !== 'undefined' && window.location.pathname.startsWith('/docs')) ? '/docs' : '';
+  const withBase = (p) => p && p.startsWith('/') ? assetBase + p : p;
 
   // Each category: id, title (shown beneath the banner image), an icon used for
   // its child cards, the two banner images, and the child dataset pages.
@@ -111,8 +113,8 @@ export const SampleDatasetExplorer = ({ categories }) => {
   // banner art, dark mode shows the *light* (yellow) art.
   const Banner = ({ cat, className }) => (
     <>
-      <img className={`sde-img-dark ${className || ''}`} src={cat.imgDark} alt={cat.title} />
-      <img className={`sde-img-light ${className || ''}`} src={cat.imgLight} alt={cat.title} />
+      <img className={`sde-img-dark ${className || ''}`} src={withBase(cat.imgDark)} alt={cat.title} />
+      <img className={`sde-img-light ${className || ''}`} src={withBase(cat.imgLight)} alt={cat.title} />
     </>
   );
 
@@ -166,9 +168,8 @@ export const SampleDatasetExplorer = ({ categories }) => {
           height: 100%;
           object-fit: cover;
           margin: 0;
-          transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+          pointer-events: none;
         }
-        .sde-tile:hover img { transform: scale(1.04); }
         /* hover hint: translucent strip along the bottom of the image */
         .sde-tile-hint {
           position: absolute;
@@ -213,18 +214,18 @@ export const SampleDatasetExplorer = ({ categories }) => {
         .sde-back {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          font-size: 0.875rem;
-          font-weight: 600;
-          padding: 6px 12px;
-          border-radius: 9999px;
+          gap: 4px;
           cursor: pointer;
           background: transparent;
-          border: 1px solid rgba(156,163,175,0.5);
+          border: none;
+          padding: 0;
           color: inherit;
-          transition: all 0.2s ease;
+          opacity: 0.5;
+          font-size: 0.875rem;
+          font-weight: 500;
+          transition: opacity 0.2s ease;
         }
-        .sde-back:hover { border-color: ${ACCENT}; }
+        .sde-back:hover { opacity: 1; }
         .sde-detail-title {
           font-size: 1.5rem;
           font-weight: 600;
@@ -269,8 +270,8 @@ export const SampleDatasetExplorer = ({ categories }) => {
         <div className="sde-view" key={selected.id}>
           <div className="mb-6">
             <button type="button" className="sde-back" onClick={() => setSelectedId(null)}>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 4L6 8l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               All categories
             </button>
@@ -287,8 +288,8 @@ export const SampleDatasetExplorer = ({ categories }) => {
                 style={{ animationDelay: `${i * 50}ms` }}
               >
                 <span className="sde-tile-media">
-                  {ds.imgDark && <img className="sde-img-dark" src={ds.imgDark} alt={ds.title} />}
-                  {ds.imgLight && <img className="sde-img-light" src={ds.imgLight} alt={ds.title} />}
+                  {ds.imgDark && <img className="sde-img-dark" src={withBase(ds.imgDark)} alt={ds.title} />}
+                  {ds.imgLight && <img className="sde-img-light" src={withBase(ds.imgLight)} alt={ds.title} />}
                   <span className="sde-tile-hint">
                     <span className="sde-explore">
                       View dataset

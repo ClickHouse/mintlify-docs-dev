@@ -136,6 +136,7 @@
       // horizontal padding (pl-[32px] / pr-[32px]) so the footer's inner edges
       // align with the content area used by both doc pages and the home page.
       + '@media (min-width: 1024px) { #' + FOOTER_ID + ' { padding-left: calc(19rem + 32px) !important; padding-right: 32px !important; } }'
+      + '#' + FOOTER_ID + ' [data-inner] { max-width: 1280px; margin: 0 auto; }'
       + '#' + FOOTER_ID + ' * { box-sizing: border-box; }'
       + '#' + FOOTER_ID + ' a { text-decoration: none; transition: color 0.15s, border-color 0.15s; }'
       // Top section: sitemap + CTA side by side only at wide viewports
@@ -182,6 +183,7 @@
       + '#' + FOOTER_ID + ' [data-copyright] { font-size: 13px; color: #6b7280; }'
       + '#' + FOOTER_ID + ' [data-bottom] a { color: #6b7280; }'
       + '#' + FOOTER_ID + ' [data-bottom] a:hover { color: #111; }'
+      + '#' + FOOTER_ID + ' [data-logo] { margin-bottom: 16px; }'
       + '#' + FOOTER_ID + ' [data-logo] svg * { fill: #111; }'
       // Dark mode colors
       + '.dark #' + FOOTER_ID + ' [data-sitemap] h3 { color: #f5f5f5; }'
@@ -216,12 +218,12 @@
         + link[0] + '</a>';
     });
 
-    return '<div style="max-width:1280px;margin:0 auto;">'
+    return '<div data-inner>'
       // Top: sitemap grid + CTA column side by side on desktop
       + '<div data-top>'
         + '<div data-sitemap>' + columnsHtml + '</div>'
         + '<div data-cta>'
-          + '<div data-logo style="margin-bottom:16px;">' + logoSvg + '</div>'
+          + '<div data-logo>' + logoSvg + '</div>'
           + '<p>Stay informed on feature releases, product roadmap, support, and cloud offerings!</p>'
           + '<form onsubmit="return false;">'
             + '<input type="email" placeholder="Email address" />'
