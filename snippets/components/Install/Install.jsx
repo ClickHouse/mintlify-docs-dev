@@ -38,15 +38,16 @@ const Card = ({title, icon, iconUrl, isSelected, onClick}) => (
 export const InstallSelector = (props) => {
   const [platform, setPlatform] = useState(null);
 
+  const assetBase = typeof window !== 'undefined' && window.location.pathname.startsWith('/docs') ? '/docs' : '';
   const cards = [
     {key: 'CLI',        title: 'ClickHouse CLI', icon: 'terminal'},
-    {key: 'Debian',     title: 'Debian/Ubuntu',  iconUrl: '/images/install/DebianUbuntu.svg'},
-    {key: 'Redhat',     title: 'Redhat',         iconUrl: '/images/install/redhat.svg'},
-    {key: 'LinuxOther', title: 'Other',          iconUrl: '/images/install/linux.svg'},
-    {key: 'NixOS',      title: 'NixOS',          iconUrl: '/images/install/nixos.svg'},
-    {key: 'MacOS',      title: 'MacOS',          iconUrl: '/images/install/apple.png'},
-    {key: 'Windows',    title: 'Windows',        iconUrl: '/images/install/windows.svg'},
-    {key: 'Docker',     title: 'Docker',         iconUrl: '/images/install/docker.svg'},
+    {key: 'Debian',     title: 'Debian/Ubuntu',  iconUrl: `${assetBase}/images/install/DebianUbuntu.svg`},
+    {key: 'Redhat',     title: 'Redhat',         iconUrl: `${assetBase}/images/install/redhat.svg`},
+    {key: 'LinuxOther', title: 'Other',          iconUrl: `${assetBase}/images/install/linux.svg`},
+    {key: 'NixOS',      title: 'NixOS',          iconUrl: `${assetBase}/images/install/nixos.svg`},
+    {key: 'MacOS',      title: 'MacOS',          iconUrl: `${assetBase}/images/install/apple.png`},
+    {key: 'Windows',    title: 'Windows',        iconUrl: `${assetBase}/images/install/windows.svg`},
+    {key: 'Docker',     title: 'Docker',         iconUrl: `${assetBase}/images/install/docker.svg`},
   ];
 
   const propByKey = {
