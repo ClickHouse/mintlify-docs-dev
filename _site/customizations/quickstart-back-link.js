@@ -10,7 +10,7 @@
   // when it unmounts the page.
 
   var CLONE_ID = 'qs-back-eyebrow';
-  var QS_PATH = /^(?:\/(?:es|ja|ko|pt-BR|ru|zh))?\/get-started\/quickstarts\/([^/]+)$/;
+  var QS_PATH = /^(?:\/docs)?(?:\/(?:es|ja|ko|pt-BR|ru|zh))?\/get-started\/quickstarts\/([^/]+)$/;
 
   function apply() {
     var clone = document.getElementById(CLONE_ID);
