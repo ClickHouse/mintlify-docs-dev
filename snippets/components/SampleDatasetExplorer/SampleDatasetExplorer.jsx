@@ -168,9 +168,8 @@ export const SampleDatasetExplorer = ({ categories }) => {
           height: 100%;
           object-fit: cover;
           margin: 0;
-          transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+          pointer-events: none;
         }
-        .sde-tile:hover img { transform: scale(1.04); }
         /* hover hint: translucent strip along the bottom of the image */
         .sde-tile-hint {
           position: absolute;
