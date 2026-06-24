@@ -159,9 +159,8 @@
       var logoLink = document.createElement('a');
       logoLink.id = LOGO_ID;
       logoLink.href = localizeUrl('/');
-      logoLink.style.cssText = 'display:flex;align-items:center;flex-shrink:0;text-decoration:none;';
-      logoLink.innerHTML = '<img src="' + BASE + '/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs" style="height:2rem;">'
-        + '<img src="' + BASE + '/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs" style="height:2rem;">';
+      logoLink.innerHTML = '<img src="' + BASE + '/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs">'
+        + '<img src="' + BASE + '/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs">';
       navbar.insertBefore(logoLink, navbar.firstChild);
       updateLogoTheme();
     }
@@ -187,12 +186,28 @@
     }
   }
 
+  // ── Navbar ready ──────────────────────────────────────────────────────────
+  // Reveal the navbar once both injections are complete: logo (homepage only)
+  // and CTA (all pages). Called via requestAnimationFrame so it runs after the
+  // current synchronous task — giving navbar-cta.js time to inject the CTA
+  // before we check. The MutationObserver re-fires on every DOM change
+  // (including when navbar-cta.js appends the CTA), so if the first RAF check
+  // fails because the CTA isn't there yet, a subsequent observer tick will retry.
+  function markNavbarReady() {
+    var navbar = document.getElementById('navbar-transition-maple');
+    if (!navbar) return;
+    if (!document.getElementById('ch-navbar-cta')) return;
+    if (isHomePath() && !document.getElementById(LOGO_ID)) return;
+    navbar.classList.add('ch-navbar-ready');
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
   function init() {
     applyHomepageClass();
     setupHomepageNavbar();
     patchTabButtons();
     styleDropdownHeaders();
+    requestAnimationFrame(markNavbarReady);
 
     var observer = new MutationObserver(function () {
       applyHomepageClass();
@@ -200,6 +215,7 @@
       updateLogoTheme();
       patchTabButtons();
       styleDropdownHeaders();
+      requestAnimationFrame(markNavbarReady);
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
@@ -209,6 +225,11 @@
       setupHomepageNavbar();
     });
   }
+
+  // Apply the homepage class immediately at script evaluation time — before the
+  // navbar is inserted by React hydration — so justify-content:flex-start and
+  // other ch-homepage navbar rules apply from the very first navbar paint.
+  applyHomepageClass();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

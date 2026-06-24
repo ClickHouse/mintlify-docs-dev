@@ -29,10 +29,10 @@ export const FullWidthDivider = ({ style }) => {
         window.addEventListener('resize', update);
         return () => window.removeEventListener('resize', update);
     }, []);
-    return <hr ref={ref} className="ch-usecase-divider" style={{ border: 'none', ...style }} />;
+    return <hr ref={ref} className="ch-usecase-divider" style={style} />;
 };
 
-export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, body, href, links, icon, showArrow, arrowBottom, extraStyle, logo, logoInvert, overlayImg, fullWidthImage, imageHeight = 'h-48' }) => {
+export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, description, body, href, links, icon, showArrow, arrowBottom, extraClassName, logo, logoInvert, overlayImg, fullWidthImage, imageHeight = 'h-48' }) => {
     const assetBase = typeof window !== 'undefined' && window.location.pathname.startsWith('/docs') ? '/docs' : '';
     const withBase = (p) => p && p.startsWith('/') ? assetBase + p : p;
     const darkFilename = darkFilenameProp || (filename ? filename.replace('-light.', '-dark.') : null);
@@ -65,8 +65,7 @@ export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, desc
                         <img
                             src={`${assetBase}/images/${overlayImg}`}
                             alt=""
-                            className="absolute right-4 bottom-0 translate-y-[40%] w-[46%] rounded-xl pointer-events-none z-20"
-                            style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.18)' }}
+                            className="absolute right-4 bottom-0 translate-y-[40%] w-[46%] rounded-xl pointer-events-none z-20 ch-overlay-shadow"
                         />
                     )}
                 </div>
@@ -104,11 +103,12 @@ export const HeroCard = ({ filename, darkFilename: darkFilenameProp, title, desc
         </>
     );
 
+    const fullClassName = [cardClassName, extraClassName].filter(Boolean).join(' ');
     if (links && links.length > 0) {
-        return <div className={cardClassName} style={extraStyle}>{content}</div>;
+        return <div className={fullClassName}>{content}</div>;
     }
 
-    return <a className={cardClassName} href={href} style={extraStyle} onClick={(e) => { e.preventDefault(); window.location.href = withBase(href); }}>{content}</a>;
+    return <a className={fullClassName} href={href} onClick={(e) => { e.preventDefault(); window.location.href = withBase(href); }}>{content}</a>;
 };
 
 export const HighlightedClickHouse = () => {
@@ -137,17 +137,10 @@ export const McpLink = () => {
         >
             <span
                 aria-hidden="true"
-                className="shrink-0"
+                className="shrink-0 w-[13px] h-[13px] bg-current ch-mcp-icon"
                 style={{
-                    width: 13,
-                    height: 13,
-                    backgroundColor: 'currentColor',
                     WebkitMaskImage: `url(${assetBase}/images/icons/icon-mcp.svg)`,
                     maskImage: `url(${assetBase}/images/icons/icon-mcp.svg)`,
-                    WebkitMaskSize: 'contain',
-                    maskSize: 'contain',
-                    WebkitMaskRepeat: 'no-repeat',
-                    maskRepeat: 'no-repeat',
                 }}
             />
             Set up docs MCP server
@@ -186,6 +179,18 @@ export const McpSetup = () => {
     );
 };
 
+export const PageWrapper = ({ children }) => {
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        let id1, id2;
+        id1 = requestAnimationFrame(() => {
+            id2 = requestAnimationFrame(() => setVisible(true));
+        });
+        return () => { cancelAnimationFrame(id1); cancelAnimationFrame(id2); };
+    }, []);
+    return <div className={visible ? 'ch-page-visible' : 'ch-page-hidden'}>{children}</div>;
+};
+
 <style>{`
   .ch-goal-icon { color: #374151; }
   .dark .ch-goal-icon { color: #FAFF69; }
@@ -202,6 +207,7 @@ export const McpSetup = () => {
   }
 `}</style>
 
+<PageWrapper>
 <div className="relative">
     <div className="absolute -top-14 left-0 right-0 opacity-80">
         <img
@@ -319,11 +325,11 @@ export const McpSetup = () => {
                 }
                 links={[
                     { label: "chDB", href: "/products/chdb" },
-                    { label: "ClickHouse Cloud", href: "/products/cloud" },
+                    { label: "ClickHouse Cloud", href: "/products/cloud/getting-started/cloud-get-started" },
                     { label: "ClickStack", href: "/clickstack" },
                     { label: "Langfuse", href: "https://langfuse.com/docs" },
-                    { label: "Managed Postgres", href: "/products/managed-postgres" },
-                    { label: "Kubernetes operator", href: "/products/kubernetes-operator" },
+                    { label: "Managed Postgres", href: "/products/managed-postgres/overview" },
+                    { label: "Kubernetes operator", href: "/products/kubernetes-operator/overview" },
                 ]}
             />
         </div>
@@ -371,7 +377,7 @@ export const McpSetup = () => {
                         imageHeight="h-[72px]"
                         title="ClickHouse Cloud"
                         href="/products/cloud/getting-started/intro"
-                        extraStyle={{ height: '100%' }}
+                        extraClassName="h-full"
                         body={<>
                             <p className="text-[#6b7280] dark:text-[#a1a1aa] mt-2 text-sm leading-[1.6]">
                                 This section shows how ClickHouse makes data warehousing fast, simple, and predictable. Instead of wrestling with fragile pipelines and slow query engines, you centralize data from your apps, services, and tools in minutes, not weeks. From there, you can power real-time dashboards, trigger alerts, analyze historical trends, and build event-driven products on top of the same platform.
@@ -393,7 +399,7 @@ export const McpSetup = () => {
                         title="ClickStack"
                         description="The all in one observability stack powered by ClickHouse, which gives you lightning-fast queries and powerful aggregations on logs, metrics, traces, session replays and errors."
                         href="/clickstack/overview"
-                        extraStyle={{ flex: 1 }}
+                        extraClassName="flex-1"
                         showArrow
                         arrowBottom
                     />
@@ -402,7 +408,7 @@ export const McpSetup = () => {
                         title="Managed Postgres"
                         description="Fast, scalable, enterprise-grade Postgres service, natively integrated with ClickHouse. Easily combine Postgres for transactions and ClickHouse for analytics."
                         href="/products/managed-postgres/overview"
-                        extraStyle={{ flex: 1 }}
+                        extraClassName="flex-1"
                         showArrow
                         arrowBottom
                     />
@@ -412,7 +418,7 @@ export const McpSetup = () => {
                         title="Integrations"
                         description="100+ integrations to connect the tools and services that you love with ClickHouse."
                         href="/integrations/home"
-                        extraStyle={{ flex: 1 }}
+                        extraClassName="flex-1"
                         showArrow
                         arrowBottom
                     />
@@ -452,3 +458,4 @@ export const McpSetup = () => {
         </div>
     </div>
 </div>
+</PageWrapper>
