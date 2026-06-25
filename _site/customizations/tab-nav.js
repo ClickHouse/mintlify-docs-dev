@@ -68,32 +68,13 @@
       if (SECTION_HEADERS.indexOf(text) === -1) return;
 
       a.dataset.headerStyled = '1';
-      a.style.fontWeight = '700';
-      a.style.fontSize = '0.75rem';
-      a.style.letterSpacing = '0.05em';
-      a.style.textTransform = 'uppercase';
-      a.style.opacity = '0.5';
-      a.style.pointerEvents = 'none';
-      a.style.cursor = 'default';
-      a.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
-      a.style.paddingBottom = '8px';
-      a.style.marginBottom = '2px';
+      a.classList.add('ch-mobile-nav-header');
 
       a.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
       });
     });
-  }
-
-  // ── Logo theme sync ──────────────────────────────────────────────────────
-  function updateLogoTheme() {
-    var light = document.getElementById('ch-hp-logo-light');
-    var dark = document.getElementById('ch-hp-logo-dark');
-    if (!light || !dark) return;
-    var isDark = document.documentElement.classList.contains('dark');
-    light.style.display = isDark ? 'none' : 'block';
-    dark.style.display = isDark ? 'block' : 'none';
   }
 
   // ── Homepage sidebar hiding ───────────────────────────────────────────────
@@ -162,7 +143,6 @@
       logoLink.innerHTML = '<img src="' + BASE + '/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs">'
         + '<img src="' + BASE + '/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs">';
       navbar.insertBefore(logoLink, navbar.firstChild);
-      updateLogoTheme();
     }
 
     // Move theme toggle from sidebar to navbar — insert after logo, before tabs.
@@ -219,7 +199,6 @@
         rafId = null;
         applyHomepageClass();
         setupHomepageNavbar();
-        updateLogoTheme();
         patchTabButtons();
         styleDropdownHeaders();
         markNavbarReady();
