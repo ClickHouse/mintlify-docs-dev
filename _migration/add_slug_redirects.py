@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Populate redirect files from slug-map.csv.
+"""Populate redirect files from slug-map.csv and vercel.json.
 
 Source files (edit these):
   _site/redirects-en.json    — English redirects
@@ -11,9 +11,6 @@ Source files (edit these):
 Deployable output (generated, do not edit directly):
   _site/redirects.json       — merged from all locale source files
 
-docs.json points to redirects.json via $ref. Mintlify cannot compose
-arrays across multiple $ref files, so locale files are merged into one.
-
 Run from repo root or _migration/:
     python _migration/add_slug_redirects.py
 """
@@ -23,12 +20,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SLUG_MAP = REPO_ROOT / "_migration/slug-map.csv"
+VERCEL_JSON = Path("/Users/sstruw/Desktop/clickhouse-docs/vercel.json")
 SITE = REPO_ROOT / "_site"
 REDIRECTS_EN = SITE / "redirects-en.json"
 REDIRECTS_OUT = SITE / "redirects.json"
 MINTLIFY_DOMAIN = "https://private-7c7dfe99.mintlify.app"
 
-# (docusaurus_locale_code, mintlify_locale_code)
 LOCALES = [("ru", "ru"), ("jp", "ja"), ("ko", "ko"), ("zh", "zh")]
 
 
@@ -36,6 +33,15 @@ def to_destination(new_url: str) -> str:
     path = new_url.removeprefix(MINTLIFY_DOMAIN)
     if path.endswith("/index"):
         path = path[:-6]
+    return path
+
+
+def normalize_vercel(path: str) -> str:
+    """Strip /docs/en or /docs prefix from a Vercel path."""
+    for prefix in ("/docs/en", "/docs"):
+        if path.startswith(prefix):
+            remainder = path[len(prefix):]
+            return remainder if remainder else "/"
     return path
 
 
@@ -47,7 +53,9 @@ def main() -> None:
     existing_en = json.loads(REDIRECTS_EN.read_text()) if REDIRECTS_EN.exists() else []
     existing_by_source = {r["source"]: r for r in existing_en}
 
-    slug_pairs: list[tuple[str, str]] = []  # (source, destination) for matched rows
+    # --- Phase 1: slug-map ---
+    slug_map: dict[str, str] = {}  # docusaurus_slug -> mintlify_destination
+    slug_pairs: list[tuple[str, str]] = []
     new_en: list[dict] = []
     conflicts: list[dict] = []
     skipped_no_dest = 0
@@ -60,7 +68,6 @@ def main() -> None:
 
             if status == "ambiguous":
                 skipped_ambiguous += 1
-                print(f"  [ambiguous] {row['docusaurus_slug']!r} — skipped")
                 continue
 
             if status != "matched":
@@ -74,6 +81,7 @@ def main() -> None:
 
             source = row["docusaurus_slug"].strip()
             destination = to_destination(new_url)
+            slug_map[source] = destination
 
             if source == destination:
                 skipped_self += 1
@@ -90,11 +98,45 @@ def main() -> None:
             else:
                 new_en.append({"source": source, "destination": destination})
 
-    # --- English redirects ---
     all_en = existing_en + new_en
     all_en.sort(key=lambda r: r["source"])
     all_en = [{"source": r["source"], "destination": r["destination"]} for r in all_en]
-    write_json(REDIRECTS_EN, all_en)
+
+    # Build lookup over all English redirects for chain resolution
+    en_by_source = {r["source"]: r["destination"] for r in all_en}
+
+    # --- Phase 2: vercel.json chain resolution ---
+    vercel_new: list[dict] = []
+    vercel_unresolvable: list[str] = []
+
+    if VERCEL_JSON.exists():
+        vercel_redirects = json.loads(VERCEL_JSON.read_text()).get("redirects", [])
+        for r in vercel_redirects:
+            src_raw = r.get("source", "")
+            dst_raw = r.get("destination", "")
+
+            # Skip wildcards, has-conditions, and non-/docs entries
+            if ":path*" in src_raw or r.get("has") or not src_raw.startswith("/docs"):
+                continue
+
+            src = normalize_vercel(src_raw)
+            dst = normalize_vercel(dst_raw)
+
+            # Already covered
+            if src in en_by_source or src in existing_by_source:
+                continue
+
+            # Resolve destination: slug-map first, then existing Mintlify redirects
+            mintlify_dest = slug_map.get(dst) or en_by_source.get(dst)
+
+            if not mintlify_dest:
+                vercel_unresolvable.append(src_raw)
+                continue
+
+            if src != mintlify_dest:
+                vercel_new.append({"source": src, "destination": mintlify_dest})
+
+    write_json(REDIRECTS_EN, all_en + vercel_new)
 
     # --- Per-locale redirect files ---
     locale_files: list[tuple[str, Path, list[dict]]] = []
@@ -112,32 +154,35 @@ def main() -> None:
         locale_files.append((old_code, path, entries))
         write_json(path, entries)
 
-    # --- Merge all locale files into single deployable output ---
-    all_entries = all_en + [e for _, _, entries in locale_files for e in entries]
-    all_entries.sort(key=lambda r: r["source"])
+    # Re-read en to include vercel additions before merging
+    all_en_final = json.loads(REDIRECTS_EN.read_text())
+    all_entries = all_en_final + [e for _, _, entries in locale_files for e in entries]
+
+    # Deduplicate by source (keep first)
+    seen: dict[str, dict] = {}
+    for e in all_entries:
+        seen.setdefault(e["source"], e)
+    all_entries = sorted(seen.values(), key=lambda r: r["source"])
     all_entries = [{"source": r["source"], "destination": r["destination"]} for r in all_entries]
     write_json(REDIRECTS_OUT, all_entries)
 
     # --- Report ---
-    print()
-    print(f"English added:  {len(new_en)}")
-    print(f"English total:  {len(all_en)}")
+    print(f"\nSlug-map:  added {len(new_en)}, total English {len(all_en)}")
+    print(f"Vercel:    added {len(vercel_new)}, unresolvable {len(vercel_unresolvable)}")
     for old_code, path, entries in locale_files:
         new_code = next(n for o, n in LOCALES if o == old_code)
-        print(f"/{old_code}/ -> /{new_code}/: {len(entries)}  ({path.name})")
-    print(f"Merged total:   {len(all_entries)}  (redirects.json)")
-    print()
+        print(f"/{old_code}/ -> /{new_code}/: {len(entries)}")
+    print(f"Merged total: {len(all_entries)}")
+    if vercel_unresolvable:
+        print(f"\nUnresolvable vercel sources ({len(vercel_unresolvable)}):")
+        for s in vercel_unresolvable:
+            print(f"  {s}")
     if conflicts:
-        print(f"Conflicts (existing kept — review manually): {len(conflicts)}")
+        print(f"\nConflicts kept (existing wins): {len(conflicts)}")
         for c in conflicts:
-            same = " [same]" if c["existing"] == c["slugmap"] else ""
-            print(f"  {c['source']}")
-            print(f"    existing:  {c['existing']}")
-            print(f"    slug-map:  {c['slugmap']}{same}")
-        print()
-    print(f"Skipped (no dest / unmatched): {skipped_no_dest}")
-    print(f"Skipped (ambiguous):           {skipped_ambiguous}")
-    print(f"Skipped (self-redirect):       {skipped_self}")
+            if c["existing"] != c["slugmap"]:
+                print(f"  {c['source']}: {c['existing']!r} vs {c['slugmap']!r}")
+    print(f"\nSkipped (no dest): {skipped_no_dest}  ambiguous: {skipped_ambiguous}  self: {skipped_self}")
 
 
 if __name__ == "__main__":
