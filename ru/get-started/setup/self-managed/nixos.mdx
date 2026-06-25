@@ -8,6 +8,104 @@ hide_title: true
 doc_type: 'guide'
 ---
 
-import NixOSInstall from '/snippets/ru/_nixos_install.mdx';
+import Recommendations from '/snippets/ru/recommendations.mdx';
 
-<NixOSInstall />
+> ClickHouse доступен в репозитории Nixpkgs и может быть установлен с помощью Nix в **Linux** и **macOS**.
+
+<Steps>
+  <Step>
+    ## Ознакомьтесь с рекомендациями
+
+    <Recommendations />
+  </Step>
+
+  <Step>
+    ## Установите ClickHouse с помощью Nix
+
+    Вы можете использовать Nix, чтобы установить ClickHouse без постоянного добавления в систему:
+
+    ```bash
+    # Установить последнюю стабильную версию
+    nix shell nixpkgs#clickhouse
+
+    # Или установить LTS-версию
+    nix shell nixpkgs#clickhouse-lts
+    ```
+
+    Это сделает бинарный файл `clickhouse` доступным в текущем сеансе оболочки.
+
+    * Пакет `nixpkgs#clickhouse` предоставляет последнюю стабильную версию.
+    * Пакет `nixpkgs#clickhouse-lts` предоставляет LTS-версию.
+    * Оба пакета работают в Linux и macOS.
+  </Step>
+
+  <Step>
+    ## Постоянная установка
+
+    Чтобы установить ClickHouse в систему на постоянной основе:
+
+    **Для пользователей NixOS** добавьте в `configuration.nix`:
+
+    ```nix
+    environment.systemPackages = with pkgs; [
+      clickhouse
+    ];
+    ```
+
+    Затем пересоберите систему:
+
+    ```bash
+    sudo nixos-rebuild switch
+    ```
+
+    **Для пользователей не NixOS** выполните установку с помощью профиля Nix:
+
+    ```bash
+    # Установить последнюю стабильную версию
+    nix profile install nixpkgs#clickhouse
+
+    # Или установить LTS-версию
+    nix profile install nixpkgs#clickhouse-lts
+    ```
+  </Step>
+
+  <Step>
+    ## Запустите сервер ClickHouse
+
+    После установки вы можете запустить сервер ClickHouse:
+
+    ```bash
+    clickhouse-server
+    ```
+
+    По умолчанию сервер запустится с базовой конфигурацией и будет прослушивать `localhost:9000`.
+
+    Для использования в production-среде на NixOS вы можете настроить ClickHouse как системный сервис. Доступные параметры конфигурации см. в [руководстве NixOS](https://search.nixos.org/options?query=clickhouse).
+  </Step>
+
+  <Step>
+    ## Запустите клиент ClickHouse
+
+    Чтобы подключиться к серверу ClickHouse, откройте новый терминал и выполните:
+
+    ```bash
+    clickhouse-client
+    ```
+  </Step>
+</Steps>
+
+<div id="about-nix-package">
+  ## О пакете ClickHouse в Nix
+</div>
+
+Пакет ClickHouse в Nixpkgs включает:
+
+* `clickhouse-server` — сервер базы данных ClickHouse
+* `clickhouse-client` — клиент командной строки для подключения к ClickHouse
+* `clickhouse-local` — инструмент для выполнения SQL-запросов к локальным файлам
+* другие утилиты ClickHouse
+
+Дополнительные сведения о пакете ClickHouse в Nixpkgs см. здесь:
+
+* [Пакет ClickHouse в Nixpkgs](https://search.nixos.org/packages?query=clickhouse)
+* [Параметры сервиса ClickHouse в NixOS](https://search.nixos.org/options?query=clickhouse)
