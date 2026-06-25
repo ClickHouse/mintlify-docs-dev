@@ -16,11 +16,19 @@ Run from repo root or _migration/:
 """
 import csv
 import json
+import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SLUG_MAP = REPO_ROOT / "_migration/slug-map.csv"
-VERCEL_JSON = Path("/Users/sstruw/Desktop/clickhouse-docs/vercel.json")
+# Path to the upstream Docusaurus repo's vercel.json. Defaults to a sibling
+# `clickhouse-docs` checkout next to this repo; override with CLICKHOUSE_DOCS
+# (repo root) or VERCEL_JSON (direct file path) env vars.
+VERCEL_JSON = Path(
+    os.environ.get("VERCEL_JSON")
+    or (Path(os.environ["CLICKHOUSE_DOCS"]) / "vercel.json" if os.environ.get("CLICKHOUSE_DOCS") else "")
+    or (REPO_ROOT.parent / "clickhouse-docs/vercel.json")
+)
 SITE = REPO_ROOT / "_site"
 REDIRECTS_EN = SITE / "redirects-en.json"
 REDIRECTS_OUT = SITE / "redirects.json"
@@ -55,7 +63,6 @@ def main() -> None:
 
     # --- Phase 1: slug-map ---
     slug_map: dict[str, str] = {}  # docusaurus_slug -> mintlify_destination
-    slug_pairs: list[tuple[str, str]] = []
     new_en: list[dict] = []
     conflicts: list[dict] = []
     skipped_no_dest = 0
@@ -87,8 +94,6 @@ def main() -> None:
                 skipped_self += 1
                 continue
 
-            slug_pairs.append((source, destination))
-
             if source in existing_by_source:
                 conflicts.append({
                     "source": source,
@@ -109,40 +114,59 @@ def main() -> None:
     vercel_new: list[dict] = []
     vercel_unresolvable: list[str] = []
 
-    if VERCEL_JSON.exists():
-        vercel_redirects = json.loads(VERCEL_JSON.read_text()).get("redirects", [])
-        for r in vercel_redirects:
-            src_raw = r.get("source", "")
-            dst_raw = r.get("destination", "")
+    if not VERCEL_JSON.exists():
+        raise SystemExit(
+            f"ERROR: vercel.json not found at {VERCEL_JSON}\n"
+            "Set CLICKHOUSE_DOCS (repo root) or VERCEL_JSON (file path) env var "
+            "to point at the upstream Docusaurus checkout. Refusing to regenerate "
+            "redirects without it — doing so would silently drop Vercel-sourced redirects."
+        )
 
-            # Skip wildcards, has-conditions, and non-/docs entries
-            if ":path*" in src_raw or r.get("has") or not src_raw.startswith("/docs"):
-                continue
+    vercel_redirects = json.loads(VERCEL_JSON.read_text()).get("redirects", [])
+    for r in vercel_redirects:
+        src_raw = r.get("source", "")
+        dst_raw = r.get("destination", "")
 
-            src = normalize_vercel(src_raw)
-            dst = normalize_vercel(dst_raw)
+        # Skip wildcards, has-conditions, and non-/docs entries
+        if ":path*" in src_raw or r.get("has") or not src_raw.startswith("/docs"):
+            continue
 
-            # Already covered
-            if src in en_by_source or src in existing_by_source:
-                continue
+        src = normalize_vercel(src_raw)
+        dst = normalize_vercel(dst_raw)
 
-            # Resolve destination: slug-map first, then existing Mintlify redirects
-            mintlify_dest = slug_map.get(dst) or en_by_source.get(dst)
+        # Already covered
+        if src in en_by_source or src in existing_by_source:
+            continue
 
-            if not mintlify_dest:
-                vercel_unresolvable.append(src_raw)
-                continue
+        # Resolve destination: slug-map first, then existing Mintlify redirects
+        mintlify_dest = slug_map.get(dst) or en_by_source.get(dst)
 
-            if src != mintlify_dest:
-                vercel_new.append({"source": src, "destination": mintlify_dest})
+        if not mintlify_dest:
+            vercel_unresolvable.append(src_raw)
+            continue
 
-    write_json(REDIRECTS_EN, all_en + vercel_new)
+        if src != mintlify_dest:
+            vercel_new.append({"source": src, "destination": mintlify_dest})
+
+    # Full English redirect set (existing + slug-map + vercel), deduped by source.
+    en_seen: dict[str, dict] = {}
+    for e in all_en + vercel_new:
+        en_seen.setdefault(e["source"], e)
+    all_en_final = sorted(en_seen.values(), key=lambda r: r["source"])
+    all_en_final = [{"source": r["source"], "destination": r["destination"]} for r in all_en_final]
+    write_json(REDIRECTS_EN, all_en_final)
 
     # --- Per-locale redirect files ---
+    # The old->new path mapping is locale-independent, so every internal English
+    # redirect gets a locale-prefixed counterpart. External destinations (full
+    # URLs) and wildcard sources are left to English only.
     locale_files: list[tuple[str, Path, list[dict]]] = []
     for old_code, new_code in LOCALES:
         entries = []
-        for eng_src, eng_dst in slug_pairs:
+        for r in all_en_final:
+            eng_src, eng_dst = r["source"], r["destination"]
+            if not eng_dst.startswith("/") or ":path*" in eng_src:
+                continue
             src = f"/{old_code}{eng_src}"
             dst = f"/{new_code}{eng_dst}"
             if src != dst:
@@ -154,8 +178,6 @@ def main() -> None:
         locale_files.append((old_code, path, entries))
         write_json(path, entries)
 
-    # Re-read en to include vercel additions before merging
-    all_en_final = json.loads(REDIRECTS_EN.read_text())
     all_entries = all_en_final + [e for _, _, entries in locale_files for e in entries]
 
     # Deduplicate by source (keep first)
