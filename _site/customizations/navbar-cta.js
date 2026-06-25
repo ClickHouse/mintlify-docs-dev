@@ -12,11 +12,42 @@
     return String(count);
   }
 
+  function injectStyles() {
+    if (document.getElementById('ch-navbar-cta-styles')) return;
+    var style = document.createElement('style');
+    style.id = 'ch-navbar-cta-styles';
+    style.textContent = ''
+      // Hide mobile AI assistant button
+      + '#assistant-entry-mobile { display: none !important; }'
+      // Invert dark SVG logos so they're visible on dark backgrounds
+      + '.dark img[src*="windsurf"], :is(.dark) img[src*="windsurf"] { filter: invert(1) !important; }'
+      // CTA container
+      + '#' + CTA_ID + ' { display: flex; align-items: center; gap: 16px; flex-shrink: 0; margin-left: 32px; }'
+      // GitHub stars link
+      + '#' + CTA_ID + ' .ch-gh-stars { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; transition: color 0.15s; }'
+      + '#' + CTA_ID + ' .ch-gh-stars svg { flex-shrink: 0; }'
+      // Get started button
+      + '#' + CTA_ID + ' .ch-cta-btn { display: inline-flex; align-items: center; padding: 6px 16px; border-radius: 4px; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background-color 0.15s, color 0.15s; }'
+      // Light mode
+      + '#' + CTA_ID + ' .ch-gh-stars { color: #374151; }'
+      + '#' + CTA_ID + ' .ch-gh-stars:hover { color: #111; }'
+      + '#' + CTA_ID + ' .ch-cta-btn { background: #1c1c1c; color: #fff; }'
+      + '#' + CTA_ID + ' .ch-cta-btn:hover { background: #333; }'
+      // Dark mode
+      + '.dark #' + CTA_ID + ' .ch-gh-stars { color: #d1d5db; }'
+      + '.dark #' + CTA_ID + ' .ch-gh-stars:hover { color: #fff; }'
+      + '.dark #' + CTA_ID + ' .ch-cta-btn { background: #fdff75; color: #1c1c1c; }'
+      + '.dark #' + CTA_ID + ' .ch-cta-btn:hover { background: #eaec6a; }';
+    document.head.appendChild(style);
+  }
+
   function injectCta() {
     if (document.getElementById(CTA_ID)) return true;
 
     var mapleNav = document.getElementById('navbar-transition-maple');
     if (!mapleNav) return false;
+
+    injectStyles();
 
     // --- Right section: GitHub stars + Get started ---
     var container = document.createElement('div');
@@ -70,13 +101,8 @@
   function init() {
     injectCta();
 
-    var rafId = null;
     var observer = new MutationObserver(function () {
-      if (rafId) return;
-      rafId = requestAnimationFrame(function () {
-        rafId = null;
-        injectCta();
-      });
+      injectCta();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }

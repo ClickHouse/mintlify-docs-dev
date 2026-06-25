@@ -11,6 +11,14 @@
     + '<polygon points="9.5 2.75 11.412 7.587 16.25 9.5 11.412 11.413 9.5 16.25 7.587 11.413 2.75 9.5 7.587 7.587 9.5 2.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></polygon>'
     + '</g></svg>';
 
+  function injectStyles() {
+    if (document.getElementById('ch-ask-ai-styles')) return;
+    var style = document.createElement('style');
+    style.id = 'ch-ask-ai-styles';
+    style.textContent = '.dark .ch-ai-icon { color: #fdff75; }';
+    document.head.appendChild(style);
+  }
+
   // Wait briefly for Kapa to mount (it's loaded async), then open. Kapa's
   // open() accepts an optional query that's submitted immediately when
   // submit:true is set.
@@ -39,6 +47,8 @@
 
     if (!searchBar) return false;
 
+    injectStyles();
+
     var btn = document.createElement('button');
     btn.id = BTN_ID;
     btn.type = 'button';
@@ -61,6 +71,8 @@
 
     if (!mobileSearchBtn) return false;
 
+    injectStyles();
+
     var btn = document.createElement('button');
     btn.id = MOBILE_BTN_ID;
     btn.type = 'button';
@@ -77,19 +89,12 @@
   }
 
   function init() {
-    var desktopDone = injectButton();
-    var mobileDone = injectMobileButton();
-    if (desktopDone && mobileDone) return;
+    injectButton();
+    injectMobileButton();
 
-    var rafId = null;
     var observer = new MutationObserver(function () {
-      if (rafId) return;
-      rafId = requestAnimationFrame(function () {
-        rafId = null;
-        if (!desktopDone) desktopDone = injectButton();
-        if (!mobileDone) mobileDone = injectMobileButton();
-        if (desktopDone && mobileDone) observer.disconnect();
-      });
+      injectButton();
+      injectMobileButton();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }
