@@ -13,11 +13,11 @@ import { Image } from "/snippets/components/Image.jsx";
   ## ¿Qué es el onboarding estándar?
 </div>
 
-**El onboarding estándar** es el flujo de trabajo guiado predeterminado para implementar ClickHouse en tu propia cuenta en la nube mediante BYOC. En este enfoque, ClickHouse Cloud aprovisiona todos los recursos principales en la nube necesarios para tu implementación, como la VPC, las subredes, los grupos de seguridad, el clúster de Kubernetes (EKS/GKE) y los roles de IAM/cuentas de servicio necesarios, dentro de tu cuenta de AWS o proyecto de GCP. Esto garantiza una configuración coherente y segura, y minimiza los pasos manuales que debe realizar tu equipo.
+**El onboarding estándar** es el flujo de trabajo guiado predeterminado para implementar ClickHouse en tu propia cuenta en la nube mediante BYOC. En este enfoque, ClickHouse Cloud aprovisiona todos los recursos principales en la nube necesarios para tu implementación, como la VPC/VNet, las subredes, los grupos de seguridad, el clúster de Kubernetes (EKS/GKE/AKS) y los roles de IAM/cuentas de servicio/entidades de servicio necesarios, dentro de tu cuenta de AWS, proyecto de GCP o suscripción de Azure. Esto garantiza una configuración coherente y segura, y minimiza los pasos manuales que debe realizar tu equipo.
 
-Con el onboarding estándar, simplemente proporcionas una cuenta de AWS o un proyecto de GCP dedicados, y ejecutas una pila inicial (mediante CloudFormation o Terraform) para crear los permisos mínimos de IAM y la relación de confianza necesarios para que ClickHouse Cloud orqueste la configuración posterior. Todos los pasos posteriores, incluido el aprovisionamiento de la infraestructura y el lanzamiento del servicio, se gestionan a través de la consola web de ClickHouse Cloud.
+Con el onboarding estándar, simplemente proporcionas una cuenta de AWS, un proyecto de GCP o una suscripción de Azure dedicados, y ejecutas una pila inicial (mediante CloudFormation o Terraform) para crear los permisos mínimos y la relación de confianza necesarios para que ClickHouse Cloud orqueste la configuración posterior. Todos los pasos posteriores, incluido el aprovisionamiento de la infraestructura y el lanzamiento del servicio, se gestionan a través de la consola web de ClickHouse Cloud.
 
-Se recomienda encarecidamente a los clientes preparar una cuenta de AWS o un proyecto de GCP **dedicados** para alojar la implementación BYOC de ClickHouse, a fin de garantizar un mejor aislamiento en términos de permisos y recursos. ClickHouse implementará un conjunto dedicado de recursos en la nube (VPC, clúster de Kubernetes, roles de IAM, buckets de S3, etc.) en tu cuenta.
+Se recomienda encarecidamente a los clientes preparar una cuenta de AWS, un proyecto de GCP o una suscripción de Azure **dedicados** para alojar la implementación BYOC de ClickHouse, a fin de garantizar un mejor aislamiento en términos de permisos y recursos. ClickHouse implementará un conjunto dedicado de recursos en la nube (VPC/VNet, clúster de Kubernetes, roles de IAM/cuentas de servicio/entidades de servicio, buckets de almacenamiento de objetos, etc.) en tu cuenta.
 
 Si necesitas una configuración más personalizada (por ejemplo, implementar en una VPC existente), consulta la documentación de [Customized Onboarding](/es/products/bring-your-own-cloud/onboarding/customization-aws).
 
@@ -36,10 +36,10 @@ Para iniciar el proceso de onboarding, [contáctenos](https://clickhouse.com/clo
 </div>
 
 <div id="prepare-an-aws-account">
-  ### Prepara una cuenta de AWS o un proyecto de GCP
+  ### Prepara una cuenta de AWS, un proyecto de GCP o una suscripción de Azure
 </div>
 
-Prepara una cuenta nueva de AWS o un proyecto de GCP en tu organización. Visita nuestra consola web: https://console.clickhouse.cloud/byocOnboarding para continuar con la configuración.
+Prepara una cuenta nueva de AWS, un proyecto de GCP o una suscripción de Azure en tu organización.
 
 <Steps>
   <Step>
@@ -49,14 +49,14 @@ Prepara una cuenta nueva de AWS o un proyecto de GCP en tu organización. Visita
   </Step>
 
   <Step>
-    ### Configuración de la cuenta o el proyecto
+    ### Configuración de la cuenta, el proyecto o la suscripción
 
-    La configuración inicial de BYOC puede realizarse con una [plantilla de CloudFormation (AWS)](https://s3.us-east-2.amazonaws.com/clickhouse-public-resources.clickhouse.cloud/cf-templates/byoc.yaml) o un [módulo de Terraform (GCP)](https://github.com/ClickHouse/terraform-byoc-onboarding/tree/main/modules/gcp). Esto crea un IAM role con privilegios elevados, lo que permite a los controladores de BYOC de ClickHouse Cloud administrar tu infraestructura.
+    La configuración inicial de BYOC puede realizarse con una [plantilla de CloudFormation (AWS)](https://s3.us-east-2.amazonaws.com/clickhouse-public-resources.clickhouse.cloud/cf-templates/byoc.yaml), un [módulo de Terraform (GCP)](https://github.com/ClickHouse/terraform-byoc-onboarding/tree/main/modules/gcp) o un [módulo de Terraform (Azure)](https://github.com/ClickHouse/terraform-byoc-onboarding/tree/main/modules/azure). Esto crea una identidad con privilegios elevados (rol de IAM/cuenta de servicio/entidad de servicio), lo que permite a los controladores de BYOC de ClickHouse Cloud administrar tu infraestructura.
 
     <Image img="/images/cloud/reference/byoc-onboarding-2.png" size="lg" alt="BYOC initialize account" background="black" />
 
     <Note>
-      Los buckets de almacenamiento, la VPC, el clúster de Kubernetes y los recursos de cómputo necesarios para ejecutar ClickHouse no se incluyen en esta configuración inicial. Se aprovisionarán en el siguiente paso.
+      Los buckets de almacenamiento, la VPC/VNet, el clúster de Kubernetes y los recursos de cómputo necesarios para ejecutar ClickHouse no se incluyen en esta configuración inicial. Se aprovisionarán en el siguiente paso.
     </Note>
 
     #### Módulo alternativo de Terraform para AWS
@@ -76,15 +76,15 @@ Prepara una cuenta nueva de AWS o un proyecto de GCP en tu organización. Visita
   <Step>
     ### Configura la infraestructura de BYOC
 
-    Se te pedirá que configures la infraestructura, incluidos los buckets de S3, la VPC y el clúster de Kubernetes, desde la consola de ClickHouse Cloud. Hay ciertas configuraciones que deben definirse en esta etapa, ya que no podrán cambiarse más adelante. En concreto:
+    Se te pedirá que configures la infraestructura, incluidos los buckets de almacenamiento de objetos, la VPC/VNet y el clúster de Kubernetes, desde la consola de ClickHouse Cloud. Hay ciertas configuraciones que deben definirse en esta etapa, ya que no podrán cambiarse más adelante. En concreto:
 
     * **Región**: Todas las **regiones públicas** incluidas en nuestra documentación de [regiones compatibles](/es/products/cloud/reference/supported-regions) están disponibles para implementaciones de BYOC. Actualmente, las regiones privadas no son compatibles.
 
-    * **Rango CIDR de la VPC**: De forma predeterminada, usamos `10.0.0.0/16` para el rango CIDR de la VPC de BYOC. Si planeas usar peering de VPC con otra cuenta, asegúrate de que los rangos CIDR no se superpongan. Asigna un rango CIDR adecuado para BYOC, con un tamaño mínimo de `/22` para admitir las workloads necesarias.
+    * **Rango CIDR de la VPC/VNet**: De forma predeterminada, usamos `10.0.0.0/16` para el rango CIDR de la VPC (AWS/GCP) o la VNet (Azure) de BYOC. Si planeas usar peering de VPC/VNet con otra cuenta, asegúrate de que los rangos CIDR no se superpongan. Asigna un rango CIDR adecuado para BYOC, con un tamaño mínimo de `/23` para admitir las workloads necesarias.
 
     * **Zonas de disponibilidad**: Si planeas usar peering de VPC, alinear las zonas de disponibilidad entre las cuentas de origen y de BYOC puede ayudar a reducir los costos del tráfico entre zonas. Por ejemplo, en AWS, los sufijos de las zonas de disponibilidad (`a`, `b`, `c`) pueden representar distintos ID de zonas físicas según la cuenta. Consulta la [guía de AWS](https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/use-consistent-availability-zones-in-vpcs-across-different-aws-accounts.html) para obtener más detalles.
 
-    <Image img="/images/cloud/reference/byoc-onboarding-3.png" size="lg" alt="BYOC setup infra" background="black" />
+    <Image img="/images/cloud/reference/byoc-onboarding-3.png" size="lg" alt="BYOC set up infrastructure" background="black" />
   </Step>
 </Steps>
 

@@ -9,9 +9,9 @@ doc_type: 'guide'
 
 import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
 
-<BetaBadge />
+<BetaBadge link="https://clickhouse.com/cloud/postgres" galaxyTrack={true} galaxyEvent="docs.managed-postgres.openapi-beta" />
 
-[ClickHouse OpenAPI](/ja/products/cloud/features/admin-features/api) を使用すると、
+[ClickHouse OpenAPI](/ja/products/cloud/features/admin-features/api/index) を使用すると、
 ClickHouse サービスと同様に Managed Postgres サービスをプログラムから
 操作できます。同じ API では、サービスのメトリクスをスクレイピングするための
 [Prometheus エンドポイント] も公開されています。
@@ -44,39 +44,40 @@ curl -s --user "$KEY_ID:$KEY_SECRET" https://api.clickhouse.cloud/v1/organizatio
 3. **Organization ID** の右側にあるコピーアイコンをクリックして、
    直接クリップボードにコピーします。
 
-{/*
+これで、次のようにリクエストで使用できます。
 
-  TODO: API の提供開始後、コメントを解除して正しい出力例を挿入する。
+```bash
+ORG_ID=myorgid
 
-  これで、次のようにリクエストで使用できます。
-
-  ```bash
-  ORG_ID=myorgid
-
-  curl -s --user "$KEY_ID:$KEY_SECRET" \
+curl -s --user "$KEY_ID:$KEY_SECRET" \
     "https://api.clickhouse.cloud/v1/organizations/$ORG_ID/postgres" | jq
-  ```
+```
 
-  これで最初の Postgres API リクエストを実行できました。上記の [list API] では、
-  組織内のすべての Postgres サーバーが一覧表示されます。出力は次のようになります。
+これで最初の Postgres API リクエストを実行できました。上記の [list API] では、
+組織内のすべての Postgres サーバーが一覧表示されます。出力は次のようになります。
 
-  ```json
-  {
+```json
+{
   "result": [
     {
-      "id": "c0d0b15d-5e8b-431d-8943-51b6e233e0b1",
-      "name": "Customer's Organization",
-      "createdAt": "2026-03-24T14:21:31Z",
-      "privateEndpoints": [],
-      "enableCoreDumps": true
+      "id": "ee2fef9f-b443-8ad0-8c9b-724390cdb826",
+      "name": "oltp",
+      "provider": "aws",
+      "region": "eu-west-2",
+      "postgresVersion": "18",
+      "size": "r6gd.medium",
+      "storageSize": 59,
+      "haType": "none",
+      "tags": [],
+      "isPrimary": true,
+      "state": "running",
+      "createdAt": "2026-05-25T16:42:16+00:00"
     }
   ],
   "requestId": "c128d830-5769-4c82-8235-f79aa69d1ebf",
   "status": 200
-  }
-  ```
-
-  */}
+}
+```
 
 <div id="crud">
   ## CRUD
@@ -94,7 +95,6 @@ Postgres サービス のライフサイクルを見ていきましょう。
 * `provider`: クラウドプロバイダーの名前
 * `region`: serviceをデプロイするproviderのネットワーク内のRegion
 * `size`: VMのサイズ
-* `storageSize`: VMのストレージサイズ
 
 これらのプロパティの設定可能な値については、[create API] のドキュメントを参照してください。さらに、デフォルトの17ではなく、Postgres 18を指定します。
 
@@ -104,8 +104,7 @@ create_data='{
   "provider": "aws",
   "region": "us-west-2",
   "postgresVersion": "18",
-  "size": "r8gd.large",
-  "storageSize": 118
+  "size": "r8gd.large"
 }'
 ```
 
@@ -123,7 +122,7 @@ curl -s --user "$KEY_ID:$KEY_SECRET" -H 'Content-Type: application/json' \
 ```json
 {
   "result": {
-    "id": "pg7myrd1j06p3gx4zrm2ze8qz6",
+    "id": "67b4bc12-8582-45d0-8806-fe9b2e5a54e6",
     "name": "my postgres",
     "provider": "aws",
     "region": "us-west-2",
@@ -151,7 +150,7 @@ curl -s --user "$KEY_ID:$KEY_SECRET" -H 'Content-Type: application/json' \
 レスポンスの`id`を使って、サービスを再度取得します:
 
 ```bash
-PG_ID=pg7myrd1j06p3gx4zrm2ze8qz6
+PG_ID=67b4bc12-8582-45d0-8806-fe9b2e5a54e6
 curl -s --user "$KEY_ID:$KEY_SECRET" \
     "https://api.clickhouse.cloud/v1/organizations/$ORG_ID/postgres/$PG_ID" \
     | jq
@@ -184,7 +183,7 @@ psql (18.3)
 SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off, ALPN: postgresql)
 Type "help" for help.
 
-postgres=# 
+postgres=#
 ```
 
 [psql] を終了するには、`\q` と入力します。
@@ -194,7 +193,7 @@ postgres=#
 </div>
 
 [patch API] は、[RFC 7396] の JSON Merge Patch を使用して、Managed
-Postgresサービスのプロパティの一部を更新できます。複雑なデプロイメントでは、タグが特に重要になることがあります。その場合は、リクエストでタグだけを送信してください:
+Postgres サービスのプロパティの一部を更新できます。複雑なデプロイメントでは、タグが特に重要になることがあります。その場合は、リクエストでタグだけを送信してください:
 
 ```bash
 curl -sX PATCH --user "$KEY_ID:$KEY_SECRET" -H 'Content-Type: application/json' \
@@ -207,7 +206,7 @@ curl -sX PATCH --user "$KEY_ID:$KEY_SECRET" -H 'Content-Type: application/json' 
 
 ```json
 {
-  "id": "$PG_ID",
+  "id": "67b4bc12-8582-45d0-8806-fe9b2e5a54e6",
   "name": "my postgres",
   "provider": "aws",
   "region": "us-west-2",
@@ -230,24 +229,34 @@ curl -sX PATCH --user "$KEY_ID:$KEY_SECRET" -H 'Content-Type: application/json' 
 }
 ```
 
+OpenAPI では、[patch API] でサポートされていないプロパティを更新するための追加のエンドポイントが提供されています。たとえば、[Postgres configuration] を更新するには、
+[config API] を使用します。
+
+```bash
+curl -s --user "$KEY_ID:$KEY_SECRET" -H 'Content-Type: application/json' \
+    "https://api.clickhouse.cloud/v1/organizations/$ORG_ID/postgres/$PG_ID/config" \
+    -d '{"pgConfig": {"max_connections": "42"}, "pgBouncerConfig": {}}' | jq
+```
+
+出力には、更新後の設定に加えて、変更による影響を説明するメッセージも表示されます：
+
+```json
+{
+  "result":{
+    "pgConfig": {
+      "max_connections": "42"
+    },
+    "pgBouncerConfig": {},
+    "message": "The changes in the following parameters require a database restart to take effect: max_connections. You can restart the database by using the restart endpoint."
+  },
+  "requestId":"fdec06f2-66f7-45b4-9f82-0c051aba20aa",
+  "status": 200
+}
+```
+
 {/*
 
-  TODO: 実装後に拡張する。
-
-  OpenAPI では、[patch API] でサポートされていないプロパティを更新するための追加のエンドポイントが提供されています。たとえば、[Postgres configuration] を更新するには、
-  [config API] を使用します。
-
-  ```bash
-  curl -s --user "$KEY_ID:$KEY_SECRET" -H 'Content-Type: application/json' \
-    "https://api.clickhouse.cloud/v1/organizations/$ORG_ID/postgres/$PG_ID/config" \
-    -d '{"max_connections": "42"}'
-  ```
-
-  出力には、更新後の設定が表示されます。
-
-  ```json
-  {"max_connections": "42"}
-  ```
+  TODO: API の提供開始後、コメントアウトを解除し、正しい出力例を挿入する。
 
   追加の更新 API には、次のものがあります。
 
@@ -425,33 +434,33 @@ time、並列 worker 数、JIT、WAL — が含まれます。これらは、
 この例では簡潔にするため、両方のオブジェクトを一部省略しています。API は
 [per-execution counters] で説明している完全なカウンター セットを返します。
 
-[ClickHouse OpenAPI]: /products/cloud/features/admin-features/api "Cloud API"
+[ClickHouse OpenAPI]: /products/cloud/features/admin-features/api/index "Cloud API"
 
 [OpenAPI]: https://www.openapis.org "OpenAPI Initiative"
 
 [API keys]: /products/cloud/features/admin-features/api/openapi "API キーの管理"
 
-[Prometheus endpoint]: /products/managed-postgres/monitoring/prometheus "Managed Postgres Prometheus エンドポイント"
-
-[metrics reference]: /products/managed-postgres/monitoring/metrics "Managed Postgres メトリクス リファレンス"
-
 [pg-openapi]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres "ClickHouse Cloud 向け OpenAPI 仕様: Postgres"
 
-[list API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceGetList "組織の Postgres service の一覧を取得"
+[list API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceGetList "組織の Postgres サービスの一覧を取得"
 
-[create API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceCreate "新しい Postgres service を作成"
+[create API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceCreate "新しい Postgres サービスを作成"
 
 [psql]: https://www.postgresql.org/docs/current/app-psql.html "PostgreSQL Docs: psql — PostgreSQL 対話型ターミナル"
 
-[patch API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServicePatch "PostgreSQL service を更新"
+[patch API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServicePatch "PostgreSQL サービスを更新"
 
 [RFC 7396]: https://www.rfc-editor.org/rfc/rfc7396 "RFC 7396: JSON Merge Patch"
 
 [Postgres configuration]: https://www.postgresql.org/docs/18/runtime-config.html "PostgreSQL Docs: サーバー設定"
 
-[config API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceSetConfig "Postgres Service の設定を更新"
+[config API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceSetConfig "Postgres サービスの設定を更新"
 
-[delete API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceDelete "PostgreSQL service を削除"
+[delete API]: /api-reference/organization/get-list-of-available-organizations#tag/Postgres/operation/postgresServiceDelete "PostgreSQL サービスを削除"
+
+[Prometheus endpoint]: /products/managed-postgres/monitoring/prometheus "Managed Postgres Prometheus エンドポイント"
+
+[metrics reference]: /products/managed-postgres/monitoring/metrics "Managed Postgres メトリクス リファレンス"
 
 [Query Insights]: /products/managed-postgres/monitoring/query-insights "Postgres クエリインサイト"
 

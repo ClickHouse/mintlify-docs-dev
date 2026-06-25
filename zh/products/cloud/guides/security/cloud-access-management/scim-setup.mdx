@@ -7,8 +7,6 @@ doc_type: 'guide'
 keywords: ['ClickHouse Cloud', 'SCIM', '预配', 'Okta', 'SSO', 'SAML', '身份提供商', 'IdP', '用户管理']
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
-
 import EnterprisePlanFeatureBadge from "/snippets/components/EnterprisePlanFeatureBadge/EnterprisePlanFeatureBadge.jsx";
 import PrivatePreviewBadge from "/snippets/components/PrivatePreviewBadge/PrivatePreviewBadge.jsx";
 
@@ -31,7 +29,7 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
 你需要准备：
 
 * 在你的 ClickHouse Cloud 组织中拥有 **Admin** 角色。
-* 已在你的 IdP 与 ClickHouse Cloud 之间配置好 [SAML 单点登录](/zh/cloud/security/saml-setup)。SCIM 会创建用户账户；这些账户通过 SAML 登录，因此必须先确保 SSO 已正常工作。
+* 已在你的 IdP 与 ClickHouse Cloud 之间配置好 [SAML 单点登录](/zh/products/cloud/guides/security/cloud-access-management/saml-sso-setup)。SCIM 会创建用户账户；这些账户通过 SAML 登录，因此必须先确保 SSO 已正常工作。
 * 拥有 Okta 租户的超级管理员权限，并具备安装应用和配置预配的权限。
 * 一份你希望通过 SCIM 分配的角色列表 (例如：Admins、Developers、Read-only) 。请提前确定这些角色——你需要在 Okta 中创建对应的组。
 
@@ -55,11 +53,11 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
 
     以组织管理员身份登录 **ClickHouse Cloud 控制台**，然后打开 **组织设置 → SAML 和 SCIM 设置 → SCIM 配置**。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-01.png" size="lg" alt="在 组织设置 中进入 SCIM 配置 选项卡" force />
+    ![在组织设置中进入 SCIM 配置选项卡](/images/cloud/security/scim-okta/scim-okta-01.png)
 
     点击 `Enable SCIM`。连接 SAML 单点登录后，SCIM 才会解锁；如果该选项显示为灰色，请先完成 SAML 设置。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-02.png" size="lg" alt="切换 Enable SCIM" force />
+    ![切换 Enable SCIM](/images/cloud/security/scim-okta/scim-okta-02.png)
 
     系统会生成一个 **SCIM 端点 URL**，格式如下：
 
@@ -76,18 +74,20 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
     找到 `Create an API key` 部分，并选择过期日期。
 
     <Tip>
-      **提前规划轮换。** 我们建议将有效期设置为 12 个月，并添加日历提醒。ClickHouse Cloud 最多可同时支持两个处于活动状态的 SCIM 令牌，因此您可以在不停机的情况下完成轮换：生成新令牌，将 Okta 切换到新令牌，确认预配仍正常工作，然后撤销旧令牌。
+      **提前规划轮换**
+
+      我们建议将有效期设置为 12 个月，并添加日历提醒。ClickHouse Cloud 最多可同时支持两个处于活动状态的 SCIM 令牌，因此您可以在不停机的情况下完成轮换：生成新令牌，将 Okta 切换到新令牌，确认预配仍正常工作，然后撤销旧令牌。
     </Tip>
 
     点击 `Generate key`。该令牌**只会显示一次**，包含一个密钥 (前缀为 `scim_`) 和一个 secret。请立即复制这两项，并将其存储到安全的 secrets manager 中——之后无法再次查看。如果丢失，请撤销该令牌并生成新令牌。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-07.png" size="lg" alt="生成新的 SCIM API 密钥" force />
+    ![生成新的 SCIM API 密钥](/images/cloud/security/scim-okta/scim-okta-07.png)
   </Step>
 
   <Step>
     ### 定义角色映射
 
-    在 SCIM 配置 面板中，点击 **Map roles in &quot;用户和角色&quot;** (或直接进入 **用户和角色 → Roles**) 。
+    在 SCIM 配置面板中，点击 **Map roles in &quot;用户和角色&quot;** (或直接进入 **用户和角色 → Roles**) 。
 
     SCIM 组会按名称绑定到 ClickHouse Cloud 角色，但需要注意以下规则：
 
@@ -108,15 +108,15 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
 
     在 **Okta Admin Console** 中，前往 **Applications → Applications**，搜索您在为 ClickHouse Cloud 配置 SAML 单点登录时创建的应用。打开它。
 
-    如果您尚未创建该 SAML 应用，请先参考 [SAML SSO 设置指南](/zh/cloud/security/saml-setup)——SCIM 预配也是在同一个应用中配置的。
+    如果您尚未创建该 SAML 应用，请先参考 [SAML SSO 设置指南](/zh/products/cloud/guides/security/cloud-access-management/saml-sso-setup)——SCIM 预配也是在同一个应用中配置的。
 
     在 **General** 选项卡中，找到 **App Settings** 部分并点击 `Edit`。在 **Provisioning** 下选择 `SCIM`，然后点击 `Save`。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-03.png" size="lg" alt="在 Okta 应用设置中将预配模式设为 SCIM" force />
+    ![在 Okta 应用设置中将预配模式设为 SCIM](/images/cloud/security/scim-okta/scim-okta-03.png)
 
     现在，该应用会显示一个 **Provisioning** 选项卡。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-05.png" size="lg" alt="应用中现已显示 Provisioning 选项卡" force />
+    ![应用中现已显示 Provisioning 选项卡](/images/cloud/security/scim-okta/scim-okta-05.png)
   </Step>
 
   <Step>
@@ -136,13 +136,13 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
       * **Username** — SCIM 令牌 **key** (以 `scim_` 开头) 。
       * **Password** — SCIM 令牌 **secret**。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-06.png" size="lg" alt="输入 SCIM connector URL，并将唯一标识字段设置为 userName" force />
+    ![输入 SCIM connector URL，并将唯一标识字段设置为 userName](/images/cloud/security/scim-okta/scim-okta-06.png)
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-08.png" size="lg" alt="输入用于 SCIM 身份验证的 API 凭据" force />
+    ![输入用于 SCIM 身份验证的 API 凭据](/images/cloud/security/scim-okta/scim-okta-08.png)
 
     点击 `Test Connector Configuration`。你应会看到绿色的确认提示。如果失败，请跳转到[故障排查](#troubleshooting)。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-09.png" size="lg" alt="测试 SCIM 连接" force />
+    ![测试 SCIM 连接](/images/cloud/security/scim-okta/scim-okta-09.png)
 
     点击 `Save`。
   </Step>
@@ -159,11 +159,11 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
     | Deactivate Users       | Enable  | 当用户在 Okta 中被取消分配或停用时，将其从 ClickHouse Cloud 中移除 |
     | Sync Password          | Disable | 不使用——登录通过 SAML 完成，而不是通过密码                     |
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-10.png" size="lg" alt="为用户启用 SCIM 预配操作" force />
+    ![为用户启用 SCIM 预配操作](/images/cloud/security/scim-okta/scim-okta-10.png)
 
     点击 `Save`，然后返回该应用的 **Sign On** / **Provisioning** 选项卡，确认这些设置已生效。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-10b.png" size="lg" alt="保存预配设置并返回 Sign On 选项卡" force />
+    ![保存预配设置并返回 Sign On 选项卡](/images/cloud/security/scim-okta/scim-okta-10b.png)
   </Step>
 
   <Step>
@@ -183,7 +183,9 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
     你还可以添加部门、主管和位置等可选属性——ClickHouse Cloud 会将它们存储在用户资料中，但目前不会将其用于权限控制。任何不属于 SCIM 标准集的属性都会在 ClickHouse Cloud 端被忽略。
 
     <Warning>
-      **电子邮箱大小写很重要。** 请确保 Okta 中的 `userName` 和 `email` 使用完全相同的大小写。ClickHouse Cloud 会将电子邮箱规范化为小写；如果这两个字段的大小写不一致，可能会导致测试失败。
+      **电子邮箱大小写很重要**
+
+      请确保 Okta 中的 `userName` 和 `email` 使用完全相同的大小写。ClickHouse Cloud 会将电子邮箱规范化为小写；如果这两个字段的大小写不一致，可能会导致测试失败。
     </Warning>
   </Step>
 
@@ -194,21 +196,21 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
 
     **在 Okta 中创建组。** 对于你之前设置的每个角色映射，在 Okta 中创建或确认一个**显示名称完全一致**的组。例如，如果你的映射是 `ClickHouse-Admins → Admin`，就在 Okta 中创建一个名为 `ClickHouse-Admins` 的组。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-13.png" size="lg" alt="在 Okta 中创建一个新组" force />
+    ![在 Okta 中创建一个新组](/images/cloud/security/scim-okta/scim-okta-13.png)
 
     打开你刚创建的组，然后点击 `Assign people`，将成员添加到该组。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-14.png" size="lg" alt="点击为该组分配人员" force />
+    ![点击为该组分配人员](/images/cloud/security/scim-okta/scim-okta-14.png)
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-15.png" size="lg" alt="将用户分配到该组" force />
+    ![将用户分配到该组](/images/cloud/security/scim-okta/scim-okta-15.png)
 
     然后将 SCIM 应用也分配给同一个组，这样角色成员关系和应用访问权限就能保持同步。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-16.png" size="lg" alt="将应用分配给该组" force />
+    ![将应用分配给该组](/images/cloud/security/scim-okta/scim-okta-16.png)
 
     **推送这些组。** 在应用的 **Provisioning** 选项卡中，点击 `Push Groups → Find groups by name`，搜索你的组，然后点击 `Save`。对每个角色组重复此操作。预配完成后，每个组的 **Push Status** 都应显示为 **Active (Pushed)**。
 
-    <Image img="/images/cloud/security/scim-okta/scim-okta-17.png" size="lg" alt="在应用的 Push Groups 选项卡上按名称设置 Group Push" force />
+    ![在应用的 Push Groups 选项卡上按名称设置 Group Push](/images/cloud/security/scim-okta/scim-okta-17.png)
 
     **分配用户。** 你有两种方式：
 
@@ -225,7 +227,7 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
 
 配置好预配后，返回 ClickHouse Cloud 控制台中的 **设置 → 用户和角色**，确认已同步的用户已经出现，并且具备预期的角色。
 
-<Image img="/images/cloud/security/scim-okta/scim-okta-18.png" size="lg" alt="在用户和角色中验证用户同步" force />
+![在用户和角色中验证用户同步](/images/cloud/security/scim-okta/scim-okta-18.png)
 
 在将其分配给整个团队**之前**，先用一到两个测试用户执行这份简短的测试计划。每一步都应在几秒内成功；如果没有，请检查 Okta 的 Tasks 队列以及[故障排查](#troubleshooting)部分。
 
@@ -240,7 +242,9 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
 如果任何一步失败，请先解决根本问题后再继续——这些症状通常会连带放大。
 
 <Tip>
-  **在 Okta 中哪里查看 SCIM 错误。** SCIM 错误会显示在 **Reports → System Log** 中 (按你的应用过滤) ，以及该应用的 **Provisioning → View Logs** 页面中。ClickHouse Cloud 返回的错误消息会原样显示——先从这里查起。
+  **在 Okta 中哪里查看 SCIM 错误**
+
+  SCIM 错误会显示在 **Reports → System Log** 中 (按你的应用过滤) ，以及该应用的 **Provisioning → View Logs** 页面中。ClickHouse Cloud 返回的错误消息会原样显示——先从这里查起。
 </Tip>
 
 <div id="best-practices">
@@ -251,7 +255,7 @@ ClickHouse Cloud 支持 SCIM 2.0 (System for Cross-domain Identity Management，
 
 **使用组，而不是直接分配。** 直接将用户分配给应用程序虽然可行，但很快就会难以审计。通过 Okta 组来管理分配，意味着访问审查和角色变更都可以在同一个地方完成。
 
-**查看审计日志。** 每一次 SCIM 操作——创建用户、停用用户、更新 profile——都会记录在 ClickHouse Cloud 审计日志中。请参阅 [Audit logging](/zh/cloud/security/audit-logging)。应定期检查日志，尤其是在大规模预配之后。
+**查看审计日志。** 每一次 SCIM 操作——创建用户、停用用户、更新 profile——都会记录在 ClickHouse Cloud 审计日志中。请参阅 [Audit logging](/zh/products/cloud/reference/security/audit-logging)。应定期检查日志，尤其是在大规模预配之后。
 
 **设置合理的默认角色。** 如果某个 Okta 用户被分配给应用程序，但不在任何已推送的组中，系统就会使用 **默认角色** 创建该用户。请选择限制最严格、但仍能让用户完成*一些*操作的角色，这样即使配置有误，也能以更安全的方式失败。
 
@@ -315,7 +319,7 @@ Okta 传播停用状态最多可能需要一分钟。如果几分钟后该用户
 </div>
 
 **在使用 SCIM 之前，是否需要先配置 SAML 单点登录？**
-是的。SCIM 会创建用户账户，但 ClickHouse Cloud 通过 SAML 对这些账户进行身份验证。请先设置 [SAML 单点登录](/zh/cloud/security/saml-setup)。
+是的。SCIM 会创建用户账户，但 ClickHouse Cloud 通过 SAML 对这些账户进行身份验证。请先设置 [SAML 单点登录](/zh/products/cloud/guides/security/cloud-access-management/saml-sso-setup)。
 
 **SCIM 能否与 Microsoft Entra ID、OneLogin 或其他 SCIM 2.0 IdP 配合使用？**
 官方来说，不能——目前我们只测试并支持 Okta 这一种 IdP。该端点遵循 SCIM 2.0 (RFC 7644) ，但身份验证仅支持 Basic Auth，因此任何无法通过 Basic Auth 进行身份验证的 IdP 都无法使用。其他支持 Basic Auth 的 SCIM 2.0 IdP 在实际使用中可能可行，但我们不作任何保证。

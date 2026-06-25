@@ -1,0 +1,48 @@
+---
+title: 'التوجيه المراعي للنسخ المتماثلة'
+slug: /manage/replica-aware-routing
+description: 'كيفية استخدام التوجيه المراعي للنسخ المتماثلة لزيادة إعادة استخدام ذاكرة التخزين المؤقت'
+keywords: ['السحابة', 'نقاط نهاية ثابتة', 'ثابت', 'نقاط النهاية', 'توجيه ثابت', 'التوجيه', 'التوجيه المراعي للنسخ المتماثلة']
+doc_type: 'guide'
+noindex: true
+---
+
+import PrivatePreviewBadge from "/snippets/components/PrivatePreviewBadge/PrivatePreviewBadge.jsx";
+
+<PrivatePreviewBadge />
+
+يستخدم التوجيه المراعي للنسخ المتماثلة (ويُعرف أيضًا باسم الجلسات اللاصقة أو التوجيه اللاصق أو ألفة الجلسة) [موازنة التحميل بـ ring hash في وكيل Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#ring-hash). والهدف الرئيسي من التوجيه المراعي للنسخ المتماثلة هو زيادة احتمال إعادة استخدام التخزين المؤقت. لكنه لا يضمن العزل.
+
+عند تمكين التوجيه المراعي للنسخ المتماثلة لخدمة ما، نتيح نطاقًا فرعيًا عامًا فوق اسم مضيف الخدمة. بالنسبة إلى خدمة تحمل اسم المضيف `abcxyz123.us-west-2.aws.clickhouse.cloud`، يمكنك استخدام أي اسم مضيف يطابق `*.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` للوصول إلى الخدمة:
+
+| أمثلة على أسماء المضيفين                                                 |
+| ------------------------------------------------------------------------ |
+| `aaa.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
+| `000.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
+| `clickhouse-is-the-best.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` |
+
+عندما يتلقى Envoy اسم مضيف يطابق هذا النمط، فإنه يحسب hash التوجيه استنادًا إلى اسم المضيف، ثم يعثر على ClickHouse server المقابل على hash ring بناءً على قيمة hash المحسوبة. وبافتراض عدم وجود تغييرات جارية على الخدمة (مثل إعادة تشغيل الخوادم أو التوسّع أو التقليص)، فسيختار Envoy دائمًا ClickHouse server نفسه لإجراء اتصال معه.
+
+لاحظ أن اسم المضيف الأصلي سيظل يستخدم موازنة التحميل `LEAST_CONNECTION`، وهي خوارزمية التوجيه الافتراضية.
+
+<div id="limitations-of-replica-aware-routing">
+  ## قيود التوجيه المراعي للنسخ المتماثلة
+</div>
+
+<div id="replica-aware-routing-does-not-guarantee-isolation">
+  ### لا يضمن التوجيه المراعي للنُسخ المتماثلة العزل
+</div>
+
+أي انقطاع في الخدمة، مثل إعادة تشغيل جراب الخادم (لأي سبب، مثل ترقية الإصدار أو التعطل أو التحجيم الرأسي، وما إلى ذلك)، أو زيادة عدد الخوادم أو تقليله، سيؤدي إلى اضطراب في حلقة تجزئة التوجيه. ونتيجةً لذلك، قد تصل الاتصالات التي تحمل اسم المضيف نفسه إلى جراب خادم مختلف.
+
+<div id="replica-aware-routing-does-not-work-out-of-the-box-with-private-link">
+  ### التوجيه المراعي للنسخ المتماثلة لا يعمل تلقائيًا مع Private Link
+</div>
+
+يحتاج العملاء إلى إضافة سجل DNS يدويًا لكي يعمل حلّ الأسماء مع نمط اسم المضيف الجديد. وقد يؤدي ذلك إلى عدم توازن في حمل الخادم إذا استخدمه العملاء بشكل غير صحيح.
+
+<div id="configuring-replica-aware-routing">
+  ## تهيئة التوجيه المراعي للنسخ المتماثلة
+</div>
+
+لتمكين التوجيه المراعي للنسخ المتماثلة، يُرجى التواصل مع [فريق الدعم](https://clickhouse.com/support/program).

@@ -6,27 +6,25 @@ title: 'ウェブターミナル'
 doc_type: 'reference'
 ---
 
-ウェブターミナルは、WebSocket 経由で対話型の `clickhouse-client` セッションを提供する、実験的なブラウザ内インターフェイスです。任意の ClickHouse HTTP ポートの `/webterminal` パスで提供されます。
+ウェブターミナルは、WebSocket 経由で対話型の `clickhouse-client` セッションを提供するブラウザ内インターフェイスです。任意の ClickHouse HTTP ポートの `/webterminal` パスで提供されます。
 
-<Note>
-  ウェブターミナルは実験的な機能であり、デフォルトでは無効になっています。詳細については、以下の[機能の有効化](#enabling-the-feature)を参照してください。
-</Note>
+ターミナルを開くには、任意の ClickHouse HTTP ポートの `/webterminal` (たとえば `http://localhost:8123/webterminal`) にアクセスします。
 
 <div id="enabling-the-feature">
-  ## 機能を有効にする
+  ## 機能の有効化と無効化
 </div>
 
-`/webterminal` エンドポイントは、`allow_experimental_webterminal` サーバー設定で制御されます。この設定が `false` (デフォルト) の場合、`/webterminal` へのリクエストには HTTP ステータス `403 Forbidden` が返されます。
-
-これを有効にするには、サーバー構成に次の内容を追加します。
+`/webterminal` エンドポイントはデフォルトで有効になっており、`enable_webterminal` サーバー設定で制御されます。無効にするには、この設定を `false` に設定します。すると、`/webterminal` へのリクエストは HTTP ステータス `403 Forbidden` を返すようになります。
 
 ```xml
 <clickhouse>
-    <allow_experimental_webterminal>true</allow_experimental_webterminal>
+    <enable_webterminal>false</enable_webterminal>
 </clickhouse>
 ```
 
-有効化したら、任意の ClickHouse の HTTP ポートで `/webterminal` (たとえば `http://localhost:8123/webterminal`) にアクセスして、ターミナルを開きます。
+<Note>
+  `enable_webterminal` は、従来の `allow_experimental_webterminal` 設定に置き換わるものです。`enable_webterminal` が設定されていない場合は、後方互換性のため、古い名前も引き続き使用できます。
+</Note>
 
 <div id="authentication">
   ## 認証
@@ -59,7 +57,7 @@ doc_type: 'reference'
   ## `/play` とのインテグレーション
 </div>
 
-[`/play`](/ja/concepts/features/interfaces/http) Web SQL UI には、ウェブターミナルがドッキング可能なパネルとして組み込まれています。表示は、サイドバーの端末アイコンで切り替えるか、クエリエディタが空の状態で `~` キーを押して切り替えます。`/play` ページは読み込み時に `/webterminal` が利用可能かどうかを判定し、エンドポイントが利用できない場合 (たとえば、実験的な設定が有効になっていない場合) には端末コントロールを非表示にします。
+[`/play`](/ja/concepts/features/interfaces/http) Web SQL UI には、ウェブターミナルがドッキング可能なパネルとして組み込まれています。表示は、サイドバーの端末アイコンで切り替えるか、クエリエディタが空の状態で `~` キーを押して切り替えます。`/play` ページは読み込み時に `/webterminal` が利用可能かどうかを判定し、エンドポイントが利用できない場合 (たとえば、`enable_webterminal` が `false` に設定されている場合) には端末コントロールを非表示にします。
 
 <div id="security">
   ## セキュリティに関する考慮事項
@@ -78,4 +76,4 @@ doc_type: 'reference'
   ## プラットフォーム対応状況
 </div>
 
-このハンドラーは、ClickHouse がサポートするすべてのプラットフォームでコンパイルされます。埋め込み `clickhouse-client` ランナーで使用される擬似端末レイヤーは、移植性のある POSIX プリミティブ (`posix_openpt`/`grantpt`/`unlockpt`) をベースに実装されており、Linux 固有のパスではスレッドセーフな `ptsname_r` を使用します。ClickHouse のスタートページおよび `/play` の `/webterminal` へのリンクは、エンドポイントを利用できない場合 (たとえば、`allow_experimental_webterminal` が有効になっていない場合) に自動的に非表示になります。
+このハンドラーは、ClickHouse がサポートするすべてのプラットフォームでコンパイルされます。埋め込み `clickhouse-client` ランナーで使用される擬似端末レイヤーは、移植性のある POSIX プリミティブ (`posix_openpt`/`grantpt`/`unlockpt`) をベースに実装されており、Linux 固有のパスではスレッドセーフな `ptsname_r` を使用します。ClickHouse のスタートページおよび `/play` の `/webterminal` へのリンクは、エンドポイントを利用できない場合 (たとえば、`enable_webterminal` が `false` に設定されている場合) に自動的に非表示になります。

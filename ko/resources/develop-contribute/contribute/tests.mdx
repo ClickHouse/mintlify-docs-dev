@@ -177,6 +177,36 @@ sudo ./install.sh
   * 다른 테스트가 동일한 내용을 테스트하지 않는지 확인합니다(즉, 먼저 grep해 보십시오).
 </Note>
 
+<div id="templated-tests-with-jinja">
+  ### Jinja를 사용한 템플릿 테스트
+</div>
+
+파일 이름에 `.j2` 접미사를 추가하면 `.sql` 테스트를 [Jinja2](https://jinja.palletsprojects.com/) 템플릿으로 작성할 수 있습니다. 즉, `foo.sql`은 `foo.sql.j2`가 됩니다. 테스트를 실행하기 전에 `clickhouse-test`가 템플릿을 일반 `.sql` 스크립트로 렌더링한 뒤, 그 결과를 실행합니다.
+
+이 방식은 테스트에서 약간씩만 다른 동일한 쿼리를 반복할 때 유용합니다. 각 쿼리를 일일이 작성하는 대신, 루프를 사용해 간결한 템플릿으로부터 쿼리를 생성할 수 있습니다. 가장 자주 사용하는 구문은 다음과 같습니다.
+
+* 블록을 반복하는 `{% for ... %} ... {% endfor %}`,
+* 출력에 값을 삽입하는 `{{ expression }}`,
+* 생성된 스크립트를 깔끔하게 유지하기 위해 인접한 공백을 제거하는 `-%}` 및 `{%-`.
+
+예를 들어, 다음과 같은 템플릿이 있습니다.
+
+```sql
+{% for type in ['UInt8', 'UInt16', 'UInt32'] -%}
+SELECT toTypeName(0::{{ type }});
+{% endfor -%}
+```
+
+렌더링 결과:
+
+```sql
+SELECT toTypeName(0::UInt8);
+SELECT toTypeName(0::UInt16);
+SELECT toTypeName(0::UInt32);
+```
+
+예상 출력은 완전히 확장된 결과를 담은 일반 `<name>.reference` 파일로 제공할 수도 있고, `clickhouse-test`가 비교 전에 같은 방식으로 렌더링하는 `<name>.reference.j2` Template으로 제공할 수도 있습니다. 예상 출력도 반복되는 패턴을 따르는 경우에는 Template 형식을 사용하십시오. 더 많은 예시는 `tests/queries/0_stateless/`에 있는 기존 `*.sql.j2` 파일을 참조하십시오.
+
 <div id="restricting-test-runs">
   ### 테스트 실행 제한
 </div>
@@ -187,8 +217,8 @@ sudo ./install.sh
 
 ```sql
 -- Tags: no-fasttest, no-replicated-database
--- no-fasttest: <여기에_태그_사용_이유를_작성하세요>
--- no-replicated-database: <여기에_이유를_작성하세요>
+-- no-fasttest: <provide_a_reason_for_the_tag_here>
+-- no-replicated-database: <provide_a_reason_here>
 
 SELECT 1
 ```
@@ -198,8 +228,8 @@ SELECT 1
 ```bash
 #!/usr/bin/env bash
 # Tags: no-fasttest, no-replicated-database
-# - no-fasttest: <여기에_태그_사용_이유를_작성하세요>
-# - no-replicated-database: <여기에_이유를_작성하세요>
+# - no-fasttest: <provide_a_reason_for_the_tag_here>
+# - no-replicated-database: <provide_a_reason_here>
 ```
 
 사용 가능한 태그 목록:
@@ -217,7 +247,7 @@ SELECT 1
 | `replica`                      | `zookeeper`와 동일합니다. `zookeeper` 사용을 권장합니다                 |                                                      |
 | `no-fasttest`                  | [빠른 테스트](#test-types)에서는 테스트를 실행하지 않습니다                   | 테스트에서 빠른 테스트에 비활성화된 `MySQL` 테이블 엔진을 사용합니다            |
 | `fasttest-only`                | 테스트를 [빠른 테스트](#test-types)에서만 실행합니다                       |                                                      |
-| `no-[asan, tsan, msan, ubsan]` | [sanitizers](#sanitizers)가 적용된 빌드에서는 테스트를 비활성화합니다         | 테스트가 sanitizer와 호환되지 않는 QEMU에서 실행됩니다                 |
+| `no-[asan, tsan, msan, ubsan]` | [새니타이저](#sanitizers)가 적용된 빌드에서는 테스트를 비활성화합니다         | 테스트가 새니타이저와 호환되지 않는 QEMU에서 실행됩니다                 |
 | `no-replicated-database`       | 기본 데이터베이스가 `ReplicatedDatabaseEngine`를 사용할 때 테스트를 비활성화합니다 |                                                      |
 | `no-ordinary-database`         | 기본 데이터베이스 엔진이 `Ordinary`일 때 테스트를 비활성화합니다                  |                                                      |
 | `no-parallel`                  | 이 테스트와 다른 테스트를 병렬로 실행하지 않도록 합니다                           | 테스트가 `system` 테이블에서 읽기 때문에 불변식이 깨질 수 있습니다            |
@@ -226,7 +256,7 @@ SELECT 1
 | `no-release`                   | Release 빌드에서는 테스트를 비활성화합니다                                |                                                      |
 | `no-darwin`                    | macOS(Darwin)에서는 테스트를 비활성화합니다                             | 테스트가 분산 쿼리, `procfs`, HTTP 서버와 같은 Linux 전용 기능에 의존합니다 |
 
-다음 옵션도 지원됩니다: `no-stress`, `no-polymorphic-parts`, `no-random-settings`, `no-random-merge-tree-settings`, `no-backward-compatibility-check`, `no-cpu-x86_64`, `no-cpu-aarch64`, `no-cpu-ppc64le`, `no-s3-storage`.
+다음 옵션도 지원됩니다: `no-polymorphic-parts`, `no-random-settings`, `no-random-merge-tree-settings`, `no-backward-compatibility-check`, `no-cpu-x86_64`, `no-cpu-aarch64`, `no-cpu-ppc64le`, `no-s3-storage`.
 
 위 설정에 더해, 특정 ClickHouse 기능 사용 여부를 정의하기 위해 `system.build_options`의 `USE_*` 플래그도 사용할 수 있습니다.
 예를 들어 테스트에서 MySQL 테이블을 사용하는 경우 `use-mysql` 태그를 추가해야 합니다.
@@ -635,9 +665,6 @@ clang 소스 리포지토리에서 `clang-format-diff` 도구를 찾을 수 있�
 이 도구는 `clang-format`만큼 충분히 테스트되지는 않았습니다.
 
 `CLion`에는 자체 코드 포매터가 있으며, 코드 스타일에 맞게 조정해야 합니다.
-
-또한 코드의 오탈자를 찾기 위해 `codespell`도 사용합니다.
-이 역시 자동화되어 있습니다.
 
 <div id="test-coverage">
   ## 테스트 커버리지

@@ -8,60 +8,27 @@ keywords: ['clickstack', 'ttl', 'retenção de dados', 'ciclo de vida', 'gerenci
 ---
 
 import { Image } from "/snippets/components/Image.jsx";
+import OtelLogsSchema from '/snippets/pt-BR/clickstack/_schema_otel_logs.mdx';
 
 <div id="ttl-clickstack">
   ## TTL no ClickStack
 </div>
 
-Time-to-Live (TTL) é um recurso essencial do ClickStack para retenção e gerenciamento eficientes de dados, especialmente considerando que grandes volumes de dados são gerados continuamente. O TTL permite a expiração e a exclusão automáticas de dados mais antigos, garantindo o uso otimizado do armazenamento e a manutenção do desempenho sem intervenção manual. Essa capacidade é fundamental para manter o banco de dados enxuto, reduzir os custos de armazenamento e garantir que as consultas continuem rápidas e eficientes ao se concentrarem nos dados mais relevantes e recentes. Além disso, ajuda na conformidade com políticas de retenção de dados ao gerenciar sistematicamente os ciclos de vida dos dados, aumentando a sustentabilidade e a escalabilidade geral da solução de observabilidade.
+Time-to-Live (TTL) é um recurso essencial no ClickStack para retenção e gerenciamento eficientes de dados, especialmente considerando que grandes volumes de dados são gerados continuamente. O TTL permite a expiração e exclusão automáticas de dados mais antigos, garantindo o uso ideal do armazenamento e a manutenção do desempenho sem intervenção manual. Essa capacidade é essencial para manter o banco de dados enxuto, reduzir os custos de armazenamento e garantir que as consultas continuem rápidas e eficientes ao se concentrarem nos dados mais relevantes e recentes. Além disso, ela ajuda na conformidade com políticas de retenção de dados ao gerenciar sistematicamente os ciclos de vida dos dados, aumentando assim a sustentabilidade e a escalabilidade gerais da solução de observabilidade.
 
-**Por padrão, o ClickStack retém os dados por 3 dias. Para alterar isso, consulte [&quot;Modificando o TTL&quot;](#modifying-ttl).**
+**Por padrão, o ClickStack retém os dados por 3 dias. Para modificar isso, consulte [&quot;Como modificar o TTL&quot;](#modifying-ttl).**
 
-No ClickHouse, o TTL é controlado no nível da tabela. Por exemplo, o schema dos logs é mostrado abaixo:
+O TTL é controlado no nível da tabela no ClickHouse. Por exemplo, o schema padrão para logs é mostrado abaixo; `${TABLES_TTL}` é substituído pela retenção configurada (3 dias, a menos que seja alterada) quando o collector cria a tabela:
 
-```sql
-CREATE TABLE default.otel_logs
-(
-    `Timestamp` DateTime64(9) CODEC(Delta(8), ZSTD(1)),
-    `TimestampTime` DateTime DEFAULT toDateTime(Timestamp),
-    `TraceId` String CODEC(ZSTD(1)),
-    `SpanId` String CODEC(ZSTD(1)),
-    `TraceFlags` UInt8,
-    `SeverityText` LowCardinality(String) CODEC(ZSTD(1)),
-    `SeverityNumber` UInt8,
-    `ServiceName` LowCardinality(String) CODEC(ZSTD(1)),
-    `Body` String CODEC(ZSTD(1)),
-    `ResourceSchemaUrl` LowCardinality(String) CODEC(ZSTD(1)),
-    `ResourceAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `ScopeSchemaUrl` LowCardinality(String) CODEC(ZSTD(1)),
-    `ScopeName` String CODEC(ZSTD(1)),
-    `ScopeVersion` LowCardinality(String) CODEC(ZSTD(1)),
-    `ScopeAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `LogAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    INDEX idx_trace_id TraceId TYPE bloom_filter(0.001) GRANULARITY 1,
-    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_scope_attr_key mapKeys(ScopeAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_scope_attr_value mapValues(ScopeAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_log_attr_key mapKeys(LogAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_log_attr_value mapValues(LogAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_body Body TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 8
-)
-ENGINE = MergeTree
-PARTITION BY toDate(TimestampTime)
-PRIMARY KEY (ServiceName, TimestampTime)
-ORDER BY (ServiceName, TimestampTime, Timestamp)
-TTL TimestampTime + toIntervalDay(3)
-SETTINGS ttl_only_drop_parts = 1
-```
+<OtelLogsSchema />
 
-O particionamento no ClickHouse permite separar logicamente os dados em disco de acordo com uma coluna ou expressão SQL. Ao separar os dados logicamente, cada partição pode ser operada de forma independente, por exemplo, sendo excluída quando expirar de acordo com uma política de TTL.
+O particionamento no ClickHouse permite que os dados sejam separados logicamente no disco de acordo com uma coluna ou expressão SQL. Ao separar os dados logicamente, cada partição pode ser operada de forma independente, por exemplo, removida quando expirar de acordo com uma política de TTL.
 
-Como mostrado no exemplo acima, o particionamento é especificado em uma tabela quando ela é definida inicialmente por meio da cláusula `PARTITION BY`. Essa cláusula pode conter uma expressão SQL sobre qualquer coluna, e o resultado dela definirá para qual partição uma linha será enviada. Isso faz com que os dados fiquem logicamente associados (por meio de um prefixo comum no nome da pasta) a cada partição no disco, que então pode ser consultada isoladamente. No exemplo acima, o schema padrão `otel_logs` particiona por dia usando a expressão `toDate(Timestamp).` À medida que as linhas são inseridas no ClickHouse, essa expressão é avaliada para cada linha e a encaminha para a partição resultante, se ela já existir (se a linha for a primeira de um dia, a partição será criada). Para mais detalhes sobre particionamento e suas outras aplicações, consulte [&quot;Partições de tabelas&quot;](/pt-BR/concepts/core-concepts/partitions).
+Como mostrado no exemplo acima, o particionamento é especificado em uma tabela quando ela é definida inicialmente por meio da cláusula `PARTITION BY`. Essa cláusula pode conter uma expressão SQL em qualquer coluna, cujo resultado definirá para qual partição uma linha será enviada. Isso faz com que os dados sejam associados logicamente (por meio de um prefixo comum no nome da pasta) a cada partição no disco, que então pode ser consultada isoladamente. No exemplo acima, o schema padrão `otel_logs` particiona por dia usando a expressão `toDate(Timestamp)`. À medida que as linhas são inseridas no ClickHouse, essa expressão será avaliada em relação a cada linha e encaminhada para a partição resultante, se ela existir (se a linha for a primeira de um dia, a partição será criada). Para mais detalhes sobre particionamento e suas outras aplicações, consulte [&quot;Partições de tabela&quot;](/pt-BR/concepts/core-concepts/partitions).
 
 <Image img="/images/use-cases/observability/observability-14.png" alt="Partições" size="lg" />
 
-O schema da tabela também inclui um `TTL TimestampTime + toIntervalDay(3)` e a configuração `ttl_only_drop_parts = 1`. A primeira cláusula garante que os dados serão removidos quando tiverem mais de 3 dias. A configuração `ttl_only_drop_parts = 1` faz com que apenas partes de dados em que todos os dados expiraram sejam removidas (em vez de tentar excluir linhas parcialmente). Como o particionamento garante que dados de dias diferentes nunca sejam &quot;mesclados&quot;, os dados podem, assim, ser removidos com eficiência.
+O schema da tabela também inclui `TTL toDateTime(Timestamp) + ${TABLES_TTL}` e a configuração `ttl_only_drop_parts = 1`. A primeira cláusula garante que os dados serão removidos quando tiverem mais do que o TTL configurado (3 dias por padrão). A configuração `ttl_only_drop_parts = 1` faz com que apenas partes de dados em que todos os dados expiraram sejam removidas (em vez de tentar excluir linhas parcialmente). Como o particionamento garante que dados de dias diferentes nunca sejam &quot;mesclados&quot;, os dados podem, assim, ser removidos com eficiência.
 
 <Warning>
   **`ttl_only_drop_parts`**

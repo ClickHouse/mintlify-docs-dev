@@ -351,7 +351,7 @@ blockSerializedSize(x1[, x2[, ...]])
 
 **Argumentos**
 
-* `x1[, x2, ...]` — Cualquier cantidad de valores para los que se obtiene el tamaño sin comprimir del bloque. [`Any`](/es/reference/data-types)
+* `x1[, x2, ...]` — Cualquier cantidad de valores para los que se obtiene el tamaño sin comprimir del bloque. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -469,7 +469,7 @@ byteSize(arg1[, arg2, ...])
 
 **Argumentos**
 
-* `arg1[, arg2, ...]` — Valores de cualquier tipo de dato cuyo tamaño en bytes sin comprimir se desea estimar. [`Any`](/es/reference/data-types)
+* `arg1[, arg2, ...]` — Valores de cualquier tipo de dato cuyo tamaño en bytes sin comprimir se desea estimar. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -1129,7 +1129,7 @@ En el caso de una consulta distribuida, se devuelve el nombre del usuario que in
 currentUser()
 ```
 
-**Alias**: `current_user`, `user`
+**Alias**: `session_user`, `user`, `current_user`
 
 **Argumentos**
 
@@ -1254,7 +1254,7 @@ defaultValueOfArgumentType(expression)
 
 **Argumentos**
 
-* `expression` — Un valor de tipo arbitrario o una expresión cuyo resultado es un valor de tipo arbitrario. [`Any`](/es/reference/data-types)
+* `expression` — Un valor de tipo arbitrario o una expresión cuyo resultado es un valor de tipo arbitrario. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -1386,7 +1386,7 @@ dumpColumnStructure(x)
 
 **Argumentos**
 
-* `x` — Valor cuya descripción se quiere obtener. [`Any`](/es/reference/data-types)
+* `x` — Valor cuya descripción se quiere obtener. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -1683,7 +1683,7 @@ finalizeAggregation(state)
 
 **Valor devuelto**
 
-Devuelve el resultado final de la agregación. [`Any`](/es/reference/data-types)
+Devuelve el resultado final de la agregación. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -1959,12 +1959,13 @@ La operación inversa de esta función es [`parseReadableSize`](#parseReadableSi
 **Sintaxis**
 
 ```sql
-formatReadableDecimalSize(x)
+formatReadableDecimalSize(value[, precision])
 ```
 
 **Argumentos**
 
-* `x` — Tamaño en bytes. [`UInt64`](/es/reference/data-types/int-uint)
+* `value` — Tamaño en bytes. [`Int8`](/es/reference/data-types/int-uint) o [`Int16`](/es/reference/data-types/int-uint) o [`Int32`](/es/reference/data-types/int-uint) o [`Int64`](/es/reference/data-types/int-uint) o [`UInt8`](/es/reference/data-types/int-uint) o [`UInt16`](/es/reference/data-types/int-uint) o [`UInt32`](/es/reference/data-types/int-uint) o [`UInt64`](/es/reference/data-types/int-uint) o [`Float32`](/es/reference/data-types/float) o [`Float64`](/es/reference/data-types/float) o [`Decimal`](/es/reference/data-types/decimal)
+* `precision` — Opcional. Número de dígitos después del punto decimal. El valor predeterminado es 2. [`const UInt8`](/es/reference/data-types/int-uint)
 
 **Valor devuelto**
 
@@ -1989,6 +1990,20 @@ SELECT
 └────────────────┴────────────┘
 ```
 
+**Con precisión explícita**
+
+```sql title=Query
+SELECT
+    formatReadableDecimalSize(192851925, 0) AS no_decimals,
+    formatReadableDecimalSize(192851925, 4) AS four_decimals
+```
+
+```response title=Response
+┌─no_decimals─┬─four_decimals─┐
+│ 193 MB      │ 192.8519 MB   │
+└─────────────┴───────────────┘
+```
+
 <div id="formatReadableQuantity">
   ## formatReadableQuantity
 </div>
@@ -2003,12 +2018,13 @@ Los resultados pueden no ser óptimos con valores grandes.
 **Sintaxis**
 
 ```sql
-formatReadableQuantity(x)
+formatReadableQuantity(value[, precision])
 ```
 
 **Argumentos**
 
-* `x` — Un número para formatear. [`UInt64`](/es/reference/data-types/int-uint)
+* `value` — Un número para formatear. [`Int8`](/es/reference/data-types/int-uint) o [`Int16`](/es/reference/data-types/int-uint) o [`Int32`](/es/reference/data-types/int-uint) o [`Int64`](/es/reference/data-types/int-uint) o [`UInt8`](/es/reference/data-types/int-uint) o [`UInt16`](/es/reference/data-types/int-uint) o [`UInt32`](/es/reference/data-types/int-uint) o [`UInt64`](/es/reference/data-types/int-uint) o [`Float32`](/es/reference/data-types/float) o [`Float64`](/es/reference/data-types/float) o [`Decimal`](/es/reference/data-types/decimal)
+* `precision` — Opcional. Número de dígitos después del punto decimal. El valor predeterminado es 2. [`const UInt8`](/es/reference/data-types/int-uint)
 
 **Valor devuelto**
 
@@ -2033,6 +2049,20 @@ SELECT
 └────────────────┴───────────────────┘
 ```
 
+**Con precisión especificada**
+
+```sql title=Query
+SELECT
+    formatReadableQuantity(98765432101234, 0) AS no_decimals,
+    formatReadableQuantity(98765432101234, 4) AS four_decimals
+```
+
+```response title=Response
+┌─no_decimals──┬─four_decimals─────┐
+│ 99 trillion  │ 98.7654 trillion  │
+└──────────────┴───────────────────┘
+```
+
 <div id="formatReadableSize">
   ## formatReadableSize
 </div>
@@ -2047,14 +2077,15 @@ Esta función acepta cualquier tipo numérico como entrada, pero internamente lo
 **Sintaxis**
 
 ```sql
-formatReadableSize(x)
+formatReadableSize(value[, precision])
 ```
 
 **Alias**: `FORMAT_BYTES`
 
 **Argumentos**
 
-* `x` — Tamaño en bytes. [`UInt64`](/es/reference/data-types/int-uint)
+* `value` — Tamaño en bytes. [`Int8`](/es/reference/data-types/int-uint) o [`Int16`](/es/reference/data-types/int-uint) o [`Int32`](/es/reference/data-types/int-uint) o [`Int64`](/es/reference/data-types/int-uint) o [`UInt8`](/es/reference/data-types/int-uint) o [`UInt16`](/es/reference/data-types/int-uint) o [`UInt32`](/es/reference/data-types/int-uint) o [`UInt64`](/es/reference/data-types/int-uint) o [`Float32`](/es/reference/data-types/float) o [`Float64`](/es/reference/data-types/float) o [`Decimal`](/es/reference/data-types/decimal)
+* `precision` — Opcional. Número de dígitos después del punto decimal. El valor predeterminado es 2. [`const UInt8`](/es/reference/data-types/int-uint)
 
 **Valor devuelto**
 
@@ -2079,15 +2110,31 @@ SELECT
 └────────────────┴────────────┘
 ```
 
+**Con precisión explícita**
+
+```sql title=Query
+SELECT
+    formatReadableSize(192851925, 0) AS no_decimals,
+    formatReadableSize(192851925, 4) AS four_decimals
+```
+
+```response title=Response
+┌─no_decimals─┬─four_decimals──┐
+│ 184 MiB     │ 183.9179 MiB   │
+└─────────────┴────────────────┘
+```
+
 <div id="formatReadableTimeDelta">
   ## formatReadableTimeDelta
 </div>
 
 Introducido en: v20.12.0
 
-Dado un intervalo de tiempo (delta) en segundos, esta función devuelve dicho delta como una cadena con años/meses/días/horas/minutos/segundos/milisegundos/microsegundos/nanosegundos.
+Dado un intervalo de tiempo (delta) en segundos o una expresión `INTERVAL`, esta función devuelve dicho delta como una cadena con años/meses/días/horas/minutos/segundos/milisegundos/microsegundos/nanosegundos.
 
 Esta función acepta cualquier tipo numérico como entrada, pero internamente lo convierte a `Float64`. Los resultados pueden no ser óptimos con valores grandes.
+
+Cuando se pasa una expresión `INTERVAL`, su valor se convierte a segundos. No se admiten las unidades de intervalo `MONTH` y superiores (`MONTH`, `QUARTER`, `YEAR`), ya que no representan un intervalo de duración fija en segundos.
 
 **Sintaxis**
 
@@ -2097,7 +2144,7 @@ formatReadableTimeDelta(column[, maximum_unit, minimum_unit])
 
 **Argumentos**
 
-* `column` — Una columna con una diferencia de tiempo numérica. [`Float64`](/es/reference/data-types/float)
+* `column` — Una columna con una diferencia de tiempo numérica, o una expresión `INTERVAL`. No se admiten unidades de intervalo de `MONTH` en adelante. [`Float64`](/es/reference/data-types/float) o [`Interval`](/es/reference/data-types/int-uint)
 * `maximum_unit` — Opcional. La unidad máxima que se mostrará. Valores aceptables: `nanoseconds`, `microseconds`, `milliseconds`, `seconds`, `minutes`, `hours`, `days`, `months`, `years`. Valor predeterminado: `years`. [`const String`](/es/reference/data-types/string)
 * `minimum_unit` — Opcional. La unidad mínima que se mostrará. Todas las unidades más pequeñas se truncan. Valores aceptables: `nanoseconds`, `microseconds`, `milliseconds`, `seconds`, `minutes`, `hours`, `days`, `months`, `years`. Si el valor especificado explícitamente es mayor que `maximum_unit`, se lanzará una excepción. Valor predeterminado: `seconds` si `maximum_unit` es `seconds` o una unidad mayor; `nanoseconds` en caso contrario. [`const String`](/es/reference/data-types/string)
 
@@ -2137,6 +2184,18 @@ SELECT
 │      12345 │ 205 minutes and 45 seconds                                      │
 │  432546534 │ 7209108 minutes and 54 seconds                                  │
 └────────────┴─────────────────────────────────────────────────────────────────┘
+```
+
+**Con una expresión INTERVAL**
+
+```sql title=Query
+SELECT formatReadableTimeDelta(INTERVAL 12345 SECOND) AS time_delta
+```
+
+```response title=Response
+┌─time_delta─────────────────────────┐
+│ 3 hours, 25 minutes and 45 seconds │
+└────────────────────────────────────┘
 ```
 
 <div id="fuzzQuery">
@@ -2569,7 +2628,7 @@ getServerSetting(setting_name')
 
 **Valor devuelto**
 
-Devuelve el valor actual del SETTING del servidor. [`Any`](/es/reference/data-types)
+Devuelve el valor actual del SETTING del servidor. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -2605,7 +2664,7 @@ getSetting(setting_name)
 
 **Valor devuelto**
 
-Devuelve el valor actual del SETTING. [`Any`](/es/reference/data-types)
+Devuelve el valor actual del SETTING. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -2751,7 +2810,7 @@ getTypeSerializationStreams(col)
 
 **Argumentos**
 
-* `col` — Columna o representación en cadena de un tipo de dato a partir de la cual se detectará el tipo de dato. [`Any`](/es/reference/data-types)
+* `col` — Columna o representación en cadena de un tipo de dato a partir de la cual se detectará el tipo de dato. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -2799,7 +2858,7 @@ globalVariable(name)
 
 **Valor devuelto**
 
-Devuelve el valor de la variable `name`. [`Any`](/es/reference/data-types)
+Devuelve el valor de la variable `name`. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -3065,11 +3124,11 @@ identity(x)
 
 **Argumentos**
 
-* `x` — Valor de entrada. [`Any`](/es/reference/data-types)
+* `x` — Valor de entrada. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
-Devuelve el valor de entrada sin modificar. [`Any`](/es/reference/data-types)
+Devuelve el valor de entrada sin modificar. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -3099,7 +3158,7 @@ ignore(x)
 
 **Argumentos**
 
-* `x` — Un valor de entrada que no se utiliza y se pasa únicamente para evitar un error de sintaxis. [`Any`](/es/reference/data-types)
+* `x` — Un valor de entrada que no se utiliza y se pasa únicamente para evitar un error de sintaxis. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -3301,11 +3360,11 @@ initializeAggregation(aggregate_function, arg1[, arg2, ...])
 **Argumentos**
 
 * `aggregate_function` — Nombre de la función de agregación que se va a inicializar. [`String`](/es/reference/data-types/string)
-* `arg1[, arg2, ...]` — Argumentos de la función de agregación. [`Any`](/es/reference/data-types)
+* `arg1[, arg2, ...]` — Argumentos de la función de agregación. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
-Devuelve el resultado de la agregación para cada fila que se pasa a la función. El tipo de retorno es el mismo que el de la función que `initializeAggregation` recibe como primer argumento. [`Any`](/es/reference/data-types)
+Devuelve el resultado de la agregación para cada fila que se pasa a la función. El tipo de retorno es el mismo que el de la función que `initializeAggregation` recibe como primer argumento. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -3356,7 +3415,7 @@ isConstant(x)
 
 **Argumentos**
 
-* `x` — Una expresión que se debe comprobar. [`Any`](/es/reference/data-types)
+* `x` — Una expresión que se debe comprobar. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -3478,11 +3537,11 @@ joinGet(join_storage_table_name, value_column, join_keys)
 
 * `join_storage_table_name` — Un identificador que indica dónde realizar la búsqueda. El identificador se busca en la base de datos predeterminada (consulte el parámetro `default_database` en el archivo de configuración). Para anular la base de datos predeterminada, use la consulta `USE database_name` o especifique la base de datos y la tabla mediante un punto, como `database_name.table_name`. [`String`](/es/reference/data-types/string)
 * `value_column` — El nombre de la columna de la tabla que contiene los datos necesarios. [`const String`](/es/reference/data-types/string)
-* `join_keys` — Una lista de claves de join. [`Any`](/es/reference/data-types)
+* `join_keys` — Una lista de claves de join. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
-Devuelve una lista de valores correspondientes a la lista de claves. [`Any`](/es/reference/data-types)
+Devuelve una lista de valores correspondientes a la lista de claves. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -3553,11 +3612,11 @@ joinGetOrNull(join_storage_table_name, value_column, join_keys)
 
 * `join_storage_table_name` — Un identificador que indica dónde realizar la búsqueda. El identificador se busca en la base de datos predeterminada (consulte el parámetro default&#95;database en el archivo de configuración). Para usar otra base de datos distinta de la predeterminada, utilice la consulta `USE database_name` o especifique la base de datos y la tabla separadas por un punto, como en `database_name.table_name`. [`String`](/es/reference/data-types/string)
 * `value_column` — El nombre de la columna de la tabla que contiene los datos necesarios. [`const String`](/es/reference/data-types/string)
-* `join_keys` — Una lista de claves de join. [`Any`](/es/reference/data-types)
+* `join_keys` — Una lista de claves de join. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
-Devuelve una lista de valores correspondientes a la lista de claves, o `NULL` si no se encuentra una clave. [`Any`](/es/reference/data-types)
+Devuelve una lista de valores correspondientes a la lista de claves, o `NULL` si no se encuentra una clave. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -3707,20 +3766,20 @@ materialize(x)
 
 **Argumentos**
 
-* `x` — Una constante. [`Any`](/es/reference/data-types)
+* `x` — Una constante. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
-Devuelve una columna completa con el valor constante. [`Any`](/es/reference/data-types)
+Devuelve una columna completa con el valor constante. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
 **Ejemplo de uso**
 
 ```sql title=Query
--- En el ejemplo siguiente, la función `countMatches` espera un segundo argumento constante.
--- Este comportamiento puede depurarse usando la función `materialize` para convertir una constante en una columna completa,
--- verificando que la función arroja un error para un argumento no constante.
+-- In the example below the `countMatches` function expects a constant second argument.
+-- This behaviour can be debugged by using the `materialize` function to turn a constant into a full column,
+-- verifying that the function throws an error for a non-constant argument.
 
 SELECT countMatches('foobarfoo', 'foo');
 SELECT countMatches('foobarfoo', materialize('foo'));
@@ -3835,13 +3894,13 @@ neighbor(column, offset[, default_value])
 
 **Argumentos**
 
-* `column` — La columna de origen. [`Any`](/es/reference/data-types)
+* `column` — La columna de origen. [`Any`](/es/reference/data-types/index)
 * `offset` — El desplazamiento con respecto a la fila actual. Los valores positivos avanzan y los valores negativos retroceden. [`Integer`](/es/reference/data-types/int-uint)
-* `default_value` — Opcional. El valor que se devuelve si el desplazamiento queda fuera de los límites de los datos. Si no se especifica, se usa el valor predeterminado del tipo de columna. [`Any`](/es/reference/data-types)
+* `default_value` — Opcional. El valor que se devuelve si el desplazamiento queda fuera de los límites de los datos. Si no se especifica, se usa el valor predeterminado del tipo de columna. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
-Devuelve un valor en el desplazamiento especificado o el valor predeterminado si queda fuera de los límites. [`Any`](/es/reference/data-types)
+Devuelve un valor en el desplazamiento especificado o el valor predeterminado si queda fuera de los límites. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -4644,7 +4703,7 @@ Acumula los estados de una función de agregación para cada fila de un bloque d
   **Obsoleto**
 
   El estado se restablece con cada nuevo bloque de datos.
-  Debido a este comportamiento propenso a errores, la función ha quedado obsoleta, y se recomienda usar [funciones de ventana](/es/reference/functions/window-functions) en su lugar.
+  Debido a este comportamiento propenso a errores, la función ha quedado obsoleta, y se recomienda usar [funciones de ventana](/es/reference/functions/window-functions/index) en su lugar.
   Puede usar la configuración [`allow_deprecated_error_prone_window_functions`](/es/reference/settings/session-settings#allow_deprecated_error_prone_window_functions) para permitir el uso de esta función.
 </Warning>
 
@@ -4657,11 +4716,11 @@ runningAccumulate(agg_state[, grouping])
 **Argumentos**
 
 * `agg_state` — Estado de la función de agregación. [`AggregateFunction`](/es/reference/data-types/aggregatefunction)
-* `grouping` — Opcional. Clave de agrupación. El estado de la función se restablece si cambia el valor de `grouping`. Puede ser cualquiera de los tipos de datos compatibles para los que esté definido el operador de igualdad. [`Any`](/es/reference/data-types)
+* `grouping` — Opcional. Clave de agrupación. El estado de la función se restablece si cambia el valor de `grouping`. Puede ser cualquiera de los tipos de datos compatibles para los que esté definido el operador de igualdad. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
-Devuelve el resultado acumulado para cada fila. [`Any`](/es/reference/data-types)
+Devuelve el resultado acumulado para cada fila. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -4695,7 +4754,7 @@ Introducido en: v21.3.0
 Calcula el número de eventos concurrentes.
 Cada evento tiene una hora de inicio y una hora de finalización.
 La hora de inicio se incluye en el evento, mientras que la hora de finalización se excluye.
-Las columnas con una hora de inicio y una hora de finalización deben tener el mismo tipo de datos.
+Las columnas con una hora de inicio y una hora de finalización deben tener el mismo tipo de dato.
 La función calcula el número total de eventos activos (concurrentes) para cada hora de inicio de evento.
 
 <Tip>
@@ -4710,7 +4769,7 @@ La función calcula el número total de eventos activos (concurrentes) para cada
 <Warning>
   **Obsoleto**
 
-  Se recomienda usar [funciones de ventana](/es/reference/functions/window-functions) en su lugar.
+  Se recomienda usar [funciones de ventana](/es/reference/functions/window-functions/index) en su lugar.
 </Warning>
 
 **Sintaxis**
@@ -4759,7 +4818,7 @@ Devuelve `0` para la primera fila y, para las siguientes, la diferencia con resp
 
   Solo devuelve diferencias dentro del bloque de datos que se está procesando en ese momento.
   Debido a este comportamiento propenso a errores, la función está obsoleta.
-  Se recomienda usar [funciones de ventana](/es/reference/functions/window-functions) en su lugar.
+  Se recomienda usar [funciones de ventana](/es/reference/functions/window-functions/index) en su lugar.
 
   Puede usar la configuración [`allow_deprecated_error_prone_window_functions`](/es/reference/settings/session-settings#allow_deprecated_error_prone_window_functions) para permitir el uso de esta función.
 </Warning>
@@ -4778,7 +4837,7 @@ runningDifference(x)
 
 **Argumentos**
 
-* `x` — Columna para la que se calcula la diferencia entre valores consecutivos. [`Any`](/es/reference/data-types)
+* `x` — Columna para la que se calcula la diferencia entre valores consecutivos. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -4847,7 +4906,7 @@ Calcula la diferencia entre los valores de filas consecutivas en un bloque de da
 
   Solo devuelve las diferencias dentro del bloque de datos que se está procesando en ese momento.
   Debido a este comportamiento propenso a errores, la función está obsoleta.
-  Se recomienda usar [funciones de ventana](/es/reference/functions/window-functions) en su lugar.
+  Se recomienda usar [funciones de ventana](/es/reference/functions/window-functions/index) en su lugar.
 
   Puede usar la configuración `allow_deprecated_error_prone_window_functions` para permitir el uso de esta función.
 </Warning>
@@ -4860,11 +4919,11 @@ runningDifferenceStartingWithFirstValue(x)
 
 **Argumentos**
 
-* `x` — Columna para la que se calcula la diferencia acumulada. [`Any`](/es/reference/data-types)
+* `x` — Columna para la que se calcula la diferencia acumulada. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
-Devuelve la diferencia entre valores consecutivos; para la primera fila, devuelve el valor de esa misma fila. [`Any`](/es/reference/data-types)
+Devuelve la diferencia entre valores consecutivos; para la primera fila, devuelve el valor de esa misma fila. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -5280,7 +5339,7 @@ throwIf(x[, message[, error_code]])
 
 **Argumentos**
 
-* `x` — La condición que se debe comprobar. [`Any`](/es/reference/data-types)
+* `x` — La condición que se debe comprobar. [`Any`](/es/reference/data-types/index)
 * `message` — Opcional. Mensaje de error personalizado. [`const String`](/es/reference/data-types/string)
 * `error_code` — Opcional. Código de error personalizado. [`const Int8/16/32`](/es/reference/data-types/int-uint)
 
@@ -5307,8 +5366,8 @@ Code: 395. DB::Exception: Received from localhost:9000. DB::Exception: Too many.
 
 Introducido en: v1.1.0
 
-Devuelve el nombre interno del tipo de datos del valor dado.
-A diferencia de la función [`toTypeName`](#toTypeName), el tipo de datos devuelto puede incluir columnas internas contenedoras como `Const` y `LowCardinality`.
+Devuelve el nombre interno del tipo de dato del valor dado.
+A diferencia de la función [`toTypeName`](#toTypeName), el tipo de dato devuelto puede incluir columnas internas contenedoras como `Const` y `LowCardinality`.
 
 **Sintaxis**
 
@@ -5318,7 +5377,7 @@ toColumnTypeName(value)
 
 **Argumentos**
 
-* `value` — Valor para el que se devuelve el tipo de dato interno. [`Any`](/es/reference/data-types)
+* `value` — Valor para el que se devuelve el tipo de dato interno. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -5355,7 +5414,7 @@ toTypeName(x)
 
 **Argumentos**
 
-* `x` — Un valor de tipo arbitrario. [`Any`](/es/reference/data-types)
+* `x` — Un valor de tipo arbitrario. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
@@ -5616,7 +5675,7 @@ transform(x, array_from, array_to[, default])
 
 **Valor devuelto**
 
-Devuelve el valor correspondiente de `array_to` si x coincide con un elemento de `array_from`; de lo contrario, devuelve default (si se proporciona) o x (si no se proporciona default). [`Any`](/es/reference/data-types)
+Devuelve el valor correspondiente de `array_to` si x coincide con un elemento de `array_from`; de lo contrario, devuelve default (si se proporciona) o x (si no se proporciona default). [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -5835,11 +5894,11 @@ variantElement(variant, type_name[, default_value])
 
 * `variant` — columna de tipo Variant. [`Variant`](/es/reference/data-types/variant)
 * `type_name` — El nombre del tipo de variante que se va a extraer. [`String`](/es/reference/data-types/string)
-* `default_value` — El valor predeterminado que se usará si `variant` no tiene una variante del tipo especificado. Puede ser de cualquier tipo. Opcional. [`Any`](/es/reference/data-types)
+* `default_value` — El valor predeterminado que se usará si `variant` no tiene una variante del tipo especificado. Puede ser de cualquier tipo. Opcional. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 
-Devuelve una columna con el tipo de variante especificado extraído de la columna Variant. [`Any`](/es/reference/data-types)
+Devuelve una columna con el tipo de variante especificado extraído de la columna Variant. [`Any`](/es/reference/data-types/index)
 
 **Ejemplos**
 
@@ -5957,7 +6016,7 @@ visibleWidth(x)
 
 **Argumentos**
 
-* `x` — Un valor de cualquier tipo de datos. [`Any`](/es/reference/data-types)
+* `x` — Un valor de cualquier tipo de datos. [`Any`](/es/reference/data-types/index)
 
 **Valor devuelto**
 

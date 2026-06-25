@@ -21,7 +21,7 @@ import { Image } from "/snippets/components/Image.jsx";
 
     1. 为 VPC 添加标签 `clickhouse-byoc="true"`。
     2. 在 3 个不同的可用区中，至少分配 3 个私有子网供 ClickHouse Cloud 使用。
-    3. 确保每个子网的最小 CIDR 范围为 `/23` (例如 `10.0.0.0/23`) ，以便为 ClickHouse 部署提供足够的 IP 地址。
+    3. 确保每个子网的最小 CIDR 范围为 `/23` (例如 `10.0.0.0/23`) 以便为 ClickHouse 部署提供足够的 IP 地址。
     4. 为每个子网添加标签 `kubernetes.io/role/internal-elb=1` 和 `clickhouse-byoc="true"`，以启用正确的负载均衡器配置。
 
     <Image img="/images/cloud/reference/byoc-subnet-1.png" size="lg" alt="BYOC VPC 子网" />
@@ -41,7 +41,7 @@ import { Image } from "/snippets/components/Image.jsx";
     ### 确保网络连通性
 
     **出站互联网访问**
-    您的 VPC 至少必须允许出站互联网访问，以便 ClickHouse BYOC 组件能够与 Tailscale 控制平面通信。Tailscale 用于为私有管理操作提供安全的零信任网络。通过 Tailscale 完成初始注册和设置需要公共互联网连通性，可通过直接访问或经由 NAT 网关实现。此连通性对于保障 BYOC 部署的隐私性和安全性都是必需的。
+    您的 VPC 至少必须允许出站互联网访问，以便 ClickHouse BYOC 组件能够与 Tailscale 控制平面通信。Tailscale 用于为私有管理操作提供安全的零信任网络。通过 Tailscale 完成初始注册和设置需要公共互联网连通性，可通过直接访问或经由 NAT gateway 实现。此连通性对于保障 BYOC 部署的隐私性和安全性都是必需的。
 
     **DNS 解析**
     确保您的 VPC 具备正常工作的 DNS 解析能力，且不会阻止、干扰或覆盖标准 DNS 名称。ClickHouse BYOC 依赖 DNS 来解析 Tailscale 控制服务器和 ClickHouse 服务端点。如果 DNS 不可用或配置不正确，BYOC 服务可能无法正常连接或运行。
@@ -50,7 +50,7 @@ import { Image } from "/snippets/components/Image.jsx";
   <Step>
     ### 配置 AWS 账号
 
-    初始 BYOC 设置会创建一个高权限 IAM 角色 (`ClickHouseManagementRole`) ，使来自 ClickHouse Cloud 的 BYOC 控制器能够管理您的基础设施。这可以通过 [CloudFormation 模板](https://s3.us-east-2.amazonaws.com/clickhouse-public-resources.clickhouse.cloud/cf-templates/byoc.yaml) 或 [Terraform 模块](https://s3.us-east-2.amazonaws.com/clickhouse-public-resources.clickhouse.cloud/tf/byoc.tar.gz) 完成。
+    初始 BYOC 设置会创建一个高权限 IAM 角色 (`ClickHouseManagementRole`)，使来自 ClickHouse Cloud 的 BYOC 控制器能够管理您的基础设施。这可以通过 [CloudFormation 模板](https://s3.us-east-2.amazonaws.com/clickhouse-public-resources.clickhouse.cloud/cf-templates/byoc.yaml) 或 [Terraform 模块](https://s3.us-east-2.amazonaws.com/clickhouse-public-resources.clickhouse.cloud/tf/byoc.tar.gz) 完成。
 
     部署 `BYO-VPC` 设置时，请将 `IncludeVPCWritePermissions` 参数设置为 `false`，以确保 ClickHouse Cloud 不会获得修改您客户管理的 VPC 的权限。
 
@@ -74,13 +74,13 @@ import { Image } from "/snippets/components/Image.jsx";
   <Step>
     ### 设置 BYOC 基础设施
 
-    在 ClickHouse Cloud 控制台中，前往 [BYOC 设置页面](https://console.clickhouse.cloud/byocOnboarding) 并配置以下内容：
+    在 ClickHouse Cloud 控制台中，设置新基础设施时请配置以下内容：
 
-    1. 在 **VPC Configuration** 下，选择 **Use existing VPC**。
-    2. 输入您的 **VPC ID** (例如 `vpc-0bb751a5b888ad123`) 。
+    1. 在 **VPC configuration** 下，选择 **Use existing VPC**。
+    2. 输入您的 **VPC ID** (例如 `vpc-0bb751a5b888ad123`)。
     3. 输入您之前配置的 3 个子网对应的 **Private subnet IDs**。
     4. 如果您的配置需要面向公网的负载均衡器，可选填 **Public subnet IDs**。
-    5. 点击 **Setup Infrastructure** 开始预配。
+    5. 点击 **Set up Infrastructure** 开始预配。
 
     <Image img="/images/cloud/reference/byoc-aws-existing-vpc-ui.png" size="lg" alt="已选择 Use existing VPC 的 ClickHouse Cloud BYOC 设置界面" />
 

@@ -7,45 +7,30 @@ doc_type: 'reference'
 ---
 
 Las funciones de ventana permiten realizar cálculos sobre un conjunto de filas relacionadas con la fila actual.
-Algunos de los cálculos que puede realizar son similares a los que pueden hacerse con una función de agregación, pero una función de ventana no agrupa las filas en una única salida: se siguen devolviendo las filas individuales.
-
-
+Pueden utilizarse para realizar cálculos similares a los que pueden hacerse con una función de agregación, pero una función de ventana no agrupa las filas en una única salida: se siguen devolviendo las filas individuales.
 
 <div id="standard-window-functions">
   ## Funciones de ventana estándar
 </div>
 
-ClickHouse admite la gramática estándar para definir ventanas y funciones de ventana. La siguiente tabla indica si una funcionalidad es compatible actualmente.
+ClickHouse admite la gramática SQL estándar para ventanas y funciones de ventana.
+La tabla siguiente muestra qué funcionalidades se admiten actualmente:
 
-| Característica                                                                          | ¿Compatible?                                                                                                                                                                                                                                                                                                                                                                                         |
-| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| especificación ad hoc de ventana (`count(*) over (partition by id order by time desc)`) | ✅                                                                                                                                                                                                                                                                                                                                                                                                    |
-| expresiones que incluyen funciones de ventana, p. ej. `(count(*) over ()) / 2)`         | ✅                                                                                                                                                                                                                                                                                                                                                                                                    |
-| cláusula `WINDOW` (`select ... from table window w as (partition by id)`)               | ✅                                                                                                                                                                                                                                                                                                                                                                                                    |
-| marco `ROWS`                                                                            | ✅                                                                                                                                                                                                                                                                                                                                                                                                    |
-| marco `RANGE`                                                                           | ✅ (el valor predeterminado)                                                                                                                                                                                                                                                                                                                                                                          |
-| sintaxis `INTERVAL` para el marco `DateTime` `RANGE OFFSET`                             | ❌ (especifique en su lugar el número de segundos (`RANGE` funciona con cualquier tipo numérico).)                                                                                                                                                                                                                                                                                                    |
-| marco `GROUPS`                                                                          | ❌                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Cálculo de funciones de agregación sobre un marco (`sum(value) over (order by time)`)   | ✅ (Se admiten todas las funciones de agregación)                                                                                                                                                                                                                                                                                                                                                     |
-| `rank()`, `dense_rank()`, `row_number()`                                                | ✅ <br />Alias: `denseRank()`                                                                                                                                                                                                                                                                                                                                                                         |
-| `percent_rank()`                                                                        | ✅ Calcula eficientemente la posición relativa de un valor dentro de una partición en un conjunto de datos. Esta función sustituye eficazmente el cálculo manual en SQL, más verboso y computacionalmente más costoso, expresado como `ifNull((rank() OVER(PARTITION BY x ORDER BY y) - 1) / nullif(count(1) OVER(PARTITION BY x) - 1, 0), 0)` <br />Alias: `percentRank()`                           |
-| `cume_dist()`                                                                           | ✅ Calcula la distribución acumulada de un valor dentro de un grupo de valores. Devuelve el porcentaje de filas con valores menores o iguales que el valor de la fila actual.                                                                                                                                                                                                                         |
-| `lag/lead(value, offset)`                                                               | ✅ <br /> También puede usar una de las siguientes alternativas:<br /> 1) `any(value) over (.... rows between <offset> preceding and <offset> preceding)`, o `following` para `lead` <br /> 2) `lagInFrame/leadInFrame`, que son análogas, pero respetan el marco de la ventana. Para obtener un comportamiento idéntico a `lag/lead`, use `rows between unbounded preceding and unbounded following` |
-| ntile(buckets)                                                                          | ✅ <br /> Especifique la ventana así: (partition by x order by y rows between unbounded preceding and unbounded following).                                                                                                                                                                                                                                                                           |
-
-
-
-## ClickHouse-specific window functions {#clickhouse-specific-window-functions}
-
-También existe la siguiente función de ventana específica de ClickHouse:
-
-### nonNegativeDerivative(metric_column, timestamp_column[, INTERVAL X UNITS]) {#nonnegativederivativemetric_column-timestamp_column-interval-x-units}
-
-Calcula la derivada no negativa de la `metric_column` indicada con respecto a `timestamp_column`.
-`INTERVAL` puede omitirse; el valor predeterminado es `INTERVAL 1 SECOND`.
-El valor calculado para cada fila es el siguiente:
-- `0` para la primera fila,
-- ${\text{metric}_i - \text{metric}_{i-1} \over \text{timestamp}_i - \text{timestamp}_{i-1}}  * \text{interval}$ para la fila $i_{th}$.
+| Característica                                                                          | ¿Compatible? | Comentario                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Especificación ad hoc de ventana (`count(*) OVER (PARTITION BY id ORDER BY time DESC)`) | ✅            |                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Expresiones que incluyen funciones de ventana, p. ej., `(count(*) OVER ()) / 2`         | ✅            |                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Cláusula `WINDOW` (`SELECT ... FROM table WINDOW w AS (PARTITION BY id)`)               | ✅            |                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Marco `ROWS`                                                                            | ✅            |                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Marco `RANGE`                                                                           | ✅            | Se usa de forma predeterminada cuando no se especifica explícitamente un marco (`RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`).                                                                                                                                                                                                                                                                           |
+| Sintaxis `INTERVAL` para el marco `DateTime` `RANGE OFFSET`                             | ❌            | En su lugar, especifique el número de segundos (`RANGE` funciona con cualquier tipo numérico).                                                                                                                                                                                                                                                                                                                  |
+| Marco `GROUPS`                                                                          | ❌            |                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Cálculo de funciones de agregación sobre un marco (`sum(value) OVER (ORDER BY time)`)   | ✅            | Se admiten todas las funciones de agregación.                                                                                                                                                                                                                                                                                                                                                                   |
+| `rank()`, `dense_rank()`/`denseRank()`, `row_number()`                                  | ✅            |                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `percent_rank()`/`percentRank()`                                                        | ✅            | Calcula de forma eficiente la posición relativa de un valor dentro de una partición. Sustituye el cálculo manual en SQL, más detallado y computacionalmente más costoso, expresado como `ifNull((rank() OVER (PARTITION BY x ORDER BY y) - 1) / nullif(count(1) OVER (PARTITION BY x) - 1, 0), 0)`.                                                                                                             |
+| `cume_dist()`                                                                           | ✅            | Calcula la distribución acumulada de un valor dentro de un grupo de valores. Devuelve el porcentaje de filas con valores menores o iguales que el valor de la fila actual.                                                                                                                                                                                                                                      |
+| `lag/lead(value, offset)`                                                               | ✅            | También puede usar una de las siguientes alternativas:<br /> 1) `any(value) OVER (... ROWS BETWEEN <offset> PRECEDING AND <offset> PRECEDING)`, o `FOLLOWING` en lugar de `PRECEDING` para `lead` <br /> 2) `lagInFrame/leadInFrame`, que son análogas pero respetan el marco de ventana. Para obtener un comportamiento idéntico a `lag/lead`, use `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`. |
+| `ntile(buckets)`                                                                        | ✅            | Especifique la ventana como, por ejemplo, `(PARTITION BY x ORDER BY y ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)`.                                                                                                                                                                                                                                                                               |
 
 <div id="syntax">
   ## Sintaxis
@@ -86,21 +71,22 @@ WINDOW window_name as ([
 ```
 
 <div id="functions">
-  ### Funciones
+  ## Funciones que solo pueden usarse como funciones de ventana
 </div>
 
-Estas funciones solo se pueden usar como función de ventana.
+Las siguientes funciones solo pueden usarse como funciones de ventana. La mayoría son funciones SQL estándar; `lagInFrame`, `leadInFrame` y `nonNegativeDerivative` son extensiones de ClickHouse.
 
-* [`row_number()`](/reference/functions/window-functions/row_number) - Numera la fila actual dentro de su partición a partir de 1.
-* [`first_value(x)`](/reference/functions/window-functions/first_value) - Devuelve el primer valor evaluado dentro de su marco ordenado.
-* [`last_value(x)`](/reference/functions/window-functions/last_value) -    Devuelve el último valor evaluado dentro de su marco ordenado.
-* [`nth_value(x, offset)`](/reference/functions/window-functions/nth_value) - Devuelve el primer valor no NULL evaluado en la enésima fila (`offset`) de su marco ordenado.
-* [`rank()`](/reference/functions/window-functions/rank) - Asigna un rango a la fila actual dentro de su partición con huecos.
-* [`dense_rank()`](/reference/functions/window-functions/dense_rank) - Asigna un rango a la fila actual dentro de su partición sin huecos.
-* [`lagInFrame(x)`](/reference/functions/window-functions/lagInFrame) - Devuelve un valor evaluado en la fila situada un desplazamiento físico especificado antes de la fila actual dentro del marco ordenado.
-* [`leadInFrame(x)`](/reference/functions/window-functions/leadInFrame) - Devuelve un valor evaluado en la fila situada un número de filas de desplazamiento después de la fila actual dentro del marco ordenado.
-
-
+| Función                                                                                                                                     | Descripción                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`row_number()`](/es/reference/functions/window-functions/row_number)                                                                          | Numera la fila actual dentro de su partición a partir de 1.                                                                                       |
+| [`first_value(x)`](/es/reference/functions/window-functions/first_value)                                                                       | Devuelve el primer valor evaluado dentro de su marco ordenado.                                                                                    |
+| [`last_value(x)`](/es/reference/functions/window-functions/last_value)                                                                         | Devuelve el último valor evaluado dentro de su marco ordenado.                                                                                    |
+| [`nth_value(x, offset)`](/es/reference/functions/window-functions/nth_value)                                                                   | Devuelve el primer valor distinto de `NULL` evaluado en la n.ª fila (`offset`) de su marco ordenado.                                              |
+| [`rank()`](/es/reference/functions/window-functions/rank)                                                                                      | Asigna un rango a la fila actual dentro de su partición, con huecos.                                                                              |
+| [`dense_rank()`](/es/reference/functions/window-functions/dense_rank)                                                                          | Asigna un rango a la fila actual dentro de su partición, sin huecos.                                                                              |
+| [`lagInFrame(x)`](/es/reference/functions/window-functions/lagInFrame)                                                                         | Devuelve el valor evaluado en la fila que se encuentra un número especificado de filas físicas antes de la fila actual dentro del marco ordenado. |
+| [`leadInFrame(x)`](/es/reference/functions/window-functions/leadInFrame)                                                                       | Devuelve el valor evaluado en la fila que se encuentra un número especificado de filas después de la fila actual dentro del marco ordenado.       |
+| [`nonNegativeDerivative(metric_column, timestamp_column[, INTERVAL X UNITS])`](/es/reference/functions/window-functions/nonNegativeDerivative) | Calcula la derivada no negativa de `metric_column` con respecto a `timestamp_column`. Es específica de ClickHouse.                                |
 
 <div id="examples">
   ## Ejemplos
@@ -206,8 +192,6 @@ SELECT
 FROM salaries;
 ```
 
-
-
 ```text
 ┌─player──────────┬─salary─┬─team──────────────────────┬─teamMax─┬───diff─┐
 │ Charles Juarez  │ 190000 │ New Coreystad Archdukes   │  190000 │      0 │
@@ -246,10 +230,10 @@ ORDER BY
 
 ┌─part_key─┬─value─┬─order─┬─frame_values─┐
 │        1 │     1 │     1 │ [1,2,3]      │   <┐   
-│        1 │     2 │     2 │ [1,2,3]      │    │  1.er grupo
+│        1 │     2 │     2 │ [1,2,3]      │    │  1-st group
 │        1 │     3 │     3 │ [1,2,3]      │   <┘ 
-│        2 │     0 │     0 │ [0]          │   <- 2.º grupo
-│        3 │     0 │     0 │ [0]          │   <- 3.er grupo
+│        2 │     0 │     0 │ [0]          │   <- 2-nd group
+│        3 │     0 │     0 │ [0]          │   <- 3-d group
 └──────────┴───────┴───────┴──────────────┘
 ```
 
@@ -271,7 +255,7 @@ INSERT INTO wf_frame FORMAT Values
 ```
 
 ```sql
--- El marco está delimitado por los límites de una partición (BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
+-- Frame is bounded by bounds of a partition (BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
 SELECT
     part_key,
     value,
@@ -295,11 +279,9 @@ ORDER BY
 └──────────┴───────┴───────┴──────────────┘
 ```
 
-
-
 ```sql
--- forma corta - sin expresión de límite, sin order by,
--- equivalente a `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`
+-- short form - no bound expression, no order by,
+-- an equalent of `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`
 SELECT
     part_key,
     value,
@@ -322,7 +304,7 @@ ORDER BY
 ```
 
 ```sql
--- el frame está delimitado por el inicio de una partición y la fila actual
+-- frame is bounded by the beginning of a partition and the current row
 SELECT
     part_key,
     value,
@@ -347,8 +329,8 @@ ORDER BY
 ```
 
 ```sql
--- forma corta (el frame está delimitado por el inicio de una partición y la fila actual)
--- equivalente a `ORDER BY order ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`
+-- short form (frame is bounded by the beginning of a partition and the current row)
+-- an equalent of `ORDER BY order ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`
 SELECT
     part_key,
     value,
@@ -371,10 +353,8 @@ ORDER BY
 └──────────┴───────┴───────┴────────────────────┴──────────────┘
 ```
 
-
-
 ```sql
--- el marco está acotado por el inicio de una partición y la fila actual, pero el orden es descendente
+-- frame is bounded by the beginning of a partition and the current row, but order is backward
 SELECT
     part_key,
     value,
@@ -395,7 +375,7 @@ ORDER BY
 ```
 
 ```sql
--- marco deslizante - 1 FILA PRECEDENTE Y FILA ACTUAL
+-- sliding frame - 1 PRECEDING ROW AND CURRENT ROW
 SELECT
     part_key,
     value,
@@ -420,7 +400,7 @@ ORDER BY
 ```
 
 ```sql
--- marco deslizante - ROWS BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING 
+-- sliding frame - ROWS BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING 
 SELECT
     part_key,
     value,
@@ -445,7 +425,7 @@ ORDER BY
 ```
 
 ```sql
--- row_number no respeta el marco, por lo que rn_1 = rn_2 = rn_3 != rn_4
+-- row_number does not respect the frame, so rn_1 = rn_2 = rn_3 != rn_4
 SELECT
     part_key,
     value,
@@ -466,22 +446,18 @@ WINDOW
 ORDER BY
     part_key ASC,
     value ASC;
-```
 
-
-
-┌─part&#95;key─┬─value─┬─order─┬─frame&#95;values─┬─rn&#95;1─┬─rn&#95;2─┬─rn&#95;3─┬─rn&#95;4─┐
+┌─part_key─┬─value─┬─order─┬─frame_values─┬─rn_1─┬─rn_2─┬─rn_3─┬─rn_4─┐
 │        1 │     1 │     1 │ [5,4,3,2,1]  │    5 │    5 │    5 │    2 │
 │        1 │     2 │     2 │ [5,4,3,2]    │    4 │    4 │    4 │    2 │
 │        1 │     3 │     3 │ [5,4,3]      │    3 │    3 │    3 │    2 │
 │        1 │     4 │     4 │ [5,4]        │    2 │    2 │    2 │    2 │
 │        1 │     5 │     5 │ [5]          │    1 │    1 │    1 │    1 │
 └──────────┴───────┴───────┴──────────────┴──────┴──────┴──────┴──────┘
-
-````
+```
 
 ```sql
--- first_value y last_value respetan el marco
+-- first_value and last_value respect the frame
 SELECT
     groupArray(value) OVER w1 AS frame_values_1,
     first_value(value) OVER w1 AS first_value_1,
@@ -504,10 +480,10 @@ ORDER BY
 │ [1,2,3,4]      │             1 │            4 │ [3,4]          │             3 │            4 │
 │ [1,2,3,4,5]    │             1 │            5 │ [4,5]          │             4 │            5 │
 └────────────────┴───────────────┴──────────────┴────────────────┴───────────────┴──────────────┘
-````
+```
 
 ```sql
--- segundo valor dentro del marco
+-- second value within the frame
 SELECT
     groupArray(value) OVER w1 AS frame_values_1,
     nth_value(value, 2) OVER w1 AS second_value
@@ -527,7 +503,7 @@ ORDER BY
 ```
 
 ```sql
--- segundo valor dentro del marco + Null para valores ausentes
+-- second value within the frame + Null for missing values
 SELECT
     groupArray(value) OVER w1 AS frame_values_1,
     nth_value(toNullable(value), 2) OVER w1 AS second_value
@@ -536,22 +512,15 @@ WINDOW w1 AS (PARTITION BY part_key ORDER BY order ASC ROWS BETWEEN 3 PRECEDING 
 ORDER BY
     part_key ASC,
     value ASC;
-```
 
-
-
-┌─frame&#95;values&#95;1─┬─second&#95;value─┐
+┌─frame_values_1─┬─second_value─┐
 │ [1]            │         ᴺᵁᴸᴸ │
 │ [1,2]          │            2 │
 │ [1,2,3]        │            2 │
 │ [1,2,3,4]      │            2 │
 │ [2,3,4,5]      │            3 │
 └────────────────┴──────────────┘
-
 ```
-```
-
-
 
 <div id="real-world-examples">
   ## Ejemplos reales
@@ -661,7 +630,7 @@ ORDER BY
 ```
 
 <div id="moving--sliding-average-per-3-rows">
-  ### Media móvil / deslizante (de 3 filas)
+  ### Media móvil / deslizante (cada 3 filas)
 </div>
 
 ```sql
@@ -672,20 +641,16 @@ CREATE TABLE sensors
     `value` Float
 )
 ENGINE = Memory;
+
+insert into sensors values('cpu_temp', '2020-01-01 00:00:00', 87),
+                          ('cpu_temp', '2020-01-01 00:00:01', 77),
+                          ('cpu_temp', '2020-01-01 00:00:02', 93),
+                          ('cpu_temp', '2020-01-01 00:00:03', 87),
+                          ('cpu_temp', '2020-01-01 00:00:04', 87),
+                          ('cpu_temp', '2020-01-01 00:00:05', 87),
+                          ('cpu_temp', '2020-01-01 00:00:06', 87),
+                          ('cpu_temp', '2020-01-01 00:00:07', 87);
 ```
-
-
-
-insert into sensors values(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:00&#39;, 87),
-(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:01&#39;, 77),
-(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:02&#39;, 93),
-(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:03&#39;, 87),
-(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:04&#39;, 87),
-(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:05&#39;, 87),
-(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:06&#39;, 87),
-(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:07&#39;, 87);
-
-````
 
 ```sql
 SELECT
@@ -712,7 +677,7 @@ ORDER BY
 │ cpu_temp │ 2020-01-01 00:00:06 │    87 │                87 │
 │ cpu_temp │ 2020-01-01 00:00:07 │    87 │                87 │
 └──────────┴─────────────────────┴───────┴───────────────────┘
-````
+```
 
 <div id="moving--sliding-average-per-10-seconds">
   ### Media móvil / deslizante (cada 10 segundos)
@@ -743,10 +708,10 @@ ORDER BY
 ```
 
 <div id="moving--sliding-average-per-10-days">
-  ### Media móvil / deslizante (por 10 días)
+  ### media móvil / deslizante (por 10 días)
 </div>
 
-La temperatura se almacena con precisión de segundos, pero al usar `Range` y `ORDER BY toDate(ts)` formamos un marco de 10 unidades y, dado que `toDate(ts)` se utiliza, la unidad es un día.
+La temperatura se almacena con precisión de segundos, pero al usar `Range` y `ORDER BY toDate(ts)` formamos un marco de 10 unidades y, como `toDate(ts)`, la unidad es un día.
 
 ```sql
 CREATE TABLE sensors
@@ -756,24 +721,20 @@ CREATE TABLE sensors
     `value` Float
 )
 ENGINE = Memory;
+
+insert into sensors values('ambient_temp', '2020-01-01 00:00:00', 16),
+                          ('ambient_temp', '2020-01-01 12:00:00', 16),
+                          ('ambient_temp', '2020-01-02 11:00:00', 9),
+                          ('ambient_temp', '2020-01-02 12:00:00', 9),                          
+                          ('ambient_temp', '2020-02-01 10:00:00', 10),
+                          ('ambient_temp', '2020-02-01 12:00:00', 10),
+                          ('ambient_temp', '2020-02-10 12:00:00', 12),                          
+                          ('ambient_temp', '2020-02-10 13:00:00', 12),
+                          ('ambient_temp', '2020-02-20 12:00:01', 16),
+                          ('ambient_temp', '2020-03-01 12:00:00', 16),
+                          ('ambient_temp', '2020-03-01 12:00:00', 16),
+                          ('ambient_temp', '2020-03-01 12:00:00', 16);
 ```
-
-
-
-insert into sensors values(&#39;ambient&#95;temp&#39;, &#39;2020-01-01 00:00:00&#39;, 16),
-(&#39;ambient&#95;temp&#39;, &#39;2020-01-01 12:00:00&#39;, 16),
-(&#39;ambient&#95;temp&#39;, &#39;2020-01-02 11:00:00&#39;, 9),
-(&#39;ambient&#95;temp&#39;, &#39;2020-01-02 12:00:00&#39;, 9),
-(&#39;ambient&#95;temp&#39;, &#39;2020-02-01 10:00:00&#39;, 10),
-(&#39;ambient&#95;temp&#39;, &#39;2020-02-01 12:00:00&#39;, 10),
-(&#39;ambient&#95;temp&#39;, &#39;2020-02-10 12:00:00&#39;, 12),
-(&#39;ambient&#95;temp&#39;, &#39;2020-02-10 13:00:00&#39;, 12),
-(&#39;ambient&#95;temp&#39;, &#39;2020-02-20 12:00:01&#39;, 16),
-(&#39;ambient&#95;temp&#39;, &#39;2020-03-01 12:00:00&#39;, 16),
-(&#39;ambient&#95;temp&#39;, &#39;2020-03-01 12:00:00&#39;, 16),
-(&#39;ambient&#95;temp&#39;, &#39;2020-03-01 12:00:00&#39;, 16);
-
-````
 
 ```sql
 SELECT
@@ -801,9 +762,7 @@ ORDER BY
 │ ambient_temp │ 2020-03-01 12:00:00 │    16 │                      16 │
 │ ambient_temp │ 2020-03-01 12:00:00 │    16 │                      16 │
 └──────────────┴─────────────────────┴───────┴─────────────────────────┘
-````
-
-
+```
 
 <div id="references">
   ## Referencias
@@ -848,8 +807,6 @@ https://dev.mysql.com/doc/refman/8.0/en/window-function-descriptions.html
 https://dev.mysql.com/doc/refman/8.0/en/window-functions-usage.html
 
 https://dev.mysql.com/doc/refman/8.0/en/window-functions-frames.html
-
-
 
 <div id="related-content">
   ## Contenido relacionado

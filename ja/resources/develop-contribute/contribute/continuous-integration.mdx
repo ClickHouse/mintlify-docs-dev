@@ -74,28 +74,62 @@ ClickHouse server と Keeper の Docker イメージをビルドし、正しく�
   ## スタイルチェック
 </div>
 
-コードベースに対してさまざまなスタイルチェックを実行します。
-
-Style Checkジョブの基本的なチェック:
+コードベースに対してさまざまなスタイルチェックを実行します。以下の各サブチェックは、[`ci/jobs/check_style.py`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/check_style.py) の `testname` に対応しており、`--test <name>` を使って個別に実行できます (以下を参照) 。
 
 <div id="cpp">
   ##### cpp
 </div>
 
-[`ci/jobs/scripts/check_style/check_cpp.sh`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/scripts/check_style/check_cpp.sh) スクリプト (ローカルでも実行可能) を使用して、正規表現ベースの簡単なコードスタイルチェックを行います。
+[`check_cpp.sh`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/scripts/check_style/check_cpp.sh) を使用して、正規表現ベースの C++ スタイルチェックを行います。
 失敗した場合は、[コードスタイルガイド](/ja/resources/develop-contribute/contribute/style) に従ってスタイルの問題を修正してください。
 
-<div id="codespell">
-  ##### codespell, aspell
+<div id="whitespace-check">
+  ##### whitespace_check
 </div>
 
-文法の誤りや誤字脱字をチェックします。
+カラムの位置合わせの一部ではない、C++ でカンマの後にある二重スペースを検出します。
 
-<div id="mypy">
-  ##### mypy
+<div id="catch-all">
+  ##### catch_all
 </div>
 
-Python コードに対して静的型チェックを実行します。
+不明な例外を握りつぶすのは安全ではないため、デストラクタ、`main`、および fuzzer のエントリポイント以外での `catch (...)` を禁止します。
+
+<div id="yamllint">
+  ##### yamllint
+</div>
+
+`.yamllint` を使用して、`.github/` 配下の YAML ワークフローファイルをチェックします。
+
+<div id="xmllint">
+  ##### xmllint
+</div>
+
+`tests/` と `programs/` 配下にある XML ファイルを検証します。
+
+<div id="functional-tests-check">
+  ##### functional_tests_check
+</div>
+
+stateless tests をチェックします。`event_date` に対する filter を含む queries では、`today()` ではなく `>= yesterday()` を使用する必要があります (深夜前後での不安定さを避けるため) 。また、テストファイル名に `fail` を含めてはいけません。
+
+<div id="test-numbers-check">
+  ##### test_numbers_check
+</div>
+
+stateless tests の採番 (`tests/queries/0_stateless/<NNNNN>_*`) にある大きなギャップを検出します。
+
+<div id="symlinks">
+  ##### シンボリックリンク
+</div>
+
+リポジトリ内のリンク切れのシンボリックリンクを検出します。
+
+<div id="various">
+  ##### 各種
+</div>
+
+[`various_checks.sh`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/scripts/check_style/various_checks.sh) による各種リポジトリチェック: `system.query_log` / `system.parts` / などに対するクエリは `currentDatabase` でフィルタする必要があり、`Replicated*MergeTree` の ZooKeeper パスにはテストごとのプレフィックスを含める必要があり、インテグレーションテストのディレクトリには `__init__.py` が必要で、UTF BOM は不可、ソース/データファイルに実行可能ビットを付けてはならず、サードパーティの docker-compose イメージに `:latest` タグを使ってはならない、などがあります。
 
 <div id="running-style-check-locally">
   ### スタイルチェックジョブをローカルで実行する

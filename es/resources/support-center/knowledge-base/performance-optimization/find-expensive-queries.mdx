@@ -2,10 +2,13 @@
 title: Cómo identificar las consultas más costosas en ClickHouse
 description: Aprende a usar la tabla `query_log` de ClickHouse para identificar las consultas con mayor consumo de memoria y CPU en nodos distribuidos.
 date: 2023-03-26
-slug: find-expensive-queries
 tags: ['Rendimiento y optimización']
 keywords: ['Consultas costosas']
 ---
+
+{frontMatter.description}
+
+{/* truncate */}
 
 <div id="answer">
   ## Respuesta
@@ -97,6 +100,12 @@ FROM s3Cluster('default','https://clickhouse-public-datasets.s3.amazonaws.com/yo
 
 Tenga en cuenta que, en un entorno de ClickHouse en clúster (como ClickHouse Cloud), `initial_query_id` representa el ID de la consulta inicial de una ejecución distribuida de consultas iniciada desde el nodo que recibe la solicitud;
 a continuación, el campo `query_id` contendrá el ID de la consulta hija ejecutada en un nodo distinto.
+
+<Info>
+  **La ejecución distribuida no es la única causa de que los valores de `query_id` sean diferentes**
+
+  Una sola consulta también puede generar subconsultas internas que se registran con su propio `query_id` e `is_initial_query = 0` — lo más habitual es que sean las consultas internas que ClickHouse ejecuta para evaluar [vistas](/es/reference/system-tables/query_views_log). ClickHouse asigna estos identificadores internos y puede que no sigan el mismo formato que el que se informa a su `client`; en los pasos relacionados con vistas puede ver valores de `query_id` que incluyan una etiqueta como `queryView...`. Cuando quiera la consulta exactamente tal como la envió, filtre por `is_initial_query = 1` (o `query_id = initial_query_id`). Este es un comportamiento del lado del servidor de `query_log` y es el mismo desde cualquier `client`, incluida la Cloud SQL Console.
+</Info>
 
 Si añadimos `query_id` a la consulta anterior, acotamos la búsqueda en torno a `initial_query_id` = `a7262fa2-bd8b-4b51-a359-621ccf282417` y `hostname()`:
 

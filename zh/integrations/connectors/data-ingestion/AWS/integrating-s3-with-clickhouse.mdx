@@ -29,7 +29,7 @@ s3(path, [aws_access_key_id, aws_secret_access_key,] [format, [structure, [compr
 其中：
 
 * path — 包含文件路径的 存储桶 URL。在只读模式下，支持以下路径通配符：`*`、`?`、`{abc,def}` 和 `{N..M}`，其中 `N`、`M` 为数字，`'abc'`、`'def'` 为字符串。更多信息，请参阅[在路径中使用通配符](/zh/reference/engines/table-engines/integrations/s3#wildcards-in-path)文档。
-* format — 文件的[格式](/zh/reference/formats#formats-overview)。
+* format — 文件的[格式](/zh/reference/formats/index#formats-overview)。
 * structure — 表的结构。格式为 `'column1_name column1_type, column2_name column2_type, ...'`。
 * compression — 该参数为可选。支持的值包括：`none`、`gzip/gz`、`brotli/br`、`xz/LZMA`、`zstd/zst`。默认情况下，会根据文件扩展名自动检测压缩方式。
 
@@ -324,7 +324,7 @@ s3Cluster(cluster_name, source, [access_key_id, secret_access_key,] format, stru
 * `cluster_name` — 用于构建远程和本地服务器地址集合及连接参数的集群名称。
 * `source` — 指向单个文件或一组文件的 URL。在只读模式下支持以下通配符：`*`、`?`、`{'abc','def'}` 和 `{N..M}`，其中 N、M 为数字，abc、def 为字符串。更多信息请参见 [路径中的通配符](/zh/reference/engines/table-engines/integrations/s3#wildcards-in-path)。
 * `access_key_id` 和 `secret_access_key` — 指定用于给定端点的凭证密钥。可选。
-* `format` — 文件的 [格式](/zh/reference/formats#formats-overview)。
+* `format` — 文件的 [格式](/zh/reference/formats/index#formats-overview)。
 * `structure` — 表的结构。格式为 &#39;column1&#95;name column1&#95;type, column2&#95;name column2&#95;type, ...&#39;。
 
 与其他 `s3` 函数一样，如果存储桶本身不安全，或者你通过环境定义了安全机制 (例如 IAM 角色) ，则凭证是可选的。不过，与 s3 function 不同的是，自 22.3.1 起，必须在请求中指定结构，也就是说不会自动推断 schema。
@@ -355,8 +355,8 @@ CREATE TABLE s3_engine_table (name String, value UInt32)
     [SETTINGS ...]
 ```
 
-* `path` — bucket URL 及文件路径。在只读模式下支持以下通配符：`*`、`?`、`{abc,def}` 和 `{N..M}`，其中 N、M 表示数字，&#39;abc&#39;、&#39;def&#39; 表示字符串。更多信息，请参见[此处](/zh/reference/engines/table-engines/integrations/s3#wildcards-in-path)。
-* `format` — 文件的[格式](/zh/reference/formats#formats-overview)。
+* `path` — 存储桶 URL 及文件路径。在只读模式下支持以下通配符：`*`、`?`、`{abc,def}` 和 `{N..M}`，其中 N、M 表示数字，&#39;abc&#39;、&#39;def&#39; 表示字符串。更多信息，请参见[此处](/zh/reference/engines/table-engines/integrations/s3#wildcards-in-path)。
+* `format` — 文件的[格式](/zh/reference/formats/index#formats-overview)。
 * `aws_access_key_id`, `aws_secret_access_key` - AWS 账户用户的长期凭证。您可以使用它们对请求进行身份验证。该参数为可选。如果未指定凭证，则使用配置文件中的值。更多信息，请参见[管理凭证](#managing-credentials)。
 * `compression` — 压缩类型。支持的值：none、gzip/gz、brotli/br、xz/LZMA、zstd/zst。该参数为可选。默认情况下，会根据文件扩展名自动检测压缩类型。
 
@@ -571,9 +571,9 @@ ClickHouse 意识到，S3 是一种很有吸引力的存储解决方案，尤其
   ### 存储分层
 </div>
 
-ClickHouse 存储卷将物理磁盘与 MergeTree 表引擎解耦。单个卷可以由一组按顺序排列的磁盘组成。这种抽象不仅可让多个块设备用于数据存储，还支持包括 S3 在内的其他存储类型。ClickHouse 数据分区片段可以根据存储策略，依据卷和写满率在不同存储之间迁移，从而形成存储分层这一概念。
+ClickHouse 存储卷将物理磁盘与 MergeTree 表引擎解耦。单个卷可以由一组按顺序排列的磁盘组成。这种抽象不仅可让多个块设备用于数据存储，还支持包括 S3 在内的其他存储类型。ClickHouse 数据分区片段可以根据存储策略和写满率在不同卷之间迁移，从而形成存储分层这一概念。
 
-存储分层支持冷热架构：最新的数据通常也是查询最频繁的数据，因此只需在高性能存储 (例如 NVMe SSD) 上占用少量空间。随着数据逐渐老化，对查询时间的 SLA 要求会放宽，查询频率也会下降。这部分长尾数据可以存储在速度更慢、性能更低的介质上，例如 HDD 或 S3 这类对象存储。
+存储分层支持冷热分层架构：最新的数据通常也是查询最频繁的数据，因此只需在高性能存储 (例如 NVMe SSD) 上占用少量空间。随着数据逐渐老化，对查询时间的 SLA 要求会放宽，查询频率也会下降。这部分长尾数据可以存储在速度更慢、性能更低的介质上，例如 HDD 或 S3 这类对象存储。
 
 <div id="creating-a-disk">
   ### 创建磁盘

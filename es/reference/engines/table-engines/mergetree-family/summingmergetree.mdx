@@ -7,7 +7,7 @@ title: 'motor de tabla SummingMergeTree'
 doc_type: 'reference'
 ---
 
-El motor hereda de [MergeTree](/es/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree). La diferencia es que, al fusionar partes de datos en tablas `SummingMergeTree`, ClickHouse sustituye todas las filas con la misma clave primaria (o, más exactamente, con la misma [clave de ordenación](/es/reference/engines/table-engines/mergetree-family/mergetree)) por una sola fila que contiene los valores sumados de las columnas con tipo de dato numérico. Si la clave de ordenación está compuesta de tal manera que un único valor de clave corresponde a un gran número de filas, esto reduce significativamente el volumen de almacenamiento y acelera la consulta de datos.
+El motor hereda de [MergeTree](/es/reference/engines/table-engines/mergetree-family/mergetree). La diferencia es que, al fusionar partes de datos en tablas `SummingMergeTree`, ClickHouse sustituye todas las filas con la misma clave primaria (o, más exactamente, con la misma [clave de ordenación](/es/reference/engines/table-engines/mergetree-family/mergetree)) por una sola fila que contiene los valores sumados de las columnas con tipo de dato numérico. Si la clave de ordenación está compuesta de tal manera que un único valor de clave corresponde a un gran número de filas, esto reduce significativamente el volumen de almacenamiento y acelera la consulta de datos.
 
 Recomendamos usar este motor junto con `MergeTree`. Almacene los datos completos en una tabla `MergeTree` y use `SummingMergeTree` para almacenar datos agregados, por ejemplo, al preparar informes. Este enfoque evitará la pérdida de datos valiosos debido a una clave primaria mal definida.
 
@@ -203,6 +203,52 @@ ARRAY JOIN
 Al solicitar datos, utilice la función [sumMap(key, value)](/es/reference/functions/aggregate-functions/sumMap) para agregar `Map`.
 
 En una estructura de datos anidada, no es necesario especificar sus columnas en la tupla de columnas para la suma.
+
+<div id="tuple-element-aggregation">
+  ### Agregación de elementos de Tuple
+</div>
+
+Cuando la configuración `allow_tuple_element_aggregation` está habilitada, las columnas `Tuple` se aplanan de forma recursiva para que cada elemento hoja participe en la suma de forma independiente. Esto le permite almacenar varias métricas en una sola columna `Tuple` y hacer que se sumen elemento a elemento durante las fusiones.
+
+A las subcolumnas aplanadas se les aplican las mismas reglas que a las columnas normales:
+
+* Solo se suman las subcolumnas numéricas.
+* Las subcolumnas que pertenecen a un `Tuple` en la clave de ordenación o en la clave de partición se excluyen de la suma.
+* Si se especifica `columns`, solo se suman las subcolumnas de las columnas `Tuple` incluidas en la lista.
+* Si todas las subcolumnas numéricas de una fila son cero después de la suma, la fila se elimina.
+
+<Note>
+  Esta configuración es inmutable y debe especificarse al crear la tabla.
+</Note>
+
+```sql
+CREATE TABLE summing_tuples
+(
+    key UInt32,
+    metrics Tuple(
+        impressions UInt64,
+        clicks UInt64,
+        nested Tuple(
+            conversions UInt64
+        )
+    )
+) ENGINE = SummingMergeTree()
+ORDER BY key
+SETTINGS allow_tuple_element_aggregation = 1;
+
+INSERT INTO summing_tuples VALUES (1, (100, 10, (1)));
+INSERT INTO summing_tuples VALUES (1, (200, 20, (3)));
+
+OPTIMIZE TABLE summing_tuples FINAL;
+
+SELECT key, metrics.impressions, metrics.clicks, metrics.nested.conversions FROM summing_tuples;
+```
+
+```text
+┌─key─┬─metrics.impressions─┬─metrics.clicks─┬─metrics.nested.conversions─┐
+│   1 │                 300 │             30 │                          4 │
+└─────┴─────────────────────┴────────────────┴────────────────────────────┘
+```
 
 <div id="related-content">
   ## Contenido relacionado

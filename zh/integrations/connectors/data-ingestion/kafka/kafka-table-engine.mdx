@@ -29,7 +29,7 @@ Kafka 表引擎可用于从 Apache Kafka 和其他兼容 Kafka API 的消息代�
 
 Kafka 表引擎 允许 ClickHouse 直接从 Kafka topic 读取数据。虽然这对于查看某个 topic 上的消息很有用，但该引擎在设计上只支持一次性读取。也就是说，当对该表发出查询时，它会从队列中消费数据，并在将结果返回给调用方之前推进消费者偏移量。实际上，如果不重置这些偏移量，数据就无法再次读取。
 
-要将通过 table engine 读取到的数据持久化，我们需要一种机制来捕获这些数据并将其插入到另一张表中。基于触发器的 materialized view 原生提供了这一能力。materialized view 会触发对 table engine 的读取，并接收成批的文档。`TO` 子句决定数据的目标端——通常是一张属于 [MergeTree 家族](/zh/reference/engines/table-engines/mergetree-family) 的表。如下图所示：
+要将通过 表引擎 读取到的数据持久化，我们需要一种机制来捕获这些数据并将其插入到另一张表中。基于触发器的 materialized view 原生提供了这一能力。materialized view 会触发对 表引擎 的读取，并接收成批的文档。`TO` 子句决定数据的目标端——通常是一张属于 [MergeTree 家族](/zh/reference/engines/table-engines/mergetree-family/index) 的表。如下图所示：
 
 <Image img="/images/integrations/data-ingestion/kafka/kafka_01.png" size="lg" alt="Kafka 表引擎 架构图" style={{width: '80%'}} />
 
@@ -78,7 +78,7 @@ USE KafkaEngine;
   ##### 3. 创建目标表
 </div>
 
-准备好目标表。为简洁起见，下面的示例使用了精简版的 GitHub schema。请注意，虽然这里使用的是 MergeTree 表引擎，但此示例也很容易改写为适用于 [MergeTree 家族](/zh/reference/engines/table-engines/mergetree-family) 中的任何成员。
+准备好目标表。为简洁起见，下面的示例使用了精简版的 GitHub schema。请注意，虽然这里使用的是 MergeTree 表引擎，但此示例也很容易改写为适用于 [MergeTree 家族](/zh/reference/engines/table-engines/mergetree-family/index) 中的任何成员。
 
 ```sql
 CREATE TABLE github
@@ -248,7 +248,7 @@ ATTACH TABLE github_queue;
   ##### 添加 Kafka 元数据
 </div>
 
-将原始 Kafka 消息中的元数据在摄取到 ClickHouse 后保留下来，通常会很有帮助。例如，我们可能希望了解某个特定 topic 或分区已经消费了多少。为此，Kafka 表引擎提供了多个[虚拟列](/zh/reference/engines/table-engines#table_engines-virtual_columns)。通过修改 schema 和 materialized view 的 SELECT 语句，可以将这些虚拟列作为普通列持久化到目标表中。
+将原始 Kafka 消息中的元数据在摄取到 ClickHouse 后保留下来，通常会很有帮助。例如，我们可能希望了解某个特定 topic 或分区已经消费了多少。为此，Kafka 表引擎提供了多个[虚拟列](/zh/reference/engines/table-engines/index#table_engines-virtual_columns)。通过修改 schema 和 materialized view 的 select 语句，可以将这些虚拟列作为普通列持久化到目标表中。
 
 首先，在向目标表添加列之前，先执行上文所述的停止操作。
 

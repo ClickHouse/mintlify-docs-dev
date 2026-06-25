@@ -118,21 +118,44 @@ doc_type: 'guide'
 配额可以使用配额键功能，按多个键分别独立统计资源。下面是一个示例：
 
 ```xml
-<!-- 用于全局报表设计器。-->
+<!-- For the global reports designer. -->
 <web_global>
-    <!-- keyed – quota_key "key" 通过查询参数传入，
-            配额将针对每个键值分别进行跟踪。
-        例如，可以将用户名作为键传入，
-            这样配额将针对每个用户名单独计算。
-        只有当 quota_key 由程序而非用户传递时，使用键才有意义。
+    <!-- keyed – The quota_key "key" is passed in the query parameter,
+            and the quota is tracked separately for each key value.
+        For example, you can pass a username as the key,
+            so the quota will be counted separately for each username.
+        Using keys makes sense only if quota_key is transmitted by the program, not by a user.
 
-        也可以写 <keyed_by_ip />，此时将以 IP 地址作为配额键。
-        （但请注意，用户可以相当轻松地更改其 IPv6 地址。）
+        You can also write <keyed_by_ip />, so the IP address is used as the quota key.
+        (But keep in mind that users can change the IPv6 address fairly easily.)
+
+        Instead of <keyed_by_ip /> you can use <keyed_by_forwarded_ip />, so the address
+        from the X-Forwarded-For header is used as the quota key.
+
+        For both <keyed_by_ip /> and <keyed_by_forwarded_ip /> you can additionally specify
+        <ipv4_prefix_bits> and <ipv6_prefix_bits> to group clients by subnet instead of by a
+        single address: the IP address is masked to the given prefix length before being used
+        as the quota key. For example, <ipv4_prefix_bits>24</ipv4_prefix_bits> shares one bucket
+        across a /24 IPv4 subnet, and <ipv6_prefix_bits>64</ipv6_prefix_bits> across a /64 IPv6
+        subnet. These elements can only be used together with <keyed_by_ip /> or
+        <keyed_by_forwarded_ip />.
     -->
     <keyed />
 ```
 
-使用 DDL 语法时，还可以按归一化查询哈希值来设置配额键，这样每种不同的查询模式都会拥有各自独立的配额桶：
+还可以按归一化查询哈希值来设置配额键，这样每种不同的查询模式都会拥有各自独立的配额桶。在 XML 配置中，写法如下：`<keyed_by_normalized_query_hash />`：
+
+```xml
+<my_quota>
+    <keyed_by_normalized_query_hash />
+    <interval>
+        <duration>3600</duration>
+        <queries>100</queries>
+    </interval>
+</my_quota>
+```
+
+同样也可以用 DDL 语法来表示：
 
 ```sql
 CREATE QUOTA my_quota KEYED BY normalized_query_hash FOR INTERVAL 1 hour MAX queries = 100 TO my_user;

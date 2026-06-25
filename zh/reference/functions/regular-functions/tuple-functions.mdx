@@ -173,7 +173,7 @@ SELECT tupleConcat((1, 2), ('a',), (true, false))
 
 引入版本：v21.11.0
 
-计算两个大小相同的元组中对应元素相除的结果。
+计算两个或多个大小相同的Tuple按元素逐一相除的结果，按从左到右的顺序进行。
 
 <Note>
   除以零将返回 `inf`。
@@ -182,21 +182,21 @@ SELECT tupleConcat((1, 2), ('a',), (true, false))
 **语法**
 
 ```sql
-tupleDivide(t1, t2)
+tupleDivide(t1, t2[, tN, ...])
 ```
 
 **参数**
 
-* `t1` — 第一个元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
-* `t2` — 第二个元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t1` — 第一个输入 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t2, ..., tN` — 一个或多个额外的输入 Tuple。所有 Tuple 的大小必须相同。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **返回值**
 
-返回包含除法结果的元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+返回一个包含逐元素相除所得商的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **示例**
 
-**基本用法**
+**两个 Tuple**
 
 ```sql title=Query
 SELECT tupleDivide((1, 2), (2, 3))
@@ -204,6 +204,16 @@ SELECT tupleDivide((1, 2), (2, 3))
 
 ```response title=Response
 (0.5, 0.6666666666666666)
+```
+
+**三个Tuple**
+
+```sql title=Query
+SELECT tupleDivide((100.0, 60.0), (5.0, 3.0), (2.0, 4.0))
+```
+
+```response title=Response
+(10, 5)
 ```
 
 <div id="tupleDivideByNumber">
@@ -251,12 +261,12 @@ SELECT tupleDivideByNumber((1, 2), 0.5)
 
 Introduced in: v1.1.0
 
-按索引或名称从元组中提取元素。
+按索引或名称从Tuple中提取元素。
 
 按索引访问时，应使用从 1 开始的数字索引。
-按名称访问时，可将元素名称作为字符串传入 (仅适用于命名元组) 。
+按名称访问时，可将元素名称作为字符串传入 (仅适用于命名Tuple) 。
 
-支持负索引。在这种情况下，将选择对应的元素，并从末尾开始计数。例如，`tuple.-1` 表示元组中的最后一个元素。
+支持负索引。在这种情况下，将选择对应的元素，并从末尾开始计数。例如，`tuple.-1` 表示Tuple中的最后一个元素。
 
 可选的第三个参数用于指定默认值；当访问的元素不存在时，将返回该值，而不是抛出异常。
 所有参数都必须是常量。
@@ -271,14 +281,14 @@ tupleElement(tuple, index|name[, default_value])
 
 **参数**
 
-* `tuple` — 元组或元组数组。[`Tuple(T)`](/zh/reference/data-types/tuple) 或 [`Array(Tuple(T))`](/zh/reference/data-types/array)
+* `tuple` — Tuple或Tuple数组。[`Tuple(T)`](/zh/reference/data-types/tuple) 或 [`Array(Tuple(T))`](/zh/reference/data-types/array)
 * `index` — 列索引，从 1 开始计数。[`const UInt8/16/32/64`](/zh/reference/data-types/int-uint)
 * `name` — 元素名称。[`const String`](/zh/reference/data-types/string)
-* `default_value` — 当索引越界或元素不存在时返回的默认值。[`Any`](/zh/reference/data-types)
+* `default_value` — 当索引越界或元素不存在时返回的默认值。[`Any`](/zh/reference/data-types/index)
 
 **返回值**
 
-返回指定索引或名称对应的元素。[`Any`](/zh/reference/data-types)
+返回指定索引或名称对应的元素。[`Any`](/zh/reference/data-types/index)
 
 **示例**
 
@@ -302,7 +312,7 @@ SELECT tupleElement((1, 'hello'), -1)
 hello
 ```
 
-**带表的命名元组**
+**带表的命名Tuple**
 
 ```sql title=Query
 CREATE TABLE example (values Tuple(name String, age UInt32)) ENGINE = Memory;
@@ -402,30 +412,30 @@ SELECT tupleHammingDistance(wordShingleMinHash(string), wordShingleMinHashCaseIn
   ## tupleIntDiv
 </div>
 
-首次引入于：v23.8.0
+引入版本：v23.8.0
 
-对一个分子 Tuple 和一个分母 Tuple 执行整数除法，返回由各商组成的 Tuple。
-如果任一 Tuple 包含非整数元素，则会先将每个非整数分子或除数舍入为最接近的整数，再计算结果。
-除以 0 会抛出错误。
+对两个或多个大小相同的Tuple按从左到右的顺序逐元素执行整数除法。返回由各商值组成的Tuple。
+如果任一Tuple包含非整数元素，则会先将每个非整数被除数或除数舍入为最接近的整数，再计算结果。
+除以 0 会抛出异常。
 
 **语法**
 
 ```sql
-tupleIntDiv(tuple_num, tuple_div)
+tupleIntDiv(t1, t2[, tN, ...])
 ```
 
 **参数**
 
-* `tuple_num` — 分子值组成的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
-* `tuple_div` — 除数值组成的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t1` — 第一个输入 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t2, ..., tN` — 一个或多个额外的输入 Tuple。所有 Tuple 的大小必须相同。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **返回值**
 
-返回由各商组成的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+返回一个由整数商组成的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **示例**
 
-**基本用法**
+**两个 Tuple**
 
 ```sql title=Query
 SELECT tupleIntDiv((15, 10, 5), (5, 5, 5))
@@ -435,7 +445,7 @@ SELECT tupleIntDiv((15, 10, 5), (5, 5, 5))
 (3, 2, 1)
 ```
 
-**使用 Decimal 类型**
+**使用 Decimal**
 
 ```sql title=Query
 SELECT tupleIntDiv((15, 10, 5), (5.5, 5.5, 5.5))
@@ -443,6 +453,16 @@ SELECT tupleIntDiv((15, 10, 5), (5.5, 5.5, 5.5))
 
 ```response title=Response
 (2, 1, 0)
+```
+
+**三个Tuple**
+
+```sql title=Query
+SELECT tupleIntDiv((120, 60), (4, 3), (2, 4))
+```
+
+```response title=Response
+(15, 5)
 ```
 
 <div id="tupleIntDivByNumber">
@@ -498,24 +518,24 @@ SELECT tupleIntDivByNumber((15.2, 10.7, 5.5), 5.8)
 
 引入版本：v23.8.0
 
-与 [`tupleIntDiv`](#tupleIntDiv) 类似，对一个由被除数组成的 Tuple 和一个由除数组成的 Tuple 执行整数除法，并返回由商组成的 Tuple。
-如果发生除以 0，则返回的商为 0，而不是抛出异常。
+与 [`tupleIntDiv`](#tupleIntDiv) 类似，对两个或多个大小相同的 Tuple 按从左到右的顺序逐元素执行整数除法。
+如果发生除以 0，则该元素返回 0，而不是抛出异常。
 如果任一 Tuple 包含非整数元素，则会先将每个非整数被除数或除数舍入为最接近的整数，再计算结果。
 
 **语法**
 
 ```sql
-tupleIntDivOrZero(tuple_num, tuple_div)
+tupleIntDivOrZero(t1, t2[, tN, ...])
 ```
 
 **参数**
 
-* `tuple_num` — 由分子值组成的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
-* `tuple_div` — 由除数值组成的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t1` — 第一个输入 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t2, ..., tN` — 一个或多个后续输入 Tuple。所有 Tuple 的大小必须相同。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **返回值**
 
-返回由商组成的 Tuple。对于除数为 0 的项，返回 0。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+返回一个由整数商组成的 Tuple。对于除数为 0 的元素，返回 0。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **示例**
 
@@ -527,6 +547,16 @@ SELECT tupleIntDivOrZero((5, 10, 15), (0, 0, 0))
 
 ```response title=Response
 (0, 0, 0)
+```
+
+**三个元组**
+
+```sql title=Query
+SELECT tupleIntDivOrZero((120, 60), (4, 3), (2, 4))
+```
+
+```response title=Response
+(15, 5)
 ```
 
 <div id="tupleIntDivOrZeroByNumber">
@@ -582,28 +612,28 @@ SELECT tupleIntDivOrZeroByNumber((15, 10, 5), 0)
 
 引入版本：v21.11.0
 
-计算两个大小相同的 Tuple 中对应元素之差。
+计算两个或多个大小相同的 Tuple 的逐元素差值，按从左到右的顺序进行。
 
 **语法**
 
 ```sql
-tupleMinus(t1, t2)
+tupleMinus(t1, t2[, tN, ...])
 ```
 
 **别名**: `vectorDifference`
 
 **参数**
 
-* `t1` — 第一个元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
-* `t2` — 第二个元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t1` — 第一个输入 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t2, ..., tN` — 一个或多个后续输入 Tuple。所有 Tuple 的大小都必须相同。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **返回值**
 
-返回一个包含各项减法结果的元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+返回一个包含逐元素差值的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **示例**
 
-**基本用法**
+**两个 Tuple**
 
 ```sql title=Query
 SELECT tupleMinus((1, 2), (2, 3))
@@ -613,32 +643,42 @@ SELECT tupleMinus((1, 2), (2, 3))
 (-1, -1)
 ```
 
+**三个元组**
+
+```sql title=Query
+SELECT tupleMinus((10, 10), (3, 4), (2, 1))
+```
+
+```response title=Response
+(5, 5)
+```
+
 <div id="tupleModulo">
   ## tupleModulo
 </div>
 
 引入版本：v23.8.0
 
-返回一个元组，其中包含两个元组对应元素相除所得余数 (模) 组成的结果。
+返回一个由两个或多个大小相同的元组按从左到右顺序逐元素相除所得余数组成的元组。
 
 **语法**
 
 ```sql
-tupleModulo(tuple_num, tuple_mod)
+tupleModulo(t1, t2[, tN, ...])
 ```
 
 **参数**
 
-* `tuple_num` — 由分子值组成的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
-* `tuple_mod` — 由模数值组成的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t1` — 第一个输入 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t2, ..., tN` — 另外一个或多个输入 Tuple。所有 Tuple 的大小必须相同。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **返回值**
 
-返回由各项除法余数组成的 Tuple。除数为零时会抛出错误。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+返回一个按元素求余后得到的 Tuple。除以零时会抛出异常。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **示例**
 
-**基本用法**
+**两个 Tuple**
 
 ```sql title=Query
 SELECT tupleModulo((15, 10, 5), (5, 3, 2))
@@ -646,6 +686,16 @@ SELECT tupleModulo((15, 10, 5), (5, 3, 2))
 
 ```response title=Response
 (0, 1, 1)
+```
+
+**三个元组**
+
+```sql title=Query
+SELECT tupleModulo((10, 20), (7, 9), (3, 5))
+```
+
+```response title=Response
+(0, 2)
 ```
 
 <div id="tupleModuloByNumber">
@@ -687,28 +737,28 @@ SELECT tupleModuloByNumber((15, 10, 5), 2)
   ## tupleMultiply
 </div>
 
-引入版本：v21.11.0
+首次引入版本：v21.11.0
 
-计算两个大小相同的 Tuple 中对应元素相乘后的结果。
+计算两个或多个大小相同的 Tuple 的逐元素乘积。
 
 **语法**
 
 ```sql
-tupleMultiply(t1, t2)
+tupleMultiply(t1, t2[, tN, ...])
 ```
 
 **参数**
 
-* `t1` — 第一个元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
-* `t2` — 第二个元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t1` — 第一个输入 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t2, ..., tN` — 一个或多个其他输入 Tuple。所有 Tuple 的大小必须相同。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **返回值**
 
-返回一个包含乘法运算结果的元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+返回一个包含对应元素乘积的 Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **示例**
 
-**基本用法**
+**两个 Tuple**
 
 ```sql title=Query
 SELECT tupleMultiply((1, 2), (2, 3))
@@ -716,6 +766,16 @@ SELECT tupleMultiply((1, 2), (2, 3))
 
 ```response title=Response
 (2, 6)
+```
+
+**三个 Tuple**
+
+```sql title=Query
+SELECT tupleMultiply((1, 2), (2, 3), (1, 2))
+```
+
+```response title=Response
+(2, 12)
 ```
 
 <div id="tupleMultiplyByNumber">
@@ -825,28 +885,28 @@ SELECT tupleNegate((1, 2))
 
 引入版本：v21.11.0
 
-计算两个大小相同的元组中对应元素之和。
+计算两个或多个大小相同的Tuple中对应元素之和。
 
 **语法**
 
 ```sql
-tuplePlus(t1, t2)
+tuplePlus(t1, t2[, tN, ...])
 ```
 
-**别名**: `vectorSum`
+**别名**：`vectorSum`
 
 **参数**
 
-* `t1` — 第一个元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
-* `t2` — 第二个元组。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t1` — 第一个输入Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+* `t2, ..., tN` — 一个或多个额外的输入Tuple。所有Tuple的大小必须相同。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **返回值**
 
-返回一个元组，其中包含输入元组中对应位置元素的和。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
+返回一个包含各元素求和结果的Tuple。[`Tuple((U)Int*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Float*)`](/zh/reference/data-types/tuple) 或 [`Tuple(Decimal)`](/zh/reference/data-types/tuple)
 
 **示例**
 
-**基本用法**
+**两个Tuple**
 
 ```sql title=Query
 SELECT tuplePlus((1, 2), (2, 3))
@@ -854,6 +914,16 @@ SELECT tuplePlus((1, 2), (2, 3))
 
 ```response title=Response
 (3, 5)
+```
+
+**三个Tuple**
+
+```sql title=Query
+SELECT tuplePlus((1, 2), (2, 3), (3, 4))
+```
+
+```response title=Response
+(6, 9)
 ```
 
 <div id="tuplePositiveModuloByNumber">

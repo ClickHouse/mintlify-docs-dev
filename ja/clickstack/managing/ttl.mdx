@@ -8,60 +8,27 @@ keywords: ['clickstack', 'ttl', 'データ保持', 'ライフサイクル', 'ス
 ---
 
 import { Image } from "/snippets/components/Image.jsx";
+import OtelLogsSchema from '/snippets/ja/clickstack/_schema_otel_logs.mdx';
 
 <div id="ttl-clickstack">
-  ## ClickStack の 有効期限 (TTL)
+  ## ClickStack における TTL
 </div>
 
-有効期限 (TTL) は、継続的に大量のデータが生成される ClickStack において、データ保持と管理を効率化する重要な機能です。有効期限 (TTL) を使用すると、古いデータを自動的に期限切れとして削除できるため、手動で運用しなくてもストレージを最適に活用し、パフォーマンスを維持できます。これは、データベースを軽量に保ち、ストレージコストを削減し、最新かつ重要なデータに絞ってクエリを高速かつ効率的に実行するうえで不可欠です。さらに、データのライフサイクルを体系的に管理することで、データ保持ポリシーへの準拠にも役立ち、オブザーバビリティソリューション全体の持続可能性とスケーラビリティの向上にもつながります。
+Time-to-Live (TTL) は、ClickStack における効率的なデータ保持と管理を支える重要な機能です。特に、大量のデータが継続的に生成される環境では欠かせません。TTL を使用すると、古いデータの有効期限切れと削除を自動化できるため、手動で介入しなくてもストレージを最適に活用し、パフォーマンスを維持できます。この機能は、データベースをスリムに保ち、ストレージコストを削減し、最も関連性が高く新しいデータに絞ってクエリを実行できるようにするうえで不可欠です。さらに、データライフサイクルを体系的に管理することでデータ保持ポリシーへの準拠にも役立ち、結果としてオブザーバビリティソリューション全体の持続可能性とスケーラビリティを高めます。
 
-**デフォルトでは、ClickStack はデータを 3 日間保持します。これを変更するには、[&quot;有効期限 (TTL) の変更&quot;](#modifying-ttl) を参照してください。**
+**デフォルトでは、ClickStack はデータを 3 日間保持します。これを変更するには、[&quot;Modifying TTL&quot;](#modifying-ttl) を参照してください。**
 
-有効期限 (TTL) は ClickHouse ではテーブルレベルで制御されます。たとえば、logs のスキーマは以下のとおりです。
+TTL は ClickHouse ではテーブルレベルで制御されます。たとえば、ログのデフォルトスキーマを以下に示します。collector がテーブルを作成する際、`${TABLES_TTL}` は設定された保持期間 (変更していない場合は 3 日) に置き換えられます。
 
-```sql
-CREATE TABLE default.otel_logs
-(
-    `Timestamp` DateTime64(9) CODEC(Delta(8), ZSTD(1)),
-    `TimestampTime` DateTime DEFAULT toDateTime(Timestamp),
-    `TraceId` String CODEC(ZSTD(1)),
-    `SpanId` String CODEC(ZSTD(1)),
-    `TraceFlags` UInt8,
-    `SeverityText` LowCardinality(String) CODEC(ZSTD(1)),
-    `SeverityNumber` UInt8,
-    `ServiceName` LowCardinality(String) CODEC(ZSTD(1)),
-    `Body` String CODEC(ZSTD(1)),
-    `ResourceSchemaUrl` LowCardinality(String) CODEC(ZSTD(1)),
-    `ResourceAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `ScopeSchemaUrl` LowCardinality(String) CODEC(ZSTD(1)),
-    `ScopeName` String CODEC(ZSTD(1)),
-    `ScopeVersion` LowCardinality(String) CODEC(ZSTD(1)),
-    `ScopeAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `LogAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    INDEX idx_trace_id TraceId TYPE bloom_filter(0.001) GRANULARITY 1,
-    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_scope_attr_key mapKeys(ScopeAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_scope_attr_value mapValues(ScopeAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_log_attr_key mapKeys(LogAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_log_attr_value mapValues(LogAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_body Body TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 8
-)
-ENGINE = MergeTree
-PARTITION BY toDate(TimestampTime)
-PRIMARY KEY (ServiceName, TimestampTime)
-ORDER BY (ServiceName, TimestampTime, Timestamp)
-TTL TimestampTime + toIntervalDay(3)
-SETTINGS ttl_only_drop_parts = 1
-```
+<OtelLogsSchema />
 
-ClickHouse のパーティション化では、カラムまたは SQL 式に基づいて、データをディスク上で論理的に分離できます。データを論理的に分離することで、各パーティションを個別に操作できるようになります。たとえば、有効期限 (TTL) ポリシーに従って有効期限が切れた際に削除できます。
+ClickHouse のパーティション化では、カラムまたは SQL 式に基づいて、データをディスク上で論理的に分離できます。データを論理的に分離することで、各パーティションを独立して操作できるようになり、たとえば TTL ポリシーに従って期限切れになった際に削除できます。
 
-上記の例にあるように、パーティション化はテーブルの初期定義時に `PARTITION BY` 句で指定します。この句には任意のカラムに対する SQL 式を含めることができ、その結果によって、行がどのパーティションに送られるかが決まります。これにより、データはディスク上の各パーティションに対して論理的に関連付けられ (共通のフォルダー名のプレフィックスを介して) 、その後、個別にクエリできるようになります。上記の例では、デフォルトの `otel_logs` スキーマは、`toDate(Timestamp).` という式を使用して日単位でパーティション化されます。行が ClickHouse に挿入されると、この式が各行に対して評価され、該当するパーティションが存在すればそこに振り分けられます (その日の最初の行であれば、パーティションが作成されます) 。パーティション化とそのほかの用途の詳細については、[&quot;テーブルパーティション&quot;](/ja/concepts/core-concepts/partitions) を参照してください。
+上記の例にあるように、パーティション化はテーブルを最初に定義する際に `PARTITION BY` 句で指定します。この句には任意のカラムに対する SQL 式を含めることができ、その結果によって行が送られるパーティションが決まります。これにより、データはディスク上で各パーティションと論理的に関連付けられ (共通のフォルダ名プレフィックスを介して)、その後は個別にクエリできます。上記の例では、デフォルトの `otel_logs` スキーマは `toDate(Timestamp)` 式を使って日単位でパーティション化します。行が ClickHouse に挿入されると、この式が各行に対して評価され、対応するパーティションが存在すればそこに振り分けられます (その日で最初の行であれば、パーティションが作成されます)。パーティション化とそのほかの用途の詳細については、[&quot;Table Partitions&quot;](/ja/concepts/core-concepts/partitions) を参照してください。
 
 <Image img="/images/use-cases/observability/observability-14.png" alt="Partitions" size="lg" />
 
-テーブルのスキーマには、`TTL TimestampTime + toIntervalDay(3)` と設定 `ttl_only_drop_parts = 1` も含まれています。前者の句により、データは 3 日を超えると削除されます。設定 `ttl_only_drop_parts = 1` は、行を部分的に削除しようとするのではなく、すべてのデータが期限切れになったデータパーツのみを削除するようにします。さらに、パーティション化によって別々の日のデータが決して「マージ」されないため、データを効率的に削除できます。
+テーブルのスキーマには、`TTL toDateTime(Timestamp) + ${TABLES_TTL}` と設定 `ttl_only_drop_parts = 1` も含まれています。前者の句により、データは設定された TTL (デフォルトでは 3 日) を超えると削除されます。設定 `ttl_only_drop_parts = 1` は、行を部分的に削除しようとするのではなく、すべてのデータが期限切れになったデータパーツのみを削除するようにします。さらに、パーティション化によって別々の日のデータが決して「マージ」されないため、データを効率的に削除できます。
 
 <Warning>
   **`ttl_only_drop_parts`**
