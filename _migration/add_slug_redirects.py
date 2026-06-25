@@ -2,16 +2,14 @@
 """Populate redirect files from slug-map.csv.
 
 Outputs:
-  _site/redirects.json       — composition manifest ($ref to each locale file)
   _site/redirects-en.json    — English redirects
   _site/redirects-ru.json    — Russian locale
   _site/redirects-jp.json    — Japanese locale (jp -> ja code rename)
   _site/redirects-ko.json    — Korean locale
   _site/redirects-zh.json    — Chinese locale
 
-docs.json points to redirects.json, which Mintlify resolves by merging
-all $ref'd locale files. Edit locale source files directly; re-run this
-script to regenerate.
+docs.json references each file directly as $ref array elements.
+Edit locale source files directly and re-run to regenerate.
 
 Run from repo root or _migration/:
     python _migration/add_slug_redirects.py
@@ -24,7 +22,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SLUG_MAP = REPO_ROOT / "_migration/slug-map.csv"
 SITE = REPO_ROOT / "_site"
 REDIRECTS_EN = SITE / "redirects-en.json"
-REDIRECTS_MANIFEST = SITE / "redirects.json"
 MINTLIFY_DOMAIN = "https://private-7c7dfe99.mintlify.app"
 
 # (docusaurus_locale_code, mintlify_locale_code)
@@ -110,10 +107,6 @@ def main() -> None:
         path = SITE / f"redirects-{old_code}.json"
         locale_files.append((old_code, path, entries))
         write_json(path, entries)
-
-    # --- Manifest: redirects.json composes all locale files via $ref ---
-    manifest = [{"$ref": f"redirects-{code}.json"} for code in ["en"] + [lc[0] for lc in LOCALES]]
-    write_json(REDIRECTS_MANIFEST, manifest)
 
     # --- Report ---
     print()
