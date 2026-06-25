@@ -8,27 +8,60 @@ keywords: ['clickstack', 'ttl', '데이터 보존', '수명 주기', '스토리�
 ---
 
 import { Image } from "/snippets/components/Image.jsx";
-import OtelLogsSchema from '/snippets/ko/clickstack/_schema_otel_logs.mdx';
 
 <div id="ttl-clickstack">
   ## ClickStack의 TTL
 </div>
 
-Time-to-Live(TTL)은 ClickStack에서 효율적인 데이터 보존 및 관리를 위해 중요한 기능이며, 특히 대량의 데이터가 지속적으로 생성되는 환경에서 더욱 그렇습니다. TTL을 사용하면 오래된 데이터를 자동으로 만료 및 삭제할 수 있으므로, 수동 개입 없이도 스토리지를 최적으로 활용하고 성능을 유지할 수 있습니다. 이 기능은 데이터베이스를 가볍게 유지하고 스토리지 비용을 절감하며, 가장 관련성이 높고 최신인 데이터에 집중함으로써 쿼리가 빠르고 효율적으로 유지되도록 하는 데 필수적입니다. 또한 데이터 수명 주기를 체계적으로 관리해 데이터 보존 정책에 대한 컴플라이언스를 지원하므로, 관측성 솔루션 전반의 지속 가능성과 확장성을 높이는 데 도움이 됩니다.
+TTL(Time-to-Live)은 ClickStack에서 효율적인 데이터 보존 및 관리를 위한 핵심 기능이며, 특히 방대한 양의 데이터가 지속적으로 생성되는 환경에서 더욱 중요합니다. TTL을 사용하면 오래된 데이터가 자동으로 만료되어 삭제되므로, 수동 개입 없이도 스토리지를 효율적으로 활용하고 성능을 유지할 수 있습니다. 이 기능은 데이터베이스를 경량으로 유지하고 스토리지 비용을 절감하며, 가장 관련성 높고 최신의 데이터에 집중함으로써 쿼리 성능을 빠르고 효율적으로 유지하는 데 필수적입니다. 또한 데이터 수명 주기를 체계적으로 관리해 데이터 보존 정책 관련 컴플라이언스를 지원하므로, 관측성 솔루션 전반의 지속 가능성과 확장성도 향상됩니다.
 
-**기본적으로 ClickStack은 데이터를 3일 동안 보존합니다. 이를 변경하려면 [&quot;TTL 수정&quot;](#modifying-ttl)를 참조하십시오.**
+**기본적으로 ClickStack은 데이터를 3일간 보존합니다. 이를 변경하려면 [&quot;TTL 수정&quot;](#modifying-ttl)을 참조하십시오.**
 
-ClickHouse에서는 TTL이 테이블 수준에서 제어됩니다. 예를 들어 logs의 기본 스키마는 아래와 같으며, collector가 테이블을 생성할 때 `${TABLES_TTL}`은 구성된 보존 기간(변경하지 않은 경우 3일)으로 대체됩니다.
+ClickHouse에서는 TTL을 테이블 수준에서 제어합니다. 예를 들어, logs의 스키마(schema)는 아래와 같습니다.
 
-<OtelLogsSchema />
+```sql
+CREATE TABLE default.otel_logs
+(
+    `Timestamp` DateTime64(9) CODEC(Delta(8), ZSTD(1)),
+    `TimestampTime` DateTime DEFAULT toDateTime(Timestamp),
+    `TraceId` String CODEC(ZSTD(1)),
+    `SpanId` String CODEC(ZSTD(1)),
+    `TraceFlags` UInt8,
+    `SeverityText` LowCardinality(String) CODEC(ZSTD(1)),
+    `SeverityNumber` UInt8,
+    `ServiceName` LowCardinality(String) CODEC(ZSTD(1)),
+    `Body` String CODEC(ZSTD(1)),
+    `ResourceSchemaUrl` LowCardinality(String) CODEC(ZSTD(1)),
+    `ResourceAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
+    `ScopeSchemaUrl` LowCardinality(String) CODEC(ZSTD(1)),
+    `ScopeName` String CODEC(ZSTD(1)),
+    `ScopeVersion` LowCardinality(String) CODEC(ZSTD(1)),
+    `ScopeAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
+    `LogAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
+    INDEX idx_trace_id TraceId TYPE bloom_filter(0.001) GRANULARITY 1,
+    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_scope_attr_key mapKeys(ScopeAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_scope_attr_value mapValues(ScopeAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_log_attr_key mapKeys(LogAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_log_attr_value mapValues(LogAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_body Body TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 8
+)
+ENGINE = MergeTree
+PARTITION BY toDate(TimestampTime)
+PRIMARY KEY (ServiceName, TimestampTime)
+ORDER BY (ServiceName, TimestampTime, Timestamp)
+TTL TimestampTime + toIntervalDay(3)
+SETTINGS ttl_only_drop_parts = 1
+```
 
-ClickHouse의 파티셔닝은 컬럼 또는 SQL 표현식에 따라 디스크에서 데이터를 논리적으로 분리할 수 있게 합니다. 데이터를 논리적으로 분리하면 각 파티션을 독립적으로 처리할 수 있으며, 예를 들어 TTL 정책에 따라 만료되면 삭제할 수 있습니다.
+ClickHouse의 파티셔닝은 컬럼 또는 SQL 표현식에 따라 디스크상에서 데이터를 논리적으로 분리할 수 있게 해줍니다. 데이터를 논리적으로 분리하면 각 파티션을 독립적으로 처리할 수 있으므로, 예를 들어 TTL 정책에 따라 만료된 데이터를 삭제할 수 있습니다.
 
-위 예시에서 볼 수 있듯이 파티셔닝은 테이블을 처음 정의할 때 `PARTITION BY` 절을 통해 지정합니다. 이 절에는 하나 이상의 컬럼에 대한 SQL 표현식을 포함할 수 있으며, 그 결과에 따라 각 행이 어느 파티션으로 전송될지가 결정됩니다. 이로 인해 데이터는 디스크에서 각 파티션과 논리적으로 연결되며(공통 폴더 이름 접두사를 통해), 이후 각 파티션만 따로 쿼리할 수 있습니다. 위 예시에서는 기본 `otel_logs` 스키마가 `toDate(Timestamp)` 표현식을 사용해 일 단위로 파티셔닝합니다. 행이 ClickHouse에 삽입되면 이 표현식이 각 행에 대해 평가되고, 해당 파티션이 이미 있으면 그 파티션으로 전달됩니다(해당 날짜의 첫 번째 행이면 파티션이 생성됩니다). 파티셔닝과 그 밖의 활용 사례에 대한 자세한 내용은 [&quot;Table Partitions&quot;](/ko/concepts/core-concepts/partitions)를 참조하십시오.
+위 예시에서 보듯이 파티셔닝은 테이블(table)을 처음 정의할 때 `PARTITION BY` 절로 지정합니다. 이 절에는 하나 이상의 컬럼에 대한 SQL 표현식이 들어갈 수 있으며, 그 결과에 따라 각 행이 어느 파티션으로 보내질지가 결정됩니다. 그 결과 데이터는 디스크의 각 파티션과 논리적으로 연결되며(공통 폴더 이름 접두사를 통해), 이후 특정 파티션만 분리해서 조회할 수 있습니다. 위 예시에서 기본 `otel_logs` 스키마(schema)는 `toDate(Timestamp).` 표현식을 사용해 일 단위로 파티셔닝합니다. 행이 ClickHouse에 삽입되면 이 표현식이 각 행에 대해 평가되며, 해당 결과의 파티션이 이미 있으면 그 파티션으로 라우팅됩니다(해당 날짜의 첫 번째 행이면 파티션이 생성됩니다). 파티셔닝과 그 밖의 활용 방식에 대한 자세한 내용은 [&quot;테이블 파티션&quot;](/ko/concepts/core-concepts/partitions)을 참조하십시오.
 
 <Image img="/images/use-cases/observability/observability-14.png" alt="파티션" size="lg" />
 
-테이블 스키마에는 `TTL toDateTime(Timestamp) + ${TABLES_TTL}`와 설정 `ttl_only_drop_parts = 1`도 포함됩니다. 앞의 절은 데이터가 구성된 TTL(기본적으로 3일)보다 오래되면 삭제되도록 보장합니다. 설정 `ttl_only_drop_parts = 1`은 모든 데이터가 만료된 데이터 파트만 만료 대상으로 처리하도록 합니다(행을 부분적으로 삭제하려고 시도하는 대신). 또한 파티셔닝을 통해 서로 다른 날짜의 데이터가 절대 머지되지 않으므로 데이터를 효율적으로 삭제할 수 있습니다.
+테이블 스키마에는 `TTL TimestampTime + toIntervalDay(3)`와 설정 `ttl_only_drop_parts = 1`도 포함됩니다. 앞의 절은 데이터가 3일이 지나면 삭제되도록 보장합니다. 설정 `ttl_only_drop_parts = 1`은 모든 데이터가 만료된 데이터 파트만 만료 대상으로 처리하도록 합니다(행을 부분적으로 삭제하려고 시도하는 대신). 또한 파티셔닝을 통해 서로 다른 날짜의 데이터가 절대 머지되지 않으므로 데이터를 효율적으로 삭제할 수 있습니다.
 
 <Warning>
   **`ttl_only_drop_parts`**

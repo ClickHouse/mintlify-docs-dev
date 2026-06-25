@@ -9,9 +9,6 @@ keywords: ['ClickStack', '可观测性', '日志', '性能', '优化']
 
 import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
 
-import OtelLogsSchema from '/snippets/zh/clickstack/_schema_otel_logs.mdx';
-import OtelTracesSchema from '/snippets/zh/clickstack/_schema_otel_traces.mdx';
-
 import { Image } from "/snippets/components/Image.jsx";
 
 <div id="introduction">
@@ -111,7 +108,47 @@ ClickStack 将 Kubernetes 标记、服务元数据和自定义属性等元数据
 
 以用于链路追踪的默认 ClickStack schema 为例，其中 Kubernetes 元数据存储在 `ResourceAttributes` 中：
 
-<OtelTracesSchema />
+```sql
+CREATE TABLE IF NOT EXISTS otel_traces
+(
+    `Timestamp` DateTime64(9) CODEC(Delta(8), ZSTD(1)),
+    `TraceId` String CODEC(ZSTD(1)),
+    `SpanId` String CODEC(ZSTD(1)),
+    `ParentSpanId` String CODEC(ZSTD(1)),
+    `TraceState` String CODEC(ZSTD(1)),
+    `SpanName` LowCardinality(String) CODEC(ZSTD(1)),
+    `SpanKind` LowCardinality(String) CODEC(ZSTD(1)),
+    `ServiceName` LowCardinality(String) CODEC(ZSTD(1)),
+    `ResourceAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
+    `ScopeName` String CODEC(ZSTD(1)),
+    `ScopeVersion` String CODEC(ZSTD(1)),
+    `SpanAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
+    `Duration` UInt64 CODEC(ZSTD(1)),
+    `StatusCode` LowCardinality(String) CODEC(ZSTD(1)),
+    `StatusMessage` String CODEC(ZSTD(1)),
+    `Events.Timestamp` Array(DateTime64(9)) CODEC(ZSTD(1)),
+    `Events.Name` Array(LowCardinality(String)) CODEC(ZSTD(1)),
+    `Events.Attributes` Array(Map(LowCardinality(String), String)) CODEC(ZSTD(1)),
+    `Links.TraceId` Array(String) CODEC(ZSTD(1)),
+    `Links.SpanId` Array(String) CODEC(ZSTD(1)),
+    `Links.TraceState` Array(String) CODEC(ZSTD(1)),
+    `Links.Attributes` Array(Map(LowCardinality(String), String)) CODEC(ZSTD(1)),
+    `__hdx_materialized_rum.sessionId` String MATERIALIZED ResourceAttributes['rum.sessionId'] CODEC(ZSTD(1)),
+    INDEX idx_trace_id TraceId TYPE bloom_filter(0.001) GRANULARITY 1,
+    INDEX idx_rum_session_id __hdx_materialized_rum.sessionId TYPE bloom_filter(0.001) GRANULARITY 1,
+    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_span_attr_key mapKeys(SpanAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_span_attr_value mapValues(SpanAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_duration Duration TYPE minmax GRANULARITY 1,
+    INDEX idx_lower_span_name lower(SpanName) TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 8
+)
+ENGINE = MergeTree
+PARTITION BY toDate(Timestamp)
+ORDER BY (ServiceName, SpanName, toDateTime(Timestamp))
+TTL toDate(Timestamp) + toIntervalDay(30)
+SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
+```
 
 用户可以使用 Lucene 语法过滤链路追踪，例如 `ResourceAttributes.k8s.pod.name:"checkout-675775c4cc-f2p9c"`：
 
@@ -143,16 +180,16 @@ MATERIALIZED ResourceAttributes['k8s.pod.name']
 
 对于新写入的数据，这样可以完全避免访问 map，并显著减少 I/O。
 
-不过，即使用户继续查询原始属性路径，例如 `ResourceAttributes.k8s.pod.name:"checkout-675775c4cc-f2p9c"`，**ClickStack 也会在内部自动重写查询**，改为使用物化后的 `PodName` 列，即使用以下谓词：
+不过，即使用户继续查询原始属性路径，例如 `ResourceAttributes.k8s.pod.name:"checkout-675775c4cc-f2p9c"`，**ClickStack 也会在内部自动将查询重写**为使用物化后的 `PodName` 列，即使用以下谓词：
 
 ```sql
 PodName = 'checkout-675775c4cc-f2p9c'
 ```
 
-这可确保用户无需更改仪表盘、告警或已保存查询，即可享受到这项优化带来的收益。
+这样一来，用户无需修改仪表盘、告警或已保存的查询，即可享受到这项优化带来的收益。
 
 <Note>
-  默认情况下，物化列会被排除在 `SELECT * queries` 之外。这样可以保持一个不变性：查询结果始终可以重新插入该表。
+  默认情况下，物化列不会包含在 `SELECT * 查询` 中。这样可以保持一个不变量：查询结果始终可以重新插入到表中。
 </Note>
 
 <div id="materializing-historical-data">
@@ -192,7 +229,7 @@ ORDER BY create_time DESC;
   变更会带来额外的 IO 和 CPU 开销，应尽量少用。在很多情况下，让旧数据自然过期即可，并依赖新摄取数据带来的性能提升就已足够。
 </Warning>
 
-<div id="adding-skip-indexes">
+<div id="adding-skip-indices">
   ## 优化 2：添加跳过索引
 </div>
 
@@ -202,15 +239,52 @@ ORDER BY create_time DESC;
 
 以 ClickStack 默认的链路追踪 schema 为例，其中包含跳过索引：
 
-<OtelTracesSchema />
+```sql
+CREATE TABLE IF NOT EXISTS otel_traces
+(
+    `Timestamp` DateTime64(9) CODEC(Delta(8), ZSTD(1)),
+    `TraceId` String CODEC(ZSTD(1)),
+    `SpanId` String CODEC(ZSTD(1)),
+    `ParentSpanId` String CODEC(ZSTD(1)),
+    `TraceState` String CODEC(ZSTD(1)),
+    `SpanName` LowCardinality(String) CODEC(ZSTD(1)),
+    `SpanKind` LowCardinality(String) CODEC(ZSTD(1)),
+    `ServiceName` LowCardinality(String) CODEC(ZSTD(1)),
+    `ResourceAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
+    `ScopeName` String CODEC(ZSTD(1)),
+    `ScopeVersion` String CODEC(ZSTD(1)),
+    `SpanAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
+    `Duration` UInt64 CODEC(ZSTD(1)),
+    `StatusCode` LowCardinality(String) CODEC(ZSTD(1)),
+    `StatusMessage` String CODEC(ZSTD(1)),
+    `Events.Timestamp` Array(DateTime64(9)) CODEC(ZSTD(1)),
+    `Events.Name` Array(LowCardinality(String)) CODEC(ZSTD(1)),
+    `Events.Attributes` Array(Map(LowCardinality(String), String)) CODEC(ZSTD(1)),
+    `Links.TraceId` Array(String) CODEC(ZSTD(1)),
+    `Links.SpanId` Array(String) CODEC(ZSTD(1)),
+    `Links.TraceState` Array(String) CODEC(ZSTD(1)),
+    `Links.Attributes` Array(Map(LowCardinality(String), String)) CODEC(ZSTD(1)),
+    `__hdx_materialized_rum.sessionId` String MATERIALIZED ResourceAttributes['rum.sessionId'] CODEC(ZSTD(1)),
+    INDEX idx_trace_id TraceId TYPE bloom_filter(0.001) GRANULARITY 1,
+    INDEX idx_rum_session_id __hdx_materialized_rum.sessionId TYPE bloom_filter(0.001) GRANULARITY 1,
+    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_span_attr_key mapKeys(SpanAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_span_attr_value mapValues(SpanAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_duration Duration TYPE minmax GRANULARITY 1,
+    INDEX idx_lower_span_name lower(SpanName) TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 8
+)
+ENGINE = MergeTree
+PARTITION BY toDate(Timestamp)
+ORDER BY (ServiceName, SpanName, toDateTime(Timestamp))
+TTL toDate(Timestamp) + toIntervalDay(30)
+SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
+```
 
-这些索引主要针对三种常见场景：
+这些索引主要针对两种常见场景：
 
 * 对高基数字符串的过滤，例如 TraceId、会话标识符、属性键或属性值
-* 借助 [`*AttributeItems`](#map-direct-read-optimization) 列上的[文本索引](#text-indexes)加速 Map 子键过滤
 * 对数值范围的过滤，例如 span 耗时
-
-日志表则统一使用 `text(tokenizer = 'array')` 索引，而不是布隆过滤器，并在 `lower(Body)` 上额外添加了一个用于全文搜索的 `text(tokenizer = 'splitByNonAlpha')` 索引。完整 DDL 请参见[“ClickStack 使用的表和 schema”](/zh/clickstack/ingesting-data/schemas#logs)。
 
 <div id="bloom-filters">
   ### 布隆过滤器
@@ -243,74 +317,7 @@ GRANULARITY 1
 
 与所有跳过索引一样，布隆过滤器应有选择地添加，并根据真实的查询模式进行验证，以确保它们能带来可衡量的收益——请参阅 [&quot;评估跳过索引的有效性。&quot;](#evaluating-skip-index-effectiveness)
 
-<div id="text-indexes">
-  ### 文本索引
-</div>
-
-[文本索引](/zh/reference/engines/table-engines/mergetree-family/textindexes)可作为布隆过滤器的替代方案。布隆过滤器是一种概率型结构，能够明确排除某些粒度，但它存在误报率，因此凡是它未排除的粒度，仍需加载并根据 `WHERE` 条件进行判断。文本索引属于倒排索引，会将标记映射到分片内的精确偏移量。由于它们判断的是偏移量而非粒度，且不会产生误报，因此通常无需加载底层列就能满足 `WHERE` 条件。这种优化称为[直接读取](https://github.com/ClickHouse/clickhouse-docs/pull/6356/%E2%80%A6)。由于加载数据通常是查询耗时的最大来源，直接读取可以显著降低查询延迟。
-
-此外，文本索引本身也可以被查询，从而为 ClickStack 中的自动补全和其他内部信息功能提供支持。
-
-以下两种分词器涵盖了大多数 ClickStack 使用场景：
-
-| 分词器               | 用途                             | 典型列                               |
-| ----------------- | ------------------------------ | --------------------------------- |
-| `array`           | 将 `Array(String)` 元素作为完整标记进行索引 | `mapKeys(...)`, `*AttributeItems` |
-| `splitByNonAlpha` | 对自然语言字符串进行词级全文搜索               | `Body`, `lower(Body)`, `SpanName` |
-
-<div id="array-tokenizer">
-  #### 用于 Map 和数组列的 Array 分词器
-</div>
-
-默认的日志 schema 会使用 `array` 分词器为 `mapKeys` 和 materialized 项数组建立索引：
-
-```sql
-INDEX idx_log_attr_key mapKeys(LogAttributes) TYPE text(tokenizer = 'array'),
-INDEX idx_log_attr_items LogAttributeItems TYPE text(tokenizer = 'array')
-```
-
-每个 Map 键 (或数组元素) 都会成为一个单独的标记。对已知的
-attribute 键进行过滤时，无需扫描相应的
-Map 列，即可剪枝掉任何不包含该键的行。这正是让 [Map 直接读取优化](#map-direct-read-optimization)
-发挥作用的机制。
-
-<div id="text-index-body">
-  #### 用于日志正文的 `splitByNonAlpha`
-</div>
-
-对 `Body` 列执行全文搜索时，`splitByNonAlpha` 文本
-索引会更有效。ClickStack 在 `lower(Body)` 上定义了该索引，因此不区分大小写的
-Lucene 搜索可以利用它：
-
-```sql
-INDEX idx_lower_body lower(Body) TYPE text(tokenizer = 'splitByNonAlpha')
-```
-
-当 ClickStack 在
-`lower(Body)` 上检测到 `text(tokenizer = 'splitByNonAlpha')` 索引时，会将 `error` 或
-`"connection refused"` 这类未显式指定列的 Lucene 查询改写为 `hasAllTokens(lower(Body), lower(...))`，从而让
-索引无需读取完整的 `Body` 列即可完成过滤。对于大多数
-可观测性日志工作负载而言，这是筛选性能提升最显著的一项优化。
-
-<Info>
-  **文本索引 vs `tokenbf_v1`**
-
-  较旧的 `tokenbf_v1` 索引类型 (默认链路追踪 schema 中的
-  `lower(SpanName)` 仍在使用) 在功能上与之类似，但在 ClickHouse 26.2 及以上版本中已弃用。
-  新的文本搜索索引应使用 `text(tokenizer = ...)`。
-</Info>
-
-如需进一步了解分词器选项、预处理器和验证方法，请参阅[全文搜索文档](/zh/reference/engines/table-engines/mergetree-family/textindexes)。
-
-<div id="text-indexes-in-default-logs-schema">
-  #### 默认日志 schema 中的文本索引
-</div>
-
-从上游同步的默认 `otel_logs` schema 预置了上文讨论的所有文本索引：在 `TraceId`、各个 `mapKeys(...)` 和 `*AttributeItems` 数组上使用 `text(tokenizer = 'array')`，并在 `lower(Body)` 上使用 `text(tokenizer = 'splitByNonAlpha')` 以支持全文搜索。标准 DDL 请参见[“ClickStack 使用的表和 schema”](/zh/clickstack/ingesting-data/schemas#logs)；下方也列出了相同的 schema。
-
-<OtelLogsSchema />
-
-<div id="min-max-indexes">
+<div id="min-max-indices">
   ### Min-max 索引
 </div>
 
@@ -405,9 +412,9 @@ WHERE database = 'otel'
 
 在实践中，MinMax 索引通常非常小，评估成本也很低，因此几乎总是可以安全地物化。相比之下，布隆过滤器索引则可能会因基数、粒度和误报概率而显著增大。
 
-可以通过提高允许的误报率来减小 布隆过滤器 的大小。例如，将 probability 参数从 `0.01` 提高到 `0.05`，会生成一个更小且评估速度更快的索引，但代价是剪枝效果会减弱。虽然被跳过的数据粒度可能会更少，但由于索引评估更快，整体查询延迟反而可能有所改善。
+可以通过提高允许的误报率来减小 Bloom filter 的大小。例如，将 probability 参数从 `0.01` 提高到 `0.05`，会生成一个更小且评估速度更快的索引，但代价是剪枝效果会减弱。虽然被跳过的数据粒度可能会更少，但由于索引评估更快，整体查询延迟反而可能有所改善。
 
-因此，调优 布隆过滤器 参数是一项依赖工作负载的优化，应结合真实的查询模式和接近生产环境的数据量进行验证。
+因此，调优 Bloom filter 参数是一项依赖工作负载的优化，应结合真实的查询模式和接近生产环境的数据量进行验证。
 
 有关跳过索引的更多信息，请参阅指南[&quot;了解 ClickHouse 数据跳过索引&quot;](/zh/concepts/features/performance/skip-indexes/skipping-indexes-examples)
 
@@ -489,116 +496,16 @@ Peak memory usage: 198.39 MiB.
   ### 何时添加跳过索引
 </div>
 
-应有选择地添加跳过索引，具体取决于用户最常使用的过滤条件类型，以及分片和粒度中的数据形态。目标是跳过足够多的粒度，以抵消评估索引本身的成本，因此必须在接近生产环境的数据上进行基准测试。
+应有选择地添加跳过索引，具体取决于用户最常使用的过滤条件类型，以及 parts 和粒度中的数据形态。目标是跳过足够多的粒度，以抵消评估索引本身的成本，因此必须在接近生产环境的数据上进行基准测试。
 
-**对于用于过滤的数值列，minmax 跳过索引几乎总是不错的选择。** 它很轻量，评估成本低，而且对范围谓词通常很有效——尤其是在值大致有序，或在分片内集中在较窄范围时。即使 minmax 对某种特定查询模式没有帮助，它带来的额外开销通常也很低，因此保留它往往依然是合理的。
+**对于用于过滤的数值列，minmax 跳过索引几乎总是不错的选择。** 它很轻量，评估成本低，而且对范围谓词通常很有效——尤其是在值大致有序，或在 parts 内集中在较窄范围时。即使 minmax 对某种特定查询模式没有帮助，它带来的额外开销通常也很低，因此保留它往往依然是合理的。
 
-**对于字符串列，若支持则优先使用文本索引；否则使用布隆过滤器。** 文本索引既能加速与布隆过滤器相同的等值过滤和 `IN` 过滤，还额外支持基于标记的谓词 (`hasToken`、`hasAllTokens`、`has`) ，这些谓词可用于全文搜索和 [Map 直接读取优化](#map-direct-read-optimization)。对于尚不支持文本索引的旧集群，布隆过滤器仍然是稳妥的选择。
+**字符串列：当基数高且值较稀疏时，使用布隆过滤器。**
 
-布隆过滤器对高基数字符串列最为有效，即每个值的出现频率相对较低，这意味着大多数分片和粒度中都不包含要查找的值。经验上，当某一列至少有 10,000 个不同值时，布隆过滤器通常比较值得尝试；而当不同值达到 100,000+ 时，往往效果最佳。如果匹配值集中在少量连续的分片中，它们也会更有效，而这种情况通常发生在该列与排序键存在关联时。同样，这里的实际效果可能因场景而异——没有什么比真实环境测试更可靠。
-
-<div id="map-direct-read-optimization">
-  ## 优化 3. Map 直接读取
-</div>
-
-当你按 Map 子键进行过滤时，例如 `LogAttributes['k8s.pod.name'] =
-'checkout'`，ClickHouse 必须从磁盘读取整个 `LogAttributes` Map 列，并解包每一行来评估该过滤条件。[将经常查询的属性物化](#materialize-frequently-queried-attributes)
-可以解决你预先已知的那些键的问题，但对于用户临时按需过滤的任意属性，这种方法无法扩展。
-
-即使某个 schema 在 `mapKeys` 和 `mapValues` 上建有索引，这些索引也只能告诉你某一行是否包含某个键，以及是否包含某个值，却无法判断该键和值是否属于同一个条目。换句话说，`mapKeys` 可以回答 `mapContainsKey(ResourceAttributes, 'foo')`，`mapValues` 可以回答 `mapContainsValue(ResourceAttributes, 'bar')`，但二者都无法回答 `ResourceAttributes['foo'] = 'bar'`。
-
-通过将键和值拼接到一个 `Array(String)` 列中，Map 直接读取优化可以让 `ResourceAttributes['foo'] = 'bar'` 在无需加载底层 Map 的情况下得到结果。Map 通常很大，而且会随着数据量增加而变大。再结合应用层的查询重写，针对任意 Map 子键的等值过滤都会变成一次由该索引支持的 `has(...)` 调用，查询时无需对 Map 进行反序列化。此外，唯一需要付出的存储成本是文本索引，因为底层列是 `ALIAS` 列，不会被存储。
-
-此优化是自动启用的。ClickStack 在默认的日志和 trace 表中提供了所需的列和索引，并且当连接的 ClickHouse server 支持底层基本类型时，会在运行时重写 Map 下标过滤条件。如果你的 schema 不包含这些列，或者除了默认列之外，你还想加速其他 Map 列，请继续阅读以启用它们。
-
-<div id="map-direct-read-schema">
-  ### Schema
-</div>
-
-对于要加速的每个 Map 列，ClickStack 都会定义一个
-`Array(String)` `ALIAS` 列，通过 `=` 将每个键和值连接起来：
-
-```sql
-ALTER TABLE otel_logs
-ADD COLUMN LogAttributeItems Array(String)
-ALIAS arrayMap(
-  (arr) -> concat(arr.1, '=', arr.2),
-  LogAttributes::Array(Tuple(String, String))
-)
-```
-
-`ALIAS` 形式意味着该数组不会在磁盘上占用任何额外字节。ClickHouse 会在
-查询时以及构建索引时计算它。`ALIAS` 列上的 `text(tokenizer = 'array')` 跳过索引
-会为每个 `key=value` 对存储一个标记，ClickHouse 利用它在不访问源 Map 的情况下跳过相应粒度：
-
-```sql
-ALTER TABLE otel_logs
-ADD INDEX idx_log_attr_items LogAttributeItems
-TYPE text(tokenizer = 'array')
-```
-
-在现有表上创建索引后，请将其物化，这样历史
-数据也能使用该索引 (参见[“物化跳过索引”](#materialize-skip-index)) 。
-
-默认的 ClickStack schema 自带以下列和索引：
-
-| 表             | ALIAS 列                                                              | 文本索引                                                               |
-| ------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `otel_logs`   | `ResourceAttributeItems`, `ScopeAttributeItems`, `LogAttributeItems` | `idx_res_attr_items`, `idx_scope_attr_items`, `idx_log_attr_items` |
-| `otel_traces` | `ResourceAttributeItems`, `SpanAttributeItems`                       | `idx_res_attr_items`, `idx_span_attr_items`                        |
-
-<div id="map-direct-read-rewrite">
-  ### 查询重写
-</div>
-
-当用户通过 ClickStack UI 或 SDK 按 Map 的子键进行过滤时，ClickStack
-会将其重写为：
-
-```sql
-LogAttributes['k8s.pod.name'] = 'checkout'
-```
-
-改为：
-
-```sql
-has(LogAttributeItems, concat('k8s.pod.name', '=', 'checkout'))
-```
-
-重写后的形式会命中 `LogAttributeItems` 上的文本索引，剪除所有不包含
-`key=value` 标记的行，并且对于不匹配的行，完全不会反序列化源 `LogAttributes` Map。对于高基数的
-可观测性工作负载，与 Map 下标访问相比，这通常可将 I/O 降低一个数量级。
-
-这种重写会自动进行——引用 `LogAttributes['key']` 的已保存查询、仪表盘和告警
-无需任何更改即可获得性能提升。
-
-<div id="map-direct-read-version">
-  ### ClickHouse 版本要求
-</div>
-
-查询重写要求使用支持对带文本索引的数组列进行直接标记级剪枝的 ClickHouse 版本。ClickStack 会检测已连接
-server 的版本 (`SELECT version()`，按 connection 缓存) ，并且只有在
-server 版本达到或高于该阈值时才会生成重写后的形式。较旧的
-server 会自动回退到原始的 Map 下标形式。
-
-| ClickHouse 分支 | 最低版本       |
-| ------------- | ---------- |
-| 26.2          | 26.2.19.43 |
-| 26.3          | 26.3.12.3  |
-| 26.4          | 26.4.3.37  |
-| 26.5+         | 所有版本       |
-
-<Info>
-  **为什么使用 ALIAS，而不是 MATERIALIZED**
-
-  items 数组只是对已存储在 Map 列中数据的一层视图。
-  如果将它存储两次——一次在 Map 中，一次在数组中——会使写入 IO
-  翻倍，却无法支持新的查询模式。`ALIAS` 列上的文本索引
-  会在写入时基于同一份源数据构建，因此这项优化只会为磁盘增加
-  索引占用。
-</Info>
+布隆过滤器对高基数字符串列最为有效，即每个值的出现频率相对较低，这意味着大多数 parts 和粒度中都不包含要查找的值。经验上，当某一列至少有 10,000 个不同值时，布隆过滤器通常比较值得尝试；而当不同值达到 100,000+ 时，往往效果最佳。如果匹配值集中在少量连续的 parts 中，它们也会更有效，而这种情况通常发生在该列与排序键存在关联时。同样，这里的实际效果可能因场景而异——没有什么比真实环境测试更可靠。
 
 <div id="modifying-the-primary-key">
-  ## 优化 4. 修改主键
+  ## 优化 3. 修改主键
 </div>
 
 对于大多数工作负载来说，主键是 ClickHouse 性能调优中最关键的组成部分之一。要想有效调优主键，你必须理解它的工作原理，以及它如何与你的查询模式相互配合。归根结底，主键应当与用户访问数据的方式相匹配，尤其要贴合最常用于过滤的列。
@@ -619,12 +526,12 @@ server 会自动回退到原始的 Map 下标形式。
 
 **通常你会优化日志表和链路追踪表。其他数据类型很少需要调整主键。**
 
-下面是 ClickStack 中日志表和链路追踪表的默认主键。
+下面是 ClickStack 中日志和指标表的默认主键。
 
-* 日志 ([`otel_logs`](/zh/clickstack/ingesting-data/schemas#logs)) - `(toStartOfFiveMinutes(Timestamp), ServiceName, Timestamp)`
-* 链路追踪 ([`otel_traces`](/zh/clickstack/ingesting-data/schemas#traces)) - `(ServiceName, SpanName, toDateTime(Timestamp))`
+* 日志 ([`otel_logs`](/zh/clickstack/ingesting-data/schemas#logs)) - `(ServiceName, TimestampTime, Timestamp)`
+* 链路追踪 ([&#39;otel&#95;traces](/zh/clickstack/ingesting-data/schemas#traces)) - `(ServiceName, SpanName, toDateTime(Timestamp))`
 
-有关其他数据类型对应表所使用的主键，请参阅 [“ClickStack 使用的表和 schema”](/zh/clickstack/ingesting-data/schemas)。链路追踪表针对按服务名和 span 名过滤进行了优化，其后是时间戳。日志表则以五分钟时间桶作为首列，这样时间范围扫描会先命中主索引，再在每个时间桶内按服务名进一步缩小范围——这种布局非常适合常见的“服务 X 在最近 N 分钟内发生了什么”工作流。虽然理想情况下用户应按主键顺序应用过滤器，但无论以何种顺序按这些列中的任意列进行过滤，查询仍会明显受益，因为 ClickHouse 会在读取前先[剪枝数据](/zh/concepts/features/performance/skip-indexes/skipping-indexes)。
+有关其他数据类型对应表所使用的主键，请参阅 [“ClickStack 使用的表和 schema”](/zh/clickstack/ingesting-data/schemas)。例如，trace 表针对按服务名和 span 名过滤进行了优化，其后是时间戳和 trace ID。相较之下，日志表针对按服务名过滤进行了优化，然后是日期，最后是时间戳。虽然理想情况下用户应按主键顺序应用过滤器，但无论以何种顺序按这些列中的任意列进行过滤，查询仍会明显受益，因为 ClickHouse 会在读取前先[剪枝数据](/zh/concepts/features/performance/skip-indexes/skipping-indexes)。
 
 选择主键时，在确定列的最佳排序时还需要考虑其他因素。请参阅 [“选择主键。”](#choosing-a-primary-key)
 
@@ -667,8 +574,8 @@ server 会自动回退到原始的 Map 下标形式。
 
     ```sql
     CREATE TABLE otel_logs_temp AS otel_logs
-    PRIMARY KEY (SeverityText, ServiceName, Timestamp)
-    ORDER BY (SeverityText, ServiceName, Timestamp)
+    PRIMARY KEY (SeverityText, ServiceName, TimestampTime)
+    ORDER BY (SeverityText, ServiceName, TimestampTime)
     ```
 
     <Info>
@@ -695,7 +602,7 @@ server 会自动回退到原始的 Map 下标形式。
 
 不过，**现有表的主键不能直接修改**。要更改主键，必须创建一张新表。
 
-下面的流程可确保旧数据得以保留，并且仍能被透明查询 (如有需要，仍可在 ClickStack UI 中使用其现有键) ；同时，新数据则通过一张针对用户访问模式优化过的新表提供。这样一来，无需修改摄取管道，数据仍会发送到默认表名，且所有变更对用户都是透明的。
+下面的流程可确保旧数据得以保留，并且仍能被透明查询 (如有需要，仍可在 HyperDX 中使用其现有键) ；同时，新数据则通过一张针对用户访问模式优化过的新表提供。这样一来，无需修改摄取管道，数据仍会发送到默认表名，且所有变更对用户都是透明的。
 
 <Note>
   在大规模场景下，将现有数据回填到新表通常得不偿失。其计算资源和 IO 成本通常很高，不足以证明性能收益值得这样做。更好的做法是让旧数据[通过生存时间 (TTL)](/zh/clickstack/managing/ttl)自然过期，而让较新的数据受益于改进后的键。
@@ -707,19 +614,19 @@ server 会自动回退到原始的 Map 下标形式。
   <Step>
     #### 创建新表
 
-    使用所需的主键创建新表。注意 `_23_01_2025` 后缀——请将其调整为当前日期。例如：
+    使用所需的主键创建新表。注意 `_23_01_2025` 后缀——请将其替换为当前日期。例如：
 
     ```sql
     CREATE TABLE otel_logs_23_01_2025 AS otel_logs
-    PRIMARY KEY (SeverityText, ServiceName, Timestamp)
-    ORDER BY (SeverityText, ServiceName, Timestamp)
+    PRIMARY KEY (SeverityText, ServiceName, TimestampTime)
+    ORDER BY (SeverityText, ServiceName, TimestampTime)
     ```
   </Step>
 
   <Step>
     #### 创建 Merge 表
 
-    [Merge 引擎](/zh/reference/engines/table-engines/special/merge) (不要与 MergeTree 混淆) 本身不存储数据，但允许同时从任意数量的其他表读取数据。
+    [Merge 引擎](/zh/reference/engines/table-engines/special/merge) (不要与 MergeTree 混淆) 本身不存储数据，但允许同时从任意数量的其他表中读取数据。
 
     ```sql
     CREATE TABLE otel_logs_merge
@@ -728,34 +635,34 @@ server 会自动回退到原始的 Map 下标形式。
     ```
 
     <Note>
-      `currentDatabase()` 假定该命令是在正确的数据库中运行的。否则，请显式指定数据库名称。
+      `currentDatabase()` 假定该命令是在正确的数据库中运行。否则，请显式指定数据库名称。
     </Note>
 
-    现在可以查询这个表，以确认它会返回来自 `otel_logs` 的数据。
+    现在可以查询这张表，以确认它会返回来自 `otel_logs` 的数据。
   </Step>
 
   <Step>
-    #### 更新 ClickStack UI 以从 merge 表读取数据
+    #### 更新 HyperDX 以从 merge 表读取
 
-    将 ClickStack UI 配置为使用 `otel_logs_merge` 作为日志数据源对应的表。
+    将 HyperDX 配置为使用 `otel_logs_merge` 作为日志数据源对应的表。
 
     <Image img="/images/clickstack/performance_guide/select_merge_table.png" size="lg" alt="选择 Merge 表" />
 
-    此时，写入仍会继续进入使用原始主键的 `otel_logs`，而读取则通过 merge 表进行。对用户没有可见变化，也不会影响摄取。
+    此时，写入仍会进入使用原始主键的 `otel_logs`，而读取则通过 merge 表进行。对用户没有可见变化，也不会影响摄取。
   </Step>
 
   <Step>
-    #### 交换表
+    #### 交换这些表
 
-    现在使用 `EXCHANGE` 语句以原子方式交换 `otel_logs` 和 `otel_logs_23_01_2025` 两个表的名称。
+    现在使用 `EXCHANGE` 语句，以原子方式交换 `otel_logs` 和 `otel_logs_23_01_2025` 这两张表的名称。
 
     ```sql
     EXCHANGE TABLES otel_logs AND otel_logs_23_01_2025
     ```
 
-    后续写入将进入使用更新后主键的新 `otel_logs` 表。现有数据仍保留在 `otel_logs_23_01_2025` 中，并且仍可通过 merge 表访问。该后缀表示应用此更改的日期，也代表该表中包含的最新时间戳。
+    此后，写入会进入采用更新后主键的新 `otel_logs` 表。现有数据仍保留在 `otel_logs_23_01_2025` 中，并且仍可通过 merge 表访问。该后缀表示应用此更改的日期，也表示该表中包含的最新时间戳。
 
-    此过程允许在不中断摄取且对用户无可见影响的情况下修改主键。
+    该流程可以在不中断摄取、且对用户无可见影响的情况下完成主键变更。
   </Step>
 </Steps>
 
@@ -794,42 +701,8 @@ server 会自动回退到原始的 Map 下标形式。
   如果已配置 TTL 策略 (这也是推荐做法) ，那些使用旧主键且不再接收写入的表会随着数据过期而逐渐清空。应监控这些表，并在其中不再包含数据后定期清理。目前，此清理过程仍需手动完成。
 </Info>
 
-<div id="row-lookup-block-columns">
-  ### 利用块列加速行查找
-</div>
-
-默认的 ClickStack 日志 schema 启用了两个 MergeTree settings，它们虽然不会直接影响查询性能，
-但能显著加快 ClickStack UI 中行详情的查找速度：
-
-```sql
-SETTINGS enable_block_number_column = 1, enable_block_offset_column = 1
-```
-
-启用这些设置后，表中的每一行都会带有一个隐式的
-`(_block_number, _block_offset)` 对，用于在一个
-分片内唯一标识该行。当你在 ClickStack UI 中点击某条日志行以打开详情面板时，ClickStack
-会发起一次后续查询来拉取这一行。如果没有块列，该
-行的 `WHERE` 子句必须包含足够多的列——通常是主键
-再加上 `Body` 和 `SeverityText`——才能唯一定位这一行。有了块列后，
-主键加上 `_block_number` 再加上 `_block_offset` 就足够了。像 `Body` 这样的大
-列在查找时完全不需要读取，从而有效加快查询速度。
-
-ClickStack 会从表的 `CREATE` 语句中识别这一设置，并在这两列都启用时
-自动生成更精简的 `WHERE` 子句。无需修改任何
-应用配置。
-
-要在现有的日志或链路追踪表上启用这一优化：
-
-```sql
-ALTER TABLE otel_logs
-MODIFY SETTING enable_block_number_column = 1, enable_block_offset_column = 1
-```
-
-这些设置仅适用于 `ALTER` 之后写入的数据。现有的分片仍会继续
-使用原先的逐行查找方式，直到在合并过程中被重写。
-
-<div id="exploiting-materialized-views">
-  ## 优化 5. 利用 Materialized Views
+<div id="exploting-materialied-views">
+  ## 优化 4. 利用 Materialized Views
 </div>
 
 <BetaBadge />
@@ -839,7 +712,7 @@ ClickStack 可以利用[增量materialized view](/zh/concepts/features/materiali
 有关如何在 ClickStack 中使用此功能的详细信息，请参阅我们的专题指南[“ClickStack - Materialized Views.”](/zh/clickstack/managing/materialized-views)
 
 <div id="exploting-projections">
-  ## 优化 6：利用 PROJECTION
+  ## 优化 5：利用 PROJECTION
 </div>
 
 PROJECTION 是最后一种可考虑的高级优化手段，应在评估完物化列、跳过索引、主键和 materialized view 之后再使用。虽然 PROJECTION 和 materialized view 看起来有些相似，但在 ClickStack 中，它们用途不同，适用场景也不同。
@@ -866,7 +739,7 @@ materialized view 也可以通过显式将行写入一个具有不同排序键�
 
 * [PROJECTION 指南](/zh/concepts/features/projections/projections)
 * [何时使用 PROJECTION](/zh/concepts/features/projections/projections#when-to-use-projections)
-* [materialized view 与PROJECTION的对比](/zh/concepts/features/projections/materialized-views-versus-projections)
+* [materialized view 与投影的对比](/zh/concepts/features/projections/materialized-views-versus-projections)
 
 <div id="example-projections">
   ### 示例 PROJECTION

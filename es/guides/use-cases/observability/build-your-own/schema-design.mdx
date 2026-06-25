@@ -1,5 +1,5 @@
 ---
-title: 'Diseño de un esquema para observabilidad'
+title: Diseño de un esquema para observabilidad
 description: 'Diseño de un esquema para observabilidad'
 keywords: ['observabilidad', 'logs', 'trazas', 'métricas', 'OpenTelemetry', 'Grafana', 'OTel']
 slug: /use-cases/observability/schema-design
@@ -21,15 +21,6 @@ Recomendamos que los usuarios creen siempre su propio esquema para logs y trazas
 *Describimos en detalle cada uno de los casos de uso anteriores a continuación.*
 
 **Importante:** Aunque se anima a los usuarios a ampliar y modificar su esquema para lograr una compresión óptima y un mejor rendimiento de las consultas, deben seguir, siempre que sea posible, la convención de nombres del esquema de OTel para las columnas principales. El plugin de ClickHouse para Grafana asume la existencia de algunas columnas básicas de OTel para ayudar a construir consultas, por ejemplo Timestamp y SeverityText. Las columnas necesarias para logs y trazas están documentadas aquí [[1]](https://grafana.com/developers/plugin-tools/tutorials/build-a-logs-data-source-plugin#logs-data-frame-format)[[2]](https://grafana.com/docs/grafana/latest/explore/logs-integration/) y [aquí](https://grafana.com/docs/grafana/latest/explore/trace-integration/#data-frame-structure), respectivamente. Puedes optar por cambiar estos nombres de columna, anulando los valores predeterminados en la configuración del plugin.
-
-<Tip>
-  **ClickStack incluye un esquema predeterminado optimizado**
-
-  **ClickStack proporciona esquemas listos para usar para logs, trazas y métricas** que incorporan las funciones más recientes de ClickHouse (text indexes para búsqueda de texto completo y por claves de mapa, columnas materializadas y arrays ALIAS para filtrado de lectura directa, búsquedas de filas por número de bloque) y se han sometido a benchmark para ofrecer un sólido rendimiento listo para usar en cargas de trabajo de logging y trazas. Úsalos como punto de referencia para tu propio diseño.
-
-  * DDL canónico: [Tablas y esquemas usados por ClickStack](/es/clickstack/ingesting-data/schemas).
-  * Recetas de optimización: [Ajuste del rendimiento de ClickStack](/es/clickstack/managing/performance-tuning). Muchas de las recomendaciones de esa página (columnas materializadas, skip indexes, elección de clave primaria, projections, vistas materializadas) se aplican directamente a una configuración propia.
-</Tip>
 
 <div id="extracting-structure-with-sql">
   ## Extracción de estructura con SQL
@@ -252,7 +243,7 @@ Peak memory usage: 3.16 MiB.
   ## Vistas materializadas
 </div>
 
-Las [vistas materializadas](/es/concepts/features/materialized-views/index) proporcionan una forma más potente de aplicar filtrado y transformaciones SQL a logs y trazas.
+Las [vistas materializadas](/es/concepts/features/materialized-views) proporcionan una forma más potente de aplicar filtrado y transformaciones SQL a logs y trazas.
 
 Las vistas materializadas le permiten trasladar el coste de cálculo del tiempo de consulta al tiempo de inserción. Una vista materializada de ClickHouse es simplemente un trigger que ejecuta una consulta sobre bloques de datos a medida que se insertan en una tabla. Los resultados de esta consulta se insertan en una segunda tabla &quot;de destino&quot;.
 
@@ -648,12 +639,12 @@ Además, aunque los timestamps se benefician de la codificación delta en térmi
 <Image img="/images/use-cases/observability/observability-12.png" alt="Observabilidad y diccionarios" size="md" />
 
 Esto resulta útil en distintos escenarios: desde enriquecer sobre la marcha los datos ingeridos sin ralentizar el proceso de ingestión hasta mejorar el rendimiento general de las consultas, con un beneficio especial para los JOINs.
-Aunque en los casos de uso de observabilidad rara vez se necesitan joins, los diccionarios siguen siendo útiles para tareas de enriquecimiento, tanto en el tiempo de inserción como en el tiempo de consulta. A continuación, proporcionamos ejemplos de ambos casos.
+Aunque en los casos de uso de observabilidad rara vez se necesitan joins, los diccionarios siguen siendo útiles para tareas de enriquecimiento, tanto en el momento de la inserción como en el de la consulta. A continuación, proporcionamos ejemplos de ambos casos.
 
 <Info>
   **Aceleración de joins**
 
-  Los usuarios interesados en acelerar joins con diccionarios pueden encontrar más detalles [aquí](/es/concepts/features/dictionaries/index).
+  Los usuarios interesados en acelerar joins con diccionarios pueden encontrar más detalles [aquí](/es/concepts/features/dictionaries).
 </Info>
 
 <div id="insert-time-vs-query-time">
@@ -667,7 +658,7 @@ Los diccionarios pueden usarse para enriquecer conjuntos de datos en el momento 
 
 Recomendamos que los usuarios se familiaricen con los conceptos básicos de los diccionarios. Los diccionarios proporcionan una tabla de búsqueda en memoria de la que pueden recuperarse valores mediante [funciones especializadas](/es/reference/functions/regular-functions/ext-dict-functions#dictGetAll).
 
-Para ver ejemplos sencillos de enriquecimiento, consulte la guía sobre Diccionarios [aquí](/es/concepts/features/dictionaries/index). A continuación, nos centramos en tareas habituales de enriquecimiento de observabilidad.
+Para ver ejemplos sencillos de enriquecimiento, consulte la guía sobre Diccionarios [aquí](/es/concepts/features/dictionaries). A continuación, nos centramos en tareas habituales de enriquecimiento de observabilidad.
 
 <div id="using-ip-dictionaries">
   ### Uso de diccionarios IP
@@ -1111,7 +1102,7 @@ Os:     ('Other','0','0','0')
 
 Para obtener más ejemplos y detalles sobre los diccionarios, recomendamos los siguientes artículos:
 
-* [Temas avanzados sobre diccionarios](/es/concepts/features/dictionaries/index#advanced-dictionary-topics)
+* [Temas avanzados sobre diccionarios](/es/concepts/features/dictionaries#advanced-dictionary-topics)
 * [&quot;Uso de diccionarios para acelerar las consultas&quot;](https://clickhouse.com/blog/faster-queries-dictionaries-clickhouse)
 * [Diccionarios](/es/reference/statements/create/dictionary)
 

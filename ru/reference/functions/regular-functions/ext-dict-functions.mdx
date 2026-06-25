@@ -358,33 +358,28 @@ LIMIT 3;
 
 Добавленный в: v23.5.0
 
-Возвращает значения атрибутов всех узлов, совпавших с каждым ключом в [словаре с древовидной структурой регулярных выражений](/ru/reference/statements/create/dictionary/layouts/regexp-tree).
-
-За исключением того, что эта функция возвращает значения типа `Array(T)` вместо `T`, она ведёт себя аналогично [`dictGet`](#dictGet).
+Преобразует значение атрибута словаря в тип данных `All` вне зависимости от конфигурации словаря.
 
 **Синтаксис**
 
 ```sql
-dictGetAll(dict_name, attr_names, id_expr[, limit])
+dictGetAll(dict_name, attr_name, id_expr)
 ```
 
 **Аргументы**
 
 * `dict_name` — Имя словаря. [`String`](/ru/reference/data-types/string)
-* `attr_names` — Имя столбца словаря или кортеж имён столбцов. [`String`](/ru/reference/data-types/string) или [`Tuple(String)`](/ru/reference/data-types/tuple)
+* `attr_name` — Имя столбца словаря. [`String`](/ru/reference/data-types/string) или [`Tuple(String)`](/ru/reference/data-types/tuple)
 * `id_expr` — Значение ключа. Выражение, возвращающее значение типа ключа словаря или значение кортежа (в зависимости от конфигурации словаря). [`Expression`](/ru/reference/data-types/special-data-types/expression) или [`Tuple(T)`](/ru/reference/data-types/tuple)
-* `limit` — Необязательно. Максимальная длина каждого возвращаемого массива значений. При усечении дочерние узлы имеют приоритет над родительскими; в остальных случаях соблюдается заданный порядок элементов в словаре `regexp tree`. Если не указано, длина массива не ограничена. [`UInt*`](/ru/reference/data-types/int-uint)
 
 **Возвращаемое значение**
 
-Возвращает массив значений атрибутов словаря, соответствующих `id_expr`, для каждого атрибута, указанного в `attr_names`.
-Если в словаре нет ключа, соответствующего `id_expr`, возвращается пустой массив.
+Возвращает значение атрибута словаря, соответствующее `id_expr`,
+или, если оно отсутствует, содержимое элемента `<null_value>`, указанного для атрибута в конфигурации словаря.
 
 <Note>
   ClickHouse генерирует исключение, если не может разобрать значение атрибута или если оно не соответствует типу данных атрибута.
 </Note>
-
-[`Array(T)`](/ru/reference/data-types/array)
 
 **Примеры**
 
@@ -394,10 +389,10 @@ dictGetAll(dict_name, attr_names, id_expr[, limit])
 SELECT
     'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36' AS user_agent,
 
-    -- This will match ALL applicable patterns
+    -- Совпадёт со ВСЕМИ подходящими шаблонами регулярных выражений
     dictGetAll('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS all_matches,
 
-    -- This returns only the first match
+    -- Возвращает только первое совпадение
     dictGet('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS first_match;
 ```
 

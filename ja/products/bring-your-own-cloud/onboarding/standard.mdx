@@ -13,11 +13,11 @@ import { Image } from "/snippets/components/Image.jsx";
   ## 標準オンボーディングとは？
 </div>
 
-**標準オンボーディング** は、BYOC を使用してお客様自身のクラウドアカウントに ClickHouse をデプロイするための、標準的なガイド付きワークフローです。この方式では、ClickHouse Cloud が、デプロイに必要な主要なクラウドリソース (VPC/VNet、サブネット、セキュリティグループ、Kubernetes (EKS/GKE/AKS) クラスター、関連する IAM ロール、サービスアカウント、サービスプリンシパルなど) を、お客様の AWS アカウント、GCP プロジェクト、または Azure サブスクリプション内にまとめてプロビジョニングします。これにより、一貫性のある安全な構成を確保しつつ、お客様のチームに必要な手動作業を最小限に抑えられます。
+**標準オンボーディング** は、BYOC を使用してお客様自身のクラウドアカウントに ClickHouse をデプロイするための、標準的なガイド付きワークフローです。この方式では、ClickHouse Cloud が、デプロイに必要な主要なクラウドリソース (VPC、サブネット、セキュリティグループ、Kubernetes (EKS/GKE) クラスター、関連する IAM ロールやサービスアカウントなど) を、お客様の AWS アカウントまたは GCP プロジェクト内にまとめてプロビジョニングします。これにより、一貫性のある安全な構成を確保しつつ、お客様のチームに必要な手動作業を最小限に抑えられます。
 
-標準オンボーディングでは、専用の AWS アカウント、GCP プロジェクト、または Azure サブスクリプションを用意し、初期スタック (CloudFormation または Terraform) を実行して、ClickHouse Cloud が以降のセットアップをオーケストレーションするために必要な最小限の権限と信頼関係を作成するだけで済みます。それ以降のすべての手順 (インフラストラクチャのプロビジョニングやサービスの起動を含む) は、ClickHouse Cloud の Web コンソールから管理されます。
+標準オンボーディングでは、専用の AWS アカウントまたは GCP プロジェクトを用意し、初期スタック (CloudFormation または Terraform) を実行して、ClickHouse Cloud が以降のセットアップをオーケストレーションするために必要な最小限の IAM 権限と信頼関係を作成するだけで済みます。それ以降のすべての手順 (インフラストラクチャのプロビジョニングやサービスの起動を含む) は、ClickHouse Cloud の Web コンソールから管理されます。
 
-権限とリソースをより適切に分離するため、ClickHouse BYOC デプロイをホストするための**専用の** AWS アカウント、GCP プロジェクト、または Azure サブスクリプションを用意することを強く推奨します。ClickHouse は、お客様のアカウント内に、専用のクラウドリソース一式 (VPC/VNet、Kubernetes クラスター、IAM ロール、サービスアカウント、サービスプリンシパル、オブジェクトストレージバケットなど) をデプロイします。
+権限とリソースをより適切に分離するため、ClickHouse BYOC デプロイをホストするための**専用の** AWS アカウントまたは GCP プロジェクトを用意することを強く推奨します。ClickHouse は、お客様のアカウント内に、専用のクラウドリソース一式 (VPC、Kubernetes クラスター、IAM ロール、S3 バケットなど) をデプロイします。
 
 より柔軟にカスタマイズしたセットアップ (たとえば既存の VPC へのデプロイ) が必要な場合は、[Customized Onboarding](/ja/products/bring-your-own-cloud/onboarding/customization-aws) のドキュメントを参照してください。
 
@@ -36,10 +36,10 @@ import { Image } from "/snippets/components/Image.jsx";
 </div>
 
 <div id="prepare-an-aws-account">
-  ### AWS アカウント/GCP プロジェクト/Azure サブスクリプションを準備する
+  ### AWS アカウント/GCP プロジェクトを準備する
 </div>
 
-組織配下に新しい AWS アカウント、GCP プロジェクト、または Azure サブスクリプションを用意します。
+組織配下に新しい AWS アカウントまたは GCP プロジェクトを用意します。セットアップを続行するには、Web コンソールにアクセスしてください: https://console.clickhouse.cloud/byocOnboarding
 
 <Steps>
   <Step>
@@ -49,14 +49,14 @@ import { Image } from "/snippets/components/Image.jsx";
   </Step>
 
   <Step>
-    ### アカウント/プロジェクト/サブスクリプションのセットアップ
+    ### アカウント/プロジェクトのセットアップ
 
-    初期の BYOC セットアップは、[CloudFormation template (AWS)](https://s3.us-east-2.amazonaws.com/clickhouse-public-resources.clickhouse.cloud/cf-templates/byoc.yaml)、[Terraform module (GCP)](https://github.com/ClickHouse/terraform-byoc-onboarding/tree/main/modules/gcp)、または [Terraform module (Azure)](https://github.com/ClickHouse/terraform-byoc-onboarding/tree/main/modules/azure) のいずれかを使用して実行できます。これにより高権限の ID (IAM ロール/サービスアカウント/サービスプリンシパル) が作成され、ClickHouse Cloud の BYOC コントローラーがインフラストラクチャを管理できるようになります。
+    初期の BYOC セットアップは、[CloudFormation template(AWS)](https://s3.us-east-2.amazonaws.com/clickhouse-public-resources.clickhouse.cloud/cf-templates/byoc.yaml) または [Terraform module(GCP)](https://github.com/ClickHouse/terraform-byoc-onboarding/tree/main/modules/gcp) のいずれかを使用して実行できます。これにより高権限の IAM ロールが作成され、ClickHouse Cloud の BYOC コントローラーがインフラストラクチャを管理できるようになります。
 
     <Image img="/images/cloud/reference/byoc-onboarding-2.png" size="lg" alt="BYOC アカウントを初期化" background="black" />
 
     <Note>
-      ClickHouse の実行に必要なストレージバケット、VPC/VNet、Kubernetes クラスター、コンピュートリソースは、この初期セットアップには含まれていません。これらは次のステップでプロビジョニングされます。
+      ClickHouse の実行に必要なストレージバケット、VPC、Kubernetes クラスター、コンピュートリソースは、この初期セットアップには含まれていません。これらは次のステップでプロビジョニングされます。
     </Note>
 
     #### AWS 向けの代替 Terraform モジュール
@@ -76,11 +76,11 @@ import { Image } from "/snippets/components/Image.jsx";
   <Step>
     ### BYOC インフラストラクチャをセットアップする
 
-    ClickHouse Cloud コンソールから、オブジェクトストレージバケット、VPC/VNet、Kubernetes クラスターを含むインフラストラクチャをセットアップするよう案内されます。この段階で決める必要がある設定がいくつかあり、後から変更することはできません。具体的には次のとおりです。
+    ClickHouse Cloud コンソールから、S3 バケット、VPC、Kubernetes クラスターを含むインフラストラクチャをセットアップするよう案内されます。この段階で決める必要がある設定がいくつかあり、後から変更することはできません。具体的には次のとおりです。
 
     * **Region**: [サポート対象リージョン](/ja/products/cloud/reference/supported-regions) のドキュメントに記載されているすべての**パブリックリージョン**で、BYOC デプロイを利用できます。Private Region は現在サポートされていません。
 
-    * **VPC/VNet CIDR 範囲**: デフォルトでは、BYOC の VPC (AWS/GCP) または VNet (Azure) の CIDR 範囲として `10.0.0.0/16` を使用します。別のアカウントと VPC/VNet ピアリングを行う予定がある場合は、CIDR 範囲が重複しないようにしてください。必要なワークロードを収容できるよう、最小サイズ `/23` で BYOC 用の適切な CIDR 範囲を割り当ててください。
+    * **VPC CIDR 範囲**: デフォルトでは、BYOC VPC CIDR 範囲として `10.0.0.0/16` を使用します。別のアカウントと VPC ピアリングを行う予定がある場合は、CIDR 範囲が重複しないようにしてください。必要なワークロードを収容できるよう、最小サイズ `/22` で BYOC 用の適切な CIDR 範囲を割り当ててください。
 
     * **アベイラビリティゾーン**: VPC ピアリングを使用する予定がある場合、ソースアカウントと BYOC アカウントのアベイラビリティゾーンを揃えることで、AZ 間トラフィックのコストを抑えられることがあります。たとえば AWS では、アベイラビリティゾーンの接尾辞 (`a`、`b`、`c`) が、アカウントごとに異なる物理ゾーン ID を表す場合があります。詳細は [AWS ガイド](https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/use-consistent-availability-zones-in-vpcs-across-different-aws-accounts.html) を参照してください。
 

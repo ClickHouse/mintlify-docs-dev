@@ -62,7 +62,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Пример:
 
   ```java showLineNumbers
-   Client client = new Client.Builder()
+  Client client = new Client.Builder()
                   .addEndpoint("https://clickhouse-cloud-instance:8443/")
                   .setUsername(user)
                   .setPassword(password)
@@ -78,7 +78,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Аутентификация по паролю требует указания имени пользователя и пароля через вызовы `setUsername(String)` и `setPassword(String)`:
 
   ```java showLineNumbers
-   Client client = new Client.Builder()
+  Client client = new Client.Builder()
           .addEndpoint("https://clickhouse-cloud-instance:8443/")
           .setUsername(user)
           .setPassword(password)
@@ -88,7 +88,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Для аутентификации с помощью токена доступа необходимо задать токен доступа, вызвав `setAccessToken(String)`:
 
   ```java showLineNumbers
-   Client client = new Client.Builder()
+  Client client = new Client.Builder()
           .addEndpoint("https://clickhouse-cloud-instance:8443/")
           .setAccessToken(userAccessToken)
           .build();
@@ -290,19 +290,19 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Настройки на стороне сервера можно задать на уровне клиента один раз при создании (см. метод `serverSetting` класса `Builder`) и на уровне операции (см. `serverSetting` для класса настроек операции).
 
   ```java showLineNumbers
-   try (Client client = new Client.Builder().addEndpoint(Protocol.HTTP, "localhost", mockServer.port(), false)
+  try (Client client = new Client.Builder().addEndpoint(Protocol.HTTP, "localhost", mockServer.port(), false)
           .setUsername("default")
           .setPassword(ClickHouseServerForTest.getPassword())
           .compressClientRequest(true)
 
-          // Client level
+          // Уровень клиента
           .serverSetting("max_threads", "10")
           .serverSetting("async_insert", "1")
           .serverSetting("roles", Arrays.asList("role1", "role2"))
 
           .build()) {
 
-  	// Operation level
+  	// Уровень операции
   	QuerySettings querySettings = new QuerySettings();
   	querySettings.serverSetting("session_timezone", "Europe/Zurich");
 
@@ -317,11 +317,9 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Пользовательские HTTP-заголовки можно задать для всех операций (на уровне клиента) или для отдельной операции (на уровне операции).
 
   ```java showLineNumbers
-
   QuerySettings settings = new QuerySettings()
       .httpHeader(HttpHeaders.REFERER, clientReferer)
       .setQueryId(qId);
-
   ```
 
   Если параметры задаются через метод `setOption` (будь то `Client.Builder` или класс настроек операции), имя пользовательского заголовка должно начинаться с префикса `http_header_`. В этом случае может пригодиться метод `com.clickhouse.client.api.ClientConfigProperties#httpHeader()`.
@@ -330,7 +328,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   ### ClickHouseFormat
 
-  Перечисление [поддерживаемых форматов](/ru/reference/formats/index). Включает все форматы, поддерживаемые ClickHouse.
+  Перечисление [поддерживаемых форматов](/ru/reference/formats). Включает все форматы, поддерживаемые ClickHouse.
 
   * `raw` - пользователь должен перекодировать необработанные данные
   * `full` — клиент может самостоятельно перекодировать данные и принимает сырой поток данных
@@ -443,7 +441,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   `format` — формат, в котором закодированы данные.
 
-  `settings` - параметры запроса.
+  `settings` — настройки запроса.
 
   **Возвращаемое значение**
 
@@ -462,7 +460,6 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           throw new RuntimeException(e);
       }
   }
-
   ```
 
   ### insert(String tableName, List&lt;?&gt; data, InsertSettings settings)
@@ -491,13 +488,13 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   **Примеры**
 
   ```java showLineNumbers
-  // Important step (done once) - register class to pre-compile object serializer according to the table schema.
+  // Важный шаг (выполняется один раз) — регистрация класса для предварительной компиляции сериализатора объектов в соответствии со схемой таблицы.
   client.register(ArticleViewEvent.class, client.getTableSchema(TABLE_NAME));
 
   List<ArticleViewEvent> events = loadBatch();
 
   try (InsertResponse response = client.insert(TABLE_NAME, events).get()) {
-      // handle response, then it will be closed and connection that served request will be released.
+      // обработать ответ; после этого он будет закрыт, а соединение, обслуживавшее запрос, — освобождено.
   }
   ```
 
@@ -515,7 +512,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | `serverSetting(String name, String value)`      | Устанавливает отдельные настройки сервера для операции.                                                                                                                        |
   | `serverSetting(String name, Collection values)` | Устанавливает отдельные настройки сервера с несколькими значениями для операции. Элементы коллекции должны иметь тип `String`.                                                 |
   | `setDBRoles(Collection dbRoles)`                | Задает роли БД, которые будут установлены перед выполнением операции. Элементы коллекции должны быть строковыми значениями `String`.                                           |
-  | `setOption(String option, Object value)`        | Задаёт параметр конфигурации в исходном формате. Это не настройка сервера.                                                                                                     |
+  | `setOption(String option, Object value)`        | Устанавливает параметр конфигурации в исходном формате. Это не настройка сервера.                                                                                              |
 
   ### InsertResponse
 
@@ -536,7 +533,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   Отправляет `sqlQuery` без изменений. Формат ответа задаётся настройками запроса. `QueryResponse` будет содержать ссылку на поток ответа, который должен быть обработан ридером для соответствующего формата.
 
-  **Сигнатуры**
+  **Подписи**
 
   ```java
   CompletableFuture<QueryResponse> query(String sqlQuery, QuerySettings settings)
@@ -558,27 +555,27 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ```java
   final String sql = "select * from " + TABLE_NAME + " where title <> '' limit 10";
 
-  // Default format is RowBinaryWithNamesAndTypesFormatReader so reader have all information about columns
+  // Формат по умолчанию — RowBinaryWithNamesAndTypesFormatReader, поэтому reader содержит всю информацию о столбцах
   try (QueryResponse response = client.query(sql).get(3, TimeUnit.SECONDS);) {
 
-      // Create a reader to access the data in a convenient way
+      // Создаём reader для удобного доступа к данным
       ClickHouseBinaryFormatReader reader = client.newBinaryFormatReader(response);
 
       while (reader.hasNext()) {
-          reader.next(); // Read the next record from stream and parse it
+          reader.next(); // Читаем следующую запись из потока и разбираем её
 
-          // get values
+          // получаем значения
           double id = reader.getDouble("id");
           String title = reader.getString("title");
           String url = reader.getString("url");
 
-          // collecting data
+          // сбор данных
       }
   } catch (Exception e) {
       log.error("Failed to read data", e);
   }
 
-  // put business logic outside of the reading block to release http connection asap.
+  // Размещайте бизнес-логику за пределами блока чтения, чтобы как можно скорее освободить HTTP-соединение.
   ```
 
   ### query(String sqlQuery, Map&lt;String, Object&gt; queryParams, QuerySettings settings)
@@ -601,32 +598,30 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **Возвращаемое значение**
 
-  Future типа `QueryResponse` — результирующий набор данных и дополнительная информация, например метрики на стороне сервера. Объект Response следует закрыть после обработки набора данных.
+  Future типа `QueryResponse` — результирующий набор данных и дополнительная информация, например метрики на стороне сервера. Объект Response необходимо закрыть после обработки набора данных.
 
   **Примеры**
 
   ```java showLineNumbers
-
-  // define parameters. They will be sent to the server along with the request.
+  // определяем параметры. Они будут отправлены на сервер вместе с запросом.
   Map<String, Object> queryParams = new HashMap<>();
   queryParams.put("param1", 2);
 
   try (QueryResponse response =
           client.query("SELECT * FROM " + table + " WHERE col1 >= {param1:UInt32}", queryParams, new QuerySettings()).get()) {
 
-      // Create a reader to access the data in a convenient way
+      // Создаём reader для удобного доступа к данным
       ClickHouseBinaryFormatReader reader = client.newBinaryFormatReader(response);
 
       while (reader.hasNext()) {
-          reader.next(); // Read the next record from stream and parse it
+          reader.next(); // Читаем следующую запись из потока и разбираем её
 
-          // reading data
+          // чтение данных
       }
 
   } catch (Exception e) {
       log.error("Failed to read data", e);
   }
-
   ```
 
   ### queryAll(String sqlQuery)
@@ -654,7 +649,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       log.info("Reading whole table and process record by record");
       final String sql = "select * from " + TABLE_NAME + " where title <> ''";
 
-      // Read whole result set and process it record by record
+      // Считать весь результирующий набор и обработать каждую запись
       client.queryAll(sql).forEach(row -> {
           double id = row.getDouble("id");
           String title = row.getString("title");
@@ -683,15 +678,15 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | `setUseTimeZone(String timeZone)`                 | Просит сервер использовать `timeZone` для преобразования времени. См. [session&#95;timezone](/ru/reference/settings/session-settings#session_timezone). |
   | `serverSetting(String name, String value)`        | Устанавливает отдельные настройки сервера для операции.                                                                                              |
   | `serverSetting(String name, Collection values)`   | Устанавливает отдельные настройки сервера с несколькими значениями для операции. Элементы коллекции должны иметь тип `String`.                       |
-  | `setDBRoles(Collection dbRoles)`                  | Задает роли БД, которые будут установлены перед выполнением операции. Элементы коллекции должны быть строковыми значениями `String`.                 |
-  | `setOption(String option, Object value)`          | Устанавливает параметр конфигурации в исходном формате. Это не настройка сервера.                                                                    |
+  | `setDBRoles(Collection dbRoles)`                  | Задает роли DB, которые будут установлены перед выполнением операции. Элементы коллекции должны иметь тип `String`.                                  |
+  | `setOption(String option, Object value)`          | Задаёт параметр конфигурации в исходном формате. Это не настройка сервера.                                                                           |
 
   ### QueryResponse
 
   Объект ответа, содержащий результат выполнения запроса. Доступен только в том случае, если клиент получил ответ от сервера.
 
   <Note>
-    Этот объект следует закрыть как можно скорее, чтобы освободить соединение, поскольку его нельзя использовать повторно, пока не будут полностью прочитаны все данные из предыдущего ответа.
+    Этот объект следует закрыть как можно скорее, чтобы освободить соединение, поскольку его нельзя использовать повторно, пока все данные предыдущего ответа не будут полностью прочитаны.
   </Note>
 
   | Метод                           | Описание                                                                                          |
@@ -734,7 +729,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   Извлекает схему из SQL-оператора.
 
-  **Сигнатуры**
+  **Подписи**
 
   ```java
   TableSchema getTableSchemaFromQuery(String sql)
@@ -813,7 +808,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           Object[] uint64 = reader.getObjectArray("uint64_arr"); // Array(UInt64) -> BigInteger[]
           Object[] arr2d = reader.getObjectArray("arr2d");       // Array(Array(Int64)) -> Object[]
 
-          // nested arrays are returned as nested Object[]:
+          // вложенные массивы возвращаются как вложенные Object[]:
           Object[] firstInner = (Object[]) arr2d[0];
           Long firstValue = (Long) firstInner[0];
       }
@@ -822,10 +817,10 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **Методы `GenericRecord`**
 
-  * `getList(...)` — читает любой `Array(...)` как `List<T>`. Хороший вариант по умолчанию для чтения с гибкой типизацией. Поддерживает вложенные массивы.
+  * `getList(...)` — считывает любой `Array(...)` как `List<T>`. Хороший вариант по умолчанию для чтения с гибкой типизацией. Поддерживает вложенные массивы.
   * `getByteArray(...)`, `getShortArray(...)`, `getIntArray(...)`, `getLongArray(...)`, `getFloatArray(...)`, `getDoubleArray(...)`, `getBooleanArray(...)` — лучше всего подходят для одномерных массивов значений, совместимых с примитивными типами.
-  * `getStringArray(...)` — для `Array(String)` (и значений `enum`, представленных в виде имён).
-  * `getObjectArray(...)` — универсальный вариант для `Array(...)` с любым типом элементов, включая вложенные массивы. Используйте для чтения массивов с Nullable-значениями и вложенных массивов.
+  * `getStringArray(...)` — для `Array(String)` (и значений enum, представленных в виде имён).
+  * `getObjectArray(...)` — универсальная опция для любого типа элементов `Array(...)`, включая вложенные массивы. Используется для чтения массивов со значениями Nullable и вложенными массивами.
 
   Для всех методов доступны перегрузки по индексу и по имени. Индексация начинается с 1. Перегрузки по индексу обеспечивают прямой доступ к столбцу.
   Методы по имени требуют поиска по индексу при каждом обращении.
@@ -851,8 +846,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   отличия:
 
   * Для получения реализации service loader не используется. `com.clickhouse.client.api.Client` — это класс-фасад для любых реализаций, которые могут появиться в будущем.
-  * меньше источников конфигурации: один передаётся билдеру, а другой — через настройки операции (`QuerySettings`, `InsertSettings`). В предыдущей версии конфигурация задавалась для каждого узла, а в некоторых случаях также загружались
-    переменные окружения.
+  * меньше источников конфигурации: один передаётся билдеру, а другой — через настройки операции (`QuerySettings`, `InsertSettings`). В предыдущей версии конфигурация задавалась для каждого узла, а в некоторых случаях также загружались переменные окружения.
 
   ### Соответствие параметров конфигурации
 
@@ -887,7 +881,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       | `ClickHouseHttpOption#USE_BASIC_AUTHENTICATION`                                  | `Client.Builder#useHTTPBasicAuth`           |                                 |
     </Tab>
 
-    <Tab title="SSL & безопасность">
+    <Tab title="SSL и безопасность">
       | Конфигурация V1                                        | Метод Builder                             | Комментарии                                                          |
       | ------------------------------------------------------ | ----------------------------------------- | -------------------------------------------------------------------- |
       | `ClickHouseDefaults#SSL_CERTIFICATE_TYPE`              | ✗                                         |                                                                      |
@@ -989,7 +983,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       | `ClickHouseClientOption#MAX_CORE_THREAD_TTL`                   | ✗                                 |                                  |
     </Tab>
 
-    <Tab title="HTTP & заголовки">
+    <Tab title="HTTP и заголовки">
       | Конфигурация V1                                      | Метод построителя V2           | Комментарии                                         |
       | ---------------------------------------------------- | ------------------------------ | --------------------------------------------------- |
       | `ClickHouseHttpOption#CUSTOM_HEADERS`                | `Client.Builder#httpHeaders`   |                                                     |
@@ -1077,12 +1071,12 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   CompletableFuture<ClickHouseResponse> future;
   try (ClickHousePipedOutputStream requestBody = ClickHouseDataStreamFactory.getInstance()
           .createPipedOutputStream(config)) {
-      // start the worker thread which transfer data from the input into ClickHouse
+      // запускаем воркер-поток, который передаёт данные из входного потока в ClickHouse
       future = request.data(requestBody.getInputStream()).execute();
 
-      // Copy data from inData stream to requestBody stream
+      // Копируем данные из потока inData в поток requestBody
 
-      // We need to close the stream before getting a response
+      // Необходимо закрыть поток перед получением ответа
       requestBody.close();
 
       try (ClickHouseResponse response = future.get()) {
@@ -1090,20 +1084,19 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           Assert.assertEquals(summary.getWrittenRows(), numRows, "Num of written rows");
       }
   }
-
   ```
 
   **V2 Вставка данных в формате TSV.**
 
   ```java
   InputStream inData = getInData();
-  InsertSettings settings = new InsertSettings().setInputStreamCopyBufferSize(8198 * 2); // set copy buffer size
+  InsertSettings settings = new InsertSettings().setInputStreamCopyBufferSize(8198 * 2); // установить размер буфера копирования
   try (InsertResponse response = client.insert(tableName, inData, ClickHouseFormat.TSV, settings).get(30, TimeUnit.SECONDS)) {
 
-    // Insert is complete at this point
+    // Вставка завершена на этом этапе
 
   } catch (Exception e) {
-   // Handle exception
+   // Обработать исключение
   }
   ```
 
@@ -1124,7 +1117,6 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       String name = record.getString("name");
       LocalDateTime ts = record.getLocalDateTime("ts");
   }
-
   ```
 </View>
 

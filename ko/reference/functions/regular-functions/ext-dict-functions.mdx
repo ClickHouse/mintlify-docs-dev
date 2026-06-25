@@ -358,33 +358,28 @@ LIMIT 3;
 
 v23.5.0에서 도입됨
 
-[정규 표현식 트리 딕셔너리](/ko/reference/statements/create/dictionary/layouts/regexp-tree)에서 각 키와 일치하는 모든 노드의 속성 값을 가져옵니다.
-
-이 함수는 `T` 대신 `Array(T)` 유형의 값을 반환한다는 점만 제외하면 [`dictGet`](#dictGet)과 유사하게 동작합니다.
+딕셔너리 구성과 관계없이 딕셔너리 속성 값을 `All` 데이터 타입으로 변환합니다.
 
 **구문**
 
 ```sql
-dictGetAll(dict_name, attr_names, id_expr[, limit])
+dictGetAll(dict_name, attr_name, id_expr)
 ```
 
 **인수**
 
 * `dict_name` — 딕셔너리 이름입니다. [`String`](/ko/reference/data-types/string)
-* `attr_names` — 딕셔너리 컬럼의 이름 또는 컬럼 이름 튜플입니다. [`String`](/ko/reference/data-types/string) 또는 [`Tuple(String)`](/ko/reference/data-types/tuple)
+* `attr_name` — 딕셔너리 컬럼의 이름입니다. [`String`](/ko/reference/data-types/string) 또는 [`Tuple(String)`](/ko/reference/data-types/tuple)
 * `id_expr` — 키 값입니다. 딕셔너리 키 타입 값 또는 튜플 값을 반환하는 표현식입니다(딕셔너리 구성에 따라 달라집니다). [`Expression`](/ko/reference/data-types/special-data-types/expression) 또는 [`Tuple(T)`](/ko/reference/data-types/tuple)
-* `limit` — 선택 사항입니다. 반환되는 각 값 배열의 최대 길이입니다. 값을 잘라낼 때는 상위 노드보다 하위 노드가 우선하며, 그 외의 경우에는 regexp 트리 딕셔너리에 정의된 목록 순서를 따릅니다. 지정하지 않으면 배열 길이에 제한이 없습니다. [`UInt*`](/ko/reference/data-types/int-uint)
 
 **반환 값**
 
-`attr_names`에 지정된 각 속성에 대해 `id_expr`에 해당하는 딕셔너리 속성 값 배열을 반환합니다.
-딕셔너리에 `id_expr`에 해당하는 키가 없으면 빈 배열을 반환합니다.
+`id_expr`에 해당하는 딕셔너리 속성 값을 반환합니다.
+해당 값이 없으면 딕셔너리 구성에서 해당 속성에 지정된 `<null_value>` 요소의 내용을 반환합니다.
 
 <Note>
   ClickHouse는 속성 값을 파싱할 수 없거나 값이 속성의 데이터 타입과 일치하지 않으면 예외를 발생시킵니다.
 </Note>
-
-[`Array(T)`](/ko/reference/data-types/array)
 
 **예시**
 
@@ -394,10 +389,10 @@ dictGetAll(dict_name, attr_names, id_expr[, limit])
 SELECT
     'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36' AS user_agent,
 
-    -- This will match ALL applicable patterns
+    -- 적용 가능한 모든 패턴과 일치합니다
     dictGetAll('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS all_matches,
 
-    -- This returns only the first match
+    -- 첫 번째 일치 항목만 반환합니다
     dictGet('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS first_match;
 ```
 

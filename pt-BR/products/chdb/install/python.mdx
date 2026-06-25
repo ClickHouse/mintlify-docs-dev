@@ -1,5 +1,5 @@
 ---
-title: 'Instalando o chDB para Python'
+title: DataFrame com objetos JSON mistos
 sidebarTitle: 'Python'
 slug: /chdb/install/python
 description: 'Como instalar o chDB para Python'
@@ -290,12 +290,12 @@ sess.close()  # Opcional - fechada automaticamente quando o objeto é deletado
 </div>
 
 ```python
-# Session with custom settings
+# Sessão com configurações personalizadas
 sess = session.Session(
     path="/tmp/analytics_db",
 )
 
-# Query performance optimization
+# Otimização de desempenho de consulta
 result = sess.query("""
     SELECT product, sum(amount) as total
     FROM sales 
@@ -305,7 +305,7 @@ result = sess.query("""
 """, "JSON")
 ```
 
-Veja também: [test&#95;stateful.py](https://github.com/chdb-io/chdb-core/blob/main/tests/test_stateful.py).
+Veja também: [test&#95;stateful.py](https://github.com/chdb-io/chdb/blob/main/tests/test_stateful.py).
 
 <div id="python-db-api-20">
   ### Interface DB-API 2.0 do Python
@@ -622,14 +622,14 @@ class DatabaseReader(chdb.PyReader):
     """Custom reader for database-like data sources"""
     
     def __init__(self, connection_string: str):
-        # Simulate database connection
+        # Simular conexão com banco de dados
         self.data = self._load_data(connection_string)
         self.cursor = 0
         self.batch_size = 1000
         super().__init__(self.data)
     
     def _load_data(self, conn_str):
-        # Simulate loading from database
+        # Simular carregamento do banco de dados
         return {
             "id": list(range(1, 10001)),
             "name": [f"user_{i}" for i in range(1, 10001)],
@@ -646,23 +646,23 @@ class DatabaseReader(chdb.PyReader):
             ("id", "UInt64"),
             ("name", "String"),
             ("score", "Int64"),
-            ("metadata", "String")  # JSON stored as string
+            ("metadata", "String")  # JSON armazenado como string
         ]
     
     def read(self, col_names: List[str], count: int) -> List[List[Any]]:
         """Read data in batches"""
         if self.cursor >= len(self.data["id"]):
-            return []  # No more data
+            return []  # Sem mais dados
         
         end_pos = min(self.cursor + min(count, self.batch_size), len(self.data["id"]))
         
-        # Return data for requested columns
+        # Retornar dados para as colunas solicitadas
         result = []
         for col in col_names:
             if col in self.data:
                 result.append(self.data[col][self.cursor:end_pos])
             else:
-                # Handle missing columns
+                # Tratar colunas ausentes
                 result.append([None] * (end_pos - self.cursor))
         
         self.cursor = end_pos
@@ -676,7 +676,6 @@ chDB automatically handles complex nested data structures:
 import pandas as pd
 import chdb
 
-# DataFrame with mixed JSON objects
 df_with_json = pd.DataFrame({
     "user_id": [1, 2, 3, 4],
     "profile": [
@@ -687,7 +686,7 @@ df_with_json = pd.DataFrame({
     ]
 })
 
-# Control JSON inference with settings
+# Controlar a inferência de JSON com configurações
 result = chdb.query("""
     SELECT 
         user_id,
@@ -696,11 +695,11 @@ result = chdb.query("""
         length(profile.preferences) as pref_count,
         profile.location.city as city
     FROM Python(df_with_json)
-    SETTINGS pandas_analyze_sample = 1000  -- Analyze all rows for JSON detection
+    SETTINGS pandas_analyze_sample = 1000  -- Analisar todas as linhas para detecção de JSON
 """, "Pretty")
 print(result)
 
-# Advanced JSON operations
+# Operações avançadas de JSON
 complex_json = chdb.query("""
     SELECT 
         user_id,

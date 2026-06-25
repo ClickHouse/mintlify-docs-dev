@@ -5,11 +5,11 @@ description: 'Substitui todas as linhas com a mesma chave primária (ou, mais pr
   de estados de funções de agregação.'
 sidebarTitle: 'AggregatingMergeTree'
 slug: /engines/table-engines/mergetree-family/aggregatingmergetree
-title: 'motor de tabela AggregatingMergeTree'
+title: 'mecanismo de tabela AggregatingMergeTree'
 doc_type: 'reference'
 ---
 
-O motor herda de [MergeTree](/pt-BR/reference/engines/table-engines/mergetree-family/mergetree), alterando a lógica de mesclagem das partes de dados. O ClickHouse substitui todas as linhas com a mesma chave primária (ou, mais precisamente, com a mesma [chave de ordenação](/pt-BR/reference/engines/table-engines/mergetree-family/mergetree)) por uma única linha (dentro de uma única parte de dados) que armazena uma combinação de estados de funções de agregação.
+O motor herda de [MergeTree](/pt-BR/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree), alterando a lógica de mesclagem das partes de dados. O ClickHouse substitui todas as linhas com a mesma chave primária (ou, mais precisamente, com a mesma [chave de ordenação](/pt-BR/reference/engines/table-engines/mergetree-family/mergetree)) por uma única linha (dentro de uma única parte de dados) que armazena uma combinação de estados de funções de agregação.
 
 Você pode usar tabelas `AggregatingMergeTree` para agregação incremental de dados, inclusive em visões materializadas agregadas.
 
@@ -189,48 +189,6 @@ FROM test.visits;
   Cada linha de origem produz uma linha na visão materializada, e a agregação real acontece depois, quando o
   `AggregatingMergeTree` mescla as partes. Isso só é verdadeiro se `optimize_on_insert = 0`.
 </Note>
-
-<div id="tuple-element-aggregation">
-  ## Agregação de elementos de Tuple
-</div>
-
-Quando a configuração `allow_tuple_element_aggregation` está habilitada, as colunas `Tuple` são achatadas recursivamente para que cada elemento folha participe da agregação de forma independente. Isso significa que as subcolunas `AggregateFunction` ou `SimpleAggregateFunction` dentro de uma `Tuple` são agregadas de acordo com suas respectivas funções, como se fossem colunas de nível superior.
-
-As subcolunas que pertencem a uma `Tuple` na chave de ordenação são excluídas da agregação. As subcolunas não agregadas são tratadas como colunas comuns (seu primeiro valor é mantido).
-
-<Note>
-  Essa configuração é imutável e deve ser especificada no momento da criação da tabela.
-</Note>
-
-```sql
-CREATE TABLE agg_tuples
-(
-    key UInt32,
-    metrics Tuple(
-        total_visits SimpleAggregateFunction(sum, UInt64),
-        unique_users SimpleAggregateFunction(max, UInt64)
-    )
-) ENGINE = AggregatingMergeTree()
-ORDER BY key
-SETTINGS allow_tuple_element_aggregation = 1;
-
-INSERT INTO agg_tuples VALUES (1, (100, 5));
-INSERT INTO agg_tuples VALUES (1, (200, 8));
-INSERT INTO agg_tuples VALUES (2, (50, 3));
-
-OPTIMIZE TABLE agg_tuples FINAL;
-
-SELECT key, metrics.total_visits, metrics.unique_users FROM agg_tuples ORDER BY key;
-```
-
-```text
-┌─key─┬─metrics.total_visits─┬─metrics.unique_users─┐
-│   1 │                  300 │                    8 │
-│   2 │                   50 │                    3 │
-└─────┴──────────────────────┴──────────────────────┘
-```
-
-`total_visits` é agregado usando `sum` (100 + 200 = 300), enquanto `unique_users` é agregado usando `max` (max(5, 8) = 8).
 
 <div id="related-content">
   ## Conteúdo relacionado

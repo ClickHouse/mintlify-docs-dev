@@ -20,16 +20,7 @@ import { Image } from "/snippets/components/Image.jsx";
 
 *위 각 사용 사례는 아래에서 자세히 설명합니다.*
 
-**중요:** 최적의 압축률과 쿼리 성능을 얻기 위해 스키마를 확장하고 수정하는 것이 권장되지만, 가능하면 핵심 컬럼의 이름은 OTel 스키마 명명 규칙을 따르십시오. ClickHouse Grafana plugin은 쿼리 작성을 돕기 위해 일부 기본 OTel 컬럼(예: Timestamp, SeverityText)이 존재한다고 가정합니다. 로그와 트레이스에 필요한 컬럼은 각각 여기 [[1]](https://grafana.com/developers/plugin-tools/tutorials/build-a-logs-data-source-plugin#logs-data-frame-format)[[2]](https://grafana.com/docs/grafana/latest/explore/logs-integration/) 및 [여기](https://grafana.com/docs/grafana/latest/explore/trace-integration/#data-frame-structure)에 문서화되어 있습니다. plugin 구성에서 기본값을 재정의하여 이러한 컬럼 이름을 변경할 수 있습니다.
-
-<Tip>
-  **ClickStack는 최적화된 기본 스키마를 기본 제공으로 제공합니다**
-
-  **ClickStack는 로그, 트레이스, 메트릭을 위한 즉시 사용 가능한 스키마를 제공합니다.** 이 스키마에는 최신 ClickHouse 기능(전문 검색 및 맵 키 검색을 위한 text index, 직접 읽기 필터링을 위한 materialized 컬럼 및 ALIAS 배열, 블록 번호 기반 행 조회)이 반영되어 있으며, 로깅 및 트레이스 workload에 대해 기본 상태에서도 우수한 성능을 제공하도록 벤치마크되었습니다. 자체 설계를 위한 기준점으로 활용하십시오.
-
-  * 표준 DDL: [ClickStack에서 사용하는 테이블 및 스키마](/ko/clickstack/ingesting-data/schemas).
-  * 최적화 레시피: [ClickStack 성능 튜닝](/ko/clickstack/managing/performance-tuning). 해당 페이지의 많은 권장 사항(materialized 컬럼, 스킵 인덱스, 프라이머리 키 선택, 프로젝션, materialized view)은 자체 구축 환경에도 직접 적용됩니다.
-</Tip>
+**중요:** 최적의 압축률과 쿼리 성능을 얻기 위해 스키마를 확장하고 수정하는 것이 권장되지만, 가능하면 핵심 컬럼의 이름은 OTel 스키마 명명 규칙을 따르십시오. ClickHouse Grafana 플러그인은 쿼리 작성을 돕기 위해 일부 기본 OTel 컬럼(예: Timestamp, SeverityText)이 존재한다고 가정합니다. 로그와 트레이스에 필요한 컬럼은 각각 여기 [[1]](https://grafana.com/developers/plugin-tools/tutorials/build-a-logs-data-source-plugin#logs-data-frame-format)[[2]](https://grafana.com/docs/grafana/latest/explore/logs-integration/) 및 [여기](https://grafana.com/docs/grafana/latest/explore/trace-integration/#data-frame-structure)에 문서화되어 있습니다. 플러그인 구성에서 기본값을 재정의하여 이러한 컬럼 이름을 변경할 수 있습니다.
 
 <div id="extracting-structure-with-sql">
   ## SQL로 구조 추출하기
@@ -252,7 +243,7 @@ Peak memory usage: 3.16 MiB.
   ## materialized views
 </div>
 
-[materialized views](/ko/concepts/features/materialized-views/index)는 로그와 트레이스에 SQL 필터링과 변환을 적용하는 더 강력한 수단을 제공합니다.
+[materialized views](/ko/concepts/features/materialized-views)는 로그와 트레이스에 SQL 필터링과 변환을 적용하는 더 강력한 수단을 제공합니다.
 
 Materialized Views를 사용하면 계산 비용을 쿼리 시점에서 삽입 시점으로 옮길 수 있습니다. ClickHouse materialized view는 테이블에 데이터 블록이 삽입될 때 해당 블록에 대해 쿼리를 실행하는 트리거일 뿐입니다. 이 쿼리의 결과는 두 번째 &quot;대상&quot; 테이블에 삽입됩니다.
 
@@ -653,7 +644,7 @@ LIMIT 5
 <Info>
   **조인 가속화**
 
-  딕셔너리를 사용해 조인을 가속화하려는 경우, 자세한 내용은 [여기](/ko/concepts/features/dictionaries/index)에서 확인할 수 있습니다.
+  딕셔너리를 사용해 조인을 가속화하려는 경우, 자세한 내용은 [여기](/ko/concepts/features/dictionaries)에서 확인할 수 있습니다.
 </Info>
 
 <div id="insert-time-vs-query-time">
@@ -667,7 +658,7 @@ LIMIT 5
 
 먼저 딕셔너리의 기본 개념을 익혀 두는 것이 좋습니다. 딕셔너리는 전용 [함수](/ko/reference/functions/regular-functions/ext-dict-functions#dictGetAll)를 사용해 값을 가져올 수 있는 인메모리 조회 테이블을 제공합니다.
 
-간단한 보강 예시는 [여기](/ko/concepts/features/dictionaries/index)의 딕셔너리 가이드를 참조하십시오. 아래에서는 일반적인 관측성 보강 작업에 집중합니다.
+간단한 보강 예시는 [여기](/ko/concepts/features/dictionaries)의 딕셔너리 가이드를 참조하십시오. 아래에서는 일반적인 관측성 보강 작업에 집중합니다.
 
 <div id="using-ip-dictionaries">
   ### IP 딕셔너리 사용하기
@@ -1111,7 +1102,7 @@ Os:     ('Other','0','0','0')
 
 더 많은 예시와 딕셔너리에 대한 자세한 내용은 다음 문서를 참고하십시오:
 
-* [고급 딕셔너리 주제](/ko/concepts/features/dictionaries/index#advanced-dictionary-topics)
+* [고급 딕셔너리 주제](/ko/concepts/features/dictionaries#advanced-dictionary-topics)
 * [&quot;딕셔너리를 사용해 쿼리 가속화하기&quot;](https://clickhouse.com/blog/faster-queries-dictionaries-clickhouse)
 * [딕셔너리](/ko/reference/statements/create/dictionary)
 

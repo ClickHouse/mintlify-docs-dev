@@ -466,18 +466,12 @@ Antes de realizar a busca, a função tokeniza
 
 * o argumento `input` (sempre), e
 * o argumento `needle` (se fornecido como [String](/pt-BR/reference/data-types/string))
-  usa o tokenizador especificado para o índice de texto.
-  Se a coluna não tiver nenhum índice de texto definido, o tokenizador `splitByNonAlpha` será usado.
+  usa o tokenizer especificado para o índice de texto.
+  Se a coluna não tiver nenhum índice de texto definido, o tokenizer `splitByNonAlpha` será usado.
   Se o argumento `needle` for do tipo [Array(String)](/pt-BR/reference/data-types/array), cada elemento do array será tratado como um token — não haverá tokenização adicional.
 
 Tokens duplicados são ignorados.
 Por exemplo, needles = [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] é considerado igual a [&#39;ClickHouse&#39;].
-
-<Note>
-  Quando um índice de texto define um [pré-processador](/pt-BR/reference/engines/table-engines/mergetree-family/textindexes#creating-a-text-index) (por exemplo, `lowerUTF8`), `hasAllTokens` o aplica a `input` e, quando `needles` é uma [String](/pt-BR/reference/data-types/string), a `needles` antes da tokenização. Quando `needles` é um [Array(String)](/pt-BR/reference/data-types/array), seus elementos são passados como estão, e o pré-processador não é aplicado a eles.
-  O pré-processador é aplicado apenas no caminho do índice de texto, portanto os resultados podem diferir entre consultas que usam o índice de texto e consultas que não o usam (por exemplo, `SETTINGS use_skip_indexes = 0`).
-  Essa inconsistência é tolerada para melhorar a usabilidade da busca de texto completo.
-</Note>
 
 **Sintaxe**
 
@@ -579,7 +573,7 @@ INSERT INTO log VALUES
 ```response title=Response
 ```
 
-**Exemplo com uma coluna do tipo array**
+**Exemplo com uma coluna do tipo Array**
 
 ```sql title=Query
 SELECT count() FROM log WHERE hasAllTokens(tags, 'clickhouse');
@@ -639,12 +633,6 @@ Antes de realizar a busca, a função tokeniza
 Tokens duplicados são ignorados.
 Por exemplo, [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] é tratado da mesma maneira que [&#39;ClickHouse&#39;].
 
-<Note>
-  Quando um índice de texto define um [pré-processador](/pt-BR/reference/engines/table-engines/mergetree-family/textindexes#creating-a-text-index) (por exemplo, `lowerUTF8`), `hasAnyTokens` o aplica a `input` e, quando `needles` é uma [String](/pt-BR/reference/data-types/string), a `needles` antes da tokenização. Quando `needles` é um [Array(String)](/pt-BR/reference/data-types/array), seus elementos são usados como estão, e o pré-processador não é aplicado a eles.
-  O pré-processador é aplicado apenas no caminho do índice de texto, portanto os resultados podem diferir entre consultas que usam o índice de texto e consultas que não o usam (por exemplo, `SETTINGS use_skip_indexes = 0`).
-  Essa inconsistência é tolerada para melhorar a usabilidade da busca de texto completo.
-</Note>
-
 **Sintaxe**
 
 ```sql
@@ -657,7 +645,7 @@ hasAnyTokens(input, needles)
 
 * `input` — A coluna de entrada. [`String`](/pt-BR/reference/data-types/string) ou [`FixedString`](/pt-BR/reference/data-types/fixedstring) ou [`Nullable(String)`](/pt-BR/reference/data-types/nullable) ou [`Nullable(FixedString)`](/pt-BR/reference/data-types/nullable) ou [`Array(String)`](/pt-BR/reference/data-types/array) ou [`Array(FixedString)`](/pt-BR/reference/data-types/array) ou [`Array(Nullable(String))`](/pt-BR/reference/data-types/array) ou [`Array(Nullable(FixedString))`](/pt-BR/reference/data-types/array)
 * `needles` — tokens a serem procurados. [`String`](/pt-BR/reference/data-types/string) ou [`Array(String)`](/pt-BR/reference/data-types/array)
-* `tokenizer` — O tokenizador a ser utilizado. Os argumentos válidos são `splitByNonAlpha`, `splitByString`, `asciiCJK`, `ngrams`, `sparseGrams` e `array`. Opcional; se não for definido explicitamente, o valor padrão é `splitByNonAlpha`. [`const String`](/pt-BR/reference/data-types/string)
+* `tokenizer` — O tokenizer a ser utilizado. Os argumentos válidos são `splitByNonAlpha`, `splitByString`, `asciiCJK`, `ngrams`, `sparseGrams` e `array`. Opcional; se não for definido explicitamente, o valor padrão é `splitByNonAlpha`. [`const String`](/pt-BR/reference/data-types/string)
 
 **Valor retornado**
 
@@ -775,22 +763,11 @@ SELECT count() FROM log WHERE hasAnyTokens(mapValues(attributes), ['192.0.0.1', 
 
 Introduzido em: v26.4.0
 
-Verifica se o `input` contém todos os tokens da `phrase` em ordem consecutiva.
+Verifica se o haystack contém todos os tokens da frase em ordem consecutiva.
 
-<Note>
-  A coluna `input` deve ter um [índice de texto](/pt-BR/reference/engines/table-engines/mergetree-family/textindexes) definido para desempenho ideal.
-  Se nenhum índice de texto for definido, a função executa uma varredura exaustiva da coluna, que é várias ordens de magnitude mais lenta do que uma consulta ao índice.
-</Note>
-
-Antes da pesquisa, a função tokeniza os argumentos `input` e `phrase` usando o tokenizador especificado para o índice de texto.
-Se a coluna não tiver nenhum índice de texto definido, o tokenizador `splitByNonAlpha` será usado — a menos que um tokenizador seja fornecido como terceiro argumento opcional.
+Antes da pesquisa, a função tokeniza os argumentos `input` e `phrase` usando o tokenizer especificado como terceiro argumento opcional.
 O argumento `tokenizer` deve ser um de `splitByNonAlpha`, `splitByString`, `ngrams` ou `asciiCJK`.
-
-<Note>
-  Quando um índice de texto define um [pré-processador](/pt-BR/reference/engines/table-engines/mergetree-family/textindexes#creating-a-text-index) (por exemplo, `lowerUTF8`), `hasPhrase` o aplica tanto a `input` quanto a `phrase` antes da tokenização.
-  O pré-processador é aplicado apenas no caminho do índice de texto, portanto os resultados podem diferir entre consultas que usam o índice de texto e consultas que não o usam (por exemplo, `SETTINGS use_skip_indexes = 0`).
-  Essa inconsistência é tolerada para melhorar a usabilidade da busca de texto completo.
-</Note>
+Se nenhum tokenizer for especificado, o tokenizer `splitByNonAlpha` será usado por padrão.
 
 Diferentemente de [`hasToken`](#hasToken), [`hasAnyTokens`](#hasAnyTokens) e [`hasAllTokens`](#hasAllTokens), `hasPhrase` exige que os tokens apareçam na mesma ordem
 e sem nenhum token entre eles. Por exemplo, `hasPhrase('the quick brown fox', 'quick fox')` retorna 0
@@ -808,7 +785,7 @@ hasPhrase(input, phrase[, tokenizer])
 
 * `input` — A coluna de entrada. [`String`](/pt-BR/reference/data-types/string) ou [`FixedString`](/pt-BR/reference/data-types/fixedstring)
 * `phrase` — Frase a ser buscada. [`const String`](/pt-BR/reference/data-types/string)
-* `tokenizer` — O tokenizador a ser usado. Opcional; o padrão é `splitByNonAlpha`. [`const String`](/pt-BR/reference/data-types/string)
+* `tokenizer` — O tokenizer a ser usado. Opcional; o padrão é `splitByNonAlpha`. [`const String`](/pt-BR/reference/data-types/string)
 
 **Valor retornado**
 
@@ -1192,20 +1169,19 @@ SELECT highlight('Hello World', ['hello'], '<b>', '</b>')
 
 Introduzido em: v20.6.0
 
-Como [`like`](#like), mas faz a busca sem diferenciar maiúsculas de minúsculas. Suporta a cláusula opcional `ESCAPE` (consulte `like`).
+Como [`like`](#like), mas faz a busca sem diferenciar maiúsculas de minúsculas.
 
 **Sintaxe**
 
 ```sql
-ilike(haystack, pattern[, escape_character])
--- haystack ILIKE pattern [ESCAPE 'escape_character']
+ilike(haystack, pattern)
+-- haystack ILIKE pattern
 ```
 
 **Argumentos**
 
 * `haystack` — String em que a busca é realizada. [`String`](/pt-BR/reference/data-types/string) ou [`FixedString`](/pt-BR/reference/data-types/fixedstring)
 * `pattern` — padrão LIKE usado para correspondência. [`String`](/pt-BR/reference/data-types/string)
-* `escape_character` — String opcional de um único caractere usada como caractere de escape em vez de `\`. Padrão: `\`. [`String`](/pt-BR/reference/data-types/string)
 
 **Valor retornado**
 
@@ -1255,27 +1231,17 @@ A barra invertida perde seu significado especial (ou seja, é interpretada liter
 Para expressões `LIKE` no formato `%needle%`, a função é tão rápida quanto a função `position`.
 Todas as outras expressões `LIKE` são convertidas internamente em uma expressão regular e executadas com desempenho semelhante ao da função `match`.
 
-<div id="escape-clause">
-  ## cláusula ESCAPE
-</div>
-
-A cláusula `ESCAPE` opcional especifica um caractere de escape personalizado (deve ser um único caractere ASCII).
-Quando especificado, o caractere de escape personalizado substitui a barra invertida padrão para escapar os metacaracteres `%` e `_`.
-O caractere de escape pode escapar três coisas: `%` (porcentagem literal), `_` (sublinhado literal) e ele mesmo (caractere de escape literal).
-Quando um caractere de escape personalizado é usado, a barra invertida não tem significado especial e é tratada como um caractere literal.
-
 **Sintaxe**
 
 ```sql
-like(haystack, pattern[, escape_character])
--- haystack LIKE pattern [ESCAPE 'escape_character']
+like(haystack, pattern)
+-- haystack LIKE pattern
 ```
 
 **Argumentos**
 
 * `haystack` — String em que a busca é realizada. [`String`](/pt-BR/reference/data-types/string) ou [`FixedString`](/pt-BR/reference/data-types/fixedstring)
 * `pattern` — Padrão `LIKE` usado na correspondência. Pode conter `%` (corresponde a qualquer número de caracteres), `_` (corresponde a um único caractere) e `\` para escape. [`String`](/pt-BR/reference/data-types/string)
-* `escape_character` — String opcional de um único caractere a ser usada como caractere de escape em vez de `\`. Padrão: `\`. [`String`](/pt-BR/reference/data-types/string)
 
 **Valor retornado**
 
@@ -1317,18 +1283,6 @@ SELECT like('ClickHouse', '%SQL%');
 ┌─like('ClickHouse', '%SQL%')─┐
 │                           0 │
 └─────────────────────────────┘
-```
-
-**Cláusula ESCAPE**
-
-```sql title=Query
-SELECT '50%off' LIKE '50#%off' ESCAPE '#';
-```
-
-```response title=Response
-┌─like('50%off', '50#%off', '#')─┐
-│                              1 │
-└────────────────────────────────┘
 ```
 
 <div id="locate">
@@ -1412,7 +1366,7 @@ match(haystack, pattern)
 **Argumentos**
 
 * `haystack` — String na qual o padrão é buscado. [`String`](/pt-BR/reference/data-types/string)
-* `pattern` — Padrão de expressão regular. Pode ser uma constante ou vir de uma coluna. [`String`](/pt-BR/reference/data-types/string)
+* `pattern` — Padrão de expressão regular. [`const String`](/pt-BR/reference/data-types/string)
 
 **Valor retornado**
 
@@ -2307,8 +2261,8 @@ SELECT multiSearchFirstPositionCaseInsensitiveUTF8('Здравствуй, мир
 ```
 
 ```response title=Response
-┌─multiSearchFirstPositionCaseInsensitiveUTF8('Здравствуй, мир', ['МИР', 'вст', 'Здра'])─┐
-│                                                                                      1 │
+┌─multiSearchFirstPositionCaseInsensitiveUTF8('Здравствуй, мир', ['мир', 'вст', 'Здра'])─┐
+│                                                                                      3 │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -2345,7 +2299,7 @@ SELECT multiSearchFirstPositionUTF8('Здравствуй, мир',['мир', '�
 
 ```response title=Response
 ┌─multiSearchFirstPositionUTF8('Здравствуй, мир', ['мир', 'вст', 'авст'])─┐
-│                                                                       4 │
+│                                                                       3 │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -2671,20 +2625,18 @@ SELECT ngramSearchUTF8('абвгдеёжз', 'гдеёзд')
 
 Introduzido na versão: v20.6.0
 
-Verifica se uma string não corresponde a um padrão, sem diferenciar maiúsculas de minúsculas. O padrão pode conter os caracteres especiais `%` e `_` para correspondência com SQL LIKE. Suporta a cláusula opcional `ESCAPE` (consulte `like`).
+Verifica se uma string não corresponde a um padrão, sem diferenciar maiúsculas de minúsculas. O padrão pode conter os caracteres especiais `%` e `_` para correspondência com SQL LIKE.
 
 **Sintaxe**
 
 ```sql
-notILike(haystack, pattern[, escape_character])
--- haystack NOT ILIKE pattern [ESCAPE 'escape_character']
+notILike(haystack, pattern)
 ```
 
 **Argumentos**
 
 * `haystack` — A string de entrada na qual a busca é feita. [`String`](/pt-BR/reference/data-types/string) ou [`FixedString`](/pt-BR/reference/data-types/fixedstring)
 * `pattern` — O padrão SQL LIKE usado para correspondência. `%` corresponde a qualquer número de caracteres (incluindo zero), `_` corresponde a exatamente um caractere. [`String`](/pt-BR/reference/data-types/string)
-* `escape_character` — String opcional de um único caractere a ser usada como caractere de escape em vez de `\`. Padrão: `\`. [`String`](/pt-BR/reference/data-types/string)
 
 **Valor retornado**
 
@@ -2710,20 +2662,19 @@ SELECT notILike('ClickHouse', '%house%');
 
 Introduzido em: v1.1.0
 
-Semelhante a [`like`](#like), mas com o resultado negado. Oferece suporte à cláusula opcional `ESCAPE` (consulte `like`).
+Semelhante a [`like`](#like), mas com o resultado negado.
 
 **Sintaxe**
 
 ```sql
-notLike(haystack, pattern[, escape_character])
--- haystack NOT LIKE pattern [ESCAPE 'escape_character']
+notLike(haystack, pattern)
+-- haystack NOT LIKE pattern
 ```
 
 **Argumentos**
 
 * `haystack` — String em que a busca é realizada. [`String`](/pt-BR/reference/data-types/string) e [`FixedString`](/pt-BR/reference/data-types/fixedstring)
 * `pattern` — Padrão `LIKE` para correspondência. [`String`](/pt-BR/reference/data-types/string)
-* `escape_character` — String opcional de um único caractere para usar como caractere de escape em vez de `\`. Padrão: `\`. [`String`](/pt-BR/reference/data-types/string)
 
 **Valor retornado**
 

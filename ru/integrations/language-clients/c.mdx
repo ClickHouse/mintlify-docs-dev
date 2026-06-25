@@ -1,17 +1,17 @@
 ---
-sidebarTitle: 'C'
 keywords: ['c', 'собственный протокол', 'Native format', 'header-only', 'встраиваемый', 'tcp', 'декодирование блоков']
 slug: /integrations/c
 description: 'Header-only C-клиент для собственного протокола ClickHouse, предназначенный для встраивания.'
+sidebarTitle: 'C'
 title: 'C-клиент ClickHouse'
 doc_type: 'reference'
 ---
 
-`clickhouse-c` — это header-only C-клиент для ClickHouse [собственного протокола](/ru/concepts/features/interfaces/tcp).
+`clickhouse-c` — это header-only C-клиент для ClickHouse [собственного протокола](/ru/interfaces/tcp).
 Исходный код и справочник по каждому заголовочному файлу доступны в [репозитории GitHub](https://github.com/ClickHouse/clickhouse-c).
 
 В отличие от более высокоуровневых клиентов, он намеренно берет на себя минимум. Основной заголовочный файл декодирует и
-кодирует блоки формата [Native](/ru/reference/formats/Native) через переданный вами I/O-колбэк. За сокет, TLS-контекст,
+кодирует блоки формата [Native](/ru/interfaces/formats/Native) через переданный вами I/O-колбэк. За сокет, TLS-контекст,
 аллокатор, повторные попытки и пул соединений отвечаете вы. Благодаря этому библиотека достаточно компактна для
 встраивания: одно только подключение `clickhouse.h` не добавляет зависимостей на этапе компоновки, кроме libc.
 
@@ -27,7 +27,7 @@ doc_type: 'reference'
 
 Это намеренно не входит в её задачи. Реализуйте это в своём приложении или с помощью родственной библиотеки:
 
-* HTTP-протокол. Используйте libcurl напрямую для [HTTP-интерфейса](/ru/concepts/features/interfaces/http).
+* HTTP-протокол. Используйте libcurl напрямую для [HTTP-интерфейса](/ru/interfaces/http).
 * Разрешение DNS-имён, переключение конечных точек при отказе, пул соединений, повторные попытки и задержка между ними.
 * Управление жизненным циклом TLS-контекста. Реализация на OpenSSL использует `SSL`, к которому вы уже подключились.
 * Многопоточность. Каждый `chc_client` по замыслу однопоточный.
@@ -342,7 +342,7 @@ vtable объявлена в `clickhouse-compression.h`.
   ## TLS
 </div>
 
-`clickhouse-openssl.h` предоставляет `chc_io` backend-соединение поверх `SSL_read`/`SSL_write`. OpenSSL настраиваете и управляете им вы:
+`clickhouse-openssl.h` предоставляет реализацию `chc_io` поверх `SSL_read`/`SSL_write`. OpenSSL настраиваете и управляете им вы:
 библиотека никогда не создаёт `SSL_CTX`, не проверяет сертификаты, не задаёт SNI и не вызывает `SSL_connect` /
 `SSL_shutdown`. К моменту вызова `chc_io.read` рукопожатие уже должно быть завершено.
 
@@ -356,7 +356,7 @@ chc_openssl_io_init(&state, &io, ssl, NULL, NULL);
 /* hand &io to chc_client_init, same as the POSIX backend */
 ```
 
-[ClickHouse Cloud](/ru/products/cloud/getting-started/intro) и другие развертывания с поддержкой TLS используют собственный протокол на
+[ClickHouse Cloud](/ru/cloud/overview) и другие развертывания с поддержкой TLS используют собственный протокол на
 порту 9440. Оба backend-соединения поддерживают необязательный callback `check_cancel`, который опрашивается между операциями чтения, а также
 deadline чтения через `chc_openssl_io_set_deadline` / `chc_posix_io_set_deadline`.
 

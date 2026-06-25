@@ -17,10 +17,17 @@ Backup データベースエンジンは、増分バックアップと非増分�
 
 ```sql
 CREATE DATABASE backup_database
-ENGINE = Backup('database_name_inside_backup', Disk('disk_name', 'backup_name'))
+ENGINE = Backup('database_name_inside_backup', 'backup_destination')
 ```
 
-バックアップの宛先には、`Disk`、`S3`、`File` など、有効な任意のバックアップ[destination](/ja/concepts/features/backup-restore/local-disk#configure-backup-destinations-for-disk)を指定できます。これは関数として渡され、たとえば `Disk('disk_name', 'backup_name')` のように指定します。
+バックアップの宛先には、`Disk`、`S3`、`File` など、有効な任意のバックアップ[destination](/ja/concepts/features/backup-restore/local-disk#configure-backup-destinations-for-disk)を指定できます。
+
+`Disk` をバックアップの宛先として使用する場合、バックアップからデータベースを作成するクエリは次のようになります。
+
+```sql
+CREATE DATABASE backup_database
+ENGINE = Backup('database_name_inside_backup', Disk('disk_name', 'backup_name'))
+```
 
 **エンジンパラメータ**
 
@@ -96,10 +103,8 @@ SELECT id, value FROM test_database_backup.test_table_3;
 この Backup データベースも、通常のデータベースと同様に扱えます。たとえば、その中のテーブルに対してクエリを実行できます。
 
 ```sql
-SELECT database, name FROM system.tables WHERE database = 'test_database_backup';
-```
+SELECT database, name FROM system.tables WHERE database = 'test_database_backup':
 
-```text
 ┌─database─────────────┬─name─────────┐
 │ test_database_backup │ test_table_1 │
 │ test_database_backup │ test_table_2 │

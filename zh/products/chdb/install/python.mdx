@@ -1,5 +1,5 @@
 ---
-title: 为 Python 安装 chDB
+title: 包含混合 JSON 对象的 DataFrame
 sidebarTitle: 'Python'
 slug: /chdb/install/python
 description: '如何安装适用于 Python 的 chDB'
@@ -290,12 +290,12 @@ sess.close()  # 可选——对象销毁时自动关闭
 </div>
 
 ```python
-# Session with custom settings
+# 使用自定义设置的会话
 sess = session.Session(
     path="/tmp/analytics_db",
 )
 
-# Query performance optimization
+# 查询性能优化
 result = sess.query("""
     SELECT product, sum(amount) as total
     FROM sales 
@@ -305,7 +305,7 @@ result = sess.query("""
 """, "JSON")
 ```
 
-另见：[test&#95;stateful.py](https://github.com/chdb-io/chdb-core/blob/main/tests/test_stateful.py)。
+另见：[test&#95;stateful.py](https://github.com/chdb-io/chdb/blob/main/tests/test_stateful.py)。
 
 <div id="python-db-api-20">
   ### Python DB-API 2.0 接口
@@ -619,17 +619,17 @@ from typing import List, Tuple, Any
 import json
 
 class DatabaseReader(chdb.PyReader):
-    """Custom reader for database-like data sources"""
+    """用于类数据库数据源的自定义读取器"""
     
     def __init__(self, connection_string: str):
-        # Simulate database connection
+        # 模拟数据库连接
         self.data = self._load_data(connection_string)
         self.cursor = 0
         self.batch_size = 1000
         super().__init__(self.data)
     
     def _load_data(self, conn_str):
-        # Simulate loading from database
+        # 模拟从数据库加载数据
         return {
             "id": list(range(1, 10001)),
             "name": [f"user_{i}" for i in range(1, 10001)],
@@ -641,28 +641,28 @@ class DatabaseReader(chdb.PyReader):
         }
     
     def get_schema(self) -> List[Tuple[str, str]]:
-        """Define table schema with explicit types"""
+        """定义具有显式类型的表 schema"""
         return [
             ("id", "UInt64"),
             ("name", "String"),
             ("score", "Int64"),
-            ("metadata", "String")  # JSON stored as string
+            ("metadata", "String")  # JSON 以字符串形式存储
         ]
     
     def read(self, col_names: List[str], count: int) -> List[List[Any]]:
-        """Read data in batches"""
+        """分批读取数据"""
         if self.cursor >= len(self.data["id"]):
-            return []  # No more data
+            return []  # 无更多数据
         
         end_pos = min(self.cursor + min(count, self.batch_size), len(self.data["id"]))
         
-        # Return data for requested columns
+        # 返回所请求列的数据
         result = []
         for col in col_names:
             if col in self.data:
                 result.append(self.data[col][self.cursor:end_pos])
             else:
-                # Handle missing columns
+                # 处理缺失列
                 result.append([None] * (end_pos - self.cursor))
         
         self.cursor = end_pos
@@ -676,7 +676,6 @@ chDB automatically handles complex nested data structures:
 import pandas as pd
 import chdb
 
-# DataFrame with mixed JSON objects
 df_with_json = pd.DataFrame({
     "user_id": [1, 2, 3, 4],
     "profile": [
@@ -687,7 +686,7 @@ df_with_json = pd.DataFrame({
     ]
 })
 
-# Control JSON inference with settings
+# 通过 settings 控制 JSON 类型推断
 result = chdb.query("""
     SELECT 
         user_id,
@@ -696,11 +695,11 @@ result = chdb.query("""
         length(profile.preferences) as pref_count,
         profile.location.city as city
     FROM Python(df_with_json)
-    SETTINGS pandas_analyze_sample = 1000  -- Analyze all rows for JSON detection
+    SETTINGS pandas_analyze_sample = 1000  -- 分析所有行以检测 JSON 类型
 """, "Pretty")
 print(result)
 
-# Advanced JSON operations
+# 高级 JSON 操作
 complex_json = chdb.query("""
     SELECT 
         user_id,

@@ -139,8 +139,6 @@ CREATE SERVER taxi_srv FOREIGN DATA WRAPPER clickhouse_fdw
 
 * `driver`：要使用的 ClickHouse 连接驱动程序，可以是 &quot;binary&quot; 或
   &quot;http&quot;。**必填。**
-* `compression`：binary driver 的 native 协议压缩，可选值为
-  &quot;none&quot;、&quot;lz4&quot; 或 &quot;zstd&quot;。默认为 &quot;lz4&quot;。http 驱动会忽略此选项。
 * `dbname`：连接时使用的 ClickHouse 数据库。默认为
   &quot;default&quot;。
 * `fetch_size`：HTTP streaming 的近似批次大小 (以字节为单位) 。批次
@@ -154,16 +152,6 @@ CREATE SERVER taxi_srv FOREIGN DATA WRAPPER clickhouse_fdw
   * 如果 `driver` 为 &quot;binary&quot; 且 `host` 不是 ClickHouse Cloud 主机，则为 9004
   * 如果 `driver` 为 &quot;http&quot; 且 `host` 是 ClickHouse Cloud 主机，则为 8443
   * 如果 `driver` 为 &quot;http&quot; 且 `host` 不是 ClickHouse Cloud 主机，则为 8123
-* `min_tls_version`：对使用 TLS 的连接协商的最低 TLS 协议版本。
-  可选值为 `TLSv1`、`TLSv1.1`、`TLSv1.2` 或 `TLSv1.3`。默认值
-  为 TLS 库自身的最低版本。适用于两种驱动程序。
-* `secure`：控制连接是否使用 TLS。可选值为：
-  * `auto` (默认) ：当 `host` 是 ClickHouse Cloud 主机或
-    `port` 是安全端口时使用 TLS；否则使用 plaintext。
-  * `on` (或 `true`/`yes`/`1`) ：始终使用 TLS。默认 `port` 为 8443
-    (&quot;http&quot;) 或 9440 (&quot;binary&quot;) 。
-  * `off` (或 `false`/`no`/`0`) ：从不使用 TLS。默认 `port` 为 8123
-    (&quot;http&quot;) 或 9000 (&quot;binary&quot;) 。
 
 <div id="alter-server">
   ### ALTER SERVER
@@ -1141,10 +1129,6 @@ SELECT clickhouse_raw_query(
 * `reverse(bytea)`: [reverse](/zh/reference/functions/regular-functions/string-functions#reverse)
 * `strpos`：[positionUTF8](/zh/reference/functions/regular-functions/string-search-functions#positionutf8)
 * `regexp_like`: [match](/zh/reference/functions/regular-functions/string-search-functions#match)
-* `regexp_match`: [extractGroups](/zh/reference/functions/regular-functions/string-search-functions#extractGroups)
-  如果正则表达式包含带括号的子表达式；否则为
-  [extractAll](/zh/reference/functions/regular-functions/string-search-functions#extractAll)
-  再使用 [arraySlice](/zh/reference/functions/regular-functions/array-functions#arraySlice) 切片。
 * `regexp_replace`：[replaceRegexpOne](/zh/reference/functions/regular-functions/string-replace-functions#replaceRegexpOne) 或 [replaceRegexpOne](/zh/reference/functions/regular-functions/string-replace-functions#replaceRegexpAll)，存在 `g` 标志时
 * `regexp_split_to_array`: [splitByRegexp](/zh/reference/functions/regular-functions/splitting-merging-functions#splitByRegexp)
 * `md5`: [MD5](/zh/reference/functions/regular-functions/hash-functions#MD5)
@@ -1330,17 +1314,17 @@ SELECT quantile(0.25)(a) FROM t1;
 这些 PostgreSQL [窗口函数] 可以通过 `OVER
 (PARTITION BY ... ORDER BY ...)` 子句下推到 ClickHouse；在适用情况下，也包括窗口帧规范。
 
-* [row&#95;number](/zh/reference/functions/window-functions/index#row_number)
-* [rank](/zh/reference/functions/window-functions/index#rank)
-* [dense&#95;rank](/zh/reference/functions/window-functions/index#dense_rank)
-* [ntile](/zh/reference/functions/window-functions/index#ntile)
-* [cume&#95;dist](/zh/reference/functions/window-functions/index#cume_dist)
-* [percent&#95;rank](/zh/reference/functions/window-functions/index#percent_rank)
-* [lead](/zh/reference/functions/window-functions/index#lead)
-* [lag](/zh/reference/functions/window-functions/index#lag)
-* [first&#95;value](/zh/reference/functions/window-functions/index#first_value)
-* [last&#95;value](/zh/reference/functions/window-functions/index#last_value)
-* [nth&#95;value](/zh/reference/functions/window-functions/index#nth_value)
+* [row&#95;number](/zh/reference/functions/window-functions#row_number)
+* [rank](/zh/reference/functions/window-functions#rank)
+* [dense&#95;rank](/zh/reference/functions/window-functions#dense_rank)
+* [ntile](/zh/reference/functions/window-functions#ntile)
+* [cume&#95;dist](/zh/reference/functions/window-functions#cume_dist)
+* [percent&#95;rank](/zh/reference/functions/window-functions#percent_rank)
+* [lead](/zh/reference/functions/window-functions#lead)
+* [lag](/zh/reference/functions/window-functions#lag)
+* [first&#95;value](/zh/reference/functions/window-functions#first_value)
+* [last&#95;value](/zh/reference/functions/window-functions#last_value)
+* [nth&#95;value](/zh/reference/functions/window-functions#nth_value)
 * `min` / `max` (带 `OVER` 子句)
 
 排名函数 (`row_number`、`rank`、`dense_rank`、`ntile`、`cume_dist`、
@@ -1359,84 +1343,50 @@ pg&#95;clickhouse 会将正则表达式下推为 ClickHouse 中的等效形式�
 并尽力保证基本兼容性，但你仍需了解二者之间的差异，以及
 pg&#95;clickhouse 如何处理这些差异。
 
-* PostgreSQL 支持 [POSIX 正则表达式]，而 ClickHouse 支持
-  [RE2 正则表达式][RE2]。请注意两者的行为差异：当正则表达式由 ClickHouse 求值时 (例如，在
-  `WHERE` 子句中) ，请使用 RE2；当它由 Postgres 求值时 (例如，在
-  `SELECT` 子句中) ，请使用 POSIX。
+* PostgreSQL 支持 [POSIX Regular Expressions]，而 ClickHouse 支持
+  [RE2 Regular Expressions][RE2]。请注意二者在行为上的差异：当正则表达式由 ClickHouse 计算时 (例如在
+  `WHERE` 子句中) ，请按 RE2 编写；当它由 Postgres 计算时 (例如在
+  `SELECT` 子句中) ，请按 POSIX 编写。
 
-* pg&#95;clickhouse 通过将 [Postgres 标志] 置于 ClickHouse 正则表达式前面并放入 `(?)` 中，来实现下推。例如：
+* pg&#95;clickhouse 会将 Postgres 的 [Regex flags] 预置到
+  ClickHouse 正则表达式的 `(?)` 中，以实现下推。例如：
 
   ```sql
   regexp_like(val, '^VAL\d', 'i')
   ```
 
-  变成
+  会变成
 
   ```sql
-  match(val, concat('(?i)', '^VAL\\d'))
+  match(val, concat('(?i-s)', '^VAL\\d'))
   ```
 
-* 两者唯一同时支持、因此可在由 ClickHouse 求值时使用的标志有：
+  注意这里包含了 `-s`；这是为了禁用 ClickHouse 默认开启的 `s`，
+  以使其行为与 Postgres 正则表达式保持一致。
+  如果 Postgres 函数调用中的标志包含 `s`，pg&#95;clickhouse 就不会添加 `-s`。
+  不幸的是，这种行为会破坏 Postgres 24 及更早版本中某些正则表达式的兼容性。
 
-  | 标志  | 对应    | 说明                              |
-  | --- | ----- | ------------------------------- |
-  | `i` | `i`   | 不区分大小写匹配                        |
-  | `m` | `m-s` | `^` 和 `$` 除了匹配文本开头/结尾外，也匹配行首/行尾 |
-  | `n` | `m-s` | `m` 的 Postgres 别名               |
-  | `p` | `-s`  | 不允许 `.` 和 `[^x]` 匹配 `\n`        |
-  | `s` | `s`   | 允许 `.` 和 `[^x]` 匹配 `\n`         |
-  | `t` |       | 紧凑语法，会被忽略                       |
-  | `w` | `m`   | 部分换行敏感匹配的反向形式                   |
+* 两者共同支持、因此可在由
+  ClickHouse 计算时使用的标志只有：
 
-  RE2 仅支持这些标志；请勿使用任何其他 [Postgres 标志]。
+  * `i`：不区分大小写
+  * `m`：多行模式：
+  * `s`：让 `.` 匹配 `\n`
+  * `p`：部分换行敏感匹配 (按与 `s` 相同的方式处理)
+  * `t`：严格语法 (默认值，会被 pg&#95;clickhouse 移除)
 
-* 下表概述了各种标志 (以及不加标志的情况，此时
-  与 `s` 相同) 在匹配换行符和行尾时的影响。请注意，在
-  Postgres 中，`m` 和 `p` 会阻止否定字符类 (`[^xyz]`) 匹配
-  换行符，而 ClickHouse 中的对应标志则不会。除此之外，
-  ClickHouse 的行为与 Postgres 相同：
+  RE2 仅支持这些标志；不要使用任何其他 [Postgres flags]
 
-  | 应用于 `a\nb` 的模式 | Postgres | ClickHouse | 一致？ |
-  | -------------- | :------: | :--------: | :-: |
-  | `a.b`          |   true   |    true    |  ✔︎ |
-  | `a[^x]b`       |   true   |    true    |  ✔︎ |
-  | `a$`           |   false  |    false   |  ✔︎ |
-  | **`s` 标志**     |          |            |     |
-  | `(?s)a.b`      |   true   |    true    |  ✔︎ |
-  | `(?s)a[^x]b`   |   true   |    true    |  ✔︎ |
-  | `(?s)a$`       |   false  |    false   |  ✔︎ |
-  | **`m` 标志**     |          |            |     |
-  | `(?m)a.b`      |   false  |    false   |  ✔︎ |
-  | `(?m)a[^x]b`   |   true   |    false   |  ✘  |
-  | `(?m)a$`       |   true   |    true    |  ✔︎ |
-  | **`p` 标志**     |          |            |     |
-  | `(?p)a.b`      |   false  |    false   |  ✔︎ |
-  | `(?p)a[^x]b`   |   true   |    false   |  ✘  |
-  | `(?p)a$`       |   false  |    false   |  ✔︎ |
-  | **`w` 标志**     |          |            |     |
-  | `(?w)a.b`      |   true   |    true    |  ✔  |
-  | `(?w)a[^x]b`   |   true   |    true    |  ✔  |
-  | `(?w)a$`       |   true   |    true    |  ✔  |
-
-* 传递给正则表达式函数的任何其他标志都会阻止
-  该函数被下推。
+* 传递给正则表达式函数的任何其他标志都会导致该
+  函数无法下推。
 
 * 例外是 `regexp_replace()`，它还支持 `g` 标志。当
-  设置 `g` 时，pg&#95;clickhouse 会使用 `replaceRegexpAll()` 而不是
-  `replaceRegexpOne()`，并会先移除该标志，再添加其他标志。
+  设置了 `g` 时，pg&#95;clickhouse 会使用 `replaceRegexpAll()` 而不是
+  `replaceRegexpOne()`，并在预置其他标志前移除该标志。
 
-* Postgres 的 `regexp_replace()` 的 replacement 参数支持使用 `\&` 来
-  引用整个匹配；而在 ClickHouse 中，则使用 `\0` 表示整个
-  匹配。该函数下推到 ClickHouse 时，务必使用 `\0`。
-
-* 当没有匹配项时，Postgres `regexp_match` 会返回 `NULL`，而
-  它下推执行的表达式则会返回空数组。请使用 `COALESCE()`
-  返回空数组而不是 `NULL`，以便以兼容的方式比较返回值。
-  例如：
-
-  ```sql
-  SELECT * FROM events WHERE COALESCE(regexp_match(msg, '^ERR'), '{}');
-  ```
+* Postgres 的 `regexp_replace()` 的 replacement 参数支持使用 `\&`
+  表示整个匹配结果，而 ClickHouse 则使用 `\0` 表示整个
+  匹配结果。函数下推到 ClickHouse 时，请务必使用 `\0`。
 
 为避免任何歧义，建议设置
 [pg&#95;clickhouse.pushdown&#95;regex](#pg_clickhousepushdown_regex) 以阻止
@@ -1533,7 +1483,7 @@ PostgreSQL 中用于 `timestamp` 和 `timestamp with time zone` 的 [`to_char()`
 
 [CREATE FOREIGN TABLE]: https://www.postgresql.org/docs/current/sql-createforeigntable.html "PostgreSQL 文档：CREATE FOREIGN TABLE"
 
-[table engine]: /reference/engines/table-engines/index "ClickHouse 文档：表引擎"
+[table engine]: /reference/engines/table-engines "ClickHouse 文档：表引擎"
 
 [AggregateFunction Type]: /reference/data-types/aggregatefunction "ClickHouse 文档：AggregateFunction 类型"
 
@@ -1569,9 +1519,9 @@ PostgreSQL 中用于 `timestamp` 和 `timestamp with time zone` 的 [`to_char()`
 
 [shared library preloading]: https://www.postgresql.org/docs/current/runtime-config-client.html#RUNTIME-CONFIG-CLIENT-PRELOAD "PostgreSQL 文档：共享库预加载"
 
-[有序集合聚合函数]: https://www.postgresql.org/docs/current/functions-aggregate.html#FUNCTIONS-ORDEREDSET-TABLE
+[ordered-set aggregate functions]: https://www.postgresql.org/docs/current/functions-aggregate.html#FUNCTIONS-ORDEREDSET-TABLE
 
-[参数化聚合函数]: /reference/functions/aggregate-functions/parametric-functions
+[Parametric aggregate functions]: /reference/functions/aggregate-functions/parametric-functions
 
 [ClickHouse settings]: /reference/settings/session-settings "ClickHouse 文档：会话设置"
 
@@ -1595,9 +1545,9 @@ PostgreSQL 中用于 `timestamp` 和 `timestamp with time zone` 的 [`to_char()`
 
 [window functions]: https://www.postgresql.org/docs/current/functions-window.html "PostgreSQL 文档：窗口函数"
 
-[POSIX Regular Expressions]: https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-POSIX-REGEXP "PostgreSQL 文档：POSIX 正则表达式"
+[POSIX Regular Expressions]: https://www.postgresql.org/docs/18/functions-matching.html#FUNCTIONS-POSIX-REGEXP "PostgreSQL 文档：POSIX 正则表达式"
 
-[Postgres flags]: https://www.postgresql.org/docs/current/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "PostgreSQL 文档：ARE 内嵌选项字母"
+[Postgres flags]: https://www.postgresql.org/docs/18/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "PostgreSQL 文档：ARE 内嵌选项字母"
 
 [RE2]: https://github.com/google/re2/wiki/Syntax "RE2 语法"
 

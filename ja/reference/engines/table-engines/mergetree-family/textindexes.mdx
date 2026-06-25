@@ -77,17 +77,17 @@ CREATE TABLE table
 (
     key UInt64,
     str String,
-    INDEX text_idx str TYPE text(
-                                -- Mandatory parameters:
+    INDEX text_idx(str) TYPE text(
+                                -- 必須パラメータ:
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
                                             | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
-                                -- Optional parameters:
+                                -- 任意パラメータ:
                                 [, preprocessor = expression(str)]
-                                -- Optional advanced parameters:
+                                -- 任意の高度なパラメータ:
                                 [, dictionary_block_size = D]
                                 [, dictionary_block_frontcoding_compression = B]
                                 [, posting_list_block_size = C]
@@ -111,17 +111,17 @@ ORDER BY key
 
 ```sql title="Query"
 ALTER TABLE table
-    ADD INDEX text_idx str TYPE text(
-                                -- Mandatory parameters:
+    ADD INDEX text_idx(str) TYPE text(
+                                -- 必須パラメータ:
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
                                             | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
-                                -- Optional parameters:
+                                -- オプションパラメータ:
                                 [, preprocessor = expression(str)]
-                                -- Optional advanced parameters:
+                                -- オプション詳細パラメータ:
                                 [, dictionary_block_size = D]
                                 [, dictionary_block_frontcoding_compression = B]
                                 [, posting_list_block_size = C]
@@ -202,31 +202,22 @@ SELECT tokens('abc def', 'ngrams', 3);
 
 例:
 
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))`
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = substringIndex(col, '\n', 1))`
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(extractTextFromHTML(col)))`
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = removeDiacriticsUTF8(caseFoldUTF8(col)))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = substringIndex(col, '\n', 1))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(extractTextFromHTML(col)))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = removeDiacriticsUTF8(caseFoldUTF8(col)))`
 
 また、プリプロセッサ式は、テキスト索引が定義されているカラムまたは式のみを参照しなければなりません。
 
 例:
 
-* `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = upper(lower(col)))`
-* `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(lower(col), lower(col)))`
-* 許可されません: `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(col, col))`
+* `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = upper(lower(col)))`
+* `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(lower(col), lower(col)))`
+* 許可されません: `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(col, col))`
 
 非決定論的関数は使用できません。
 
-<Note>
-  プリプロセッサは原則として、索引対象のカラムまたは式をプリプロセッサ式でラップすることと同等です。
-  例えば、`INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))` における `lower` プリプロセッサは、`INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha')` によって再現できます。
-  後者の形式には、再現されたプリプロセッサが `WHERE` 句のフィルタ条件に一致する場合にのみ適用されるという欠点があります。
-  例えば、`WHERE hasAllTokens(lower(col), [...])` は一致しますが、`WHERE hasAllTokens(col, [...])` は一致しません。
-  そのため、最適なユーザー体験のために、プリプロセッサ式の使用を推奨します。
-</Note>
-
-関数 [hasToken](/ja/reference/functions/regular-functions/string-search-functions#hasToken)、[hasAllTokens](/ja/reference/functions/regular-functions/string-search-functions#hasAllTokens)、[hasAnyTokens](/ja/reference/functions/regular-functions/string-search-functions#hasAnyTokens)、および [hasPhrase](/ja/reference/functions/regular-functions/string-search-functions#hasPhrase) では、検索語をトークン化する前に、まずプリプロセッサで変換を行います。
-プリプロセッサはテキスト索引のパスでのみ適用されるため、これらの関数の結果は、テキスト索引を使用するクエリと使用しないクエリ (例: `SETTINGS use_skip_indexes = 0`) とで異なる場合があることに注意してください。
+関数 [hasToken](/ja/reference/functions/regular-functions/string-search-functions#hasToken)、[hasAllTokens](/ja/reference/functions/regular-functions/string-search-functions#hasAllTokens)、および [hasAnyTokens](/ja/reference/functions/regular-functions/string-search-functions#hasAnyTokens) では、検索語をトークン化する前に、まずプリプロセッサで変換を行います。
 
 例えば、
 
@@ -234,7 +225,7 @@ SELECT tokens('abc def', 'ngrams', 3);
 CREATE TABLE table
 (
     str String,
-    INDEX idx str TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(str))
+    INDEX idx(str) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(str))
 )
 ENGINE = MergeTree
 ORDER BY tuple();
@@ -248,7 +239,7 @@ SELECT count() FROM table WHERE hasToken(str, 'Foo');
 CREATE TABLE table
 (
     str String,
-    INDEX idx lower(str) TYPE text(tokenizer = 'splitByNonAlpha')
+    INDEX idx(lower(str)) TYPE text(tokenizer = 'splitByNonAlpha')
 )
 ENGINE = MergeTree
 ORDER BY tuple();
@@ -256,7 +247,7 @@ ORDER BY tuple();
 SELECT count() FROM table WHERE hasToken(str, lower('Foo'));
 ```
 
-この場合、プリプロセッサ式は配列内の各要素をそれぞれ変換します。
+この場合、プリプロセッサ式は配列の各要素をそれぞれ変換します。
 
 例:
 
@@ -266,7 +257,7 @@ CREATE TABLE table
     arr Array(String),
     INDEX idx arr TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(arr))
 
-    -- This is not legal:
+    -- これは不正です:
     INDEX idx_illegal arr TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = arraySort(arr))
 )
 ENGINE = MergeTree
@@ -275,8 +266,8 @@ ORDER BY tuple();
 SELECT count() FROM tab WHERE hasAllTokens(arr, 'foo');
 ```
 
-[Map](/ja/reference/data-types/map) 型のカラムに対するテキスト索引でプリプロセッサを定義するには、その索引を
-マップのキーと値のどちらを対象に構築するかを決める必要があります。
+[Map](/ja/reference/data-types/map) 型のカラムに作成するテキスト索引でプリプロセッサを定義するには、索引を
+マップのキーと値のどちらに対して作成するかを決める必要があります。
 
 例:
 
@@ -310,26 +301,6 @@ SELECT count() FROM tab WHERE hasAllTokens(mapKeys(map), 'foo');
 
   * `none` - ポスティングリストは追加の圧縮を行わずに保存されます。
   * `bitpacking` - [差分 (delta) 符号化](https://en.wikipedia.org/wiki/Delta_encoding) を適用した後、[bit-packing](https://dev.to/madhav_baby_giraffe/bit-packing-the-secret-to-optimizing-data-storage-and-transmission-m70) を適用します (いずれも固定サイズのブロック内で実行されます) 。SELECT クエリが遅くなるため、現時点では推奨されません。
-
-  上記の詳細パラメータは、対応する MergeTree settings を通じてテーブルレベルで設定することもできます: [`text_index_dictionary_block_size`](/ja/reference/settings/merge-tree-settings#text_index_dictionary_block_size), [`text_index_dictionary_block_frontcoding_compression`](/ja/reference/settings/merge-tree-settings#text_index_dictionary_block_frontcoding_compression), [`text_index_posting_list_block_size`](/ja/reference/settings/merge-tree-settings#text_index_posting_list_block_size), および [`text_index_posting_list_codec`](/ja/reference/settings/merge-tree-settings#text_index_posting_list_codec)。
-  これらは、パラメータを明示的に指定していない、そのテーブル内のすべてのテキスト索引に適用されます。
-
-  テーブルレベル設定の主なユースケースは、すべてのテーブルパーツ上のテキスト索引を削除して再作成することなく、既存テーブルの索引パラメータを変更することです。
-  テーブルレベル設定を変更すると、新しいパーツ用に構築されるテキスト索引にのみ新しいパラメータが適用され、既存のパーツは現在のレイアウトを維持します。
-
-  たとえば、索引定義で指定された引数はテーブル設定よりも優先されます:
-
-  ```sql
-  CREATE TABLE table(
-      s String,
-      -- この索引は 'bitpacking' を使用し、以下のテーブルレベルのデフォルトを上書きします:
-      INDEX idx_a s TYPE text(tokenizer = 'splitByNonAlpha', posting_list_codec = 'bitpacking'),
-      -- この索引はテーブル設定から 'none' を継承します:
-      INDEX idx_b lower(s) TYPE text(tokenizer = 'splitByNonAlpha'))
-  ENGINE = MergeTree()
-  ORDER BY tuple()
-  SETTINGS text_index_posting_list_codec = 'none';
-  ```
 </details>
 
 *索引の粒度。*
@@ -343,7 +314,7 @@ SELECT count() FROM tab WHERE hasAllTokens(mapKeys(map), 'foo');
 CREATE TABLE table(
     k UInt64,
     s String,
-    INDEX idx s TYPE text(tokenizer = ngrams(2)))
+    INDEX idx(s) TYPE text(tokenizer = ngrams(2)))
 ENGINE = MergeTree()
 ORDER BY k;
 
@@ -356,7 +327,7 @@ SHOW CREATE TABLE table;
 │↳(                                                                     ↴│
 │↳    `k` UInt64,                                                       ↴│
 │↳    `s` String,                                                       ↴│
-│↳    INDEX idx s TYPE text(tokenizer = ngrams(2)) GRANULARITY 100000000↴│ <-- here
+│↳    INDEX idx s TYPE text(tokenizer = ngrams(2)) GRANULARITY 100000000↴│ <-- ここ
 │↳)                                                                     ↴│
 │↳ENGINE = MergeTree                                                    ↴│
 │↳ORDER BY k                                                            ↴│
@@ -455,36 +426,6 @@ SELECT count() FROM table WHERE comment LIKE ' support %'; -- または `% suppo
 幸い、ClickHouse が転置索引を活用して LIKE クエリを大幅に高速化できる特別なケースがあります。
 
 詳しくは、[LIKE/ILIKE パフォーマンスチューニングのセクション](#like-ilike-queries-perf)を参照してください。
-
-<div id="functions-example-multisearchany-multimatchany">
-  #### `multiSearchAny` と `multiMatchAny`
-</div>
-
-[multiSearchAny](/ja/reference/functions/regular-functions/string-search-functions#multiSearchAny) とその UTF-8 版である [multiSearchAnyUTF8](/ja/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8) は、複数のリテラルな部分文字列のうちいずれかが検索対象文字列に現れるかどうかを判定し、[multiMatchAny](/ja/reference/functions/regular-functions/string-search-functions#multiMatchAny) は複数の正規表現のうちいずれかに一致するかどうかを判定します。
-これらの関数は、`LIKE` および `match` と同じ条件でテキスト索引を使用します (上記参照) 。つまり、ClickHouse が各 needle から完全なトークンを抽出でき、かつ needles のリストが定数である必要があります。
-いずれかの needle が含まれている可能性があるグラニュールは読み取られます。
-
-`multiMatchAny` では、1 つの pattern をトークン要件に還元できない場合 (たとえば任意の document に一致する `.*` など) 、テキスト索引は使用できず、クエリは完全走査にフォールバックします。
-
-`LIKE` や `match` と同様に、部分文字列検索と正規表現検索は `ngrams` および `sparseGrams` トークナイザーで最も効果的に機能します。
-これらのトークナイザーは、互いに重なり合う文字 N-gram を索引化します。そのため needle は N-gram に分解され、単語の途中で始まるか終わるかにかかわらず、needle が部分文字列として現れる箇所であれば索引内に存在します。
-したがって、needle は N-gram サイズ以上の長さがあれば、そのまま使用できます。
-
-`ngrams` トークナイザーを使ったテキスト索引の例:
-
-```sql
-SELECT count() FROM table WHERE multiSearchAny(comment, ['clickhouse', 'support']);
-```
-
-これに対して、`splitByNonAlpha` トークナイザーは完全なトークン (単語全体) だけを索引付けします。
-needle は単語の途中で始まったり終わったりすることがあるため、ClickHouse は各 needle の先頭と末尾のトークンを除外します。そのため、索引がグラニュールを絞り込めるのは、完全なトークンを使う場合に限られます。
-`splitByNonAlpha` で substring 検索や正規表現検索に索引を利用させるには、各 needle を区切り文字 (スペースなど) で囲み、1 つ以上の完全なトークンになるようにします。
-
-`splitByNonAlpha` トークナイザーを使用したテキスト索引の例:
-
-```sql
-SELECT count() FROM table WHERE multiSearchAny(comment, [' clickhouse ', ' support ']);
-```
 
 <div id="functions-example-startswith-endswith">
   #### `startsWith` and `endsWith`
@@ -646,7 +587,7 @@ SELECT count() FROM table WHERE mapContainsValueLike(map, '% clickhouse %');
   #### `operator[]`
 </div>
 
-アクセス[operator[]](/ja/reference/operators/index#access-operators)は、テキスト索引と組み合わせて使用することで、キーと値を絞り込めます。テキスト索引が使用されるのは、`mapKeys(map)` または `mapValues(map)` 式、あるいはその両方に対して作成されている場合のみです。
+アクセス[operator[]](/ja/reference/operators#access-operators)は、テキスト索引と組み合わせて使用することで、キーと値を絞り込めます。テキスト索引が使用されるのは、`mapKeys(map)` または `mapValues(map)` 式、あるいはその両方に対して作成されている場合のみです。
 
 例:
 
@@ -993,7 +934,7 @@ SELECT * FROM events WHERE data.level IN ('error', 'critical');
 CREATE TABLE tab (
     id UInt32,
     text String,
-    INDEX idx text TYPE text(tokenizer = splitByNonAlpha)
+    INDEX idx(text) TYPE text(tokenizer = splitByNonAlpha)
 )
 ENGINE = MergeTree
 ORDER BY id;
@@ -1364,10 +1305,10 @@ INSERT INTO hackernews
 `ALTER TABLE` を使用して comment カラムにテキスト索引を追加し、その後マテリアライズします：
 
 ```sql
--- Add the index
-ALTER TABLE hackernews ADD INDEX comment_idx comment TYPE text(tokenizer = splitByNonAlpha);
+-- 索引を追加する
+ALTER TABLE hackernews ADD INDEX comment_idx(comment) TYPE text(tokenizer = splitByNonAlpha);
 
--- Materialize the index for existing data
+-- 既存データの索引をマテリアライズする
 ALTER TABLE hackernews MATERIALIZE INDEX comment_idx SETTINGS mutations_sync = 2;
 ```
 
@@ -1538,12 +1479,8 @@ SETTINGS query_plan_direct_read_from_text_index = 1;
   ## 関連コンテンツ
 </div>
 
-* ブログ: [ClickHouse 全文検索の一般提供を発表](https://clickhouse.com/blog/full-text-search-ga-release)
-* ブログ: [オブジェクトストレージ向けの高性能な全文検索の構築](https://clickhouse.com/blog/clickhouse-full-text-search-object-storage)
-* ビデオ: [ClickHouse における全文検索の紹介](https://www.youtube.com/watch?v=9zPmf1a_heU)
-* ビデオ: [舞台裏: ClickHouse のスケールと速度を支える全文検索](https://www.youtube.com/watch?v=8JbqE_ubfkU)
-* プレゼンテーション: [ClickHouse 全文検索の内部: 高速・ネイティブ・列指向](https://github.com/ClickHouse/clickhouse-presentations/blob/master/2025-tumuchdata-munich/ClickHouse_%20full-text%20search%20-%2011.11.2025%20Munich%20Database%20Meetup.pdf)
-* プレゼンテーション: [転置データベース索引: 必要性、概要、実装方法、FOSDEM 2026](https://presentations.clickhouse.com/2026-fosdem-inverted-index/Inverted_indexes_the_what_the_why_the_how.pdf)
+* プレゼンテーション: https://github.com/ClickHouse/clickhouse-presentations/blob/master/2025-tumuchdata-munich/ClickHouse&#95;%20full-text%20search%20-%2011.11.2025%20Munich%20Database%20Meetup.pdf
+* プレゼンテーション: https://presentations.clickhouse.com/2026-fosdem-inverted-index/Inverted&#95;indexes&#95;the&#95;what&#95;the&#95;why&#95;the&#95;how.pdf
 
 **旧資料**
 

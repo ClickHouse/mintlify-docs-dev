@@ -12,7 +12,7 @@ import { Image } from "/snippets/components/Image.jsx";
 
 * Для оптимальной производительности следует стремиться уменьшить количество `JOIN` в запросах, особенно для аналитических рабочих нагрузок в реальном времени, где важна задержка на уровне миллисекунд. Старайтесь, чтобы в одном запросе было не более 3–4 JOIN. В [разделе о моделировании данных](/ru/guides/clickhouse/data-modelling/schema-design) мы подробно рассматриваем несколько способов минимизировать количество JOIN, включая денормализацию, словари и материализованные представления.
 * Начиная с ClickHouse 24.12, планировщик запросов автоматически переставляет JOIN двух таблиц так, чтобы меньшая таблица находилась справа для оптимальной производительности. В версии 25.9 эта возможность была расширена и теперь оптимизирует порядок JOIN в запросах с тремя и более таблицами.
-* Если вашему запросу нужен direct JOIN, то есть `LEFT ANY JOIN`, как показано ниже, мы рекомендуем по возможности использовать [Dictionaries](/ru/concepts/features/dictionaries/index).
+* Если вашему запросу нужен прямой JOIN, то есть `LEFT ANY JOIN`, как показано ниже, мы рекомендуем по возможности использовать [Dictionaries](/ru/concepts/features/dictionaries).
 
 <Image img="/images/guides/joins-1.png" size="sm" alt="LEFT ANY JOIN" />
 
@@ -23,15 +23,13 @@ SELECT count()
 FROM stackoverflow.posts AS p
 ANY INNER `JOIN` stackoverflow.comments AS c ON p.Id = c.PostId
 WHERE (p.Title != '') AND (p.Title NOT ILIKE '%clickhouse%') AND (p.Body NOT ILIKE '%clickhouse%') AND (c.Text ILIKE '%clickhouse%')
-```
 
-```response
 ┌─count()─┐
 │       86 │
 └─────────┘
 
 1 row in set. Elapsed: 8.209 sec. Processed 150.20 million rows, 56.05 GB (18.30 million rows/s., 6.83 GB/s.)
-Peak memory usage: 1.23 GiB.
+Пиковое потребление памяти: 1.23 GiB.
 ```
 
 Обратите внимание, что мы используем `ANY INNER JOIN`, а не просто `INNER JOIN`, поскольку нам не нужно декартово произведение, то есть для каждого поста нам нужно только одно совпадение.
@@ -46,15 +44,12 @@ WHERE (Title != '') AND (Title NOT ILIKE '%clickhouse%') AND (Body NOT ILIKE '%c
         FROM stackoverflow.comments
         WHERE Text ILIKE '%clickhouse%'
 ))
-```
-
-```response
 ┌─count()─┐
 │       86 │
 └─────────┘
 
 1 row in set. Elapsed: 2.284 sec. Processed 150.20 million rows, 16.61 GB (65.76 million rows/s., 7.27 GB/s.)
-Peak memory usage: 323.52 MiB.
+Пиковое потребление памяти: 323.52 MiB.
 ```
 
 Хотя ClickHouse пытается проталкивать условия во все секции JOIN и подзапросы, мы рекомендуем пользователям по возможности вручную применять условия ко всем вложенным секциям — так можно минимизировать объём данных для `JOIN`. Рассмотрим пример, где нужно вычислить количество положительных голосов за посты, связанные с Java, начиная с 2020 года.
@@ -66,9 +61,7 @@ SELECT countIf(VoteTypeId = 2) AS upvotes
 FROM stackoverflow.posts AS p
 INNER JOIN stackoverflow.votes AS v ON p.Id = v.PostId
 WHERE has(arrayFilter(t -> (t != ''), splitByChar('|', p.Tags)), 'java') AND (p.CreationDate >= '2020-01-01')
-```
 
-```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
@@ -83,9 +76,7 @@ SELECT countIf(VoteTypeId = 2) AS upvotes
 FROM stackoverflow.votes AS v
 INNER JOIN stackoverflow.posts AS p ON v.PostId = p.Id
 WHERE has(arrayFilter(t -> (t != ''), splitByChar('|', p.Tags)), 'java') AND (p.CreationDate >= '2020-01-01')
-```
 
-```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
@@ -100,9 +91,7 @@ SELECT countIf(VoteTypeId = 2) AS upvotes
 FROM stackoverflow.votes AS v
 INNER JOIN stackoverflow.posts AS p ON v.PostId = p.Id
 WHERE has(arrayFilter(t -> (t != ''), splitByChar('|', p.Tags)), 'java') AND (p.CreationDate >= '2020-01-01') AND (v.CreationDate >= '2020-01-01')
-```
 
-```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
@@ -121,9 +110,7 @@ WHERE (VoteTypeId = 2) AND (PostId IN (
         FROM stackoverflow.posts
         WHERE (CreationDate >= '2020-01-01') AND has(arrayFilter(t -> (t != ''), splitByChar('|', Tags)), 'java')
 ))
-```
 
-```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘

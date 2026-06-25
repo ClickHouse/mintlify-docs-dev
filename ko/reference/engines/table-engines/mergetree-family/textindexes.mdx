@@ -77,17 +77,17 @@ CREATE TABLE table
 (
     key UInt64,
     str String,
-    INDEX text_idx str TYPE text(
-                                -- Mandatory parameters:
+    INDEX text_idx(str) TYPE text(
+                                -- 필수 매개변수:
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
                                             | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
-                                -- Optional parameters:
+                                -- 선택적 매개변수:
                                 [, preprocessor = expression(str)]
-                                -- Optional advanced parameters:
+                                -- 선택적 고급 매개변수:
                                 [, dictionary_block_size = D]
                                 [, dictionary_block_frontcoding_compression = B]
                                 [, posting_list_block_size = C]
@@ -111,17 +111,17 @@ ORDER BY key
 
 ```sql title="Query"
 ALTER TABLE table
-    ADD INDEX text_idx str TYPE text(
-                                -- Mandatory parameters:
+    ADD INDEX text_idx(str) TYPE text(
+                                -- 필수 매개변수:
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
                                             | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
-                                -- Optional parameters:
+                                -- 선택적 매개변수:
                                 [, preprocessor = expression(str)]
-                                -- Optional advanced parameters:
+                                -- 선택적 고급 매개변수:
                                 [, dictionary_block_size = D]
                                 [, dictionary_block_frontcoding_compression = B]
                                 [, posting_list_block_size = C]
@@ -201,31 +201,22 @@ SELECT tokens('abc def', 'ngrams', 3);
 
 예시:
 
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))`
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = substringIndex(col, '\n', 1))`
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(extractTextFromHTML(col)))`
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = removeDiacriticsUTF8(caseFoldUTF8(col)))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = substringIndex(col, '\n', 1))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(extractTextFromHTML(col)))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = removeDiacriticsUTF8(caseFoldUTF8(col)))`
 
 또한 전처리기 표현식은 텍스트 인덱스가 정의된 컬럼 또는 표현식만 참조해야 합니다.
 
 예시:
 
-* `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = upper(lower(col)))`
-* `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(lower(col), lower(col)))`
-* 허용되지 않음: `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(col, col))`
+* `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = upper(lower(col)))`
+* `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(lower(col), lower(col)))`
+* 허용되지 않음: `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(col, col))`
 
 비결정적 함수는 사용할 수 없습니다.
 
-<Note>
-  전처리기는 원칙적으로 인덱스 컬럼 또는 표현식을 전처리기 표현식으로 감싸는 것과 같습니다.
-  예를 들어 `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))`의 `lower` 전처리기는 `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha')`로 구현할 수 있습니다.
-  후자의 형식은 에뮬레이션된 전처리기가 WHERE 절의 filter condition과 일치할 때만 적용된다는 단점이 있습니다.
-  예를 들어 `WHERE hasAllTokens(lower(col), [...])`는 일치하지만 `WHERE hasAllTokens(col, [...])`는 일치하지 않습니다.
-  따라서 최적의 사용자 경험을 위해 전처리기 표현식을 사용하는 것을 권장합니다.
-</Note>
-
-함수 [hasToken](/ko/reference/functions/regular-functions/string-search-functions#hasToken), [hasAllTokens](/ko/reference/functions/regular-functions/string-search-functions#hasAllTokens), [hasAnyTokens](/ko/reference/functions/regular-functions/string-search-functions#hasAnyTokens), [hasPhrase](/ko/reference/functions/regular-functions/string-search-functions#hasPhrase)는 검색어를 토큰화하기 전에 먼저 전처리기를 사용해 검색어를 변환합니다.
-전처리기는 텍스트 인덱스 경로에만 적용되므로, 이러한 함수의 결과는 텍스트 인덱스를 사용하는 쿼리와 사용하지 않는 쿼리 간에 다를 수 있습니다(예: `SETTINGS use_skip_indexes = 0`).
+함수 [hasToken](/ko/reference/functions/regular-functions/string-search-functions#hasToken), [hasAllTokens](/ko/reference/functions/regular-functions/string-search-functions#hasAllTokens), [hasAnyTokens](/ko/reference/functions/regular-functions/string-search-functions#hasAnyTokens)는 검색어를 토큰화하기 전에 먼저 전처리기를 사용해 검색어를 변환합니다.
 
 예를 들어,
 
@@ -233,7 +224,7 @@ SELECT tokens('abc def', 'ngrams', 3);
 CREATE TABLE table
 (
     str String,
-    INDEX idx str TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(str))
+    INDEX idx(str) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(str))
 )
 ENGINE = MergeTree
 ORDER BY tuple();
@@ -247,7 +238,7 @@ SELECT count() FROM table WHERE hasToken(str, 'Foo');
 CREATE TABLE table
 (
     str String,
-    INDEX idx lower(str) TYPE text(tokenizer = 'splitByNonAlpha')
+    INDEX idx(lower(str)) TYPE text(tokenizer = 'splitByNonAlpha')
 )
 ENGINE = MergeTree
 ORDER BY tuple();
@@ -265,7 +256,7 @@ CREATE TABLE table
     arr Array(String),
     INDEX idx arr TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(arr))
 
-    -- This is not legal:
+    -- 이것은 허용되지 않습니다:
     INDEX idx_illegal arr TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = arraySort(arr))
 )
 ENGINE = MergeTree
@@ -274,8 +265,7 @@ ORDER BY tuple();
 SELECT count() FROM tab WHERE hasAllTokens(arr, 'foo');
 ```
 
-[맵](/ko/reference/data-types/map) 타입 컬럼에 텍스트 인덱스용 전처리기를 정의하려면, 인덱스를 맵 키를 기준으로
-빌드할지 아니면 값을 기준으로 빌드할지 결정해야 합니다.
+[맵](/ko/reference/data-types/map) 타입 컬럼의 텍스트 인덱스에서 전처리기를 정의하려면, 인덱스를 맵 키 기준으로 생성할지 값 기준으로 생성할지 결정해야 합니다.
 
 예시:
 
@@ -309,26 +299,6 @@ SELECT count() FROM tab WHERE hasAllTokens(mapKeys(map), 'foo');
 
   * `none` - 포스팅 리스트는 추가 압축 없이 저장됩니다.
   * `bitpacking` - [차분(델타) 코딩](https://en.wikipedia.org/wiki/Delta_encoding)을 적용한 다음 [비트 패킹](https://dev.to/madhav_baby_giraffe/bit-packing-the-secret-to-optimizing-data-storage-and-transmission-m70)을 적용합니다(각 고정 크기 블록 내에서 수행). SELECT 쿼리 속도가 느려지므로 현재로서는 권장하지 않습니다.
-
-  위의 고급 매개변수는 해당 MergeTree 설정을 통해 테이블 수준에서도 설정할 수 있습니다: [`text_index_dictionary_block_size`](/ko/reference/settings/merge-tree-settings#text_index_dictionary_block_size), [`text_index_dictionary_block_frontcoding_compression`](/ko/reference/settings/merge-tree-settings#text_index_dictionary_block_frontcoding_compression), [`text_index_posting_list_block_size`](/ko/reference/settings/merge-tree-settings#text_index_posting_list_block_size), [`text_index_posting_list_codec`](/ko/reference/settings/merge-tree-settings#text_index_posting_list_codec).
-  이 설정은 매개변수를 명시적으로 지정하지 않은 테이블의 모든 텍스트 인덱스에 적용됩니다.
-
-  테이블 수준 설정의 주요 사용 사례는 모든 테이블 파트의 텍스트 인덱스를 삭제 후 다시 생성하지 않고도 기존 테이블의 인덱스 매개변수를 변경하는 것입니다.
-  테이블 수준 설정을 변경하면 새 매개변수는 새 파트에 생성되는 텍스트 인덱스에만 적용되며, 기존 파트는 현재 레이아웃을 유지합니다.
-
-  인덱스 정의에 지정된 인수는 테이블 설정보다 우선합니다. 예를 들면 다음과 같습니다:
-
-  ```sql
-  CREATE TABLE table(
-      s String,
-      -- 이 인덱스는 'bitpacking'을 사용하며, 아래의 테이블 수준 기본값을 재정의합니다:
-      INDEX idx_a s TYPE text(tokenizer = 'splitByNonAlpha', posting_list_codec = 'bitpacking'),
-      -- 이 인덱스는 테이블 설정에서 'none'을 상속합니다:
-      INDEX idx_b lower(s) TYPE text(tokenizer = 'splitByNonAlpha'))
-  ENGINE = MergeTree()
-  ORDER BY tuple()
-  SETTINGS text_index_posting_list_codec = 'none';
-  ```
 </details>
 
 *인덱스 세분화 수준.*
@@ -342,7 +312,7 @@ SELECT count() FROM tab WHERE hasAllTokens(mapKeys(map), 'foo');
 CREATE TABLE table(
     k UInt64,
     s String,
-    INDEX idx s TYPE text(tokenizer = ngrams(2)))
+    INDEX idx(s) TYPE text(tokenizer = ngrams(2)))
 ENGINE = MergeTree()
 ORDER BY k;
 
@@ -454,36 +424,6 @@ SELECT count() FROM table WHERE comment LIKE ' support %'; -- 또는 `% support 
 다행히 ClickHouse가 inverted index를 활용해 LIKE 쿼리 성능을 크게 높일 수 있는 특별한 경우가 있습니다.
 
 자세한 내용은 [LIKE/ILIKE 성능 튜닝 섹션](#like-ilike-queries-perf)을 참조하십시오.
-
-<div id="functions-example-multisearchany-multimatchany">
-  #### `multiSearchAny` and `multiMatchAny`
-</div>
-
-[multiSearchAny](/ko/reference/functions/regular-functions/string-search-functions#multiSearchAny) 및 해당 UTF-8 변형인 [multiSearchAnyUTF8](/ko/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8)는 여러 리터럴 부분 문자열 중 하나라도 검색 대상 문자열에 포함되는지 확인하고, [multiMatchAny](/ko/reference/functions/regular-functions/string-search-functions#multiMatchAny)는 여러 정규식 중 하나라도 일치하는지 확인합니다.
-이 함수들은 `LIKE` 및 `match`와 동일한 조건에서 텍스트 인덱스를 사용합니다(위 참조). 즉, ClickHouse가 각 검색 패턴에서 완전한 토큰을 추출할 수 있어야 하며, 검색 패턴 목록은 상수여야 합니다.
-검색 패턴 중 하나라도 포함되어 있을 가능성이 있으면 해당 그래뉼(granule)을 읽습니다.
-
-`multiMatchAny`의 경우, 단일 pattern을 토큰 요구 사항으로 축약할 수 없으면(예: 모든 문서와 일치하는 `.*`) 텍스트 인덱스를 사용할 수 없으며, 쿼리는 전체 스캔으로 돌아갑니다.
-
-`LIKE` 및 `match`와 마찬가지로, 부분 문자열 검색과 정규식 검색은 `ngrams` 및 `sparseGrams` 토크나이저에서 가장 잘 동작합니다.
-이 토크나이저는 서로 겹치는 문자 n-그램을 인덱싱하므로, 검색 패턴은 부분 문자열로 나타나는 모든 위치에서 인덱스에 존재하는 n-그램으로 분해됩니다. 단어의 중간에서 시작하거나 끝나는 경우도 마찬가지입니다.
-따라서 검색 패턴의 길이가 n-그램 크기 이상이면 그대로 사용할 수 있습니다.
-
-`ngrams` 토크나이저를 사용하는 텍스트 인덱스 예시:
-
-```sql
-SELECT count() FROM table WHERE multiSearchAny(comment, ['clickhouse', 'support']);
-```
-
-반면 `splitByNonAlpha` 토크나이저는 완전한 토큰(전체 단어)만 인덱싱합니다.
-needle은 단어의 중간에서 시작하거나 끝날 수 있으므로, ClickHouse는 각 needle의 앞뒤 토큰을 삭제합니다. 따라서 인덱스는 완전한 토큰만 사용해 그래뉼을 가지치기할 수 있습니다.
-부분 문자열 및 정규 표현식 검색에서 `splitByNonAlpha`와 함께 인덱스를 사용하려면, 각 needle을 구분 문자(예: 공백)로 감싸 하나 이상의 완전한 토큰이 되도록 하십시오.
-
-`splitByNonAlpha` 토크나이저를 사용하는 텍스트 인덱스의 예시:
-
-```sql
-SELECT count() FROM table WHERE multiSearchAny(comment, [' clickhouse ', ' support ']);
-```
 
 <div id="functions-example-startswith-endswith">
   #### `startsWith` and `endsWith`
@@ -645,7 +585,7 @@ SELECT count() FROM table WHERE mapContainsValueLike(map, '% clickhouse %');
   #### `operator[]`
 </div>
 
-접근 [operator[]](/ko/reference/operators/index#access-operators)를 텍스트 인덱스와 함께 사용하면 키와 값을 필터링할 수 있습니다. 텍스트 인덱스는 `mapKeys(map)` 또는 `mapValues(map)` 표현식에 생성되었거나, 두 표현식 모두에 생성된 경우에만 사용됩니다.
+접근 [operator[]](/ko/reference/operators#access-operators)를 텍스트 인덱스와 함께 사용하면 키와 값을 필터링할 수 있습니다. 텍스트 인덱스는 `mapKeys(map)` 또는 `mapValues(map)` 표현식에 생성되었거나, 두 표현식 모두에 생성된 경우에만 사용됩니다.
 
 예시:
 
@@ -653,7 +593,7 @@ SELECT count() FROM table WHERE mapContainsValueLike(map, '% clickhouse %');
 SELECT count() FROM table WHERE map['engine'] = 'clickhouse';
 ```
 
-텍스트 인덱스에서 `Array(T)` 및 `맵(K, V)` 유형의 컬럼을 사용하는 예시는 다음과 같습니다.
+텍스트 인덱스에서 `Array(T)` 및 `Map(K, V)` 유형의 컬럼을 사용하는 예시는 다음과 같습니다.
 
 <div id="text-index-example-array">
   ### Array(String) 컬럼 인덱싱
@@ -992,7 +932,7 @@ SELECT * FROM events WHERE data.level IN ('error', 'critical');
 CREATE TABLE tab (
     id UInt32,
     text String,
-    INDEX idx text TYPE text(tokenizer = splitByNonAlpha)
+    INDEX idx(text) TYPE text(tokenizer = splitByNonAlpha)
 )
 ENGINE = MergeTree
 ORDER BY id;
@@ -1014,7 +954,7 @@ SELECT id, text FROM tab WHERE hasPhrase(text, 'weather in New York');
 ```
 
 2행(`'New weather in York'`)은 토큰 순서가 올바르지 않아 일치하지 않습니다.
-3행(`'weather in New Orleans'`)은 토큰 `'York'`를 포함하지 않아 일치하지 않습니다。
+3행(`'weather in New Orleans'`)은 토큰 `'York'`를 포함하지 않아 일치하지 않습니다.
 
 <div id="performance-tuning">
   ## 성능 최적화
@@ -1363,10 +1303,10 @@ INSERT INTO hackernews
 `ALTER TABLE`을 사용해 `comment` 컬럼에 텍스트 인덱스를 추가한 후 이를 구체화합니다:
 
 ```sql
--- Add the index
-ALTER TABLE hackernews ADD INDEX comment_idx comment TYPE text(tokenizer = splitByNonAlpha);
+-- 인덱스 추가
+ALTER TABLE hackernews ADD INDEX comment_idx(comment) TYPE text(tokenizer = splitByNonAlpha);
 
--- Materialize the index for existing data
+-- 기존 데이터에 대해 인덱스 구체화
 ALTER TABLE hackernews MATERIALIZE INDEX comment_idx SETTINGS mutations_sync = 2;
 ```
 
@@ -1541,12 +1481,8 @@ SETTINGS query_plan_direct_read_from_text_index = 1;
   ## 관련 콘텐츠
 </div>
 
-* 블로그: [ClickHouse 전문 검색 일반 제공 발표](https://clickhouse.com/blog/full-text-search-ga-release)
-* 블로그: [객체 스토리지를 위한 고성능 전문 검색 구축](https://clickhouse.com/blog/clickhouse-full-text-search-object-storage)
-* 동영상: [ClickHouse 전문 검색 소개](https://www.youtube.com/watch?v=9zPmf1a_heU)
-* 동영상: [내부 살펴보기: ClickHouse 규모와 속도에 맞춘 전문 검색](https://www.youtube.com/watch?v=8JbqE_ubfkU)
-* 발표 자료: [ClickHouse 전문 검색의 내부: 빠르고, 네이티브하며, 열 지향적입니다](https://github.com/ClickHouse/clickhouse-presentations/blob/master/2025-tumuchdata-munich/ClickHouse_%20full-text%20search%20-%2011.11.2025%20Munich%20Database%20Meetup.pdf)
-* 발표 자료: [역방향 데이터베이스 인덱스: 왜 필요한가, 무엇인가, 어떻게 구현하는가, FOSDEM 2026](https://presentations.clickhouse.com/2026-fosdem-inverted-index/Inverted_indexes_the_what_the_why_the_how.pdf)
+* 발표 자료: https://github.com/ClickHouse/clickhouse-presentations/blob/master/2025-tumuchdata-munich/ClickHouse&#95;%20full-text%20search%20-%2011.11.2025%20Munich%20Database%20Meetup.pdf
+* 발표 자료: https://presentations.clickhouse.com/2026-fosdem-inverted-index/Inverted&#95;indexes&#95;the&#95;what&#95;the&#95;why&#95;the&#95;how.pdf
 
 **오래된 자료**
 

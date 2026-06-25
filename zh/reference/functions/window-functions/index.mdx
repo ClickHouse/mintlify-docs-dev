@@ -7,30 +7,45 @@ doc_type: 'reference'
 ---
 
 窗口函数可让你对与当前行相关的一组行进行计算。
-它们可用于执行与聚合函数类似的计算，但不同之处在于，窗口函数不会将多行分组成单个输出，而是仍会返回各个行。
+其中有些计算与聚合函数所能完成的计算类似，但窗口函数不会将多行分组成单个输出，仍会返回各个行。
+
+
 
 <div id="standard-window-functions">
   ## 标准窗口函数
 </div>
 
-ClickHouse 支持窗口和窗口函数的标准 SQL 语法。
-下表展示了当前支持的功能：
+ClickHouse 支持定义窗口和窗口函数的标准语法。下表列出了当前各项功能的支持情况。
 
-| 功能                                                                  | 支持？ | 说明                                                                                                                                                                                                                                                                                            |
-| ------------------------------------------------------------------- | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 临时窗口定义 (`count(*) OVER (PARTITION BY id ORDER BY time DESC)`)       | ✅   |                                                                                                                                                                                                                                                                                               |
-| 包含窗口函数的表达式，例如 `(count(*) OVER ()) / 2`                              | ✅   |                                                                                                                                                                                                                                                                                               |
-| `WINDOW` 子句 (`SELECT ... FROM table WINDOW w AS (PARTITION BY id)`) | ✅   |                                                                                                                                                                                                                                                                                               |
-| `ROWS` 窗口帧                                                          | ✅   |                                                                                                                                                                                                                                                                                               |
-| `RANGE` 窗口帧                                                         | ✅   | 未显式指定窗口帧时，默认使用它 (`RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`) 。                                                                                                                                                                                                                       |
-| `DateTime` `RANGE OFFSET` 窗口帧的 `INTERVAL` 语法                        | ❌   | 请改为直接指定秒数 (`RANGE` 适用于任何数值类型) 。                                                                                                                                                                                                                                                               |
-| `GROUPS` 窗口帧                                                        | ❌   |                                                                                                                                                                                                                                                                                               |
-| 在窗口帧上计算聚合函数 (`sum(value) OVER (ORDER BY time)`)                     | ✅   | 支持所有聚合函数。                                                                                                                                                                                                                                                                                     |
-| `rank()`, `dense_rank()`/`denseRank()`, `row_number()`              | ✅   |                                                                                                                                                                                                                                                                                               |
-| `percent_rank()`/`percentRank()`                                    | ✅   | 可高效计算某个值在分区内的相对排名。它可替代更冗长且计算开销更高的手动 SQL 写法：`ifNull((rank() OVER (PARTITION BY x ORDER BY y) - 1) / nullif(count(1) OVER (PARTITION BY x) - 1, 0), 0)`。                                                                                                                                        |
-| `cume_dist()`                                                       | ✅   | 计算某个值在一组值中的累计分布。返回值小于或等于当前行值的行所占的百分比。                                                                                                                                                                                                                                                         |
-| `lag/lead(value, offset)`                                           | ✅   | 你也可以使用以下任一变通方法：<br /> 1) `any(value) OVER (... ROWS BETWEEN <offset> PRECEDING AND <offset> PRECEDING)`，或者对于 `lead`，使用 `FOLLOWING` 替代 `PRECEDING` <br /> 2) `lagInFrame/leadInFrame`，它们与前者类似，但会遵循窗口帧。若要获得与 `lag/lead` 完全相同的行为，请使用 `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`。 |
-| `ntile(buckets)`                                                    | ✅   | 例如，可将窗口指定为 `(PARTITION BY x ORDER BY y ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)`。                                                                                                                                                                                            |
+| 功能                                                                   | 是否支持？                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 即席窗口定义 (`count(*) over (partition by id order by time desc)`)        | ✅                                                                                                                                                                                                                                                                                     |
+| 包含窗口函数的表达式，例如 `(count(*) over ()) / 2`                               | ✅                                                                                                                                                                                                                                                                                     |
+| `WINDOW` 子句 (`select ... from table window w as (partition by id)`)  | ✅                                                                                                                                                                                                                                                                                     |
+| `ROWS` 窗口帧                                                           | ✅                                                                                                                                                                                                                                                                                     |
+| `RANGE` 窗口帧                                                          | ✅ (默认)                                                                                                                                                                                                                                                                                |
+| 用于 `DateTime` `RANGE OFFSET` 窗口帧的 `INTERVAL` 语法                      | ❌ (请改为指定秒数 (`RANGE` 适用于任何数值类型) 。)                                                                                                                                                                                                                                                     |
+| `GROUPS` 窗口帧                                                         | ❌                                                                                                                                                                                                                                                                                     |
+| 在窗口帧上计算聚合函数 (`sum(value) over (order by time)`)                      | ✅ (支持所有聚合函数)                                                                                                                                                                                                                                                                          |
+| `rank()`, `dense_rank()`, `row_number()`                             | ✅ <br />别名：`denseRank()`                                                                                                                                                                                                                                                              |
+| `percent_rank()`                                                     | ✅ 高效计算某个值在数据集分区中的相对排名。该函数可有效替代更冗长且计算开销更高的手动 SQL 写法，即 `ifNull((rank() OVER(PARTITION BY x ORDER BY y) - 1) / nullif(count(1) OVER(PARTITION BY x) - 1, 0), 0)` <br />别名：`percentRank()`                                                                                                |
+| `cume_dist()`                                                        | ✅ 计算某个值在一组值中的累积分布。返回值小于或等于当前行值的行所占的百分比。                                                                                                                                                                                                                                               |
+| `lag/lead(value, offset)`                                            | ✅ <br /> 你也可以使用以下任一替代方案：<br /> 1) `any(value) over (.... rows between <offset> preceding and <offset> preceding)`，或者对 `lead` 使用 `following` <br /> 2) `lagInFrame/leadInFrame`，它们与之类似，但会遵循窗口帧。若要获得与 `lag/lead` 完全相同的行为，请使用 `rows between unbounded preceding and unbounded following` |
+| ntile(buckets)                                                       | ✅ <br /> 例如，可按如下方式指定窗口：`(partition by x order by y rows between unbounded preceding and unbounded following)`。                                                                                                                                                                        |
+
+
+
+## ClickHouse 特有的窗口函数 {#clickhouse-specific-window-functions}
+
+以下是 ClickHouse 特有的窗口函数：
+
+### nonNegativeDerivative(metric_column, timestamp_column[, INTERVAL X UNITS]) {#nonnegativederivativemetric_column-timestamp_column-interval-x-units}
+
+根据 `timestamp_column` 计算给定 `metric_column` 的非负导数。
+`INTERVAL` 可省略，默认为 `INTERVAL 1 SECOND`。
+各行的计算值如下：
+- 第 1 行为 `0`，
+- 第 $i$ 行为 ${\text{metric}_i - \text{metric}_{i-1} \over \text{timestamp}_i - \text{timestamp}_{i-1}}  * \text{interval}$。
 
 <div id="syntax">
   ## 语法
@@ -71,22 +86,21 @@ WINDOW window_name as ([
 ```
 
 <div id="functions">
-  ## 仅可作为窗口函数使用的函数
+  ### 函数
 </div>
 
-以下函数只能作为窗口函数使用。其中大多数是标准 SQL 函数；`lagInFrame`、`leadInFrame` 和 `nonNegativeDerivative` 是 ClickHouse 扩展。
+这些函数只能用作窗口函数。
 
-| Function                                                                                                                                    | Description                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [`row_number()`](/zh/reference/functions/window-functions/row_number)                                                                          | 从 1 开始对当前行在其分区内进行编号。                                                 |
-| [`first_value(x)`](/zh/reference/functions/window-functions/first_value)                                                                       | 返回其有序窗口帧中计算出的第一个值。                                                   |
-| [`last_value(x)`](/zh/reference/functions/window-functions/last_value)                                                                         | 返回其有序窗口帧中计算出的最后一个值。                                                  |
-| [`nth_value(x, offset)`](/zh/reference/functions/window-functions/nth_value)                                                                   | 返回其有序窗口帧中第 n 行 (偏移量) 对应计算结果里的第一个非 NULL 值。                            |
-| [`rank()`](/zh/reference/functions/window-functions/rank)                                                                                      | 对当前行在其分区内进行排名，排名中会有空缺。                                               |
-| [`dense_rank()`](/zh/reference/functions/window-functions/dense_rank)                                                                          | 对当前行在其分区内进行排名，排名中没有空缺。                                               |
-| [`lagInFrame(x)`](/zh/reference/functions/window-functions/lagInFrame)                                                                         | 返回其有序窗口帧中位于当前行之前指定物理偏移位置的行所计算出的值。                                    |
-| [`leadInFrame(x)`](/zh/reference/functions/window-functions/leadInFrame)                                                                       | 返回其有序窗口帧中位于当前行之后偏移若干行的位置所计算出的值。                                      |
-| [`nonNegativeDerivative(metric_column, timestamp_column[, INTERVAL X UNITS])`](/zh/reference/functions/window-functions/nonNegativeDerivative) | 计算 `metric_column` 相对于 `timestamp_column` 的非负导数。这是 ClickHouse 特有的函数。 |
+* [`row_number()`](/reference/functions/window-functions/row_number) - 对当前行在其分区内从 1 开始编号。
+* [`first_value(x)`](/reference/functions/window-functions/first_value) - 返回其有序窗口帧内计算得到的第一个值。
+* [`last_value(x)`](/reference/functions/window-functions/last_value) -    返回其有序窗口帧内计算得到的最后一个值。
+* [`nth_value(x, offset)`](/reference/functions/window-functions/nth_value) - 返回其有序窗口帧中第 n 行 (offset) 计算得到的第一个非 NULL 值。
+* [`rank()`](/reference/functions/window-functions/rank) - 对当前行在其分区内进行有间隔排名。
+* [`dense_rank()`](/reference/functions/window-functions/dense_rank) - 对当前行在其分区内进行无间隔排名。
+* [`lagInFrame(x)`](/reference/functions/window-functions/lagInFrame) - 返回其有序窗口帧内当前行之前按指定物理偏移量对应行上计算得到的值。
+* [`leadInFrame(x)`](/reference/functions/window-functions/leadInFrame) - 返回其有序窗口帧内当前行之后偏移若干行处计算得到的值。
+
+
 
 <div id="examples">
   ## 示例
@@ -192,6 +206,8 @@ SELECT
 FROM salaries;
 ```
 
+
+
 ```text
 ┌─player──────────┬─salary─┬─team──────────────────────┬─teamMax─┬───diff─┐
 │ Charles Juarez  │ 190000 │ New Coreystad Archdukes   │  190000 │      0 │
@@ -230,15 +246,15 @@ ORDER BY
 
 ┌─part_key─┬─value─┬─order─┬─frame_values─┐
 │        1 │     1 │     1 │ [1,2,3]      │   <┐   
-│        1 │     2 │     2 │ [1,2,3]      │    │  1-st group
+│        1 │     2 │     2 │ [1,2,3]      │    │  第1组
 │        1 │     3 │     3 │ [1,2,3]      │   <┘ 
-│        2 │     0 │     0 │ [0]          │   <- 2-nd group
-│        3 │     0 │     0 │ [0]          │   <- 3-d group
+│        2 │     0 │     0 │ [0]          │   <- 第2组
+│        3 │     0 │     0 │ [0]          │   <- 第3组
 └──────────┴───────┴───────┴──────────────┘
 ```
 
 <div id="frame-bounding">
-  ### 窗口帧界定
+  ### 窗口帧边界
 </div>
 
 ```sql
@@ -255,7 +271,7 @@ INSERT INTO wf_frame FORMAT Values
 ```
 
 ```sql
--- Frame is bounded by bounds of a partition (BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
+-- 窗口帧由分区的边界限定（BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING）
 SELECT
     part_key,
     value,
@@ -279,9 +295,11 @@ ORDER BY
 └──────────┴───────┴───────┴──────────────┘
 ```
 
+
+
 ```sql
--- short form - no bound expression, no order by,
--- an equalent of `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`
+-- 简写形式 - 无边界表达式，无 order by，
+-- 等价于 `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`
 SELECT
     part_key,
     value,
@@ -304,7 +322,7 @@ ORDER BY
 ```
 
 ```sql
--- frame is bounded by the beginning of a partition and the current row
+-- 窗口帧的范围从分区起始位置到当前行
 SELECT
     part_key,
     value,
@@ -329,8 +347,8 @@ ORDER BY
 ```
 
 ```sql
--- short form (frame is bounded by the beginning of a partition and the current row)
--- an equalent of `ORDER BY order ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`
+-- 简写形式（窗口帧由分区起始行到当前行界定）
+-- 等价于 `ORDER BY order ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`
 SELECT
     part_key,
     value,
@@ -353,8 +371,10 @@ ORDER BY
 └──────────┴───────┴───────┴────────────────────┴──────────────┘
 ```
 
+
+
 ```sql
--- frame is bounded by the beginning of a partition and the current row, but order is backward
+-- 窗口帧由分区起始位置延伸至当前行，但排序方向为降序
 SELECT
     part_key,
     value,
@@ -375,7 +395,7 @@ ORDER BY
 ```
 
 ```sql
--- sliding frame - 1 PRECEDING ROW AND CURRENT ROW
+-- 滑动窗口帧 - 前 1 行和当前行
 SELECT
     part_key,
     value,
@@ -400,7 +420,7 @@ ORDER BY
 ```
 
 ```sql
--- sliding frame - ROWS BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING 
+-- 滑动窗口帧 - ROWS BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING 
 SELECT
     part_key,
     value,
@@ -425,7 +445,7 @@ ORDER BY
 ```
 
 ```sql
--- row_number does not respect the frame, so rn_1 = rn_2 = rn_3 != rn_4
+-- row_number 不受窗口帧约束，因此 rn_1 = rn_2 = rn_3 != rn_4
 SELECT
     part_key,
     value,
@@ -446,18 +466,22 @@ WINDOW
 ORDER BY
     part_key ASC,
     value ASC;
+```
 
-┌─part_key─┬─value─┬─order─┬─frame_values─┬─rn_1─┬─rn_2─┬─rn_3─┬─rn_4─┐
+
+
+┌─part&#95;key─┬─value─┬─order─┬─frame&#95;values─┬─rn&#95;1─┬─rn&#95;2─┬─rn&#95;3─┬─rn&#95;4─┐
 │        1 │     1 │     1 │ [5,4,3,2,1]  │    5 │    5 │    5 │    2 │
 │        1 │     2 │     2 │ [5,4,3,2]    │    4 │    4 │    4 │    2 │
 │        1 │     3 │     3 │ [5,4,3]      │    3 │    3 │    3 │    2 │
 │        1 │     4 │     4 │ [5,4]        │    2 │    2 │    2 │    2 │
 │        1 │     5 │     5 │ [5]          │    1 │    1 │    1 │    1 │
 └──────────┴───────┴───────┴──────────────┴──────┴──────┴──────┴──────┘
-```
+
+````
 
 ```sql
--- first_value and last_value respect the frame
+-- first_value 和 last_value 遵循窗口帧
 SELECT
     groupArray(value) OVER w1 AS frame_values_1,
     first_value(value) OVER w1 AS first_value_1,
@@ -480,10 +504,10 @@ ORDER BY
 │ [1,2,3,4]      │             1 │            4 │ [3,4]          │             3 │            4 │
 │ [1,2,3,4,5]    │             1 │            5 │ [4,5]          │             4 │            5 │
 └────────────────┴───────────────┴──────────────┴────────────────┴───────────────┴──────────────┘
-```
+````
 
 ```sql
--- second value within the frame
+-- 窗口帧内的第二个值
 SELECT
     groupArray(value) OVER w1 AS frame_values_1,
     nth_value(value, 2) OVER w1 AS second_value
@@ -503,7 +527,7 @@ ORDER BY
 ```
 
 ```sql
--- second value within the frame + Null for missing values
+-- 窗口帧内的第二个值 + 缺失值用 NULL 表示
 SELECT
     groupArray(value) OVER w1 AS frame_values_1,
     nth_value(toNullable(value), 2) OVER w1 AS second_value
@@ -512,15 +536,22 @@ WINDOW w1 AS (PARTITION BY part_key ORDER BY order ASC ROWS BETWEEN 3 PRECEDING 
 ORDER BY
     part_key ASC,
     value ASC;
+```
 
-┌─frame_values_1─┬─second_value─┐
+
+
+┌─frame&#95;values&#95;1─┬─second&#95;value─┐
 │ [1]            │         ᴺᵁᴸᴸ │
 │ [1,2]          │            2 │
 │ [1,2,3]        │            2 │
 │ [1,2,3,4]      │            2 │
 │ [2,3,4,5]      │            3 │
 └────────────────┴──────────────┘
+
 ```
+```
+
+
 
 <div id="real-world-examples">
   ## 真实场景示例
@@ -641,16 +672,20 @@ CREATE TABLE sensors
     `value` Float
 )
 ENGINE = Memory;
-
-insert into sensors values('cpu_temp', '2020-01-01 00:00:00', 87),
-                          ('cpu_temp', '2020-01-01 00:00:01', 77),
-                          ('cpu_temp', '2020-01-01 00:00:02', 93),
-                          ('cpu_temp', '2020-01-01 00:00:03', 87),
-                          ('cpu_temp', '2020-01-01 00:00:04', 87),
-                          ('cpu_temp', '2020-01-01 00:00:05', 87),
-                          ('cpu_temp', '2020-01-01 00:00:06', 87),
-                          ('cpu_temp', '2020-01-01 00:00:07', 87);
 ```
+
+
+
+insert into sensors values(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:00&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:01&#39;, 77),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:02&#39;, 93),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:03&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:04&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:05&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:06&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:07&#39;, 87);
+
+````
 
 ```sql
 SELECT
@@ -677,7 +712,7 @@ ORDER BY
 │ cpu_temp │ 2020-01-01 00:00:06 │    87 │                87 │
 │ cpu_temp │ 2020-01-01 00:00:07 │    87 │                87 │
 └──────────┴─────────────────────┴───────┴───────────────────┘
-```
+````
 
 <div id="moving--sliding-average-per-10-seconds">
   ### 移动平均 / 滑动平均 (每 10 秒)
@@ -711,7 +746,7 @@ ORDER BY
   ### 移动平均 / 滑动平均 (每 10 天)
 </div>
 
-温度以秒级精度存储，但使用 `Range` 和 `ORDER BY toDate(ts)` 时，我们构造出的窗口帧大小为 10 个单位；而由于使用了 `toDate(ts)`，这里的单位是天。
+温度以秒级精度存储，但通过使用 `Range` 和 `ORDER BY toDate(ts)`，我们构造了一个大小为 10 个单位的窗口帧；而由于使用了 `toDate(ts)`，这里的单位就是天。
 
 ```sql
 CREATE TABLE sensors
@@ -721,20 +756,24 @@ CREATE TABLE sensors
     `value` Float
 )
 ENGINE = Memory;
-
-insert into sensors values('ambient_temp', '2020-01-01 00:00:00', 16),
-                          ('ambient_temp', '2020-01-01 12:00:00', 16),
-                          ('ambient_temp', '2020-01-02 11:00:00', 9),
-                          ('ambient_temp', '2020-01-02 12:00:00', 9),                          
-                          ('ambient_temp', '2020-02-01 10:00:00', 10),
-                          ('ambient_temp', '2020-02-01 12:00:00', 10),
-                          ('ambient_temp', '2020-02-10 12:00:00', 12),                          
-                          ('ambient_temp', '2020-02-10 13:00:00', 12),
-                          ('ambient_temp', '2020-02-20 12:00:01', 16),
-                          ('ambient_temp', '2020-03-01 12:00:00', 16),
-                          ('ambient_temp', '2020-03-01 12:00:00', 16),
-                          ('ambient_temp', '2020-03-01 12:00:00', 16);
 ```
+
+
+
+insert into sensors values(&#39;ambient&#95;temp&#39;, &#39;2020-01-01 00:00:00&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-01-01 12:00:00&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-01-02 11:00:00&#39;, 9),
+(&#39;ambient&#95;temp&#39;, &#39;2020-01-02 12:00:00&#39;, 9),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-01 10:00:00&#39;, 10),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-01 12:00:00&#39;, 10),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-10 12:00:00&#39;, 12),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-10 13:00:00&#39;, 12),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-20 12:00:01&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-03-01 12:00:00&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-03-01 12:00:00&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-03-01 12:00:00&#39;, 16);
+
+````
 
 ```sql
 SELECT
@@ -762,7 +801,9 @@ ORDER BY
 │ ambient_temp │ 2020-03-01 12:00:00 │    16 │                      16 │
 │ ambient_temp │ 2020-03-01 12:00:00 │    16 │                      16 │
 └──────────────┴─────────────────────┴───────┴─────────────────────────┘
-```
+````
+
+
 
 <div id="references">
   ## 参考资料
@@ -807,6 +848,8 @@ https://dev.mysql.com/doc/refman/8.0/en/window-function-descriptions.html
 https://dev.mysql.com/doc/refman/8.0/en/window-functions-usage.html
 
 https://dev.mysql.com/doc/refman/8.0/en/window-functions-frames.html
+
+
 
 <div id="related-content">
   ## 相关内容

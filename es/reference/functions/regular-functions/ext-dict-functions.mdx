@@ -358,33 +358,28 @@ LIMIT 3;
 
 Introducido en: v23.5.0
 
-Recupera los valores de los atributos de todos los nodos que coincidieron con cada clave en un [diccionario regexp tree](/es/reference/statements/create/dictionary/layouts/regexp-tree).
-
-Además de devolver valores del tipo `Array(T)` en lugar de `T`, esta función se comporta de manera similar a [`dictGet`](#dictGet).
+Convierte el valor de un atributo del diccionario al tipo de dato `All`, independientemente de la configuración del diccionario.
 
 **Sintaxis**
 
 ```sql
-dictGetAll(dict_name, attr_names, id_expr[, limit])
+dictGetAll(dict_name, attr_name, id_expr)
 ```
 
 **Argumentos**
 
 * `dict_name` — Nombre del diccionario. [`String`](/es/reference/data-types/string)
-* `attr_names` — Nombre de la columna del diccionario o tupla de nombres de columnas. [`String`](/es/reference/data-types/string) o [`Tuple(String)`](/es/reference/data-types/tuple)
+* `attr_name` — Nombre de la columna del diccionario. [`String`](/es/reference/data-types/string) o [`Tuple(String)`](/es/reference/data-types/tuple)
 * `id_expr` — Valor de la clave. Una expresión que devuelve un valor del tipo de clave del diccionario o un valor de tupla (según la configuración del diccionario). [`Expression`](/es/reference/data-types/special-data-types/expression) o [`Tuple(T)`](/es/reference/data-types/tuple)
-* `limit` — Opcional. Longitud máxima de cada array de valores devuelto. Al truncar, los nodos hijo tienen prioridad sobre los nodos padre; en caso contrario, se respeta el orden de lista definido para el diccionario regexp tree. Si no se especifica, la longitud del array es ilimitada. [`UInt*`](/es/reference/data-types/int-uint)
 
 **Valor devuelto**
 
-Devuelve un array de valores de los atributos del diccionario que corresponden a `id_expr` para cada atributo especificado en `attr_names`.
-Si no hay ninguna clave correspondiente a `id_expr` en el diccionario, se devuelve un array vacío.
+Devuelve el valor del atributo del diccionario correspondiente a `id_expr`;
+de lo contrario, devuelve el contenido del elemento `<null_value>` especificado para el atributo en la configuración del diccionario.
 
 <Note>
   ClickHouse lanza una excepción si no puede interpretar el valor del atributo o si el valor no coincide con el tipo de dato del atributo.
 </Note>
-
-[`Array(T)`](/es/reference/data-types/array)
 
 **Ejemplos**
 
@@ -394,10 +389,10 @@ Si no hay ninguna clave correspondiente a `id_expr` en el diccionario, se devuel
 SELECT
     'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36' AS user_agent,
 
-    -- This will match ALL applicable patterns
+    -- Esto coincidirá con TODOS los patrones aplicables
     dictGetAll('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS all_matches,
 
-    -- This returns only the first match
+    -- Esto devuelve solo la primera coincidencia
     dictGet('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS first_match;
 ```
 

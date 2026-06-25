@@ -21,7 +21,7 @@ Paimon テーブルは、あらかじめストレージ内に存在している�
 SET allow_experimental_paimon_storage_engine = 1;
 
 CREATE TABLE paimon_table_s3
-    ENGINE = PaimonS3(url,  [, access_key_id, secret_access_key] [,format] [,compression])
+    ENGINE = PaimonS3(url,  [, access_key_id, secret_access_key] [,format] [,structure] [,compression])
 
 CREATE TABLE paimon_table_azure
     ENGINE = PaimonAzure(connection_string|storage_account_url, container_name, blobpath, [,account_name], [,account_key] [,format] [,compression_method])
@@ -138,12 +138,12 @@ SETTINGS max_consume_snapshots = 2;
 
 **ステップ 1 — インクリメンタル読み取りとメタデータのリフレッシュを有効にした Paimon のソーステーブルを作成します。**
 
-以下の例では `PaimonLocal` を使用します。ストレージバックエンドに応じて、engine を `PaimonS3`、`PaimonAzure`、`PaimonHDFS`、または自動検出される `Paimon` engine に置き換えてください:
+以下の例では `PaimonLocal` を使用します。ストレージバックエンドに応じて、engine を `PaimonS3`、`PaimonAzure`、`PaimonHDFS`、または `Paimon` 別名 に置き換えてください。
 
 ```sql
 SET allow_experimental_paimon_storage_engine = 1;
 
--- Local storage
+-- ローカルストレージ
 CREATE TABLE paimon_mv_source
 ENGINE = PaimonLocal('/path/to/paimon/table')
 SETTINGS
@@ -152,7 +152,7 @@ SETTINGS
     paimon_replica_name = '{replica}',
     paimon_metadata_refresh_interval_sec = 1;
 
--- S3 storage (the `Paimon` engine defaults to the S3 implementation when no `disk` is specified)
+-- S3ストレージ（PaimonはPaimonS3のエイリアス）
 CREATE TABLE paimon_mv_source
 ENGINE = Paimon('http://minio:9000/bucket/path/to/table', 'access_key', 'secret_key')
 SETTINGS
@@ -212,7 +212,7 @@ DROP TABLE IF EXISTS paimon_mv_source SYNC;
   ## 別名
 </div>
 
-`Paimon` テーブルエンジンは、`disk` 設定からストレージバックエンドを自動検出し、それに応じて `PaimonS3`、`PaimonAzure`、または `PaimonLocal` に振り分けます。`disk` が指定されていない場合は、デフォルトで `PaimonS3` 実装が使用されます。
+現在、テーブルエンジン `Paimon` は `PaimonS3` の別名です。
 
 <div id="virtual-columns">
   ## 仮想カラム

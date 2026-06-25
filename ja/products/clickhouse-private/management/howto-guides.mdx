@@ -1,0 +1,115 @@
+---
+hidden: true
+title: "ハウツーガイド"
+slug: "docs/products/clickhouse-private/howto-guides"
+---
+
+このセクションには、プライベート環境における ClickHouse の一般的なセットアップに関するガイドが掲載されています。
+
+<div id="how-to-configure-cert-manager-to-generate-the-certificates-for-clickhouse-server-keeper">
+  ### ハウツー: cert-manager を設定して ClickHouse Server と Keeper の証明書を生成する
+</div>
+
+このガイドでは、[cert-manager](https://cert-manager.io/) がすでにクラスターにインストールされていることを前提としています。また、ClickHouse クラスターの名前が `default-xx-01` であることも前提としています。
+
+まず、証明書に署名するための認証局 (CA) が必要です。
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+```
+
+簡単のため、ここでは有効な CA を生成できる自己署名の `Issuer` を使用します。これはテスト用途です。本番環境向けの `Issuer` については、[利用可能なオプションの一覧](https://cert-manager.io/docs/configuration/issuers/)を参照することをおすすめします。
+
+この後、`Certificate` リソースを使って証明書を作成できます。
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: clickhouse-server-tls
+  namespace: ns-default-xx-01
+spec:
+  secretName: default-xx-01-server-cert-secret
+  dnsNames:
+    - "*.default-xx-01.ns-default-xx-01.svc.cluster.local"
+  issuerRef:
+    name: selfsigned-issuer
+    kind: Issuer
+```
+
+これにより、`default-xx-01-server-cert-secret` という名前のシークレットが作成され、`ca.crt`、`tls.crt`、`tls.key` のキーが含まれます。
+
+`ca.crt` は、issuer から取得できる場合にのみ追加される点に注意してください。たとえば ACME では、`ca.crt` はシークレットに追加されません。この場合は、公開ルートを `ca.crt` キーの値に追加する必要があります (たとえば、[trust-manager](https://cert-manager.io/docs/trust/trust-manager/) を使用して CA バンドルを生成し、適切なシークレットを対象にします) 。
+
+デフォルトでは、onprem-ClickHouse-cluster Helm チャートは、`ca.crt`、`server.crt`、`server.key` のキーを持つ `<cluster_name>-server-cert-secret` という名前のシークレットを想定しています。
+
+次の値を使用すると、ClickHouse クラスターがシークレット内の正しいキーから証明書を読み込むようにできます。
+
+```yaml
+# デフォルトのシークレット名（default-xx-01-server-cert-secret）を使用するため、指定不要
+server:
+  openSSL:
+    enabled: true
+    secret:
+      caKey: ca.crt
+      certKey: tls.crt
+      keyKey: tls.key
+```
+
+証明書は、ClickHouse Server の場合はポッド内の `/etc/ClickHouse-server/certs/` に、ClickHouse Keeper の場合は `/etc/clickhouse-keeper/certs/` にマウントされます。
+ClickHouse 向けの適切な OpenSSL 設定は、Helm チャートによって生成されます。
+
+<div id="how-to-configure-remote_servers-with-secretkeyref-and-from_env">
+  ### ハウツー: secretKeyRef と @from_env を使用して remote_servers を設定する
+</div>
+
+> ClickHouse サーバーの `remote_servers` 設定を構成するには、少なくとも `1.1.151` 以降の `onprem-clickHouse-cluster` Helm チャートが必要です
+
+このガイドでは、分散テーブルおよび cluster() 関数で使用する [`remote_servers`](/ja/reference/settings/server-settings/settings#remote_servers) の設定方法を説明します。ここでは、ClickHouse クラスター名が `default-xx-01` であり、クラスターのネームスペース内に `default-xx-01-password` という名前の [シークレット](https://kubernetes.io/docs/concepts/configuration/secret/) が存在することを前提としています。
+
+> 注: 外部シークレットストアと統合している場合も、[Kubernetes Secrets Store CSI Driver](https://github.com/kubernetes-sigs/secrets-store-csi-driver) を使用してマウントし、[シークレットを環境変数として読み込む](https://secrets-store-csi-driver.sigs.k8s.io/topics/set-as-env-var)ことで、同様の方法を利用できます。
+
+推奨される方法では、[`secretKeyRef` を使用した Kubernetes シークレット](https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#define-container-environment-variables-using-secret-data) により機密データを環境変数として注入し、その変数を [`@from_env`](/ja/concepts/features/configuration/server-config/configuration-files#from_env_zk) を使って ClickHouse の設定内から参照します。
+
+例:
+
+```yaml
+server:
+  additionalEnvVars:
+    - name: DEFAULT_XX_01_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: default-xx-01-password
+          key: password
+  config:
+    remote_servers:
+      default-xx-01:
+        shard:
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-0r280c0-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-f9cshqb-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+          - replica:
+              user: default
+              password:
+                "@from_env": DEFAULT_XX_01_PASSWORD
+              host: c-default-xx-01-server-gsip6lp-0.c-default-xx-01-server-headless.ns-default-xx-01.svc.cluster.local
+              port: 9000
+```
+
+この方法により、機密データをマニフェストに直接テンプレート展開せずに済みます。`additionalEnvVars` フィールドでは、`secretKeyRef` を使って Kubernetes シークレットから環境変数を設定し、ClickHouse 設定内の `@from_env` ディレクティブでそれらの値を実行時に読み込みます。
+
+レプリカホストの FQDN 形式は、Kubernetes のパターン `<pod-name>.<headless-service-name>.<namespace>.svc.cluster.local` に従う点に注意してください。

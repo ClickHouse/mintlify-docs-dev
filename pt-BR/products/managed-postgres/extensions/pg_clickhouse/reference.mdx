@@ -149,8 +149,6 @@ As opções compatíveis são:
 
 * `driver`: O driver de conexão do ClickHouse a ser usado: &quot;binary&quot; ou
   &quot;http&quot;. **Obrigatório.**
-* `compression`: Compressão do protocolo nativo para o driver &quot;binary&quot;, uma entre
-  &quot;none&quot;, &quot;lz4&quot; ou &quot;zstd&quot;. O padrão é &quot;lz4&quot;. Ignorada pelo driver &quot;http&quot;.
 * `dbname`: O banco de dados do ClickHouse a ser usado na conexão. O padrão é
   &quot;default&quot;.
 * `fetch_size`: Tamanho aproximado do lote em bytes para HTTP streaming. Os lotes
@@ -164,16 +162,6 @@ As opções compatíveis são:
   * 9004 se `driver` for &quot;binary&quot; e `host` não for um host do ClickHouse Cloud
   * 8443 se `driver` for &quot;http&quot; e `host` for um host do ClickHouse Cloud
   * 8123 se `driver` for &quot;http&quot; e `host` não for um host do ClickHouse Cloud
-* `min_tls_version`: Versão mínima do protocolo TLS a ser negociada em conexões
-  que usam TLS. Uma entre `TLSv1`, `TLSv1.1`, `TLSv1.2` ou `TLSv1.3`. O padrão
-  é o mínimo da própria biblioteca TLS. Aplica-se a ambos os drivers.
-* `secure`: Controla o uso de TLS na conexão. Uma entre:
-  * `auto` (padrão): usa TLS quando `host` é um host do ClickHouse Cloud ou
-    `port` é uma porta segura; caso contrário, plaintext.
-  * `on` (ou `true`/`yes`/`1`): sempre usa TLS. O padrão de `port` é 8443
-    (&quot;http&quot;) ou 9440 (&quot;binary&quot;).
-  * `off` (ou `false`/`no`/`0`): nunca usa TLS. O padrão de `port` é 8123
-    (&quot;http&quot;) ou 9000 (&quot;binary&quot;).
 
 <div id="alter-server">
   ### ALTER SERVER
@@ -1176,10 +1164,6 @@ no ClickHouse, da seguinte forma:
 * `reverse(bytea)`: [reverse](/pt-BR/reference/functions/regular-functions/string-functions#reverse)
 * `strpos`: [positionUTF8](/pt-BR/reference/functions/regular-functions/string-search-functions#positionutf8)
 * `regexp_like`: [match](/pt-BR/reference/functions/regular-functions/string-search-functions#match)
-* `regexp_match`: [extractGroups](/pt-BR/reference/functions/regular-functions/string-search-functions#extractGroups)
-  se a expressão regular contiver subexpressões entre parênteses; caso contrário,
-  [extractAll](/pt-BR/reference/functions/regular-functions/string-search-functions#extractAll)
-  fatiado com [arraySlice](/pt-BR/reference/functions/regular-functions/array-functions#arraySlice).
 * `regexp_replace`: [replaceRegexpOne](/pt-BR/reference/functions/regular-functions/string-replace-functions#replaceRegexpOne) ou [replaceRegexpOne](/pt-BR/reference/functions/regular-functions/string-replace-functions#replaceRegexpAll) quando a flag `g` estiver presente
 * `regexp_split_to_array`: [splitByRegexp](/pt-BR/reference/functions/regular-functions/splitting-merging-functions#splitByRegexp)
 * `md5`: [MD5](/pt-BR/reference/functions/regular-functions/hash-functions#MD5)
@@ -1372,17 +1356,17 @@ Estas [funções de janela] do PostgreSQL podem ser submetidas a pushdown para o
 (PARTITION BY ... ORDER BY ...)`, incluindo especificações de frame quando
 aplicável.
 
-* [row&#95;number](/pt-BR/reference/functions/window-functions/index#row_number)
-* [rank](/pt-BR/reference/functions/window-functions/index#rank)
-* [dense&#95;rank](/pt-BR/reference/functions/window-functions/index#dense_rank)
-* [ntile](/pt-BR/reference/functions/window-functions/index#ntile)
-* [cume&#95;dist](/pt-BR/reference/functions/window-functions/index#cume_dist)
-* [percent&#95;rank](/pt-BR/reference/functions/window-functions/index#percent_rank)
-* [lead](/pt-BR/reference/functions/window-functions/index#lead)
-* [lag](/pt-BR/reference/functions/window-functions/index#lag)
-* [first&#95;value](/pt-BR/reference/functions/window-functions/index#first_value)
-* [last&#95;value](/pt-BR/reference/functions/window-functions/index#last_value)
-* [nth&#95;value](/pt-BR/reference/functions/window-functions/index#nth_value)
+* [row&#95;number](/pt-BR/reference/functions/window-functions#row_number)
+* [rank](/pt-BR/reference/functions/window-functions#rank)
+* [dense&#95;rank](/pt-BR/reference/functions/window-functions#dense_rank)
+* [ntile](/pt-BR/reference/functions/window-functions#ntile)
+* [cume&#95;dist](/pt-BR/reference/functions/window-functions#cume_dist)
+* [percent&#95;rank](/pt-BR/reference/functions/window-functions#percent_rank)
+* [lead](/pt-BR/reference/functions/window-functions#lead)
+* [lag](/pt-BR/reference/functions/window-functions#lag)
+* [first&#95;value](/pt-BR/reference/functions/window-functions#first_value)
+* [last&#95;value](/pt-BR/reference/functions/window-functions#last_value)
+* [nth&#95;value](/pt-BR/reference/functions/window-functions#nth_value)
 * `min` / `max` (com cláusula `OVER`)
 
 As funções de classificação (`row_number`, `rank`, `dense_rank`, `ntile`, `cume_dist`,
@@ -1402,87 +1386,52 @@ quando [pg&#95;clickhouse.pushdown&#95;regex](#pg_clickhousepushdown_regex) é t
 padrão), e se esforce para garantir um nível básico de compatibilidade, esteja
 ciente das diferenças entre os dois e de como o pg&#95;clickhouse as trata.
 
-* O PostgreSQL oferece suporte a [Expressões Regulares POSIX], enquanto o ClickHouse oferece suporte a
-  [Expressões Regulares RE2][RE2]. Fique atento às diferenças de comportamento: use RE2
+* O PostgreSQL oferece suporte a [expressões regulares POSIX], enquanto o ClickHouse oferece suporte a
+  [expressões regulares RE2][RE2]. Fique atento às diferenças de comportamento: use RE2
   quando a expressão regular for avaliada pelo ClickHouse (por exemplo, em uma
   cláusula `WHERE`) e POSIX quando ela for avaliada pelo Postgres (por exemplo, em uma
   cláusula `SELECT`).
 
-* pg&#95;clickhouse aplica as [flags do Postgres] prefixando-as à
+* O pg&#95;clickhouse faz pushdown dos [sinalizadores de regex] do Postgres, prefixando-os à
   expressão regular do ClickHouse dentro de `(?)`. Por exemplo:
 
   ```sql
   regexp_like(val, '^VAL\d', 'i')
   ```
 
-  Passa a ser
+  Torna-se
 
   ```sql
-  match(val, concat('(?i)', '^VAL\\d'))
+  match(val, concat('(?i-s)', '^VAL\\d'))
   ```
 
-* As únicas flags compatíveis com ambos e, portanto, que podem ser usadas quando interpretadas pelo
-  ClickHouse são:
+  Observe a inclusão de `-s`; isso alinha o comportamento com as expressões
+  regulares do Postgres ao desabilitar `s`, que o ClickHouse ativa por padrão.
+  O pg&#95;clickhouse não incluirá `-s` se os sinalizadores na chamada da função do Postgres
+  incluírem `s`. Infelizmente, esse comportamento quebra a compatibilidade de
+  algumas expressões regulares no Postgres 24 e versões anteriores.
 
-  | Flag | Como  | Observações                                                                |
-  | ---- | ----- | -------------------------------------------------------------------------- |
-  | `i`  | `i`   | correspondência sem diferenciar maiúsculas de minúsculas                   |
-  | `m`  | `m-s` | `^` e `$` correspondem ao início/fim da linha, além do início/fim do texto |
-  | `n`  | `m-s` | alias do Postgres para `m`                                                 |
-  | `p`  | `-s`  | não permitir que `.` e `[^x]` correspondam a `\n`                          |
-  | `s`  | `s`   | permitir que `.` e `[^x]` correspondam a `\n`                              |
-  | `t`  |       | sintaxe estrita, ignorado                                                  |
-  | `w`  | `m`   | correspondência parcial inversa sensível a quebras de linha                |
+* Os únicos sinalizadores compatíveis com ambos e, portanto, que podem ser usados quando avaliados pelo
+  ClickHouse, são:
 
-  O RE2 oferece suporte apenas a estas flags; não use nenhuma outra [flags do Postgres].
+  * `i`: sem distinção entre maiúsculas e minúsculas
+  * `m`: modo multilinha:
+  * `s`: faz `.` corresponder a `\n`
+  * `p`: correspondência parcial sensível a nova linha (tratado da mesma forma que `s`)
+  * `t`: sintaxe restrita (o padrão, removido pelo pg&#95;clickhouse)
 
-* Esta tabela resume os efeitos das várias flags (e da ausência de flag, que
-  é o mesmo que `s`) na correspondência de quebras de linha e terminações de linha. Observe que, no
-  Postgres, `m` e `p` impedem que classes de caracteres negadas (`[^xyz]`)
-  correspondam a uma quebra de linha, enquanto os equivalentes no ClickHouse não. Fora isso,
-  os comportamentos são os mesmos no ClickHouse e no Postgres:
+  O RE2 oferece suporte apenas a esses sinalizadores; não use nenhum outro [sinalizador do Postgres]
 
-  | Padrão aplicado a `a\nb` | Postgres | ClickHouse | Igual? |
-  | ------------------------ | :------: | :--------: | :----: |
-  | `a.b`                    |   true   |    true    |   ✔︎   |
-  | `a[^x]b`                 |   true   |    true    |   ✔︎   |
-  | `a$`                     |   false  |    false   |   ✔︎   |
-  | **`s` Flag**             |          |            |        |
-  | `(?s)a.b`                |   true   |    true    |   ✔︎   |
-  | `(?s)a[^x]b`             |   true   |    true    |   ✔︎   |
-  | `(?s)a$`                 |   false  |    false   |   ✔︎   |
-  | **`m` Flag**             |          |            |        |
-  | `(?m)a.b`                |   false  |    false   |   ✔︎   |
-  | `(?m)a[^x]b`             |   true   |    false   |    ✘   |
-  | `(?m)a$`                 |   true   |    true    |   ✔︎   |
-  | **`p` Flag**             |          |            |        |
-  | `(?p)a.b`                |   false  |    false   |   ✔︎   |
-  | `(?p)a[^x]b`             |   true   |    false   |    ✘   |
-  | `(?p)a$`                 |   false  |    false   |   ✔︎   |
-  | **`w` Flag**             |          |            |        |
-  | `(?w)a.b`                |   true   |    true    |    ✔   |
-  | `(?w)a[^x]b`             |   true   |    true    |    ✔   |
-  | `(?w)a$`                 |   true   |    true    |    ✔   |
+* Quaisquer outros sinalizadores passados para funções de expressão regular farão com que a
+  função não passe por pushdown.
 
-* Quaisquer outras flags passadas para funções de expressão regular impedem
-  o pushdown da função.
+* A exceção é `regexp_replace()`, que também oferece suporte ao sinalizador `g`. Quando
+  `g` está definido, o pg&#95;clickhouse usa `replaceRegexpAll()` em vez de
+  `replaceRegexpOne()` e remove o sinalizador antes de prefixar os outros sinalizadores.
 
-* A exceção é `regexp_replace()`, que também aceita a flag `g`. Quando
-  `g` está definida, pg&#95;clickhouse usa `replaceRegexpAll()` em vez de
-  `replaceRegexpOne()` e remove a flag antes de adicionar outras flags no início.
-
-* O argumento de substituição de `regexp_replace()` no Postgres aceita `\&` para
-  se referir à correspondência inteira, enquanto no ClickHouse `\0` representa a correspondência inteira.
+* O argumento de substituição de `regexp_replace()` no Postgres oferece suporte a `\&` para
+  se referir à correspondência inteira, enquanto no ClickHouse há suporte a `\0` para a correspondência inteira.
   Certifique-se de usar `\0` quando a função fizer pushdown para o ClickHouse.
-
-* Postgres `regexp_match` retorna `NULL` quando não há correspondências, enquanto
-  as expressões delegadas retornam um array vazio. Use `COALESCE()`
-  para retornar um array vazio em vez de `NULL` e comparar os valores de retorno
-  de forma compatível. Por exemplo:
-
-  ```sql
-  SELECT * FROM events WHERE COALESCE(regexp_match(msg, '^ERR'), '{}');
-  ```
 
 Para evitar qualquer ambiguidade, considere definir
 [pg&#95;clickhouse.pushdown&#95;regex](#pg_clickhousepushdown_regex) para impedir
@@ -1581,7 +1530,7 @@ Copyright (c) 2025-2026, ClickHouse
 
 [CREATE FOREIGN TABLE]: https://www.postgresql.org/docs/current/sql-createforeigntable.html "Documentação do PostgreSQL: CREATE FOREIGN TABLE"
 
-[table engine]: /reference/engines/table-engines/index "Documentação do ClickHouse: Motores de tabela"
+[table engine]: /reference/engines/table-engines "Documentação do ClickHouse: Motores de tabela"
 
 [AggregateFunction Type]: /reference/data-types/aggregatefunction "Documentação do ClickHouse: Tipo AggregateFunction"
 
@@ -1643,9 +1592,9 @@ Copyright (c) 2025-2026, ClickHouse
 
 [window functions]: https://www.postgresql.org/docs/current/functions-window.html "Documentação do PostgreSQL: Funções de janela"
 
-[POSIX Regular Expressions]: https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-POSIX-REGEXP "Documentação do PostgreSQL: Expressões regulares POSIX"
+[POSIX Regular Expressions]: https://www.postgresql.org/docs/18/functions-matching.html#FUNCTIONS-POSIX-REGEXP "Documentação do PostgreSQL: Expressões regulares POSIX"
 
-[Postgres flags]: https://www.postgresql.org/docs/current/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "Documentação do PostgreSQL: Letras de opções embutidas do ARE"
+[Postgres flags]: https://www.postgresql.org/docs/18/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "Documentação do PostgreSQL: Letras de opções embutidas do ARE"
 
 [RE2]: https://github.com/google/re2/wiki/Syntax "Sintaxe do RE2"
 

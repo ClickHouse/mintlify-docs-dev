@@ -117,11 +117,11 @@ use_query_cache = true`), 이 경우 모든 `SELECT` 쿼리가 캐시된 결과�
 ```xml
 <profiles>
     <default>
-        <!-- The maximum cache size in bytes for user/profile 'default' -->
+        <!-- 사용자/프로필 'default'의 최대 캐시 크기(바이트) -->
         <query_cache_max_size_in_bytes>10000</query_cache_max_size_in_bytes>
-        <!-- The maximum number of SELECT query results stored in the cache for user/profile 'default' -->
+        <!-- 사용자/프로필 'default'의 캐시에 저장되는 SELECT 쿼리 결과의 최대 개수 -->
         <query_cache_max_entries>100</query_cache_max_entries>
-        <!-- Make both settings read-only so the user cannot change them -->
+        <!-- 사용자가 변경할 수 없도록 두 설정을 읽기 전용으로 설정 -->
         <constraints>
             <query_cache_max_size_in_bytes>
                 <readonly/>
@@ -162,46 +162,12 @@ SETTINGS use_query_cache = true, query_cache_min_query_duration = 5000;
 동일한 쿼리에 대해 서로 다른 3개의 쿼리 캐시 엔트리를 생성하는 예시:
 
 ```sql
-SELECT 1 SETTINGS use_query_cache = true; -- query_cache_tag is implicitly '' (empty string)
+SELECT 1 SETTINGS use_query_cache = true; -- query_cache_tag는 암묵적으로 '' (빈 문자열)
 SELECT 1 SETTINGS use_query_cache = true, query_cache_tag = 'tag 1';
 SELECT 1 SETTINGS use_query_cache = true, query_cache_tag = 'tag 2';
 ```
 
-쿼리 캐시에서 태그 `tag`가 있는 엔트리만 제거하려면 `SYSTEM CLEAR QUERY CACHE TAG 'tag'` 문을 사용할 수 있습니다.
-
-<div id="subquery-caching">
-  ## 서브쿼리 캐싱
-</div>
-
-기본적으로 외부 쿼리의 `use_query_cache`는 서브쿼리에 전파되지 않습니다. 즉, 각 서브쿼리에서 캐시 사용을 명시적으로 설정해야 합니다:
-
-```sql
-SELECT *
-FROM (SELECT number FROM system.numbers LIMIT 1000 SETTINGS use_query_cache = true)
-WHERE number > 500;
-```
-
-이 예시에서는 내부 서브쿼리의 결과만 캐시됩니다. 외부 쿼리는 캐시되지 않습니다.
-
-모든 서브쿼리에 대한 캐싱을 한 번에 활성화하려면 `query_cache_for_subqueries` 설정을 사용하십시오:
-
-```sql
-SELECT *
-FROM (SELECT number FROM system.numbers LIMIT 1000)
-WHERE number > 500
-SETTINGS use_query_cache = true, query_cache_for_subqueries = true;
-```
-
-벌크 전파가 활성화된 상태에서 특정 서브쿼리의 캐싱을 명시적으로 비활성화하려면, 해당 서브쿼리에서 `use_query_cache = false`를 설정하십시오:
-
-```sql
-SELECT *
-FROM (SELECT number FROM system.numbers LIMIT 1000 SETTINGS use_query_cache = false)
-WHERE number > 500
-SETTINGS use_query_cache = true, query_cache_for_subqueries = true;
-```
-
-서브쿼리 캐시 엔트리는 `is_subquery = 1`인 경우 [system.query&#95;cache](/ko/reference/system-tables/query_cache)에서 확인할 수 있습니다. `query_cache_ttl` 설정도 서브쿼리 캐시 엔트리에 적용되며, 서브쿼리별로 설정할 수 있습니다.
+쿼리 캐시에서 태그 `tag`가 있는 항목만 제거하려면 `SYSTEM CLEAR QUERY CACHE TAG 'tag'` 문을 사용할 수 있습니다.
 
 ClickHouse는 테이블 데이터를 [max&#95;block&#95;size](/ko/reference/settings/session-settings#max_block_size)행 단위의 블록으로 읽습니다. 필터링, 집계
 등으로 인해 결과 블록은 일반적으로 &#39;max&#95;block&#95;size&#39;보다 훨씬 작지만, 그보다 훨씬 커지는 경우도 있습니다. 설정
@@ -238,7 +204,7 @@ ClickHouse는 테이블 데이터를 [max&#95;block&#95;size](/ko/reference/sett
 
 시스템 테이블이 포함된 쿼리의 결과(예: [system.processes](/ko/reference/system-tables/processes)&#96; 또는
 [information&#95;schema.tables](/ko/reference/system-tables/information_schema))도 기본적으로 캐시되지 않습니다. 시스템 테이블이 포함된 쿼리 결과를
-강제로 캐시하려면 설정 [query&#95;cache&#95;system&#95;table&#95;handling](/ko/reference/settings/session-settings#query_cache_system_table_handling)을 사용하십시오।
+강제로 캐시하려면 설정 [query&#95;cache&#95;system&#95;table&#95;handling](/ko/reference/settings/session-settings#query_cache_system_table_handling)을 사용하십시오.
 
 마지막으로, 보안상의 이유로 쿼리 캐시의 엔트리는 사용자 간에 공유되지 않습니다. 예를 들어, 사용자 A가
 그러한 정책이 없는 다른 사용자 B와 동일한 쿼리를 실행하는 방식으로 테이블의 ROW POLICY를 우회할 수는 없어야 합니다. 그러나 필요한 경우에는 설정

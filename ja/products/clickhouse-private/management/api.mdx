@@ -1,0 +1,480 @@
+---
+hidden: true
+title: "ClickHouse プライベート API"
+slug: "docs/products/clickhouse-private/api"
+---
+
+<div id="introduction">
+  ### はじめに
+</div>
+
+<div id="starting-with-the-clickhouse-private-api">
+  #### ClickHouse Private API から始める
+</div>
+
+ClickHouse Private API は、バックアップの作成や垂直スケーリングへの対応など、ClickHouse クラスターの管理に必要な一般的な操作をサポートします。
+
+これはスタンドアロンのオプションコンポーネントであり、管理を簡素化するために環境に追加できます。
+
+<div id="installation">
+  #### インストール
+</div>
+
+ClickHouse Private API は Docker イメージおよび Helm チャートとして提供されており、これらをプライベート ECR リポジトリにコピーしたうえで、EKS クラスターにインストールする必要があります。
+
+<div id="prerequisites">
+  ##### 前提条件
+</div>
+
+* ClickHouse Operator がインストールされていること ([Helm 経由での Operator のインストール](/ja/products/clickhouse-private/deployment/aws#install-operator-via-helm)を参照)
+* 少なくとも 1 つの ClickHouse クラスターがデプロイされていること ([ClickHouseCluster CR](/ja/products/clickhouse-private/deployment/aws#clickhousecluster-cr)を参照)
+* ClickHouse のプライベート ECR リポジトリにアクセスできること
+* 対象の ECR リポジトリが AWS アカウント内に作成済みであること:
+  * `airgap-management`
+  * `helm/airgap-management`
+
+<div id="copy-ecr-artifacts-for-private-api">
+  ##### Private API 用に ECR アーティファクトをコピーする
+</div>
+
+**イメージのコピーには [skopeo](https://github.com/containers/skopeo) を使用することを強く推奨します**。これにより、Dockerイメージ内のすべてのアーキテクチャが保持されます。以下の `TARGET_REGION` と `TARGET_ECR_REPO` は、利用する ECR のリージョンとホストに合わせて必ず設定してください。
+
+```bash
+SOURCE_REGION=us-east-1
+SOURCE_ECR_REPO=349290138304.dkr.ecr.$SOURCE_REGION.amazonaws.com
+
+TARGET_REGION=us-west-2
+TARGET_ECR_REPO=0000000000.dkr.ecr.$TARGET_REGION.amazonaws.com
+
+# ECRにログインする
+aws ecr get-login-password --region $SOURCE_REGION | skopeo login --username AWS --password-stdin $SOURCE_ECR_REPO
+
+# ターゲットのAWSリポジトリにログインする
+aws ecr get-login-password --region $TARGET_REGION | skopeo login --username AWS --password-stdin $TARGET_ECR_REPO
+
+# 各イメージをターゲットECRにコピーする。--allフラグを必ず指定すること
+skopeo copy --all docker://$SOURCE_ECR_REPO/airgap-management:<<API_TAG>> docker://$TARGET_ECR_REPO/airgap-management:<<API_TAG>>
+skopeo copy --all docker://$SOURCE_ECR_REPO/helm/airgap-management:<<API_HELM_TAG>> docker://$TARGET_ECR_REPO/helm/airgap-management:<<API_HELM_TAG>>
+```
+
+<div id="install-private-api-via-helm">
+  ##### Helm で Private API をインストールする
+</div>
+
+Private API は専用のネームスペースにインストールしてください。必要に応じて、ECR ホスト、バージョンタグ、認証設定を更新してください。
+
+```bash
+# 必要に応じて ECR_HOST を更新する
+ECR_HOST=0000000000.dkr.ecr.us-west-2.amazonaws.com
+
+# API の Helm チャートのバージョンを使用すること
+API_HELM_VERSION=<<API_HELM_TAG>>
+
+# API イメージタグを設定する
+API_IMAGE_TAG=<<API_TAG>>
+
+helm install clickhouse-private-api \
+   oci://$ECR_HOST/helm/airgap-management \
+   --version=$API_HELM_VERSION \
+   --create-namespace \
+   -n clickhouse-private-api \
+   --set-json="image.repository=\"$ECR_HOST/airgap-management\"" \
+   --set-json="image.tag=\"$API_IMAGE_TAG\""
+```
+
+**認証に関する注意:**
+
+* デフォルトでは、Basic認証は無効です。本番環境では、`api.basicAuth.enabled=true` を設定し、安全な認証情報を指定することで、Basic認証を有効にできます。
+* ユーザー名とパスワードは安全に保管し、組織のセキュリティポリシーに従って定期的に更新してください。
+
+<div id="verify-installation">
+  ##### インストールの確認
+</div>
+
+Private API ポッドが稼働していることを確認します。
+
+```bash
+kubectl get pods -n clickhouse-private-api
+```
+
+次のような出力が表示されます。
+
+```
+NAME                                    READY   STATUS    RESTARTS   AGE
+clickhouse-private-api-xxxxxxxxxx-xxxxx   1/1     Running   0          1m
+```
+
+サービスをポートフォワードし、API にアクセスできることを確認します:
+
+```bash
+kubectl port-forward svc/clickhouse-private-api-airgap-management 8080:8080 -n clickhouse-private-api
+```
+
+API のヘルスチェックエンドポイントをテストします：
+
+```bash
+curl http://localhost:8080/readiness
+```
+
+認証が有効な場合は、認証情報を含めてください。
+
+```bash
+curl -u admin:YOUR_SECURE_PASSWORD_HERE http://localhost:8080/readiness
+```
+
+<div id="configuration-options">
+  ##### 設定オプション
+</div>
+
+以下の主要な設定オプションは、Helm の values で指定できます。
+
+* `image.repository`: Private API イメージ用の ECR リポジトリ
+* `image.tag`: デプロイするイメージのタグ
+* `api.port`: API が待ち受けるポート (デフォルト: 8080)
+* `api.basicAuth.enabled`: HTTP 基本認証を有効にする (デフォルト: false)
+* `api.basicAuth.username`: 基本認証用のユーザー名 (デフォルト: &quot;admin&quot;)
+* `api.basicAuth.password`: 基本認証用のパスワード (デフォルト: &quot;changeme&quot;)
+* `serviceAccount.enabled`: API 用のサービスアカウントを作成する (デフォルト: true)
+* `serviceAccount.annotations`: サービスアカウント用のアノテーション (例: IRSA 用)
+
+設定オプションの完全な一覧については、Helm チャートの `README.md` を参照してください。
+
+<div id="api-tutorials">
+  ### API チュートリアル
+</div>
+
+<div id="tutorial-managing-backups-through-the-api">
+  #### チュートリアル: API を通じたバックアップの管理
+</div>
+
+ClickHouse Private API では、バックアップ管理を簡素化するための機能が提供されています。`api/v1/backups` REST リソースを使用すると、デプロイ済みの ClickHouse クラスターのバックアップを操作できます。
+
+このガイドでは、たとえば Kubernetes のポッドをポートフォワードして、`http://localhost:8080/` 経由で API にアクセスできることを前提とします。API とのやり取りや HTTP リクエストの送信には [curl](https://curl.se/) を使用します。また、default-xx-01 という名前の ClickHouse クラスターがデプロイされていることも前提とします (ClickHouse クラスターのデプロイ方法の詳細については、[セットアップガイド](/ja/products/clickhouse-private/deployment/aws) を参照してください) 。
+
+まず、バックアップを作成しましょう。次のようにフルバックアップを作成します。
+
+backup.json
+
+```json
+{
+    "incremental": false
+}
+```
+
+cURL コマンド
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/backups?instance_id=default-xx-01" \
+    -H "Content-Type: application/json" \
+    --data-binary "@backup.json"
+```
+
+バックアップを作成する対象の ClickHouse クラスターを指定するには、`instance_id` クエリパラメータを使用します。ここでは、デプロイ時に使用した ClickHouse クラスター名を指定します。
+
+これにより、本文の `incremental` フィールドで指定されているとおり、増分バックアップではなくフルバックアップが作成されます。さらに、`backupObject` を使用して、バックアップ対象のテーブルまたはデータベースを指定できます。この場合は `type` に Common を使用しており、すべてのテーブルとデータベースを示します。
+
+レスポンスには、作成されたバックアップに関する情報が含まれており、その中にはバックアップを参照するために使用できる UUID も含まれます。
+
+内部的には、API は ClickHouse クラスターのネームスペース内に `Backup` オブジェクトを作成します。
+ClickHouse Operator は ClickHouse クラスターのネームスペース内の `Backup` を監視し、新しい `Backup` オブジェクトが作成されると、クラスター上で対応する Backup SQL ステートメントを実行し、その状態を監視します (システムテーブルを使用) 。
+
+そのバックアップの UUID は、API を通じてバックアップの状態を監視するために使用できます。
+
+```sh
+curl "http://localhost:8080/api/v1/backups/{uuid}?instance_id=default-xx-01
+```
+
+これによりバックアップオブジェクトが返され、`status` フィールドを使ってバックアップに関する情報を取得できます。バックアップが正常に完了すると、`state` フィールドは `Ready` を返します。
+
+さらに、次のようにして作成されたすべてのバックアップを watch できます。
+
+```sh
+curl "http://localhost:8080/api/v1/backups?instance_id=default-xx-01"
+```
+
+<div id="tutorial-vertically-scaling-clickhouse-clusters-through-the-api">
+  #### チュートリアル: API を介した ClickHouse クラスターの垂直スケーリング
+</div>
+
+ClickHouse Private API は、CPU とメモリのリソースを調整することで ClickHouse クラスターを垂直スケーリングする機能を提供します。デプロイ済みの ClickHouse クラスターのリソース割り当てを変更するには、REST リソース `api/v1/instances/{instance_id}/scale` を使用できます。
+
+このガイドでは、たとえば Kubernetes ポッドをポートフォワードすることで、`http://localhost:8080/` 経由で API にアクセスできるものとします。API とのやり取りや HTTP リクエストの送信には [curl](https://curl.se/) を使用します。また、default-xx-01 という名前の ClickHouse クラスターがデプロイ済みであることを前提とします (ClickHouse クラスターのデプロイ方法の詳細については、[セットアップガイド](/ja/products/clickhouse-private/deployment/aws) を参照してください) 。
+
+では、リソースを調整してクラスターをスケールしましょう。次のようにスケールリクエストを作成します。
+
+scale.json
+
+```json
+{
+  "vertical": {
+    "resources": {
+        "cpu": "4",
+        "memory": "16Gi"
+    }
+  }
+}
+```
+
+curl コマンド
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/instances/default-xx-01/scale" \
+    -H "Content-Type: application/json" \
+    --data-binary "@scale.json"
+```
+
+スケール対象の ClickHouse クラスターを指定するには、`instance_id` パスパラメーターを使用します。ここでは、デプロイ時に使用した ClickHouse クラスター名を指定します。
+
+`resources` フィールドは、クラスターの CPU とメモリの割り当てを指定します。CPU とメモリはどちらも Kubernetes の resource quantity format を使用して指定します (例: CPU コア 4 個の場合は &quot;4&quot;、メモリ 16 GiB の場合は &quot;16Gi&quot;) 。
+
+**重要**: API では、CPU とメモリの比率を 1:4 (CPU 1 コアあたりメモリ 4 GiB、許容誤差 5%) に制限しています。片方のリソース種別だけを指定した場合、API はこの比率を維持するためにもう片方を自動的に算出します。たとえば、`"memory": "16Gi"` のみを指定すると、CPU は自動的に 4 コアに設定されます。
+
+ClickHouse はリソース追加によるスケール性能に優れており、一般的にはスケールアウト (Horizontal Scaling) を検討する前に、まず ClickHouse をスケールアップすることが推奨されます。ClickHouse は、クエリのパフォーマンスを向上させるために、利用可能なすべてのコアを活用します。
+
+内部的には、API は Kubernetes 内の `ClickhouseCluster` カスタムリソースの `ServerPodPolicy` を更新します。ClickHouse Operator はこの変更を検出し、新しいリソース割り当てで ClickHouse server を管理している Stateful Sets のローリングリスタートをトリガーします。
+
+**重要**: ClickHouse Cloud とは異なり、ClickHouse Private の vertical scaling feature は [Make Before Break (MBB) scaling](/ja/products/cloud/features/autoscaling/overview#how-scaling-works-in-clickhouse-cloud) を使用しません。つまり、ClickHouse Server を管理する StatefulSets にローリングリスタートが適用されるため、vertical scaling によってサービスが中断する可能性があります。
+
+<div id="tutorial-resetting-the-main-clickhouse-user-password">
+  #### チュートリアル: メインの ClickHouse ユーザーのパスワードをリセットする
+</div>
+
+ClickHouse Private API は、ClickHouse クラスターのユーザーパスワードのリセットに対応しています。デプロイ済みの ClickHouse クラスター上のユーザー認証情報を更新するには、`api/v1/instances/{instance_id}/reset-user-password` endpoint を使用できます。
+
+このガイドでは、たとえば Kubernetes のポッドをポートフォワードすることで、`http://localhost:8080/` 経由で API にアクセスできることを前提とします。API とのやり取りや HTTP リクエストの送信には、[curl](https://curl.se/) を使用します。また、default-xx-01 という名前の ClickHouse クラスターがデプロイされていることを前提とします (ClickHouse クラスターのデプロイ方法の詳細については、[セットアップガイド](/ja/products/clickhouse-private/deployment/aws) を参照してください) 。
+
+**重要**: Hydra の子インスタンスではパスワードをリセットできません。Hydra の子インスタンスのパスワードをリセットする必要がある場合は、代わりに親インスタンスでリセットする必要があります。
+
+パスワードをリセットする前に、ハッシュ化したパスワードを生成する必要があります。API では、パスワードを SHA-256 (または他のサポートされているハッシュ関数) でハッシュ化し、その後 base64 エンコードする必要があります。ハッシュ化したパスワードは次のように生成します。
+
+```sh
+# これがユーザーの新しいパスワードになります
+PASSWORD='My super secret p@$$w0rd'
+HASHED_PASSWORD=$(echo -n $PASSWORD | shasum -a 256 | awk '{printf $1}' | base64)
+```
+
+次に、パスワード再設定リクエストを作成します。リクエスト本文には、ハッシュ化したパスワードを含めてください。
+
+password&#95;reset.json
+
+```json
+{
+  "user_hashed_password": "<base64-encoded-sha256-hash>",
+  "hashing_function": "sha256",
+  "username": "default"
+}
+```
+
+フィールドは次のとおりです。
+
+* `user_hashed_password` (必須) : 新しいパスワードのハッシュを base64 エンコードしたもの
+* `hashing_function` (任意) : 使用するハッシュアルゴリズム。指定しない場合はデフォルトで `"sha256"` が使用されます
+* `username` (任意) : パスワードをリセットする対象のユーザー名。指定しない場合はデフォルトで `"default"` が使用されます
+
+CURL コマンド:
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/instances/default-xx-01/reset-user-password" \
+    -H "Content-Type: application/json" \
+    --data-binary "@password_reset.json"
+```
+
+パスワードをリセットする対象の ClickHouse クラスターを指定するには、パスパラメータ `instance_id` を使用します。この値には、デプロイ時に使用した ClickHouse クラスター名を指定します。
+
+リクエストが成功すると、次のようなレスポンスが返されます:
+
+```json
+{
+  "message": "User password reset successfully"
+}
+```
+
+内部的には、API が Kubernetes の `ClickhouseCluster` カスタムリソース内の `CustomerAccount` フィールドを更新します。ClickHouse Operator はこの変更を検知し、それに応じて ClickHouse クラスター内のユーザー認証情報を更新します。
+
+**注**: パスワードのリセットが反映されるのは、オペレーターがこの変更を処理した後です。新しいパスワードでクラスターへの接続を試すことで、パスワードが更新されたことを確認できます。
+
+<div id="how-to">
+  ### ハウツー
+</div>
+
+<div id="how-to-check-the-current-state-of-a-clickhouse-cluster-and-monitor-state-transitions">
+  #### 手順: ClickHouse クラスターの現在の状態を確認し、状態遷移を監視する
+</div>
+
+ClickHouse Private API は、指定した ClickHouse クラスターの現在の状態を確認するためのエンドポイント `http://{api_base_url}/api/v1/instances/{instance_id}/status` を公開しています。
+
+ステータスエンドポイントは、次のフィールドを含む JSON を返します。
+
+* `state`: ClickHouse クラスターの現在の状態。
+* `previousState`: ClickHouse クラスターが遷移前にあった状態。
+* `message`: 状態遷移に関連するメッセージ。これには、クラスターがその状態に遷移した理由の詳細が含まれます。
+* `stateProvidedBy`: どのプロセスが状態遷移の原因となったか。
+
+このエンドポイントは、いくつかの場面で役立ちます。たとえば次のような場合です。
+
+* API を介して垂直スケーリングを実行し、オペレーターがスケーリング処理を完了したかどうかを確認したい場合。
+* ユーザーパスワードをリセットし、API がその変更をクラスター全体に適用したかどうかを確認したい場合。
+
+<div id="how-to-incremental-backups">
+  #### ハウツー: 増分バックアップ
+</div>
+
+増分バックアップを使用すると、前回のバックアップ以降のすべてのデータだけをバックアップできます。これにより、必要な総ストレージ容量を削減でき
+
+増分バックアップは常にバックアップチェーンとして作成され、各バックアップは直前のバックアップを参照し、フルバックアップが起点となります。
+
+前回のバックアップをすでに作成していることを前提に、次のように作成できます:
+
+```json
+{
+    "incremental": true,
+    "baseBackupUuid": <uuid of previous backup>
+}
+```
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/backups?instance_id=default-xx-01" \
+    -H "Content-Type: application/json" \
+    --data-binary "@backup.json"
+```
+
+最後に成功したバックアップを特定して UUID を確認するには、List backups API (`http://localhost:8080/api/v1/backups`) では、最後に成功したバックアップを見つけるためのクエリパラメータを利用できます：`http://localhost:8080/api/v1/backups?instance_id=default-xx-01&status__state__eq=Ready&sort=status__effictiveFinishTime&limit=1 | jq -r '.[].id'`。
+
+<div id="how-to-scheduling-backups">
+  #### ハウツー: バックアップのスケジュール設定
+</div>
+
+Kubernetes の CronJob を使えば、バックアップのスケジュール設定は簡単です。
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: clickhouse-daily-backup
+  namespace: clickhouse-private-api
+spec:
+  schedule: "0 2 * * *"  # 毎日午前2時に実行
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: curlimages/curl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              curl -X POST "http://clickhouse-private-api-airgap-management:8080/api/v1/backups?instance_id=default-xx-01" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "incremental": false
+                }'
+          restartPolicy: OnFailure
+```
+
+上記のCronJobは、毎日午前2時にフルバックアップを実行するようスケジュールされています。Private API に `http://clickhouse-private-api-airgap-management:8080` 経由でアクセスできることを前提としています。
+
+<div id="how-to-backing-up-only-specific-tables-or-databases">
+  #### ハウツー: 特定のテーブルまたはデータベースのみをバックアップする
+</div>
+
+バックアップ対象とするテーブルおよびデータベースは制御できます。これは、リクエスト本文内の `databases` フィールドと `tables`
+フィールドで指定します。
+
+`tables` フィールドでは、完全修飾テーブル名 (つまり `db.table`) を指定する必要がある点に注意してください。
+
+特定のデータベースとテーブルのみを含むバックアップを作成するには、次のリクエストを使用します。
+
+```json
+{
+    "incremental": false,
+    "databases": ["mydb"],
+    "tables": ["mydb2.table"]
+}
+```
+
+```sh
+curl -X POST "http://localhost:8080/api/v1/backups?instance_id=default-xx-01" \
+    -H "Content-Type: application/json" \
+    --data-binary "@backup.json"
+```
+
+<div id="how-to-restoring-backups">
+  #### ハウツー: バックアップの復元
+</div>
+
+バックアップを復元する場合は、新しい ClickHouse クラスターを起動し ([ClickHouseCluster リソースを作成する](/ja/products/clickhouse-private/deployment/aws#clickhousecluster-cr) 手順に従ってください) 、元のクラスターに負荷をかけすぎないよう、新しいクラスターに復元することを推奨します。
+
+API では、対象インスタンスで指定したバックアップの復元をトリガーするエンドポイント `api/v1/backups/<uuid>/restore?instance_id=default-xx-01&target_instance_id=default-xx-02` が公開されています。これにより、対象インスタンスでそのバックアップに対して `RESTORE ALL` が実行されます。
+
+安全上の理由から、この API では同じインスタンスへの復元は許可されていません。
+
+また、バックアップを手動で復元することもでき、その場合は復元対象をより細かく制御できます。たとえば、データベース `example` の場合は、次の SQL ステートメントを実行できます。
+
+```sql
+RESTORE DATABASE example
+AS example_restored
+FROM S3('https://<bucket_name>.s3.amazonaws.com/backups/<uuid>')
+```
+
+これにより、指定した uuid のバックアップからデータベース `example` が `example_restored` という名前の新しいデータベースとして復元されます。
+
+<div id="how-to-manage-the-lifecycle-of-backups-on-s3">
+  #### ハウツー: S3 上のバックアップのライフサイクルを管理する
+</div>
+
+バックアップのライフサイクルを管理する際には、いくつか考慮すべき点があります。
+
+* バックアップをどのくらいの期間保持しますか。たとえば、コンプライアンス上の理由から過去のバックアップを保持する必要がありますか。ストレージにどの程度のコストをかけられますか。
+* 増分バックアップを作成した場合は、完全なバックアップチェーン全体を利用できる状態にしておく必要があります。
+
+一般に、S3 上でライフサイクルを管理する方法は 2 つあります。
+
+* S3 ライフサイクルを使用する
+* たとえば cronjob を使用して、バックアップを手動で削除する
+
+S3 のライフサイクルポリシーの例を以下に示します。
+
+```json
+{
+  "Rules": [
+    {
+      "ID": "ClickHouseBackupLifecycle",
+      "Prefix": "backups/",
+      "Status": "Enabled",
+      "Transitions": [
+        { "Days": 7, "StorageClass": "STANDARD_IA" },
+        { "Days": 30, "StorageClass": "GLACIER_IR" }
+      ],
+      "Expiration": { "Days": 90 }
+    }
+  ]
+}
+```
+
+この設定では、7日経過後のバックアップはすべて、より低コストな S3 ティア (Intelligent Archive) に移動され、30日後には Glacier に移動されます。90日後にはバックアップは削除されます。
+
+S3 ライフサイクルポリシーでは、バックアップチェーンの一部となっているバックアップを監視できません。たとえば、上記の例で 7 日後にバックアップを削除し、フル
+バックアップを 14 日ごとにしか作成しない場合、バックアップチェーンが途切れ、その結果バックアップが破損してしまいます。
+
+したがって、バックアップのライフサイクル管理をどのように実装するかは慎重に検討することを推奨します。また、バックアップを復元できるかどうかを定期的にテストすることも重要です。
+
+<div id="how-to-understanding-resource-quantity-formats">
+  #### ハウツー: リソース量のフォーマットを理解する
+</div>
+
+API は、CPU とメモリについて Kubernetes のリソース量フォーマットを受け付けます。
+
+**CPU の量:**
+
+* 整数値: `"4"` (4 CPU コア)
+* 小数値: `"2.5"` (2.5 CPU コア)
+* ミリコア: `"500m"` (0.5 CPU コア)
+
+**メモリの量:**
+
+* バイナリ単位: `"16Gi"` (16 ギビバイト) 、`"4096Mi"` (4096 メビバイト)
+* 10 進単位: `"16G"` (16 ギガバイト) 、`"16000M"` (16000 メガバイト)
+
+Kubernetes の慣例に合わせるため、メモリにはバイナリ単位 (Ki、Mi、Gi) を使用することを推奨します。

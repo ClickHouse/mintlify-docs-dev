@@ -118,44 +118,21 @@ doc_type: 'guide'
 Квоты могут использовать возможность &quot;quota key&quot;, чтобы независимо учитывать ресурсы для нескольких ключей. Вот пример:
 
 ```xml
-<!-- For the global reports designer. -->
+<!-- Для глобального дизайнера отчётов. -->
 <web_global>
-    <!-- keyed – The quota_key "key" is passed in the query parameter,
-            and the quota is tracked separately for each key value.
-        For example, you can pass a username as the key,
-            so the quota will be counted separately for each username.
-        Using keys makes sense only if quota_key is transmitted by the program, not by a user.
+    <!-- keyed – "Ключ" quota_key передаётся в параметре запроса,
+            и квота отслеживается отдельно для каждого значения ключа.
+        Например, можно передавать имя пользователя в качестве ключа —
+            тогда квота будет учитываться отдельно для каждого имени пользователя.
+        Использование ключей имеет смысл только в том случае, если quota_key передаётся программой, а не пользователем.
 
-        You can also write <keyed_by_ip />, so the IP address is used as the quota key.
-        (But keep in mind that users can change the IPv6 address fairly easily.)
-
-        Instead of <keyed_by_ip /> you can use <keyed_by_forwarded_ip />, so the address
-        from the X-Forwarded-For header is used as the quota key.
-
-        For both <keyed_by_ip /> and <keyed_by_forwarded_ip /> you can additionally specify
-        <ipv4_prefix_bits> and <ipv6_prefix_bits> to group clients by subnet instead of by a
-        single address: the IP address is masked to the given prefix length before being used
-        as the quota key. For example, <ipv4_prefix_bits>24</ipv4_prefix_bits> shares one bucket
-        across a /24 IPv4 subnet, and <ipv6_prefix_bits>64</ipv6_prefix_bits> across a /64 IPv6
-        subnet. These elements can only be used together with <keyed_by_ip /> or
-        <keyed_by_forwarded_ip />.
+        Также можно указать <keyed_by_ip />, тогда в качестве ключа квоты будет использоваться IP-адрес.
+        (Но учтите, что пользователи могут достаточно легко менять IPv6-адрес.)
     -->
     <keyed />
 ```
 
-Вы также можете задавать квоты по нормализованному хешу запроса, чтобы для каждого отдельного шаблона запроса создавался собственный независимый бакет квоты. В XML-конфигурации это записывается как `<keyed_by_normalized_query_hash />`:
-
-```xml
-<my_quota>
-    <keyed_by_normalized_query_hash />
-    <interval>
-        <duration>3600</duration>
-        <queries>100</queries>
-    </interval>
-</my_quota>
-```
-
-То же самое можно записать в синтаксисе DDL:
+При использовании синтаксиса DDL вы также можете задавать квоты по нормализованному хешу запроса, чтобы для каждого отдельного шаблона запроса создавался собственный независимый бакет квоты:
 
 ```sql
 CREATE QUOTA my_quota KEYED BY normalized_query_hash FOR INTERVAL 1 hour MAX queries = 100 TO my_user;

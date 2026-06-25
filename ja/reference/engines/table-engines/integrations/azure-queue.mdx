@@ -104,19 +104,17 @@ AzureQueue engine には、SELECT クエリ向けの特別な設定 `commit_on_s
 
 `SELECT` はストリーミングインポートにはあまり適していません (デバッグ用途を除く) 。各ファイルは一度しかインポートできないためです。代わりに、[materialized view](/ja/reference/statements/create/view) を使ってリアルタイムの処理パイプラインを作成するほうが実用的です。手順は次のとおりです。
 
-1. エンジンを使用して、Azure Blob Storage 内の指定したパスからデータを読み込むためのテーブルを作成し、それをデータストリームとして扱います。
+1. エンジンを使用して、S3 内の指定したパスからデータを読み込むためのテーブルを作成し、それをデータストリームとして扱います。
 2. 必要な構造を持つテーブルを作成します。
 3. エンジンからのデータを変換し、あらかじめ作成したテーブルに書き込む materialized view を作成します。
 
 `MATERIALIZED VIEW` でそのエンジンを参照すると、バックグラウンドでデータの収集が開始されます。
 
-エンジンの引数は `AzureQueue(connection_string, container_name, blobpath, format[, compression])` の形式です。
-
 例:
 
 ```sql
 CREATE TABLE azure_queue_engine_table (key UInt64, data String)
-  ENGINE=AzureQueue('DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite1:10000/devstoreaccount1/;', 'testcontainer', '*', 'CSV')
+  ENGINE=AzureQueue('<endpoint>', 'CSV', 'gzip')
   SETTINGS
       mode = 'unordered';
 
@@ -136,7 +134,7 @@ SELECT * FROM stats ORDER BY key;
 * `_path` — ファイルのパス。
 * `_file` — ファイル名。
 
-仮想カラムの詳細については、[こちら](/ja/reference/engines/table-engines/index#table_engines-virtual_columns)を参照してください。
+仮想カラムの詳細については、[こちら](/ja/reference/engines/table-engines#table_engines-virtual_columns)を参照してください。
 
 <div id="introspection">
   ## イントロスペクション

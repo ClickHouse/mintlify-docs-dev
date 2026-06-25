@@ -1,0 +1,96 @@
+---
+hidden: true
+title: "FAQ"
+slug: "docs/products/clickhouse-private/faq"
+---
+
+<div id="zone-details-couldnt-be-found-for-any-pv">
+  ### 找不到任何 PV 的可用区详细信息？
+</div>
+
+如果 ClickHouse Operator 日志中出现此错误，表示它无法完成 ClickHouse 集群 的协调，因为 operator 期望 PersistentVolume 上会自动填充拓扑感知的节点亲和性。具体来说，operator 会查找基于 `topology.kubernetes.io/zone` 标记的节点亲和性。通常这由支持拓扑感知的卷置备程序处理 (例如使用 AWS EBS 卷置备程序时) 。
+
+但是，对于某些云提供商 (例如 IBM) 或本地部署环境，这些信息不会自动填充，或者会使用非标准标记。为了确保 operator 仍能继续运行，建议在存储类上添加节点亲和性，例如：
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-nvme-sc
+allowVolumeExpansion: true
+parameters:
+  path: /nvme/disk
+provisioner: rancher.io/local-path
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowedTopologies:
+  - matchLabelExpressions:
+      - key: topology.kubernetes.io/zone
+        values:
+          - <your_cluster_name>-keeper
+          - <your_host_1>
+          - <your_host_2>
+          - <your_host_3>
+          - <your_host_4>
+          - <your_host_5>
+          - <your_host_6>
+      - key: directpv.min.io/zone
+        values:
+          - default
+```
+
+这将确保创建的存储卷具有正确的节点亲和性。例如：
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  ...
+spec:
+  accessModes:
+    - ReadWriteOnce
+  ...
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: directpv.min.io/zone
+              operator: In
+              values:
+                - default
+  ...
+```
+
+如果使用非标准标记来处理拓扑，operator 会提供一个 `additionalZoneLabelRegexes` 属性。例如，如果你是使用 Helm 图表通过 helm 安装 operator，可以将 `operator.additionalZoneLabelRegexes` 这个 helm 值设置为 `directpv.*zone`，以匹配上述 PersistentVolume。
+
+<div id="what-does-the-loadbalancertype-field-on-the-clickhousecluster-crd-do">
+  ### ClickHouseCluster CRD 上的 loadBalancerType 字段有什么作用？
+</div>
+
+`loadBalancerType` 实际上不会给 ClickHouse 集群的 Service 添加负载均衡器 annotations。目前，ClickHouse Operator 不支持为 ClickHouse 集群创建负载均衡器。这个字段只在 ClickHouse Cloud 中有实际用途，用于协助为 Cloud SQL Console 创建用户。
+
+<div id="do-i-have-to-use-a-nvme-attached-instance-what-purpose-does-the-nvme-disk-serve">
+  ### 我必须使用附带 NVMe 的实例吗？NVMe 磁盘有什么作用？
+</div>
+
+NVMe 磁盘由 ClickHouse Operator 用于在 ClickHouse server 的 pod (容器组) 中挂载缓存卷。该缓存卷用作来自 S3 (或同类对象存储) 的数据缓存。ClickHouse Operator 会在 ClickHouse server 配置中自动设置这些磁盘：
+
+```yaml
+s3diskWithCache:
+    type: cache
+    disk: s3disk
+    path: /mnt/ClickHouse-cache/sharedS3DiskCache
+    max_size:
+    '@from_env': CONFIG_DISK_CACHE_SIZE
+    cache_on_write_operations: 1
+```
+
+请注意，如果使用 SharedMergeTree，ClickHouse 实际上不会在本地存储数据。NVMe 磁盘唯一的作用，就是优化针对 SharedMergeTree 执行的查询性能。
+
+也可以使用其他存储设备，例如在使用 EC2 实例时使用 AWS EBS。这会使 onboarding 指南中的一些步骤有所不同：
+
+* 你需要确保这些磁盘已附加到用于调度 ClickHouse server Kubernetes Pod (容器组) 的实例上
+* 应调整启动模板，以反映磁盘架构的变化。仍然可以创建 RAID 磁盘，并将磁盘格式化为 ext4 或 xfs，但显然应改用其他工具列出这些设备 (例如 `lsblk`) 。
+* 如果磁盘不像示例启动模板中那样挂载在 `/nvme/disk`，则应将 ClickHouseCluster Helm 图表中的 `hostPathBaseDirectory` 设置为实际挂载点。
+
+请注意，具体选择会影响查询性能。

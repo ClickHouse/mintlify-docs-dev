@@ -77,17 +77,17 @@ CREATE TABLE table
 (
     key UInt64,
     str String,
-    INDEX text_idx str TYPE text(
-                                -- Mandatory parameters:
+    INDEX text_idx(str) TYPE text(
+                                -- 必填参数：
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
                                             | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
-                                -- Optional parameters:
+                                -- 可选参数：
                                 [, preprocessor = expression(str)]
-                                -- Optional advanced parameters:
+                                -- 可选高级参数：
                                 [, dictionary_block_size = D]
                                 [, dictionary_block_frontcoding_compression = B]
                                 [, posting_list_block_size = C]
@@ -111,17 +111,17 @@ ORDER BY key
 
 ```sql title="Query"
 ALTER TABLE table
-    ADD INDEX text_idx str TYPE text(
-                                -- Mandatory parameters:
+    ADD INDEX text_idx(str) TYPE text(
+                                -- 必填参数：
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
                                             | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
-                                -- Optional parameters:
+                                -- 可选参数：
                                 [, preprocessor = expression(str)]
-                                -- Optional advanced parameters:
+                                -- 可选高级参数：
                                 [, dictionary_block_size = D]
                                 [, dictionary_block_frontcoding_compression = B]
                                 [, posting_list_block_size = C]
@@ -201,31 +201,22 @@ SELECT tokens('abc def', 'ngrams', 3);
 
 示例：
 
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))`
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = substringIndex(col, '\n', 1))`
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(extractTextFromHTML(col)))`
-* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = removeDiacriticsUTF8(caseFoldUTF8(col)))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = substringIndex(col, '\n', 1))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(extractTextFromHTML(col)))`
+* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = removeDiacriticsUTF8(caseFoldUTF8(col)))`
 
 此外，预处理器表达式只能引用定义文本索引时所基于的列或表达式。
 
 示例：
 
-* `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = upper(lower(col)))`
-* `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(lower(col), lower(col)))`
-* 不允许：`INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(col, col))`
+* `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = upper(lower(col)))`
+* `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(lower(col), lower(col)))`
+* 不允许：`INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(col, col))`
 
 禁止使用非确定性函数。
 
-<Note>
-  预处理器原则上等价于用预处理器表达式包装索引列或表达式。
-  例如，`INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))` 中的 `lower` 预处理器可以用 `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha')` 来模拟。
-  后一种形式的缺点是，只有当模拟的预处理器与 WHERE 子句中的过滤条件匹配时，才会应用它。
-  例如，`WHERE hasAllTokens(lower(col), [...])` 会匹配，而 `WHERE hasAllTokens(col, [...])` 则不会。
-  因此，为了获得最佳用户体验，我们建议使用预处理器表达式。
-</Note>
-
-函数 [hasToken](/zh/reference/functions/regular-functions/string-search-functions#hasToken)、[hasAllTokens](/zh/reference/functions/regular-functions/string-search-functions#hasAllTokens)、[hasAnyTokens](/zh/reference/functions/regular-functions/string-search-functions#hasAnyTokens) 和 [hasPhrase](/zh/reference/functions/regular-functions/string-search-functions#hasPhrase) 会先使用预处理器转换搜索词，再对其进行分词。
-请注意，由于预处理器只会在文本索引路径上应用，因此这些函数在使用文本索引的查询与不使用文本索引的查询之间，结果可能会不同 (例如 `SETTINGS use_skip_indexes = 0`) 。
+函数 [hasToken](/zh/reference/functions/regular-functions/string-search-functions#hasToken)、[hasAllTokens](/zh/reference/functions/regular-functions/string-search-functions#hasAllTokens) 和 [hasAnyTokens](/zh/reference/functions/regular-functions/string-search-functions#hasAnyTokens) 会先使用预处理器转换搜索词，再对其进行分词。
 
 例如，
 
@@ -233,7 +224,7 @@ SELECT tokens('abc def', 'ngrams', 3);
 CREATE TABLE table
 (
     str String,
-    INDEX idx str TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(str))
+    INDEX idx(str) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(str))
 )
 ENGINE = MergeTree
 ORDER BY tuple();
@@ -247,7 +238,7 @@ SELECT count() FROM table WHERE hasToken(str, 'Foo');
 CREATE TABLE table
 (
     str String,
-    INDEX idx lower(str) TYPE text(tokenizer = 'splitByNonAlpha')
+    INDEX idx(lower(str)) TYPE text(tokenizer = 'splitByNonAlpha')
 )
 ENGINE = MergeTree
 ORDER BY tuple();
@@ -255,7 +246,7 @@ ORDER BY tuple();
 SELECT count() FROM table WHERE hasToken(str, lower('Foo'));
 ```
 
-在这种情况下，预处理器 表达式会逐个转换数组中的元素。
+在这种情况下，预处理表达式会逐个转换数组中的元素。
 
 示例：
 
@@ -265,7 +256,7 @@ CREATE TABLE table
     arr Array(String),
     INDEX idx arr TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(arr))
 
-    -- This is not legal:
+    -- 这是不合法的：
     INDEX idx_illegal arr TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = arraySort(arr))
 )
 ENGINE = MergeTree
@@ -274,7 +265,8 @@ ORDER BY tuple();
 SELECT count() FROM tab WHERE hasAllTokens(arr, 'foo');
 ```
 
-要在针对 [Map](/zh/reference/data-types/map) 类型列构建的文本索引中定义预处理器，用户需要决定索引是基于 map 的键构建，还是基于其值构建。
+要为构建在 [Map](/zh/reference/data-types/map) 类型列上的文本索引定义预处理器，用户需要确定该索引是
+基于 map 的键还是值构建的。
 
 示例：
 
@@ -308,26 +300,6 @@ SELECT count() FROM tab WHERE hasAllTokens(mapKeys(map), 'foo');
 
   * `none` - 倒排列表存储时不使用额外压缩。
   * `bitpacking` - 先应用[差分 (delta) 编码](https://en.wikipedia.org/wiki/Delta_encoding)，再进行[位打包](https://dev.to/madhav_baby_giraffe/bit-packing-the-secret-to-optimizing-data-storage-and-transmission-m70) (二者都在固定大小的块内进行) 。会降低 SELECT 查询速度，目前不建议使用。
-
-  上述高级参数也可以通过对应的 MergeTree 设置在表级别进行设置：[`text_index_dictionary_block_size`](/zh/reference/settings/merge-tree-settings#text_index_dictionary_block_size)、[`text_index_dictionary_block_frontcoding_compression`](/zh/reference/settings/merge-tree-settings#text_index_dictionary_block_frontcoding_compression)、[`text_index_posting_list_block_size`](/zh/reference/settings/merge-tree-settings#text_index_posting_list_block_size) 和 [`text_index_posting_list_codec`](/zh/reference/settings/merge-tree-settings#text_index_posting_list_codec)。
-  它们适用于该表中所有未显式指定该参数的文本索引。
-
-  这些表级设置的主要用例，是在不删除并重新创建所有表 parts 上的文本索引的情况下，更改现有表的索引参数。
-  更改表级设置后，新参数只会应用于为新 parts 构建的文本索引；现有 parts 会保留其当前布局。
-
-  在索引定义中给出的参数优先于表设置，例如：
-
-  ```sql
-  CREATE TABLE table(
-      s String,
-      -- 此索引使用 'bitpacking'，覆盖下面的表级默认值：
-      INDEX idx_a s TYPE text(tokenizer = 'splitByNonAlpha', posting_list_codec = 'bitpacking'),
-      -- 此索引从表设置继承 'none'：
-      INDEX idx_b lower(s) TYPE text(tokenizer = 'splitByNonAlpha'))
-  ENGINE = MergeTree()
-  ORDER BY tuple()
-  SETTINGS text_index_posting_list_codec = 'none';
-  ```
 </details>
 
 *索引粒度。*
@@ -341,7 +313,7 @@ SELECT count() FROM tab WHERE hasAllTokens(mapKeys(map), 'foo');
 CREATE TABLE table(
     k UInt64,
     s String,
-    INDEX idx s TYPE text(tokenizer = ngrams(2)))
+    INDEX idx(s) TYPE text(tokenizer = ngrams(2)))
 ENGINE = MergeTree()
 ORDER BY k;
 
@@ -354,7 +326,7 @@ SHOW CREATE TABLE table;
 │↳(                                                                     ↴│
 │↳    `k` UInt64,                                                       ↴│
 │↳    `s` String,                                                       ↴│
-│↳    INDEX idx s TYPE text(tokenizer = ngrams(2)) GRANULARITY 100000000↴│ <-- here
+│↳    INDEX idx s TYPE text(tokenizer = ngrams(2)) GRANULARITY 100000000↴│ <-- 此处
 │↳)                                                                     ↴│
 │↳ENGINE = MergeTree                                                    ↴│
 │↳ORDER BY k                                                            ↴│
@@ -453,36 +425,6 @@ SELECT count() FROM table WHERE comment LIKE ' support %'; -- 或 `% support %`
 幸运的是，在一种特殊情况下，ClickHouse 可以利用倒排索引显著加速 LIKE 查询。
 
 详见 [LIKE/ILIKE 性能调优章节](#like-ilike-queries-perf)。
-
-<div id="functions-example-multisearchany-multimatchany">
-  #### `multiSearchAny` and `multiMatchAny`
-</div>
-
-[multiSearchAny](/zh/reference/functions/regular-functions/string-search-functions#multiSearchAny) 及其 UTF-8 变体 [multiSearchAnyUTF8](/zh/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8) 用于检测多个字面子串中是否有任意一个出现在 haystack 中，而 [multiMatchAny](/zh/reference/functions/regular-functions/string-search-functions#multiMatchAny) 用于检测多个正则表达式中是否有任意一个匹配。
-这些函数在与 `LIKE` 和 `match` 相同的条件下使用文本索引 (见上文) ：ClickHouse 必须能够从每个 needle 中提取出完整的标记，并且 needles 列表必须为常量。
-如果某个粒度中可能包含任意一个 needle，就会读取该粒度。
-
-对于 `multiMatchAny`，如果某个 pattern 无法归约为对标记的要求 (例如 `.*`，它可以匹配任何文档) ，则无法使用文本索引，查询会退回为全扫描。
-
-与 `LIKE` 和 `match` 一样，子串和正则表达式搜索最适合配合 `ngrams` 和 `sparseGrams` 分词器使用。
-这些分词器会为相互重叠的字符 n-gram 建立索引，因此 needle 会被拆分为 n-gram；只要 needle 作为子串出现，这些 n-gram 就会出现在索引中，而不受其是否始于或终于单词中间的影响。
-因此，只要 needle 的长度不小于 n-gram 的大小，就可以直接按原样使用。
-
-使用 `ngrams` 分词器的文本索引示例：
-
-```sql
-SELECT count() FROM table WHERE multiSearchAny(comment, ['clickhouse', 'support']);
-```
-
-相比之下，`splitByNonAlpha` 分词器只为完整的标记 (整个单词) 建立索引。
-由于 needle 可能从单词中间开始或结束，ClickHouse 会丢弃每个 needle 的首尾标记，因此索引只能利用完整标记来裁剪粒度。
-要让子串和正则表达式搜索在使用 `splitByNonAlpha` 时也能利用索引，请用分隔符字符 (例如空格) 将每个 needle 包裹起来，使其构成一个或多个完整标记。
-
-`splitByNonAlpha` 分词器的 文本索引 示例：
-
-```sql
-SELECT count() FROM table WHERE multiSearchAny(comment, [' clickhouse ', ' support ']);
-```
 
 <div id="functions-example-startswith-endswith">
   #### `startsWith` and `endsWith`
@@ -644,7 +586,7 @@ SELECT count() FROM table WHERE mapContainsValueLike(map, '% clickhouse %');
   #### `operator[]`
 </div>
 
-访问 [operator[]](/zh/reference/operators/index#access-operators) 可与文本索引配合使用，以过滤键和值。只有在 `mapKeys(map)` 或 `mapValues(map)` 表达式上创建了文本索引，或同时在两者上创建时，才会使用该文本索引。
+访问 [operator[]](/zh/reference/operators#access-operators) 可与文本索引配合使用，以过滤键和值。只有在 `mapKeys(map)` 或 `mapValues(map)` 表达式上创建了文本索引，或同时在两者上创建时，才会使用该文本索引。
 
 示例：
 
@@ -991,7 +933,7 @@ SELECT * FROM events WHERE data.level IN ('error', 'critical');
 CREATE TABLE tab (
     id UInt32,
     text String,
-    INDEX idx text TYPE text(tokenizer = splitByNonAlpha)
+    INDEX idx(text) TYPE text(tokenizer = splitByNonAlpha)
 )
 ENGINE = MergeTree
 ORDER BY id;
@@ -1362,10 +1304,10 @@ INSERT INTO hackernews
 我们将使用 `ALTER TABLE`，在 comment 列上添加文本索引，然后将其物化：
 
 ```sql
--- Add the index
-ALTER TABLE hackernews ADD INDEX comment_idx comment TYPE text(tokenizer = splitByNonAlpha);
+-- 添加索引
+ALTER TABLE hackernews ADD INDEX comment_idx(comment) TYPE text(tokenizer = splitByNonAlpha);
 
--- Materialize the index for existing data
+-- 对现有数据物化索引
 ALTER TABLE hackernews MATERIALIZE INDEX comment_idx SETTINGS mutations_sync = 2;
 ```
 
@@ -1536,12 +1478,8 @@ SETTINGS query_plan_direct_read_from_text_index = 1;
   ## 相关内容
 </div>
 
-* 博客: [宣布 ClickHouse 全文搜索正式发布](https://clickhouse.com/blog/full-text-search-ga-release)
-* 博客: [为对象存储打造高性能全文搜索](https://clickhouse.com/blog/clickhouse-full-text-search-object-storage)
-* 视频: [ClickHouse 全文搜索简介](https://www.youtube.com/watch?v=9zPmf1a_heU)
-* 视频: [深入剖析：ClickHouse 规模与速度背后的全文搜索](https://www.youtube.com/watch?v=8JbqE_ubfkU)
-* 演示文稿: [深入了解 ClickHouse 全文搜索：快速、原生和列式](https://github.com/ClickHouse/clickhouse-presentations/blob/master/2025-tumuchdata-munich/ClickHouse_%20full-text%20search%20-%2011.11.2025%20Munich%20Database%20Meetup.pdf)
-* 演示文稿: [倒排数据库索引：为什么、是什么以及如何实现，FOSDEM 2026](https://presentations.clickhouse.com/2026-fosdem-inverted-index/Inverted_indexes_the_what_the_why_the_how.pdf)
+* 演示文稿: https://github.com/ClickHouse/clickhouse-presentations/blob/master/2025-tumuchdata-munich/ClickHouse&#95;%20full-text%20search%20-%2011.11.2025%20Munich%20Database%20Meetup.pdf
+* 演示文稿: https://presentations.clickhouse.com/2026-fosdem-inverted-index/Inverted&#95;indexes&#95;the&#95;what&#95;the&#95;why&#95;the&#95;how.pdf
 
 **过期内容**
 

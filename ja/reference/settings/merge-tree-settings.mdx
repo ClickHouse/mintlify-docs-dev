@@ -168,11 +168,40 @@ true の場合、CollapsingMergeTree または VersionedCollapsingMergeTree テ�
   ## allow_experimental_reverse_key
 </div>
 
+<ExperimentalBadge />
+
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.12"},{"label": "0"},{"label": "新しい設定"}]}]} />
 
-廃止された設定で、効果はありません。
+MergeTree のソートキーで降順の並び順をサポートします。この
+設定は、時系列分析や Top-N クエリで特に有用であり、
+データを新しい時刻から古い時刻への逆時系列順で保存することで、クエリ
+パフォーマンスの最適化に役立ちます。
+
+`allow_experimental_reverse_key` を有効にすると、MergeTree テーブルの `ORDER BY`
+句内で降順の並び順を定義できます。これにより、降順クエリでは
+`ReadInReverseOrder` の代わりに、より効率的な `ReadInOrder` 最適化を
+使用できます。
+
+**例**
+
+```sql
+CREATE TABLE example
+(
+time DateTime,
+key Int32,
+value String
+) ENGINE = MergeTree
+ORDER BY (time DESC, key)  -- 'time' フィールドの降順
+SETTINGS allow_experimental_reverse_key = 1;
+
+SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
+```
+
+クエリで `ORDER BY time DESC` を指定すると、`ReadInOrder` が適用されます。
+
+**デフォルト値:** false
 
 <div id="allow_floating_point_partition_key">
   ## allow_floating_point_partition_key
@@ -244,20 +273,6 @@ ClickHouse Cloud でのみ利用可能
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 同一の式を持つプライマリ/セカンダリ索引およびソートキーを拒否します
-
-<div id="allow_tuple_element_aggregation">
-  ## allow_tuple_element_aggregation
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新しい設定"}]}]} />
-
-有効にすると、Tuple カラム内の各要素が、SummingMergeTree、AggregatingMergeTree、および
-CoalescingMergeTree でのマージ時の集計に
-含まれます。ネストされた Tuple は再帰的に展開されるため、すべての
-リーフ要素が個別に集計されます。この設定は変更できないため、
-テーブル作成時に指定する必要があります。
 
 <div id="allow_vertical_merges_from_compact_to_wide_parts">
   ## allow_vertical_merges_from_compact_to_wide_parts
@@ -351,7 +366,7 @@ true の場合、INSERT クエリのデータはキューに格納され、後�
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "minmax, uniq"},{"label": "デフォルトで自動統計を有効化"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": ""},{"label": "新しい設定"}]}]} />
 
 適切なすべてのカラムに対して自動的に計算される統計タイプのカンマ区切りリストです。
-サポートされる統計タイプ: basic, tdigest, countmin, minmax, uniq.
+サポートされる統計タイプ: tdigest, countmin, minmax, nullcount, uniq.
 
 <div id="background_task_preferred_step_execution_time_ms">
   ## background_task_preferred_step_execution_time_ms
@@ -747,7 +762,7 @@ Dynamic データ型のシリアル化バージョンです。互換性の維持
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "デフォルトで、min_age_to_force_merge_seconds が指定されている場合でもパーツのサイズを制限します"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "新しい設定"}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "min_age_to_force_merge の最大バイト数を制限する新しい設定を追加しました。"}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "デフォルトで、min_age_to_force_merge_seconds が指定されている場合でもパートのサイズを制限します"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "min_age_to_force_merge の最大バイト数を制限する新しい設定を追加しました。"}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "新しい設定"}]}]} />
 
 設定 `min_age_to_force_merge_seconds` および
 `min_age_to_force_merge_on_partition_only` に
@@ -1196,33 +1211,6 @@ mark の圧縮ブロックサイズです。実際に圧縮するブロックの
 
 marks に使用される圧縮コーデックです。marks は十分に小さく、キャッシュされるため、
 デフォルトの圧縮は ZSTD(3) です。
-
-<div id="materialize_projections_on_insert">
-  ## materialize_projections_on_insert
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "新しい設定"}]}]} />
-
-有効にすると、INSERT 時に PROJECTION を含む新しいパーツが作成されます。
-それ以外の場合は、明示的な [MATERIALIZE PROJECTION](/ja/reference/statements/alter/projection#materialize-projection)
-または [materialize&#95;projections&#95;on&#95;merge](/ja/reference/settings/merge-tree-settings#materialize_projections_on_merge) を使用したマージ中に作成できます。
-
-<div id="materialize_projections_on_merge">
-  ## materialize_projections_on_merge
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新しい設定"}]}]} />
-
-有効にすると、マージ時に、すべてのソースパーツで欠落している PROJECTION (たとえば `materialize_projections_on_insert = 0` を指定して
-挿入されたために存在しない場合) が再構築され、マージ後のパーツにその PROJECTION が含まれるようになります。
-
-マージでは引き続き、同じ PROJECTION の集合を持つパーツ同士だけが結合されます。既存のすべてのパーツに PROJECTION をバックフィルするには、
-明示的に [MATERIALIZE PROJECTION](/ja/reference/statements/alter/projection#materialize-projection) を使用してください。PROJECTION は、
-[materialize&#95;projections&#95;on&#95;insert](/ja/reference/settings/merge-tree-settings#materialize_projections_on_insert) を使用した INSERT 時にも作成されます。
 
 <div id="materialize_skip_indexes_on_merge">
   ## materialize_skip_indexes_on_merge
@@ -2656,49 +2644,6 @@ LZ4 または ZSTD の圧縮率は、平均で 20〜40% 改善します。
 `DateTime64` 型の timestamp カラムを含むような、カーディナリティの高い
 主キーでは、この設定による効果はあまり期待できません。
 
-<div id="packed_skip_index_max_bytes">
-  ## packed_skip_index_max_bytes
-</div>
-
-<ExperimentalBadge />
-
-<SettingsInfoBlock type="UInt64" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新しい設定。シリアライズ後のディスク上サイズがこのバイト数以下のスキップ索引サブストリームを、各パーツごとに単一の skp_idx.packed アーカイブにまとめます。これより大きいサブストリームは、個別の skp_idx_<name>.idx2 / .mrk2 レイアウトのままになります。判定は書き込み時にサブストリームごとに行われます。"}]}]} />
-
-しきい値 (シリアライズ後のディスク上のバイト数、つまりサブストリームの圧縮とハッシュ
-チェーン後のサイズ) 未満のスキップ索引サブストリームは、個別の
-`skp_idx_<name>.idx2` / `.mrk2` ファイルとして書き込まれる代わりに、パーツごとに単一の
-`skp_idx.packed` アーカイブにまとめられます。これより大きいサブストリームは、従来の
-ファイル単位のレイアウトのままです。この判定は書き込み時にサブストリームごとに独立して
-行われるため、1 つのパーツ内で、小さい索引 (たとえば `minmax`) はパックされ、
-大きい索引 (たとえばサイズの大きい `bloom_filter`) は個別ファイルのままになることがあります。完全に
-パックを無効にするには 0 に設定します (既定値) 。
-
-各スキップ索引サブストリームは、実際にはデータファイルとマークファイルで構成されており、
-spill の判定が行われるまで、両方ともメモリ内でしきい値までバッファされます。したがって、
-書き込み中のピークメモリは
-`2 * packed_skip_index_max_bytes * (number of substreams that stay
-below the threshold)` に比例します。
-
-全文索引はこの設定ではサポートされておらず、パックされることはありません。
-
-パッキングにより、テーブルに多数のスキップ索引が定義されている場合 (たとえば
-`add_minmax_index_for_numeric_columns` を使う場合) の inode 負荷を軽減できます。
-
-ディスク上のフォーマットは自己記述型であり、リーダーは `skp_idx.packed` を検出して、その中の
-パック済みサブストリームを透過的に処理します。この設定の変更は新しく書き込まれるパーツに
-のみ影響し、既存のパーツは書き込み時のレイアウトをそのまま保持します。
-
-既知の制限: `system.data_skipping_indices.data_uncompressed_bytes` と
-`system.parts.secondary_indices_uncompressed_bytes` は、パック済み
-サブストリームについては圧縮サイズを報告します (アーカイブ索引には非圧縮サイズが格納されないため) 。
-これは監視上の見た目の問題ですが、機能面では 1 つ影響があります:
-`distributed_index_analysis_min_indexes_bytes_to_activate` は
-`data_uncompressed` と比較するため、圧縮効率の高いパック済み索引 (文字列に対する `set` や `bloom_filter` など) は、
-実際の非圧縮サイズであればしきい値を超える場合でも、有効化しきい値を
-超えないことがあります。その場合の fallback は通常のクエリプランであり、誤った結果にはなりません。
-
 <div id="part_minmax_index_columns">
   ## part_minmax_index_columns
 </div>
@@ -3804,17 +3749,6 @@ Cloudでのみ利用できます
 
 有効にすると、すべてのレプリカは、プライマリキーやパーティション情報などのパーツのメモリ内データを、すでに保持している他のレプリカから取得しようとします。
 
-<div id="shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup">
-  ## shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "起動時に SMT が S3 ではなくレプリカからパーツデータをダウンロードできるようにする新しい設定"}]}]} />
-
-有効にすると、すべてのレプリカは起動時に、パーツのメモリ内データ (プライマリ
-キー、パーティション情報など) を、すでにそのデータを保持しているほかのレプリカから取得しようと試みます。
-
 <div id="shared_merge_tree_update_replica_flags_delay_ms">
   ## shared_merge_tree_update_replica_flags_delay_ms
 </div>
@@ -3966,50 +3900,6 @@ true に設定すると、テーブルは読み取り専用モードになりま
 
 tmp&#95; ディレクトリを保持する秒数です。この値は下げないでください。
 この設定値が低すぎると、マージやミューテーションが正常に動作しない可能性があります。
-
-<div id="text_index_dictionary_block_frontcoding_compression">
-  ## text_index_dictionary_block_frontcoding_compression
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "新しい設定"}]}]} />
-
-テキスト索引の Dictionary ブロックに対するデフォルトの front-coding 圧縮です。
-明示的に指定した `dictionary_block_frontcoding_compression` 索引引数で上書きできます。
-
-<div id="text_index_dictionary_block_size">
-  ## text_index_dictionary_block_size
-</div>
-
-<SettingsInfoBlock type="NonZeroUInt64" default_value="512" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "512"},{"label": "新しい設定"}]}]} />
-
-テキスト索引のデフォルトのDictionaryブロックサイズ。
-明示的な索引引数 `dictionary_block_size` で上書きできます。
-
-<div id="text_index_posting_list_block_size">
-  ## text_index_posting_list_block_size
-</div>
-
-<SettingsInfoBlock type="NonZeroUInt64" default_value="1048576" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1048576"},{"label": "新しい設定"}]}]} />
-
-テキスト索引のポスティングリストのデフォルトのブロックサイズ (行数) 。
-明示的に指定した索引引数 `posting_list_block_size` で上書きできます。
-
-<div id="text_index_posting_list_codec">
-  ## text_index_posting_list_codec
-</div>
-
-<SettingsInfoBlock type="TextIndexPostingListCodec" default_value="none" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "none"},{"label": "新しい設定"}]}]} />
-
-テキスト索引のデフォルトの ポスティングリスト codec です。
-明示的に指定した索引引数 `posting_list_codec` で上書きできます。
 
 <div id="try_fetch_recompressed_part_timeout">
   ## try_fetch_recompressed_part_timeout

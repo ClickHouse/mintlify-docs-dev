@@ -198,28 +198,6 @@ SELECT SUM(-1), MAX(0) FROM system.one WHERE 0;
 
 メモリ効率モードで中間の集約結果をマージする際に使用するスレッド数。値が大きいほど、消費メモリも増えます。0 は &#39;max&#95;threads&#39; と同じ意味です。
 
-<div id="ai_function_credentials">
-  ## ai_function_credentials
-</div>
-
-<ExperimentalBadge />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": ""},{"label": "新しい設定"}]}]} />
-
-AI 関数がプロバイダの認証情報や設定 (`provider`、`endpoint`、`model`、省略可能な `api_key` など) に使用する named collection の名前です。空の場合は例外が発生します。
-
-<div id="ai_function_embedding_max_batch_size">
-  ## ai_function_embedding_max_batch_size
-</div>
-
-<ExperimentalBadge />
-
-<SettingsInfoBlock type="NonZeroUInt64" default_value="100" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "100"},{"label": "新しい設定"}]}]} />
-
-`aiEmbed` が 1 回の HTTP リクエストで送信するテキストの最大数です。API 呼び出しのオーバーヘッドを減らすため、テキストはこのサイズのバッチにまとめられます。たとえば、一意なテキストが 500 件あり、バッチサイズが 100 の場合、HTTP リクエストは 5 回になります。
-
 <div id="ai_function_max_api_calls_per_query">
   ## ai_function_max_api_calls_per_query
 </div>
@@ -244,8 +222,6 @@ AI 関数がクエリごとに発行できる HTTP リクエストの最大数�
 
 1 つのクエリ内における、すべての AI 関数 API 呼び出しの入力 (プロンプト) トークン総数の上限です。これはプロバイダからの応答に基づいて累積的に追跡されます。各呼び出しの入力トークン数は事前にわからないため、この上限は 1 回の呼び出し分の入力トークン数だけ超過する可能性がある点に注意してください。無効にするには 0 に設定します。
 
-この制限は、応答内で `usage` オブジェクトを返すプロバイダ (OpenAI、Anthropic、vLLM) に対してのみ適用されます。トークン使用量を返さないプロバイダ (特に HuggingFace TEI) ではカウンターが 0 のままになるため、そのような呼び出しの上限を設けるには、代わりに `ai_function_max_api_calls_per_query` を使用してください。
-
 <div id="ai_function_max_output_tokens_per_query">
   ## ai_function_max_output_tokens_per_query
 </div>
@@ -257,8 +233,6 @@ AI 関数がクエリごとに発行できる HTTP リクエストの最大数�
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "500000"},{"label": "新しい設定"}]}]} />
 
 1 回のクエリ内における、すべての AI 関数 API 呼び出しでの出力 (completion) トークン総数の上限です。provider からのレスポンスに基づいて累積で追跡されます。各呼び出しの出力トークン数は事前にはわからないため、この上限は 1 回の呼び出し分の出力トークン数だけ超過する場合がある点に注意してください。無効にするには 0 に設定します。
-
-この上限が適用されるのは、レスポンスに `usage` オブジェクトを含めて返す provider (OpenAI、Anthropic、vLLM) のみです。これは埋め込み関数 (特に aiEmbed) には適用されません。埋め込み関数は出力トークンを生成しないためです。
 
 <div id="ai_function_max_retries">
   ## ai_function_max_retries
@@ -751,9 +725,7 @@ MaterializedPostgreSQLテーブルエンジンを使用できるようにしま�
   ## allow_experimental_nullable_tuple_type
 </div>
 
-<BetaBadge />
-
-**別名**: `enable_nullable_tuple_type`
+<ExperimentalBadge />
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
@@ -822,17 +794,15 @@ polyglot SQL トランスパイラを有効にします。30 種類以上の SQL
 
 PRQL (SQL の代替) を有効にします。
 
-<div id="allow_experimental_text_index_lazy_apply">
-  ## allow_experimental_text_index_lazy_apply
+<div id="allow_experimental_query_deduplication">
+  ## allow_experimental_query_deduplication
 </div>
 
 <ExperimentalBadge />
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "実験的な遅延ポスティングリスト適用モードを有効にするための新しい設定"}]}]} />
-
-`true` に設定すると、テキスト索引クエリで遅延ポスティングリスト適用モードを使用できるようになります。
+part UUID に基づく SELECT クエリの実験的なデータ重複排除
 
 <div id="allow_experimental_time_series_aggregate_functions">
   ## allow_experimental_time_series_aggregate_functions
@@ -1013,22 +983,7 @@ Iceberg に対する `insert` クエリの実行を許可します。
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "索引解析の前に、`coalesce(a_1, ..., a_N) <op> const` 形式の述語（同等の `ifNull` や、定数が左側にある場合を含む）を論理和に書き換えるための新しい設定です。これにより、各 `a_i` に対してカラムごとの主キーおよびスキップ索引を利用できます。`coalesce(a, 42, b)` や `coalesce(a, b, 42)` のような一部が定数の形式にも対応しています。"}]}]} />
 
-この設定を有効にすると、`coalesce` または `ifNull` を含む `WHERE`/`PREWHERE` 述語に対して、MergeTree の主キーおよびスキップ索引で granule を絞り込めるようになります。この設定が無効な場合、そのような述語は索引解析では内容を判別できないため絞り込みに使われず、一致しない granule も読み込まれます。影響があるのは読み込まれる granule だけで、クエリ結果は変わりません。行のフィルタリングには引き続き元の述語が使われるためです。
-
-索引解析の前に、次の 2 種類の述語の shape が書き換えられます:
-
-* `coalesce`/`ifNull` に対する比較 (たとえば `coalesce(a, b) = 5`) は、各引数の索引で絞り込めるよう論理和に書き換えられます: `a = 5 OR (a IS NULL AND b = 5)`。引数がさらに多い場合も同様に拡張されます。
-* 条件として直接使われる、偽値 (ゼロ) の定数をデフォルト値に持つ `coalesce`/`ifNull` (たとえば `ifNull(a = 5, 0)` や `coalesce(a = 5, 0)`) は、内部の述語 `a = 5` にアンラップされます。このような wrapper は、内部述語の三値論理の結果を確定したブール値に畳み込みます (`NULL` は `false` に対応付けられます) 。
-
-<div id="allow_limit_by_partitions_independently">
-  ## allow_limit_by_partitions_independently
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "パーティション式が `LIMIT BY` のカラムの決定論的関数である場合に、パーティションごとに独立して `LIMIT BY` を評価できるようにする新しい設定です。"}]}]} />
-
-パーティション式が `LIMIT BY` のカラムの決定論的関数である場合、パーティションごとに独立した `LIMIT BY` の評価を別々のスレッドで有効にします。
+索引解析の前に、`coalesce(a_1, ..., a_N) <op> const` 形式の述語 (同等の `ifNull` や、定数が左側にある場合を含む) を論理和 `(a_1 <op> const) OR (a_1 IS NULL AND a_2 <op> const) OR ... OR (a_1 IS NULL AND ... AND a_{N-1} IS NULL AND a_N <op> const)` に書き換えることで、各 `a_i` に対してカラムごとの主キーおよびスキップ索引を利用できるようにします。`coalesce(a, 42, b)` や `coalesce(a, b, 42)` のような一部が定数の形式にも対応しています。引数リストは `coalesce` 自体と同様に正規化され (`NULL` リテラルは削除され、最初の非 `Nullable` な引数以降は削除されます) 、末尾に非 `NULL` の定数がある場合は、それが最後の分岐として出力されます。この書き換えは索引のプルーニングにのみ追加で適用され、ランタイムフィルタリングでは引き続き元の述語が使用されます。
 
 <div id="allow_materialized_view_with_bad_select">
   ## allow_materialized_view_with_bad_select
@@ -1121,7 +1076,7 @@ toTimeZone()、fromUnixTimestamp*()、snowflakeToDateTime*() などの一部の�
 * `true`: `Nullable(Tuple(...))` を返し、サブカラムが存在しない行では `NULL` を使用します。
 
 この設定で制御されるのは、抽出サブカラムの動作のみです。
-テーブル内で `Nullable(Tuple(...))` カラムを作成できるかどうかは制御しません。こちらは `enable_nullable_tuple_type` で制御されます。
+テーブル内で `Nullable(Tuple(...))` カラムを作成できるかどうかは制御しません。こちらは `allow_experimental_nullable_tuple_type` で制御されます。
 
 ClickHouse は、サーバー起動時に読み込まれたこの設定値を使用します。
 `SET` またはクエリレベルの `SETTINGS` で変更しても、抽出サブカラムの動作は変わりません。
@@ -1426,7 +1381,7 @@ ALTER TABLE test FREEZE SETTINGS alter_partition_verbose_result = 1;
 
 <SettingsInfoBlock type="UInt64" default_value="1" />
 
-[`ALTER`](/ja/reference/statements/alter/index)、[`OPTIMIZE`](/ja/reference/statements/optimize) または [`TRUNCATE`](/ja/reference/statements/truncate) クエリによってレプリカ上で実行されるアクションについて、どのように待機するかを指定できます。
+[`ALTER`](/ja/reference/statements/alter)、[`OPTIMIZE`](/ja/reference/statements/optimize)、または [`TRUNCATE`](/ja/reference/statements/truncate) クエリによってレプリカ上で実行されるアクションについて、どのように待機するかを指定できます。
 
 設定可能な値:
 
@@ -1484,16 +1439,6 @@ nested に複合識別子を追加できるようにします。クエリ結果�
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "0"},{"label": "JOIN USING 内の識別子を射影から解決するよう強制します"}]}]} />
 
 JOIN USING 内の識別子を射影から解決するよう強制します (たとえば、`SELECT a + 1 AS b FROM t1 JOIN t2 USING (b)` では、結合は `t1.b = t2.b` ではなく、`t1.a + 1 = t2.b` によって実行されます) 。
-
-<div id="analyzer_compatibility_prefer_alias_over_subcolumn">
-  ## analyzer_compatibility_prefer_alias_over_subcolumn
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新しい互換性設定"}]}]} />
-
-`b.id` のような複合識別子が、別名 `b` を持つテーブルのカラム `id` を指す場合と、別のカラムの Tuple サブカラム `b.id` を指す場合の両方があり得るときは、別名プレフィックスとしての解釈 (`b` のカラム `id`) を優先します。デフォルトでは、新しいアナライザはサブカラムを優先します。従来のアナライザの名前解決に合わせるには、これを有効にしてください。
 
 <div id="analyzer_inline_views">
   ## analyzer_inline_views
@@ -1596,7 +1541,7 @@ Join モードでパッチパートを適用する際に使用する一時 cache
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.10"},{"label": "1"},{"label": "この設定は、行ポリシーと PREWHERE が FINAL の前に適用されていた #87303 後のリグレッションを修正するために追加されました。PR #91065 でこの設定が導入され、PR #97279 で正しさを保証する true がデフォルトになりました。互換性のために修正前の false の動作へ戻らないよう、{true, true} として記録されています。"}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "25.8 で #87303 より前と同様に、apply_row_policy_after_final をデフォルトで有効化"}]}, {"id": "row-2","items": [{"label": "25.12"},{"label": "0"},{"label": "行ポリシーと PREWHERE を *MergeTree テーブルでの FINAL 処理後に適用するかどうかを制御する新しい設定"}]}]} />
 
 有効にすると、行ポリシーと PREWHERE は *MergeTree テーブルでの FINAL 処理後に適用されます。 (特に ReplacingMergeTree の場合)
 無効にすると、行ポリシーは FINAL の前に適用されるため、ポリシーによって
@@ -4097,11 +4042,11 @@ Distributed への INSERT クエリで、読み取り専用レプリカをスキ
 
 <ExperimentalBadge />
 
-<SettingsInfoBlock type="NonZeroUInt64" default_value="8" />
+<SettingsInfoBlock type="UInt64" default_value="8" />
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.5"},{"label": "8"},{"label": "新しい実験的な設定"}]}]} />
 
-分散クエリで並列読み取りを行う際のデフォルトのタスク数です。タスクはレプリカ間に分散されます。
+分散クエリでの並列読み取りに使用されるデフォルトのタスク数です。タスクはレプリカ間で分散されます。
 
 <div id="distributed_plan_default_shuffle_join_bucket_count">
   ## distributed_plan_default_shuffle_join_bucket_count
@@ -4553,16 +4498,6 @@ HTTPリクエストへの応答でデータの圧縮を有効または無効に�
 * 0 — 無効。
 * 1 — 有効。
 
-<div id="enable_identifier_resolve_cache">
-  ## enable_identifier_resolve_cache
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "クエリ アナライザにおける識別子解決cacheを制御するための新しい設定です"}]}]} />
-
-クエリ アナライザで識別子解決cacheを有効にします。このcacheは、同じ alias が複数回参照されたときに AST の肥大化を防ぐため、解決済みの alias ノードを共有します。結果が不正確だと疑われる場合は、false に設定してcacheを無効にしてください。
-
 <div id="enable_job_stack_trace">
   ## enable_job_stack_trace
 </div>
@@ -4599,11 +4534,11 @@ HTTPリクエストへの応答でデータの圧縮を有効または無効に�
   ## enable_join_transitive_predicates
 </div>
 
-<BetaBadge />
+<ExperimentalBadge />
 
-<SettingsInfoBlock type="Bool" default_value="1" />
+<SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "enable_join_transitive_predicates をデフォルトで有効化"}]}, {"id": "row-2","items": [{"label": "26.4"},{"label": "0"},{"label": "JOIN 順序の最適化のために、推移的な等値 JOIN 述語を推論する新しい設定。"}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "0"},{"label": "JOIN 順序の最適化のために、推移的な等値 JOIN 述語を推論する新しい設定。"}]}]} />
 
 既存の JOIN 条件から、推移的な等値 JOIN 述語を推論します。
 たとえば、`A.x = B.x` と `B.x = C.x` がある場合、`A.x = C.x` という述語も
@@ -4885,23 +4820,6 @@ true に設定すると、スカラーサブクエリで大きなスカラー値
 
 これはアナライザの互換性設定であり、旧アナライザで実行できていた一部の無効なクエリを実行できるようにするためのものです。
 
-<div id="enable_sharding_aggregator">
-  ## enable_sharding_aggregator
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "グループ化キーのハッシュに基づいて行をスレッド間に分散し、各スレッドがマージフェーズなしで重複しないキーの部分集合を集約できるようにする、分片化された `GROUP BY` 最適化を有効にするための新しい設定です。これは、データが均等に分散した高カーディナリティのキーに対して効率的です。"}]}]} />
-
-グループ化キーのハッシュに基づいて行をスレッド間に分散し、各スレッドがマージフェーズなしで重複しないキーの部分集合を集約できるようにする、分片化された `GROUP BY` 最適化を有効にします。
-
-これは、データが均等に分散した高カーディナリティのキーに対しては効率的ですが、キー分布の偏りが大きい場合や、異なるキーがごく少ないクエリでは性能が低下することがあります。
-
-設定可能な値:
-
-* 0 — 分片化された集約の最適化は無効です。
-* 1 — 分片化された集約の最適化は有効です。
-
 <div id="enable_shared_storage_snapshot_in_query">
   ## enable_shared_storage_snapshot_in_query
 </div>
@@ -4965,21 +4883,6 @@ WHERE (_part, _part_offset) IN (
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "ハッシュ結合のプローブフェーズでソフトウェアプリフェッチを使用できるようにします。"}]}]} />
 
 大規模なハッシュテーブルでのメモリアクセス遅延を隠すため、ハッシュ結合のプローブフェーズでソフトウェアプリフェッチを使用できるようにします。
-
-<div id="enable_streaming_queries">
-  ## enable_streaming_queries
-</div>
-
-<ExperimentalBadge />
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新しい設定"}]}]} />
-
-`SELECT ... FROM t STREAM [CURSOR '{...}']` の継続的クエリを許可します。
-オフの場合、`STREAM` 修飾子を使用するあらゆるテーブル式は
-プラン構築時に拒否されます。これは streaming-queries
-機能全体を有効化するための包括的な設定であり、追加の機能はそれぞれ独自の設定で制御される場合があります。
 
 <div id="enable_time_time64_type">
   ## enable_time_time64_type
@@ -5269,16 +5172,6 @@ ClickHouse は、テーブルの古いレプリカの中から最も適切なも
 
 デフォルト値は 1 (enabled) です。
 
-<div id="file_like_engine_default_partition_strategy">
-  ## file_like_engine_default_partition_strategy
-</div>
-
-<SettingsInfoBlock type="FileLikeEngineDefaultPartitionStrategy" default_value="hive" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "hive"},{"label": "`partition_strategy` が指定されていない場合、ファイルライクなテーブルエンジン（S3、AzureBlobStorage など）のデフォルトのパーティション方式が `wildcard` から `hive` に変更されました。"}]}]} />
-
-ファイルライクなエンジンのデフォルトのパーティション方式。
-
 <div id="filesystem_cache_allow_background_download">
   ## filesystem_cache_allow_background_download
 </div>
@@ -5476,7 +5369,7 @@ SELECT * FROM test;
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-[nested](/ja/reference/data-types/nested-data-structures/index) カラムのデータフォーマットを設定します。
+[nested](/ja/reference/data-types/nested-data-structures) カラムのデータフォーマットを設定します。
 
 設定可能な値:
 
@@ -5732,16 +5625,6 @@ DROP クエリ実行時にデータを再帰的に削除します。これによ
 `.sql` ファイルの書き込み時に [fsync](http://pubs.opengroup.org/onlinepubs/9699919799/functions/fsync.html) を有効または無効にします。デフォルトでは有効です。
 
 server に数百万もの小さな table があり、それらが絶えず作成・削除されている場合は、これを無効にするのが適切です。
-
-<div id="function_base58_max_input_size">
-  ## function_base58_max_input_size
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="10000" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "10000"},{"label": "入力長に対して二次時間の変換となる `base58Encode`、`base58Decode`、`tryBase58Decode` の入力サイズを、既定で 10 KB に制限する新しい設定です。互換性のための値 `0` を指定すると制限が無効になり、任意に大きな入力を受け付けていた以前の動作に戻ります。"}]}]} />
-
-関数 `base58Encode`、`base58Decode`、`tryBase58Decode` に対する、単一の入力値の最大サイズ (バイト単位) です。汎用的な `base58` 変換は入力長に対して二次時間であるため、1 つの大きな値だけでも非常に長時間実行されることがあります。`base58` は短いデータ (キー、ハッシュ、アドレス) 向けであり、既定値の 10 KB は十分に余裕のある安全しきい値です。`base58Encode` と `base58Decode` は、これを超える入力に対して `TOO_LARGE_STRING_SIZE` を送出し、`tryBase58Decode` は空文字列を返します。値 `0` を指定すると制限は無効になります (この設定が導入される前の動作になります) 。線形の `base32` 関数と `base64` 関数には影響しません。
 
 <div id="function_date_trunc_return_type_behavior">
   ## function_date_trunc_return_type_behavior
@@ -6158,7 +6041,7 @@ HTTP headers `X-ClickHouse-Progress` は、指定した各間隔より短い頻�
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "4096"},{"label": "HTTP接続における認証前のメモリ使用量を抑えるため、デフォルト値を引き下げました。"}]}]} />
 
-HTTPリクエストヘッダー、クエリパラメータ、フォームデータ内のフィールド名の最大長。
+HTTPヘッダー内のフィールド名の最大長
 
 <div id="http_max_field_value_size">
   ## http_max_field_value_size
@@ -6166,7 +6049,7 @@ HTTPリクエストヘッダー、クエリパラメータ、フォームデー�
 
 <SettingsInfoBlock type="UInt64" default_value="131072" />
 
-HTTPリクエストヘッダー、クエリパラメータ、およびフォームデータ内のフィールド値の最大長。
+HTTPヘッダー内のフィールド値の最大長
 
 <div id="http_max_fields">
   ## http_max_fields
@@ -6176,7 +6059,7 @@ HTTPリクエストヘッダー、クエリパラメータ、およびフォー�
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "1000"},{"label": "HTTP接続による認証前のメモリ使用量を抑えるため、デフォルト値を引き下げました。"}]}]} />
 
-HTTPリクエストヘッダー、クエリパラメータ、およびフォームデータ内のフィールドの最大数
+HTTPヘッダー内のフィールドの最大数
 
 <div id="http_max_multipart_form_data_size">
   ## http_max_multipart_form_data_size
@@ -7265,17 +7148,15 @@ ClickHouse は可能であれば常に `partial_merge` join を使用し、そ�
 
 <SettingsInfoBlock type="OverflowMode" default_value="throw" />
 
-join が以下のいずれかの制限に達した際に、ClickHouse が実行する動作を定義します。
+以下のいずれかの JOIN 制限に達したときに、ClickHouse がどのように動作するかを定義します。
 
 * [max&#95;bytes&#95;in&#95;join](/ja/reference/settings/session-settings#max_bytes_in_join)
 * [max&#95;rows&#95;in&#95;join](/ja/reference/settings/session-settings#max_rows_in_join)
 
-この設定が適用されるのは、[`join_algorithm`](/ja/reference/settings/session-settings#join_algorithm) の値が `hash` または `parallel_hash` の場合のみです。その他のアルゴリズム (たとえば `partial_merge`、`grace_hash`、`auto`) では、これらの制限は別の方法で処理されます。たとえば、ディスクへのスピル、再パーティション化、または戦略の切り替えです。詳細は [`join_algorithm`](/ja/reference/settings/session-settings#join_algorithm) を参照してください。
-
 設定可能な値:
 
-* `THROW` — ClickHouse は例外をスローしてクエリを停止します。
-* `BREAK` — ClickHouse はクエリを停止し、例外はスローしません。
+* `THROW` — ClickHouse は例外をスローして処理を中断します。
+* `BREAK` — ClickHouse は処理を中断し、例外はスローしません。
 
 デフォルト値: `THROW`。
 
@@ -7343,16 +7224,6 @@ JOIN のランタイムフィルタとして使用される bloom filter のハ�
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.10"},{"label": "10000"},{"label": "新しい設定"}]}]} />
 
 ランタイムフィルタ内でそのまま Set に格納される要素の最大数です。このしきい値を超えると、bloom filter に切り替わります。
-
-<div id="join_runtime_filter_from_fixed_hash_table">
-  ## join_runtime_filter_from_fixed_hash_table
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "新しい設定"}]}]} />
-
-ハッシュ結合のビルド側が FixedHashMap に変換された場合 (`enable_join_fixed_hash_table_conversion` を参照)、そのハッシュマップをランタイムフィルタとして直接利用します。
 
 <div id="join_runtime_filter_pass_ratio_threshold_for_disabling">
   ## join_runtime_filter_pass_ratio_threshold_for_disabling
@@ -7535,17 +7406,17 @@ Keeper の一般的な操作に対する最大バックオフタイムアウト
 
 設定可能な値:
 
-| 値   | 説明                                                                                                                  |
-| --- | ------------------------------------------------------------------------------------------------------------------- |
-| `0` | ミューテーションは非同期で実行されます。                                                                                                |
-| `1` | クエリは、現在のサーバー上で論理削除が完了するまで待機します。                                                                                     |
-| `2` | クエリは、すべてのレプリカ (存在する場合) で論理削除が完了するまで待機します。                                                                           |
-| `3` | クエリはアクティブなレプリカでの完了のみを待機します。`SharedMergeTree` でのみサポートされます。`ReplicatedMergeTree` では、`mutations_sync = 2` と同じように動作します。 |
+| 値   | 説明                                                                                                                 |
+| --- | ------------------------------------------------------------------------------------------------------------------ |
+| `0` | ミューテーションは非同期で実行されます。                                                                                               |
+| `1` | クエリは、現在のサーバー上で論理削除が完了するまで待機します。                                                                                    |
+| `2` | クエリは、すべてのレプリカ (存在する場合) で論理削除が完了するまで待機します。                                                                          |
+| `3` | クエリはアクティブなレプリカのみの完了を待機します。`SharedMergeTree` でのみサポートされます。`ReplicatedMergeTree` では、`mutations_sync = 2` と同じように動作します。 |
 
 **関連項目**
 
-* [ALTER クエリの同期性](/ja/reference/statements/alter/index#synchronicity-of-alter-queries)
-* [Mutations](/ja/reference/statements/alter/index#mutations)
+* [ALTER クエリの同期性](/ja/reference/statements/alter#synchronicity-of-alter-queries)
+* [Mutations](/ja/reference/statements/alter#mutations)
 
 Cloud でのデフォルト値: `1`.
 
@@ -7575,8 +7446,6 @@ ClickHouse は、レプリカを選択するための次のアルゴリズムを
 * [ランダム](#load_balancing-random) (既定)
 * [最も近いホスト名](#load_balancing-nearest_hostname)
 * [ホスト名のレーベンシュタイン距離](#load_balancing-hostname_levenshtein_distance)
-* [ホスト名の最長共通プレフィックス](#load_balancing-hostname_longest_common_prefix)
-* [ホスト名の最長共通接尾辞](#load_balancing-hostname_longest_common_suffix)
 * [定義順](#load_balancing-in_order)
 * [最初またはランダム](#load_balancing-first_or_random)
 * [ラウンドロビン](#load_balancing-round_robin)
@@ -7632,53 +7501,6 @@ example-clickhouse-0-0 example-clickhouse-1-10
 example-clickhouse-0-0 example-clickhouse-12-0
 3
 ```
-
-<div id="load_balancing-hostname_longest_common_prefix">
-  ### ホスト名の最長共通プレフィックス
-</div>
-
-```sql
-load_balancing = hostname_longest_common_prefix
-```
-
-`nearest_hostname` と同様ですが、ローカルの hostname と最長の共通プレフィックスを持つ hostname のレプリカが優先されます (共通プレフィックスが長いほど優先度が高くなります) 。文字ごとの差異を位置ごとに数える `nearest_hostname` とは異なり、この戦略は、数値セグメントの長さが異なる hostname があっても誤判定しません。たとえば、ローカルの hostname が `sfe301` の場合:
-
-```text
-sfe301 sde301
-1
-
-sfe301 sfe10101
-3
-
-sfe301 sde505
-1
-```
-
-ここでは、`sfe10101` は `sfe301` と最も長い共通プレフィックス (`sfe`、長さ 3) を持つため、優先されます。
-
-共通プレフィックスの長さが同じレプリカは、ランダムに選択されます。特に、ローカルの hostname とプレフィックスを共有するレプリカが 1 つもない場合 (すべての共通プレフィックス長が 0 の場合) 、この戦略の動作は `random` とまったく同じです。
-
-<div id="load_balancing-hostname_longest_common_suffix">
-  ### ホスト名の最長共通接尾辞
-</div>
-
-```sql
-load_balancing = hostname_longest_common_suffix
-```
-
-`hostname_longest_common_prefix` と同様ですが、プレフィックスではなく、最長の共通 *接尾辞* を比較します。これは、データセンターの識別情報が hostname の接尾辞としてエンコードされている場合に便利です。たとえば、ローカル hostname が `et46gtghn.qc.localdomain` の場合:
-
-```text
-et46gtghn.qc.localdomain tr676ddgh.td.localdomain
-12
-
-et46gtghn.qc.localdomain ab999.qc.localdomain
-15
-```
-
-ここでは、`ab999.qc.localdomain` は `et46gtghn.qc.localdomain` と最も長い共通接尾辞 (`.qc.localdomain`、長さ 15) を持つため、優先されます。
-
-共通接尾辞の長さが同じレプリカは、ランダムに選択されます。特に、ローカル hostname と接尾辞を共有するレプリカが 1 つもない場合 (すべての共通接尾辞の長さが 0 の場合) 、この戦略は `random` とまったく同じように動作します。
 
 <div id="load_balancing-in_order">
   ### In Order
@@ -8064,9 +7886,7 @@ ALTER MODIFY TTL クエリの実行後、古いデータに有効期限 (TTL) �
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-有効にすると、依存する materialized view へのデータのプッシュ中 (その `SELECT` 内、または内部テーブルのシンク内) に投げられた例外は警告としてログに記録され、`INSERT` ステートメントは成功します。無効 (デフォルト) の場合、そのような例外は伝播し、`INSERT` ステートメントは失敗します。
-
-この設定が制御するのはエラー報告だけです。ソーステーブルへの書き込みはロールバックされず、依存ビューのパイプラインでエラーが発生した時点で、元の block がすでにソーステーブルに commit 済みかどうかも保証されません。無効 (デフォルト) の場合、ビューエラーによって `INSERT` は失敗します。ソーステーブルとすべての依存ビューに exactly-once 配信を実現するには、挿入の重複排除 (`insert_deduplicate`, `deduplicate_blocks_in_dependent_materialized_views`) を指定して再試行してください。有効にすると、失敗したビューとその下流の chain への配信が部分的であっても、`INSERT` は成功として報告されます。これは、ソーステーブルへの書き込みをビュー側の問題でブロックしてはならない場合 (たとえば `system.*_log` テーブル) にのみ使用してください。完全なセマンティクスについては、`CREATE VIEW` のドキュメントを参照してください。
+MATERIALIZED VIEW で発生したエラーを無視し、MV の有無にかかわらず元のブロックをテーブルに書き込みます
 
 <div id="materialized_views_squash_parallel_inserts">
   ## materialized_views_squash_parallel_inserts
@@ -8229,15 +8049,15 @@ DISTINCT 使用時にハッシュテーブルが使用する、メモリ内の�
 
 <SettingsInfoBlock type="UInt64" default_value="0" />
 
-テーブルの join 時に使用される右側のデータ構造 (通常はハッシュ
-テーブル) の最大サイズ (バイト数) です。
+テーブルの結合時に使用されるハッシュテーブルの最大サイズ (バイト数) です。
 
 この設定は、[SELECT ... JOIN](/ja/reference/statements/select/join)
 操作と [Join table engine](/ja/reference/engines/table-engines/special/join) に適用されます。
 
-クエリに複数の join が含まれている場合、ClickHouse は中間結果ごとにこの設定を確認します。上限に達した場合の動作は、選択した
-[`join_algorithm`](/ja/reference/settings/session-settings#join_algorithm) に依存します。アルゴリズムごとの動作 (スピル、再パーティション、切り替え、または
-[`join_overflow_mode`](/ja/reference/settings/session-settings#join_overflow_mode) に従った throw/break) については、その設定を参照してください。
+クエリに JOIN が含まれている場合、ClickHouse は中間結果ごとにこの設定を確認します。
+
+上限に達した場合、ClickHouse は異なる動作で処理を継続できます。実行する動作は
+[join&#95;overflow&#95;mode](/ja/reference/settings/session-settings#join_overflow_mode) 設定で選択します。
 
 設定可能な値:
 
@@ -9282,16 +9102,15 @@ DISTINCT 使用時の、異なる行の最大数です。
 
 <SettingsInfoBlock type="UInt64" default_value="0" />
 
-テーブルの結合時に使用される右側のデータ構造 (通常はハッシュ
-テーブル) 内の行数を制限します。
+テーブルの結合時に使用されるハッシュテーブル内の行数を制限します。
 
 この設定は、[SELECT ... JOIN](/ja/reference/statements/select/join)
 操作および [Join](/ja/reference/engines/table-engines/special/join) テーブルエンジンに適用されます。
 
-1 つのクエリに複数の JOIN が含まれている場合、ClickHouse は中間結果ごとにこの設定を確認します。制限に達した場合の動作は、選択した
-[`join_algorithm`](/ja/reference/settings/session-settings#join_algorithm) に依存します。アルゴリズムごとの動作 (spill、再パーティション、
-切り替え、または [`join_overflow_mode`](/ja/reference/settings/session-settings#join_overflow_mode) に従った
-throw/break) については、その設定を参照してください。
+1 つのクエリに複数の JOIN が含まれている場合、ClickHouse は中間結果ごとにこの設定を確認します。
+
+制限に達すると、ClickHouse は異なる動作で処理を続行できます。実行する動作は、
+[`join_overflow_mode`](/ja/reference/settings/session-settings#join_overflow_mode) 設定で選択します。
 
 設定可能な値:
 
@@ -9493,7 +9312,7 @@ JOIN の前に、すべてのハッシュテーブル全体で合計何要素ま
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "ピークメモリ使用量を削減するため、`UNION` ステップで同時にアクティブにできるデータストリーム数を制限する新しい設定。"}]}]} />
 
-`UNION` ステップで同時にアクティブになるデータストリーム数を制限します (`UNION DISTINCT` は `UNION ALL` ステップの後に `DISTINCT` ステップを続ける形で実装されているため、`UNION ALL` と `UNION DISTINCT` の両方に適用されます) 。`UNION` クエリに多数のサブクエリがある場合、それらはすべて同時に読み取りバッファを開くため、メモリ使用量はサブクエリ数に比例して増加します。この設定では `Concat` プロセッサを挿入してパイプラインの幅を絞り、同時にアクティブなストリーム数を最大でこの値までに抑えることで、ピークメモリを大幅に削減します。実際の上限は、この値と `max_threads * max_streams_for_union_step_to_max_threads_ratio` の小さい方です (いずれかが 0 の場合は無視されます) 。両方が 0 の場合、パイプラインの絞り込みは適用されません。また、クエリプランで `UNION` の各出力ストリームをそれぞれ個別にソート済みの状態に保つ必要がある場合 (たとえば、read-in-order 最適化が `UNION` 全体に適用される場合) にも、この上限は適用されません。その場合は順序の正しさが優先されるため、絞り込みはスキップされます。
+`UNION` ステップで同時にアクティブになるデータストリーム数を制限します (`UNION DISTINCT` は `UNION ALL` ステップの後に `DISTINCT` ステップを続ける形で実装されているため、`UNION ALL` と `UNION DISTINCT` の両方に適用されます) 。`UNION` クエリに多数のサブクエリがある場合、それらはすべて同時に読み取りバッファを開くため、メモリ使用量はサブクエリ数に比例して増加します。この設定では `Concat` プロセッサを挿入してパイプラインの幅を絞り、同時にアクティブなストリーム数を最大でこの値までに抑えることで、ピークメモリを大幅に削減します。実際の上限は、この値と `max_threads * max_streams_for_union_step_to_max_threads_ratio` の小さい方です (いずれかが 0 の場合は無視されます) 。両方が 0 の場合、パイプラインの絞り込みは適用されません。
 
 <div id="max_streams_for_union_step_to_max_threads_ratio">
   ## max_streams_for_union_step_to_max_threads_ratio
@@ -9503,7 +9322,7 @@ JOIN の前に、すべてのハッシュテーブル全体で合計何要素ま
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "8"},{"label": "新しい設定: UNION ステップで同時にアクティブなストリーム数の上限は、min(max_streams_for_union_step, max_threads * max_streams_for_union_step_to_max_threads_ratio) として計算されます。いずれかが 0 の場合、その制限は無効になります。"}]}]} />
 
-この比率に `max_threads` を掛けた値によって、`UNION` ステップで同時にアクティブにできるストリーム数の上限が決まります (`UNION ALL` と `UNION DISTINCT` の両方に適用されます) 。実際の上限は、この計算値と `max_streams_for_union_step` のうち小さい方です (どちらか一方が 0 の場合は無視されます) 。たとえば、`max_threads = 8` でこの比率を 1 に設定すると、アクティブになるストリームは最大 8 個です。この比率ベースの上限を無効にするには、0 に設定します。`max_streams_for_union_step` と同様に、クエリプランで `UNION` の各出力ストリームをそれぞれソート済みの状態に保つ必要がある場合、この上限は適用されません。
+この比率に `max_threads` を掛けた値によって、`UNION` ステップで同時にアクティブにできるストリーム数の上限が決まります (`UNION ALL` と `UNION DISTINCT` の両方に適用されます) 。実際の上限は、この計算値と `max_streams_for_union_step` のうち小さい方です (どちらか一方が 0 の場合は無視されます) 。たとえば、`max_threads = 8` でこの比率を 1 に設定すると、アクティブになるストリームは最大 8 個です。この比率ベースの上限を無効にするには、0 に設定します。
 
 <div id="max_streams_multiplier_for_merge_tables">
   ## max_streams_multiplier_for_merge_tables
@@ -10406,7 +10225,7 @@ JOIN の入力および出力ブロックの最小行数です (JOINアルゴリ
 
 <SettingsInfoBlock type="UInt64" default_value="0" />
 
-`ALTER TABLE ... UPDATE|DELETE|MATERIALIZE INDEX|MATERIALIZE PROJECTION|MATERIALIZE COLUMN|MATERIALIZE STATISTICS` クエリ ([mutations](/ja/reference/statements/alter/index#mutations)) を同期的に実行できるようにします。
+`ALTER TABLE ... UPDATE|DELETE|MATERIALIZE INDEX|MATERIALIZE PROJECTION|MATERIALIZE COLUMN|MATERIALIZE STATISTICS` クエリ ([mutations](/ja/reference/statements/alter#mutations)) を同期的に実行できるようにします。
 
 設定可能な値:
 
@@ -10637,7 +10456,7 @@ ClickHouse が実行されるクエリのトレースを開始する確率を設
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-[MergeTree](/ja/reference/engines/table-engines/mergetree-family/mergetree) テーブルにおいて、対応する順序でデータを集計する [SELECT](/ja/reference/statements/select/index) クエリでの [GROUP BY](/ja/reference/statements/select/group-by) 最適化を有効にします。
+[MergeTree](/ja/reference/engines/table-engines/mergetree-family/mergetree) テーブルにおいて、対応する順序でデータを集計する [SELECT](/ja/reference/statements/select) クエリでの [GROUP BY](/ja/reference/statements/select/group-by) 最適化を有効にします。
 
 設定可能な値:
 
@@ -10875,18 +10694,6 @@ If と Transform の String 型のargumentを enum に置き換えます。分�
 
 GROUP BY 句内の単射関数をその引数に置き換えます
 
-<div id="optimize_injective_functions_in_limit_by">
-  ## optimize_injective_functions_in_limit_by
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "LIMIT BY キーで単射関数をその引数に置き換える新しい設定"}]}]} />
-
-LIMIT BY 句内の単射関数を、その引数に置き換えます。
-
-例: `LIMIT 5 BY toString(x)` は `LIMIT 5 BY x` になります。
-
 <div id="optimize_injective_functions_inside_uniq">
   ## optimize_injective_functions_inside_uniq
 </div>
@@ -10904,28 +10711,6 @@ uniq*() 関数内の単項の単射関数を削除します。
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.12"},{"label": "1"},{"label": "新しい設定"}]}]} />
 
 事前計算されたキー候補の集合に対してより高速なルックアップを行うことで、逆引きの Dictionary ルックアップを繰り返し実行するのを防ぎます。
-
-<div id="optimize_limit_by_function_keys">
-  ## optimize_limit_by_function_keys
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "他の LIMIT BY キーの関数となっている LIMIT BY キーを削除する新しい設定です。"}]}]} />
-
-LIMIT BY 句で、他のキーの関数となっているキーを削除します。
-
-例: `LIMIT 5 BY x, f(x)` は `LIMIT 5 BY x` になります。
-
-<div id="optimize_limit_by_in_order">
-  ## optimize_limit_by_in_order
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "`BY` カラムがテーブルのソートキーのプレフィックスである場合に `LIMIT BY` クエリを最適化するための新しい設定。"}]}]} />
-
-`<cols>` が (順不同で) テーブルのソートキーのプレフィックスを構成する場合、または `WHERE col = const` によって先頭のカラムが固定されてそうなる場合に、`SELECT ... LIMIT N BY <cols>` クエリを最適化します。これを有効にすると、データはプライマリキー順に読み取られるため、`BY` カラムの値が等しい行は各ストリーム内で隣接して到着します。データが単一のソート済みストリームで到着する場合、`LIMIT BY` はストリーミングモードでこれをフィルタリングするため、メモリ使用量は O(1) で済み、`BY` カラムの異なる組み合わせごとにハッシュテーブルを構築する必要がありません。ソート済みデータが複数のストリームで到着し、同じ `BY` の値が複数のストリームに現れる可能性がある場合は、まず各ストリームをストリーミングモードでグループごとに最大 `LIMIT + OFFSET` 行まで事前フィルタリングし、その後ストリームを結合して、最後にハッシュベースの `LIMIT BY` で複数ストリームにまたがるグループを重複排除します。この最後の処理では、依然として `BY` カラムの異なる組み合わせごとにエントリを保持しますが、処理するのは事前フィルタリング済みの行だけです。
 
 <div id="optimize_min_equality_disjunction_chain_length">
   ## optimize_min_equality_disjunction_chain_length
@@ -10949,9 +10734,9 @@ LIMIT BY 句で、他のキーの関数となっているキーを削除しま�
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-[SELECT](/ja/reference/statements/select/index) クエリにおける [PREWHERE](/ja/reference/statements/select/prewhere) の自動最適化を有効または無効にします。
+[SELECT](/ja/reference/statements/select) クエリにおける [PREWHERE](/ja/reference/statements/select/prewhere) の自動最適化を有効または無効にします。
 
-[*MergeTree](/ja/reference/engines/table-engines/mergetree-family/index) テーブルでのみ有効です。
+[*MergeTree](/ja/reference/engines/table-engines/mergetree-family) テーブルでのみ有効です。
 
 設定可能な値:
 
@@ -10964,9 +10749,9 @@ LIMIT BY 句で、他のキーの関数となっているキーを削除しま�
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-[FINAL](/ja/reference/statements/select/from#final-modifier) 修飾子を使用する [SELECT](/ja/reference/statements/select/index) クエリで、自動 [PREWHERE](/ja/reference/statements/select/prewhere) 最適化を有効または無効にします。
+[FINAL](/ja/reference/statements/select/from#final-modifier) 修飾子を使用する [SELECT](/ja/reference/statements/select) クエリで、自動 [PREWHERE](/ja/reference/statements/select/prewhere) 最適化を有効または無効にします。
 
-[*MergeTree](/ja/reference/engines/table-engines/mergetree-family/index) テーブルでのみ動作します。
+[*MergeTree](/ja/reference/engines/table-engines/mergetree-family) テーブルでのみ動作します。
 
 設定可能な値:
 
@@ -11061,20 +10846,6 @@ SELECT * FROM test2;
 
 複数の OR LIKE を `multiMatchAny` に最適化します。この最適化は、場合によっては索引解析を妨げるため、デフォルトで有効にすべきではありません。
 
-<div id="optimize_prewhere_after_pushdown">
-  ## optimize_prewhere_after_pushdown
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "後続の最適化（`JOIN` を介した述語プッシュダウン、プロジェクションの書き換え）によって `MergeTree` 読み取りステップの上に追加されたフィルターを既存の `PREWHERE` チェーンに取り込む、2 回目の `PREWHERE` 昇格パスを有効にする新しい設定。"}]}]} />
-
-後続のクエリプラン最適化によって `MergeTree` 読み取りステップの上に追加のフィルター
-(たとえば `JOIN` を介した述語プッシュダウンやプロジェクションの書き換え) が
-追加されることがあるため、その後に 2 回目の `PREWHERE` 昇格パスを実行します。既存の
-`PREWHERE` がすでにある場合、新しいフィルターは別個のフィルターステップのままにはならず、
-`AND` でマージされます。
-
 <div id="optimize_qbit_distance_function_reads">
   ## optimize_qbit_distance_function_reads
 </div>
@@ -11091,7 +10862,7 @@ SELECT * FROM test2;
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-[MergeTree](/ja/reference/engines/table-engines/mergetree-family/mergetree) テーブルからデータを読み取る際に、[SELECT](/ja/reference/statements/select/index) クエリでの [ORDER BY](/ja/reference/statements/select/order-by#optimization-of-data-reading) 最適化を有効にします。
+[MergeTree](/ja/reference/engines/table-engines/mergetree-family/mergetree) テーブルからデータを読み取る際に、[SELECT](/ja/reference/statements/select) クエリでの [ORDER BY](/ja/reference/statements/select/order-by#optimization-of-data-reading) 最適化を有効にします。
 
 設定可能な値:
 
@@ -11140,16 +10911,6 @@ true に設定すると、WHERE/GROUP BY/ORDER BY で別名が尊重されます
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "1"},{"label": "書き換え前に型の互換性がチェックされるようになったため、arrayExists から has への書き換え最適化はデフォルトで有効です。"}]}]} />
 
 論理的に等価な場合、arrayExists() 関数を has() に書き換えます。たとえば、arrayExists(x -&gt; x = 1, arr) は has(arr, 1) に書き換えられます
-
-<div id="optimize_rewrite_has_to_in">
-  ## optimize_rewrite_has_to_in
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "新しい設定"}]}]} />
-
-最初の引数が定数配列の場合、`has` 関数を `IN` に書き換えます。たとえば、`has([1, 2, 3], x)` は、定数配列ではパフォーマンス向上のため `x IN [1, 2, 3]` に書き換えることができます
 
 <div id="optimize_rewrite_like_perfect_affix">
   ## optimize_rewrite_like_perfect_affix
@@ -11204,10 +10965,10 @@ level &gt; 0 のパートが 1 つだけで、その有効期限 (TTL) が切れ
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-`WHERE/PREWHERE` に分片キー条件を含む [SELECT](/ja/reference/statements/select/index) クエリについて、未使用の分片のスキップを有効または無効にします。また、分散クエリに関連する最適化 (例: 分片キーによる集約) も有効にします。
+`WHERE/PREWHERE` にシャーディングキー条件を含む [SELECT](/ja/reference/statements/select) クエリについて、未使用の分片のスキップを有効または無効にします。また、分散クエリに関連する最適化 (例: シャーディングキーによる集約) も有効にします。
 
 <Note>
-  データが分片キーに従って分散されていることを前提としています。そうでない場合、クエリは不正確な結果を返します。
+  データがシャーディングキーに従って分散されていることを前提としています。そうでない場合、クエリは不正確な結果を返します。
 </Note>
 
 設定可能な値:
@@ -12610,16 +12371,6 @@ JOIN 後のフィルタが、不一致の行または一致した行に対して
 * 0 - 無効
 * 1 - 有効
 
-<div id="query_plan_max_limit_for_join_lazy_indexing">
-  ## query_plan_max_limit_for_join_lazy_indexing
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="1000" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1000"},{"label": "JOIN の遅延索引最適化でクエリプランを使用できる最大 LIMIT 値を制御する新しい設定を追加しました。0 の場合、制限はありません"}]}]} />
-
-JOIN の遅延索引最適化でクエリプランを使用できる最大 LIMIT 値を制御します。0 の場合、制限はありません。
-
 <div id="query_plan_max_limit_for_lazy_materialization">
   ## query_plan_max_limit_for_lazy_materialization
 </div>
@@ -12654,18 +12405,6 @@ EXPLAIN PLAN クエリでは、この上限に達すると最適化の適用を�
 <Note>
   これはエキスパート向けの設定であり、開発者がデバッグ目的でのみ使用すべきものです。今後、後方互換性のない形で変更されたり、削除されたりする可能性があります。
 </Note>
-
-<div id="query_plan_max_set_size_for_projection_match">
-  ## query_plan_max_set_size_for_projection_match
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="10000" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "10000"},{"label": "projection matcher（現時点では aggregate projection）で、内容ハッシュ化された IN 句の Set にかかるコストを制限する新しい設定を追加しました。上限を超える Set は非一致として扱われます。ゼロを指定すると内容ハッシュの比較は完全に無効になり（互換性のための値）、IN 句の Set を含むノードでは projection の一致は決して成功しません。"}]}]} />
-
-projection matcher が 2 つの Set が等しいかどうかを判定する際に、内容ハッシュを計算して比較する `IN` 句の Set の最大要素数です。これを超える Set は非一致として扱われ、projection はスキップされます。ゼロを指定すると内容ハッシュの比較は完全に無効になり、`IN` 句の Set を含むノードでは projection の一致は決して成功しません。
-
-これは aggregate projection matcher (および `IN` 句の Set を比較する必要がある将来の projection matcher) で使用されます。内容ハッシュの計算量は Set の要素数に対して `O(N log N)` です。この設定は、クエリまたは projection に多数の `IN` 句が現れる場合に、プラン時に発生するコストを抑えるためのものです。
 
 <div id="query_plan_max_step_description_length">
   ## query_plan_max_step_description_length
@@ -12715,16 +12454,6 @@ EXPLAIN PLAN におけるステップ説明の最大長。
 
 クエリプラン内のフィルターをマージできるようにします。
 
-<div id="query_plan_min_columns_for_join_lazy_indexing">
-  ## query_plan_min_columns_for_join_lazy_indexing
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="3" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "3"},{"label": "JOIN で遅延索引最適化を有効にするために必要な、左側のペイロードカラムの最小数を制御します"}]}]} />
-
-JOIN で遅延索引最適化を有効にするために必要な、左側のペイロードカラムの最小数を制御します。0 は、この最適化が無効であることを意味します。
-
 <div id="query_plan_optimize_join_order_algorithm">
   ## query_plan_optimize_join_order_algorithm
 </div>
@@ -12737,10 +12466,9 @@ JOIN で遅延索引最適化を有効にするために必要な、左側のペ
 
 クエリプランの最適化時に試行する JOIN 順序アルゴリズムを指定します。使用できるアルゴリズムは次のとおりです。
 
-* `greedy` - 基本的な貪欲アルゴリズムです。高速に動作しますが、最適な JOIN 順序にならない場合があります
-* `dpsize` - 現在は INNER JOIN に対してのみ DPsize アルゴリズムを実装しています。可能なすべての JOIN 順序を考慮して最適なものを見つけますが、多数のテーブルや JOIN 述語を含むクエリでは遅くなる可能性があります
-* `dphyp` - 現在は INNER JOIN に対してのみ DPhyp (Hypergraph Partitioning による動的計画法) アルゴリズムを実装しています。`dpsize` と同じ探索空間を探索しますが、接続された部分グラフのペアだけを列挙するため、クロス積を考慮しない代わりに、スパースな JOIN グラフでは中間 JOIN の生成が少なくなります
-  複数のアルゴリズムは、たとえば `dphyp,greedy` のようにカンマ区切りのリストとして指定できます。これらは順番に試行され、あるアルゴリズムでクエリを処理できない場合 (たとえば OUTER JOIN や非連結のコンポーネントが原因の場合) は、代替として次のものが使用されます。
+* &#39;greedy&#39; - 基本的な貪欲アルゴリズムです。高速に動作しますが、最適な JOIN 順序にならない場合があります
+* &#39;dpsize&#39; - 現在は INNER JOIN に対してのみ DPsize アルゴリズムを実装しています。可能なすべての JOIN 順序を考慮して最適なものを見つけますが、多数のテーブルや JOIN 述語を含むクエリでは遅くなる可能性があります。
+  複数のアルゴリズムを指定できます。たとえば &#39;dpsize,greedy&#39; です。
 
 <div id="query_plan_optimize_join_order_limit">
   ## query_plan_optimize_join_order_limit
@@ -12752,20 +12480,6 @@ JOIN で遅延索引最適化を有効にするために必要な、左側のペ
 
 同じサブクエリ内の JOIN の順序を最適化します。現在のところ、ごく限られたケースでのみサポートされています。
 値は、最適化対象となるテーブルの最大数です。
-
-<div id="query_plan_optimize_join_order_max_searched_plans">
-  ## query_plan_optimize_join_order_max_searched_plans
-</div>
-
-<ExperimentalBadge />
-
-<SettingsInfoBlock type="UInt64" default_value="100000" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "100000"},{"label": "JOIN 順序オプティマイザが次のアルゴリズムにフォールバックする前に列挙する部分プラン数の上限を設定する新しい設定。"}]}]} />
-
-`query_plan_optimize_join_order_algorithm` で指定された次のアルゴリズムにフォールバックするまでに、JOIN 順序オプティマイザが列挙できる部分プランの最大数です。
-これにより、クリークやスターのような密な join グラフで探索空間が指数関数的に増大する場合でも、最適化時間を決定論的に (実時間とは無関係に) 制限できます。
-制限を無効にするには 0 に設定します。デフォルトの `query_plan_optimize_join_order_limit` には影響しません。この場合、探索は常にこの上限を大きく下回るためです。
 
 <div id="query_plan_optimize_join_order_randomize">
   ## query_plan_optimize_join_order_randomize
@@ -12823,23 +12537,6 @@ JOIN で遅延索引最適化を有効にするために必要な、左側のペ
 <Note>
   これは上級者向けの設定であり、開発者がデバッグのためにのみ使用すべきです。この設定は将来、後方互換性のない形で変更されたり、削除されたりする可能性があります。
 </Note>
-
-設定可能な値:
-
-* 0 - 無効
-* 1 - 有効
-
-<div id="query_plan_push_limit_by_into_sort">
-  ## query_plan_push_limit_by_into_sort
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "LIMIT BY のカラムが ORDER BY のプレフィックスである場合に、ストリームごとの LIMIT BY をソートパイプラインにプッシュして、最終マージを流れる行数を減らす新しい設定。"}]}]} />
-
-`ORDER BY ... LIMIT BY` クエリに対するクエリプランレベルの最適化を切り替えます。`LIMIT BY` のカラムが `ORDER BY` 句のプレフィックスである場合、並列にソートされた各ストリームは、ストリームが 1 つにマージされる前に `LIMIT BY` を適用するため、最終マージおよび後続のパイプライン段階で処理される行数が減ります。`LIMIT BY` によって大量の行が除外されるクエリを高速化します。
-
-この設定は、[query&#95;plan&#95;enable&#95;optimizations](#query_plan_enable_optimizations) が 1 の場合にのみ有効です。
 
 設定可能な値:
 
@@ -13425,7 +13122,7 @@ HTTPインターフェイスを使用する場合は、`query_id` パラメー�
 
 <SettingsInfoBlock type="Int64" default_value="120" />
 
-非アクティブなレプリカが [`ALTER`](/ja/reference/statements/alter/index)、[`OPTIMIZE`](/ja/reference/statements/optimize)、または [`TRUNCATE`](/ja/reference/statements/truncate) クエリを実行するまで待機する時間 (秒単位) を指定します。
+非アクティブなレプリカが [`ALTER`](/ja/reference/statements/alter)、[`OPTIMIZE`](/ja/reference/statements/optimize)、または [`TRUNCATE`](/ja/reference/statements/truncate) クエリを実行するまで待機する時間 (秒単位) を指定します。
 
 設定可能な値:
 
@@ -14228,6 +13925,16 @@ SMT テーブルで MOVE|REPLACE|ATTACH パーティション操作を行った�
 すべての引数が非 NULL 値である行に対してのみ Nullable 引数を持つ関数を実行するための、NULL 値の比率のしきい値です。設定 short&#95;circuit&#95;function&#95;evaluation&#95;for&#95;nulls が有効な場合に適用されます。
 NULL 値を含む行の比率が全行数に対してこのしきい値を超えると、それらの NULL 値を含む行は評価されません。
 
+<div id="show_data_lake_catalogs_in_system_tables">
+  ## show_data_lake_catalogs_in_system_tables
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.8"},{"label": "1"},{"label": "新しい設定"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": "0"},{"label": "デフォルトでシステムテーブル内のカタログを無効化"}]}]} />
+
+システムテーブルにデータレイクカタログを表示できるようにします。
+
 <div id="show_processlist_include_internal">
   ## show_processlist_include_internal
 </div>
@@ -14239,18 +13946,6 @@ NULL 値を含む行の比率が全行数に対してこのしきい値を超え
 `SHOW PROCESSLIST` クエリの出力に内部の補助プロセスを表示します。
 
 内部プロセスには、Dictionary の再読み込み、リフレッシャブルmaterialized view の再読み込み、`SHOW ...` クエリで実行される補助的な `SELECT`、破損したテーブルに対処するために内部で実行される補助的な `CREATE DATABASE ...` クエリなどが含まれます。
-
-<div id="show_remote_databases_in_system_tables">
-  ## show_remote_databases_in_system_tables
-</div>
-
-**別名**: `show_data_lake_catalogs_in_system_tables`
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "`show_data_lake_catalogs_in_system_tables` からリネームされ、デフォルトで `system.tables`、`system.columns`、`system.completions` から `MySQL` および `PostgreSQL` データベースも非表示にするよう適用範囲が拡張されました。これらのテーブルを列挙するには高コストなリモート呼び出しが必要なためです。従来の動作に依存していたユーザーは、この設定を `true` に設定する必要があります。古い名前は別名として維持されます。"}]}]} />
-
-システムテーブルにリモートデータベース (データレイクカタログ、MySQL、PostgreSQL) を表示するかどうかを制御します。
 
 <div id="show_table_uuid_in_table_create_query_if_not_nil">
   ## show_table_uuid_in_table_create_query_if_not_nil
@@ -14615,17 +14310,6 @@ TCP が keepalive プローブの送信を開始するまでに、接続がア�
 * LZ4 — [LZ4](https://en.wikipedia.org/wiki/LZ4_\(compression_algorithm\)) 圧縮が適用されます。
 * NONE — 圧縮は適用されません。
 
-<div id="text_index_density_threshold">
-  ## text_index_density_threshold
-</div>
-
-<SettingsInfoBlock type="Float" default_value="0.2" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0.2"},{"label": "遅延ポスティングリストの密度しきい値に関する新しい設定"}]}]} />
-
-lazy posting list モードでアルゴリズムを選択するための密度しきい値です。
-しきい値未満: leapfrog 方式の積集合。しきい値以上: brute-force bitmap。
-
 <div id="text_index_hint_max_selectivity">
   ## text_index_hint_max_selectivity
 </div>
@@ -14660,18 +14344,6 @@ lazy posting list モードでアルゴリズムを選択するための密度�
 このしきい値より短いパターンは、一致する辞書トークンが多くなりすぎるため、コストの高いスキャンを避ける目的でスキップされます。
 
 `use_text_index_like_evaluation_by_dictionary_scan` を有効にする必要があります。
-
-<div id="text_index_posting_list_apply_mode">
-  ## text_index_posting_list_apply_mode
-</div>
-
-<SettingsInfoBlock type="TextIndexPostingListApplyMode" default_value="materialize" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "materialize"},{"label": "遅延ポスティングリスト適用モードの新しい設定"}]}]} />
-
-テキスト索引クエリ時にポスティングリストをどのように適用するかを制御します。
-&#39;materialize&#39; (デフォルト) は、ポスティングリストを Roaring Bitmap に即座にデコードします。
-&#39;lazy&#39; は、カーソルベースのオンデマンドデコードを使用します (V2 索引フォーマットおよび allow&#95;experimental&#95;text&#95;index&#95;lazy&#95;apply が必要です) 。
 
 <div id="throw_if_no_data_to_insert">
   ## throw_if_no_data_to_insert
@@ -14894,18 +14566,6 @@ system.remote&#95;data&#95;paths のクエリ時に、実際のテーブルデ�
 
 例については [UNION](/ja/reference/statements/select/union) を参照してください。
 
-<div id="unique_key_max_encoded_size">
-  ## unique_key_max_encoded_size
-</div>
-
-<ExperimentalBadge />
-
-<SettingsInfoBlock type="UInt64" default_value="256" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "256"},{"label": "新しい設定: 単一の UNIQUE KEY 行の順序保持バイナリエンコーディングの最大サイズ（バイト）"}]}]} />
-
-単一の `UNIQUE KEY` 行の順序保持バイナリエンコーディングの最大サイズ (バイト単位) 。
-
 <div id="unknown_packet_in_send_data">
   ## unknown_packet_in_send_data
 </div>
@@ -15126,23 +14786,6 @@ JOIN 条件の OR で結合された部分を、対応する入力側にプッ�
 無効な場合は、新しい toTime 関数が使用され、さまざまな型のデータを Time 型に変換します。
 従来の古い関数は、toTimeWithFixedDate として常に利用できます。
 
-<div id="use_lightweight_primary_key_index_analysis">
-  ## use_lightweight_primary_key_index_analysis
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "長い主キーを持つテーブルの主キー索引解析を最適化するための新しい設定"}]}]} />
-
-長い主キーを持つ `MergeTree` テーブルの主キー索引解析を最適化します。
-
-有効にすると、索引解析の実行時間は主キーの長さではなく、主にクエリのフィルタ条件の複雑さ (実際に使用されるキーカラム) に依存します。そのため、数個のカラムだけをフィルタするクエリでは、ソートキーを拡張しても索引解析に対する追加のオーバーヘッドはごくわずかです。
-
-設定可能な値:
-
-* 0 — 無効。索引解析ではすべての主キーカラムが処理されます。
-* 1 — 有効。
-
 <div id="use_page_cache_for_disks_without_file_cache">
   ## use_page_cache_for_disks_without_file_cache
 </div>
@@ -15271,18 +14914,6 @@ MergeTree テーブルで、クエリ実行時のグラニュールのプルー�
 
 * 0 - 無効
 * 1 - 有効
-
-<div id="use_reader_executor">
-  ## use_reader_executor
-</div>
-
-<ExperimentalBadge />
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "従来の幾重にも重なった読み取りバッファではなく、新しいパイプライン `ReaderExecutor` を通して読み取りを行うための新しい実験的設定。"}]}]} />
-
-実験的機能です。従来の幾重にも重なった読み取りバッファではなく、新しいパイプライン `ReaderExecutor` を通して読み取りを行います。`ReaderExecutor` がまだサポートしていない構成では、従来のパスにフォールバックします。
 
 <div id="use_roaring_bitmap_iceberg_positional_deletes">
   ## use_roaring_bitmap_iceberg_positional_deletes
@@ -15777,20 +15408,6 @@ true の場合は、非同期挿入の処理が完了するまで待機します
 
 非同期挿入の処理完了を待機する際のタイムアウト
 
-<div id="wait_for_part_commit_in_dependent_materialized_views">
-  ## wait_for_part_commit_in_dependent_materialized_views
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新しい設定"}]}]} />
-
-各 sink が、自身で書き込んだばかりのパーツを、自身に依存する materialized view のカスケードが実行される前にコミットするかどうかを制御します。これにより、`JOIN` を介してソースを再度読み込むカスケードで、その sink が書き込んだパーツを参照できます。
-
-この保証は sink インスタンスごとに適用されます。同じ `INSERT` の他の sink スレッドによって書き込まれたパーツは、まだ見えない場合があります。この設定では、スレッド間のコミット順序は保証されません。
-
-依存する materialized view がないテーブルへの INSERT には影響しません。
-
 <div id="wait_for_window_view_fire_signal_timeout">
   ## wait_for_window_view_fire_signal_timeout
 </div>
@@ -15811,7 +15428,8 @@ true の場合は、非同期挿入の処理が完了するまで待機します
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.3"},{"label": "100000"},{"label": "WebAssembly UDF インスタンス実行ごとの CPU 命令数（fuel）を制限する新しい設定。"}]}]} />
 
-WebAssembly UDF インスタンスの実行ごとの fuel の上限です。各 WebAssembly 命令は一定量の fuel を消費します。値はランタイムに渡される前に 1024 倍されるため、`webassembly_udf_max_fuel = 1` はおよそ 1024 fuel 単位に相当します。有限の上限を設けない場合は 0 に設定します。これは、関数ごとの設定 `webassembly_udf_enable_fuel` が true の関数にのみ適用されます。これが既定値です。
+WebAssembly UDF インスタンスの実行ごとの fuel の上限です。各 WebAssembly 命令は一定量の fuel を消費します。
+制限を設けない場合は 0 に設定します。
 
 <div id="webassembly_udf_max_input_block_size">
   ## webassembly_udf_max_input_block_size

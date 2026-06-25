@@ -474,12 +474,6 @@ SELECT extractGroups(s, '< ([\\w\\-]+): ([^\\r\\n]+)');
 重複するトークンは無視されます。
 例えば、needles = [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] は [&#39;ClickHouse&#39;] と同じように扱われます。
 
-<Note>
-  テキスト索引で [プリプロセッサ](/ja/reference/engines/table-engines/mergetree-family/textindexes#creating-a-text-index) (たとえば `lowerUTF8`) が定義されている場合、`hasAllTokens` はそれを `input` に適用し、`needles` が [String](/ja/reference/data-types/string) の場合はトークン化の前に `needles` にも適用します。`needles` が [Array(String)](/ja/reference/data-types/array) の場合、その要素はそのまま渡され、プリプロセッサは適用されません。
-  プリプロセッサはテキスト索引を使用する経路でのみ適用されるため、テキスト索引を使用するクエリと使用しないクエリ (例: `SETTINGS use_skip_indexes = 0`) では結果が異なることがあります。
-  この不一致は、全文検索の使い勝手を向上させるために許容されています。
-</Note>
-
 **構文**
 
 ```sql
@@ -580,7 +574,7 @@ INSERT INTO log VALUES
 ```response title=Response
 ```
 
-**Array型カラムの例**
+**Array 型カラムの例**
 
 ```sql title=Query
 SELECT count() FROM log WHERE hasAllTokens(tags, 'clickhouse');
@@ -604,7 +598,7 @@ SELECT count() FROM log WHERE hasAllTokens(mapKeys(attributes), ['address', 'log
 └─────────┘
 ```
 
-**mapValuesを使った例**
+**mapValues を使った例**
 
 ```sql title=Query
 SELECT count() FROM log WHERE hasAllTokens(mapValues(attributes), ['192.0.0.1', 'DEBUG']);
@@ -639,12 +633,6 @@ SELECT count() FROM log WHERE hasAllTokens(mapValues(attributes), ['192.0.0.1', 
 
 重複するトークンは無視されます。
 例えば、[&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] は [&#39;ClickHouse&#39;] と同じように扱われます。
-
-<Note>
-  テキスト索引で [プリプロセッサ](/ja/reference/engines/table-engines/mergetree-family/textindexes#creating-a-text-index) (たとえば `lowerUTF8`) が定義されている場合、`hasAnyTokens` はそれを `input` に適用し、`needles` が [String](/ja/reference/data-types/string) の場合はトークン化の前に `needles` にも適用します。`needles` が [Array(String)](/ja/reference/data-types/array) の場合、その要素はそのまま渡され、プリプロセッサは適用されません。
-  プリプロセッサはテキスト索引の経路でのみ適用されるため、テキスト索引を使用するクエリと使用しないクエリ (例: `SETTINGS use_skip_indexes = 0`) では結果が異なる場合があります。
-  この不整合は、全文検索の使い勝手を向上させるために許容されています。
-</Note>
 
 **構文**
 
@@ -746,7 +734,7 @@ SELECT count() FROM log WHERE hasAnyTokens(tags, 'clickhouse');
 └─────────┘
 ```
 
-**mapKeysを使った例**
+**mapKeys の例**
 
 ```sql title=Query
 SELECT count() FROM log WHERE hasAnyTokens(mapKeys(attributes), ['address', 'log_level']);
@@ -758,7 +746,7 @@ SELECT count() FROM log WHERE hasAnyTokens(mapKeys(attributes), ['address', 'log
 └─────────┘
 ```
 
-**mapValuesを使った例**
+**mapValues の使用例**
 
 ```sql title=Query
 SELECT count() FROM log WHERE hasAnyTokens(mapValues(attributes), ['192.0.0.1', 'DEBUG']);
@@ -776,22 +764,11 @@ SELECT count() FROM log WHERE hasAnyTokens(mapValues(attributes), ['192.0.0.1', 
 
 導入バージョン: v26.4.0
 
-`input` に、`phrase` 内のすべての token が連続した順序で含まれているかどうかを確認します。
+haystack に、phrase 内のすべての token が連続した順序で含まれているかどうかを確認します。
 
-<Note>
-  最適なパフォーマンスを得るには、カラム `input` に [テキスト索引](/ja/reference/engines/table-engines/mergetree-family/textindexes) を定義しておく必要があります。
-  テキスト索引が定義されていない場合、この関数は総当たりのカラムスキャンを実行します。これは索引ルックアップと比べて桁違いに低速です。
-</Note>
-
-検索を行う前に、この関数はテキスト索引に指定されたトークナイザーを使用して、`input` 引数と `phrase` 引数の両方をトークン化します。
-カラムにテキスト索引が定義されていない場合は、省略可能な第 3 引数としてトークナイザーが指定されていない限り、代わりに `splitByNonAlpha` トークナイザーが使用されます。
+検索を行う前に、この関数は省略可能な第 3 引数で指定されたトークナイザーを使用して、`input` 引数と `phrase` 引数の両方をトークン化します。
 トークナイザー引数には、`splitByNonAlpha`、`splitByString`、`ngrams`、`asciiCJK` のいずれかを指定する必要があります。
-
-<Note>
-  テキスト索引で [プリプロセッサ](/ja/reference/engines/table-engines/mergetree-family/textindexes#creating-a-text-index) (たとえば `lowerUTF8`) が定義されている場合、`hasPhrase` はトークン化の前にそれを `input` と `phrase` の両方に適用します。
-  プリプロセッサはテキスト索引のパスでのみ適用されるため、テキスト索引を使用するクエリと使用しないクエリ (たとえば `SETTINGS use_skip_indexes = 0`) では結果が異なる場合があります。
-  この不整合は、全文検索の使い勝手を向上させるために許容されています。
-</Note>
+トークナイザーが指定されていない場合は、デフォルトで `splitByNonAlpha` トークナイザーが使用されます。
 
 [`hasToken`](#hasToken)、[`hasAnyTokens`](#hasAnyTokens)、[`hasAllTokens`](#hasAllTokens) とは異なり、`hasPhrase` では token が同じ順序で現れ、
 その間に別の token が挟まらないことが必要です。たとえば、`hasPhrase('the quick brown fox', 'quick fox')` は 0 を返します。
@@ -1193,20 +1170,19 @@ SELECT highlight('Hello World', ['hello'], '<b>', '</b>')
 
 導入バージョン: v20.6.0
 
-[`like`](#like) と同様ですが、大文字と小文字を区別せずに検索します。オプションの `ESCAPE` 句にも対応しています (`like` を参照) 。
+[`like`](#like) と同様ですが、大文字と小文字を区別せずに検索します。
 
 **構文**
 
 ```sql
-ilike(haystack, pattern[, escape_character])
--- haystack ILIKE pattern [ESCAPE 'escape_character']
+ilike(haystack, pattern)
+-- haystack ILIKE pattern（大文字小文字を区別しない）
 ```
 
 **引数**
 
 * `haystack` — 検索対象の文字列。[`String`](/ja/reference/data-types/string) または [`FixedString`](/ja/reference/data-types/fixedstring)
 * `pattern` — 照合する LIKE パターン。[`String`](/ja/reference/data-types/string)
-* `escape_character` — `\` の代わりにエスケープ文字として使用する、省略可能な1文字の文字列。デフォルト: `\`。[`String`](/ja/reference/data-types/string)
 
 **戻り値**
 
@@ -1256,27 +1232,17 @@ Unicode の正規化は自動では行われないため、必要に応じて `n
 `%needle%` 形式の `LIKE` 式では、この関数は `position` 関数と同程度の速度で動作します。
 それ以外の `LIKE` 式はすべて内部的に正規表現へ変換され、`match` 関数と同程度の性能で実行されます。
 
-<div id="escape-clause">
-  ## ESCAPE 句
-</div>
-
-省略可能な `ESCAPE` 句では、カスタムのエスケープ文字を指定します (ASCII 1 文字である必要があります)。
-指定した場合、このカスタムのエスケープ文字は、`%` と `_` のメタ文字をエスケープするためのデフォルトのバックスラッシュの代わりに使用されます。
-エスケープ文字でエスケープできるものは 3 つあります: `%` (リテラルのパーセント記号)、`_` (リテラルのアンダースコア)、およびそれ自身 (リテラルのエスケープ文字) です。
-カスタムのエスケープ文字を使用する場合、バックスラッシュには特別な意味はなく、リテラル文字として扱われます。
-
 **構文**
 
 ```sql
-like(haystack, pattern[, escape_character])
--- haystack LIKE pattern [ESCAPE 'escape_character']
+like(haystack, pattern)
+-- haystack LIKE pattern
 ```
 
 **引数**
 
 * `haystack` — 検索対象の文字列。[`String`](/ja/reference/data-types/string) または [`FixedString`](/ja/reference/data-types/fixedstring)
 * `pattern` — 照合する `LIKE` パターン。`%` (任意の文字数に一致) 、`_` (任意の1文字に一致) 、およびエスケープ用の `\` を含めることができます。[`String`](/ja/reference/data-types/string)
-* `escape_character` — `\` の代わりにエスケープ文字として使用する、省略可能な 1 文字の文字列。デフォルト: `\`。[`String`](/ja/reference/data-types/string)
 
 **戻り値**
 
@@ -1318,18 +1284,6 @@ SELECT like('ClickHouse', '%SQL%');
 ┌─like('ClickHouse', '%SQL%')─┐
 │                           0 │
 └─────────────────────────────┘
-```
-
-**ESCAPE 句**
-
-```sql title=Query
-SELECT '50%off' LIKE '50#%off' ESCAPE '#';
-```
-
-```response title=Response
-┌─like('50%off', '50#%off', '#')─┐
-│                              1 │
-└────────────────────────────────┘
 ```
 
 <div id="locate">
@@ -1413,7 +1367,7 @@ match(haystack, pattern)
 **引数**
 
 * `haystack` — パターンを検索する対象の文字列。 [`String`](/ja/reference/data-types/string)
-* `pattern` — 正規表現のパターン。定数にすることも、カラムから取得することもできます。 [`String`](/ja/reference/data-types/string)
+* `pattern` — 正規表現のパターン。 [`const String`](/ja/reference/data-types/string)
 
 **戻り値**
 
@@ -2308,8 +2262,8 @@ SELECT multiSearchFirstPositionCaseInsensitiveUTF8('Здравствуй, мир
 ```
 
 ```response title=Response
-┌─multiSearchFirstPositionCaseInsensitiveUTF8('Здравствуй, мир', ['МИР', 'вст', 'Здра'])─┐
-│                                                                                      1 │
+┌─multiSearchFirstPositionCaseInsensitiveUTF8('Здравствуй, мир', ['мир', 'вст', 'Здра'])─┐
+│                                                                                      3 │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -2346,7 +2300,7 @@ SELECT multiSearchFirstPositionUTF8('Здравствуй, мир',['мир', '�
 
 ```response title=Response
 ┌─multiSearchFirstPositionUTF8('Здравствуй, мир', ['мир', 'вст', 'авст'])─┐
-│                                                                       4 │
+│                                                                       3 │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -2672,20 +2626,18 @@ SELECT ngramSearchUTF8('абвгдеёжз', 'гдеёзд')
 
 導入バージョン: v20.6.0
 
-文字列がパターンに一致しないかどうかを、大文字と小文字を区別せずに判定します。パターンには、SQL の LIKE マッチングで使用する特殊文字 `%` と `_` を含めることができます。省略可能な `ESCAPE` 句もサポートしています (`like` を参照)。
+文字列がパターンに一致しないかどうかを、大文字と小文字を区別せずに判定します。パターンには、SQL の LIKE マッチングで使用する特殊文字 `%` と `_` を含めることができます。
 
 **構文**
 
 ```sql
-notILike(haystack, pattern[, escape_character])
--- haystack NOT ILIKE pattern [ESCAPE 'escape_character']
+notILike(haystack, pattern)
 ```
 
 **引数**
 
 * `haystack` — 検索対象の入力文字列です。[`String`](/ja/reference/data-types/string) または [`FixedString`](/ja/reference/data-types/fixedstring)
 * `pattern` — 照合する SQL の LIKE パターンです。`%` は任意の文字数 (0 文字を含む) に一致し、`_` はちょうど 1 文字に一致します。[`String`](/ja/reference/data-types/string)
-* `escape_character` — `\` の代わりにエスケープ文字として使用する、省略可能な 1 文字の文字列です。デフォルトは `\` です。[`String`](/ja/reference/data-types/string)
 
 **戻り値**
 
@@ -2711,20 +2663,19 @@ SELECT notILike('ClickHouse', '%house%');
 
 導入バージョン: v1.1.0
 
-[`like`](#like) に似ていますが、結果を反転します。オプションの `ESCAPE` 句をサポートしています (`like` を参照) 。
+[`like`](#like) に似ていますが、結果を反転します。
 
 **構文**
 
 ```sql
-notLike(haystack, pattern[, escape_character])
--- haystack NOT LIKE pattern [ESCAPE 'escape_character']
+notLike(haystack, pattern)
+-- haystack NOT LIKE pattern
 ```
 
 **引数**
 
 * `haystack` — 検索対象の文字列。[`String`](/ja/reference/data-types/string) または [`FixedString`](/ja/reference/data-types/fixedstring)
 * `pattern` — 照合する `LIKE` パターン。[`String`](/ja/reference/data-types/string)
-* `escape_character` — `\` の代わりにエスケープ文字として使用する、省略可能な1文字の文字列。デフォルト: `\`。[`String`](/ja/reference/data-types/string)
 
 **戻り値**
 

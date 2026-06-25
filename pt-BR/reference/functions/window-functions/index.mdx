@@ -7,30 +7,45 @@ doc_type: 'reference'
 ---
 
 As funções de janela permitem realizar cálculos em um conjunto de linhas relacionadas à linha atual.
-Elas podem ser usadas para realizar cálculos semelhantes aos feitos com funções de agregação, mas diferem no fato de que uma função de janela não faz com que as linhas sejam agrupadas em uma única saída — as linhas individuais ainda são retornadas.
+Alguns dos cálculos que você pode fazer são semelhantes aos que podem ser feitos com uma função de agregação, mas uma função de janela não faz com que as linhas sejam agrupadas em uma única saída — as linhas individuais ainda são retornadas.
+
+
 
 <div id="standard-window-functions">
   ## Funções de janela padrão
 </div>
 
-O ClickHouse oferece suporte à gramática SQL padrão para janelas e funções de janela.
-A tabela abaixo mostra quais recursos têm suporte no momento:
+O ClickHouse oferece suporte à sintaxe padrão para definir janelas e funções de janela. A tabela abaixo indica se um recurso tem suporte no momento.
 
-| Recurso                                                                               | Suportado? | Comentário                                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Especificação de janela ad hoc (`count(*) OVER (PARTITION BY id ORDER BY time DESC)`) | ✅          |                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Expressões que envolvem funções de janela, por exemplo, `(count(*) OVER ()) / 2`      | ✅          |                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Cláusula `WINDOW` (`SELECT ... FROM table WINDOW w AS (PARTITION BY id)`)             | ✅          |                                                                                                                                                                                                                                                                                                                                                                                                           |
-| frame `ROWS`                                                                          | ✅          |                                                                                                                                                                                                                                                                                                                                                                                                           |
-| frame `RANGE`                                                                         | ✅          | Usado por padrão quando um frame não é especificado explicitamente (`RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`).                                                                                                                                                                                                                                                                                 |
-| Sintaxe `INTERVAL` para o frame `DateTime` `RANGE OFFSET`                             | ❌          | Em vez disso, especifique o número de segundos (`RANGE` funciona com qualquer tipo numérico).                                                                                                                                                                                                                                                                                                             |
-| frame `GROUPS`                                                                        | ❌          |                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Cálculo de funções agregadas sobre um frame (`sum(value) OVER (ORDER BY time)`)       | ✅          | Todas as funções agregadas são compatíveis.                                                                                                                                                                                                                                                                                                                                                               |
-| `rank()`, `dense_rank()`/`denseRank()`, `row_number()`                                | ✅          |                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `percent_rank()`/`percentRank()`                                                      | ✅          | Calcula com eficiência a posição relativa de um valor dentro de uma partição. Substitui o cálculo manual em SQL, mais verboso e computacionalmente mais custoso, expresso como `ifNull((rank() OVER (PARTITION BY x ORDER BY y) - 1) / nullif(count(1) OVER (PARTITION BY x) - 1, 0), 0)`.                                                                                                                |
-| `cume_dist()`                                                                         | ✅          | Calcula a distribuição cumulativa de um valor dentro de um grupo de valores. Retorna a porcentagem de linhas com valores menores ou iguais ao valor da linha atual.                                                                                                                                                                                                                                       |
-| `lag/lead(value, offset)`                                                             | ✅          | Você também pode usar uma das seguintes alternativas:<br /> 1) `any(value) OVER (... ROWS BETWEEN <offset> PRECEDING AND <offset> PRECEDING)`, ou `FOLLOWING` em vez de `PRECEDING` para `lead` <br /> 2) `lagInFrame/leadInFrame`, que são análogas, mas respeitam o frame da janela. Para obter um comportamento idêntico a `lag/lead`, use `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`. |
-| `ntile(buckets)`                                                                      | ✅          | Especifique a janela como, por exemplo, `(PARTITION BY x ORDER BY y ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)`.                                                                                                                                                                                                                                                                           |
+| Recurso                                                                               | Suportado?                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| especificação de janela ad hoc (`count(*) over (partition by id order by time desc)`) | ✅                                                                                                                                                                                                                                                                                                                                                                                                    |
+| expressões que envolvem funções de janela, por exemplo, `(count(*) over ()) / 2)`     | ✅                                                                                                                                                                                                                                                                                                                                                                                                    |
+| cláusula `WINDOW` (`select ... from table window w as (partition by id)`)             | ✅                                                                                                                                                                                                                                                                                                                                                                                                    |
+| frame `ROWS`                                                                          | ✅                                                                                                                                                                                                                                                                                                                                                                                                    |
+| frame `RANGE`                                                                         | ✅ (o padrão)                                                                                                                                                                                                                                                                                                                                                                                         |
+| sintaxe `INTERVAL` para frame `DateTime` `RANGE OFFSET`                               | ❌ (em vez disso, especifique o número de segundos (`RANGE` funciona com qualquer tipo numérico).)                                                                                                                                                                                                                                                                                                    |
+| frame `GROUPS`                                                                        | ❌                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Cálculo de funções agregadas sobre um frame (`sum(value) over (order by time)`)       | ✅ (Há suporte para todas as funções agregadas)                                                                                                                                                                                                                                                                                                                                                       |
+| `rank()`, `dense_rank()`, `row_number()`                                              | ✅ <br />Alias: `denseRank()`                                                                                                                                                                                                                                                                                                                                                                         |
+| `percent_rank()`                                                                      | ✅  Calcula com eficiência a posição relativa de um valor dentro de uma partição em um conjunto de dados. Essa função substitui, na prática, o cálculo manual em SQL, mais verboso e computacionalmente mais custoso, expresso como `ifNull((rank() OVER(PARTITION BY x ORDER BY y) - 1) / nullif(count(1) OVER(PARTITION BY x) - 1, 0), 0)` <br />Alias: `percentRank()`                             |
+| `cume_dist()`                                                                         | ✅  Calcula a distribuição cumulativa de um valor dentro de um grupo de valores. Retorna a porcentagem de linhas com valores menores ou iguais ao valor da linha atual.                                                                                                                                                                                                                               |
+| `lag/lead(value, offset)`                                                             | ✅ <br /> Você também pode usar uma das soluções alternativas a seguir:<br /> 1) `any(value) over (.... rows between <offset> preceding and <offset> preceding)`, ou `following` para `lead` <br /> 2) `lagInFrame/leadInFrame`, que são análogas, mas respeitam o frame da janela. Para obter um comportamento idêntico a `lag/lead`, use `rows between unbounded preceding and unbounded following` |
+| ntile(buckets)                                                                        | ✅ <br /> Especifique a janela assim: (partition by x order by y rows between unbounded preceding and unbounded following).                                                                                                                                                                                                                                                                           |
+
+
+
+## Funções de janela específicas do ClickHouse {#clickhouse-specific-window-functions}
+
+Existe também a seguinte função de janela específica do ClickHouse:
+
+### nonNegativeDerivative(metric_column, timestamp_column[, INTERVAL X UNITS]) {#nonnegativederivativemetric_column-timestamp_column-interval-x-units}
+
+Calcula a derivada não negativa da `metric_column` fornecida em relação à `timestamp_column`.
+`INTERVAL` pode ser omitido; o padrão é `INTERVAL 1 SECOND`.
+O valor calculado para cada linha é:
+- `0` para a 1ª linha,
+- ${\text{metric}_i - \text{metric}_{i-1} \over \text{timestamp}_i - \text{timestamp}_{i-1}}  * \text{interval}$ para a $i_{th}$ linha.
 
 <div id="syntax">
   ## Sintaxe
@@ -71,22 +86,21 @@ WINDOW window_name as ([
 ```
 
 <div id="functions">
-  ## Funções utilizáveis apenas como funções de janela
+  ### Funções
 </div>
 
-As funções a seguir só podem ser usadas como funções de janela. A maioria é de funções SQL padrão; `lagInFrame`, `leadInFrame` e `nonNegativeDerivative` são extensões do ClickHouse.
+Estas funções só podem ser usadas como funções de janela.
 
-| Function                                                                                                                                    | Description                                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| [`row_number()`](/pt-BR/reference/functions/window-functions/row_number)                                                                          | Numera a linha atual dentro da partição, começando em 1.                                                                         |
-| [`first_value(x)`](/pt-BR/reference/functions/window-functions/first_value)                                                                       | Retorna o primeiro valor avaliado dentro do frame ordenado.                                                                      |
-| [`last_value(x)`](/pt-BR/reference/functions/window-functions/last_value)                                                                         | Retorna o último valor avaliado dentro do frame ordenado.                                                                        |
-| [`nth_value(x, offset)`](/pt-BR/reference/functions/window-functions/nth_value)                                                                   | Retorna o primeiro valor não NULL avaliado na n-ésima linha (deslocamento) dentro do frame ordenado.                             |
-| [`rank()`](/pt-BR/reference/functions/window-functions/rank)                                                                                      | Classifica a linha atual dentro da partição, com lacunas.                                                                        |
-| [`dense_rank()`](/pt-BR/reference/functions/window-functions/dense_rank)                                                                          | Classifica a linha atual dentro da partição, sem lacunas.                                                                        |
-| [`lagInFrame(x)`](/pt-BR/reference/functions/window-functions/lagInFrame)                                                                         | Retorna um valor avaliado na linha que está a um deslocamento físico especificado antes da linha atual dentro do frame ordenado. |
-| [`leadInFrame(x)`](/pt-BR/reference/functions/window-functions/leadInFrame)                                                                       | Retorna um valor avaliado na linha que está a um número de linhas de deslocamento após a linha atual dentro do frame ordenado.   |
-| [`nonNegativeDerivative(metric_column, timestamp_column[, INTERVAL X UNITS])`](/pt-BR/reference/functions/window-functions/nonNegativeDerivative) | Calcula a derivada não negativa de `metric_column` em relação a `timestamp_column`. Específico do ClickHouse.                    |
+* [`row_number()`](/reference/functions/window-functions/row_number) - Numera a linha atual dentro da partição, começando em 1.
+* [`first_value(x)`](/reference/functions/window-functions/first_value) - Retorna o primeiro valor avaliado dentro do frame ordenado.
+* [`last_value(x)`](/reference/functions/window-functions/last_value) -    Retorna o último valor avaliado dentro do frame ordenado.
+* [`nth_value(x, offset)`](/reference/functions/window-functions/nth_value) - Retorna o primeiro valor não NULL avaliado na enésima linha (`offset`) dentro do frame ordenado.
+* [`rank()`](/reference/functions/window-functions/rank) - Classifica a linha atual dentro da partição, com lacunas.
+* [`dense_rank()`](/reference/functions/window-functions/dense_rank) - Classifica a linha atual dentro da partição, sem lacunas.
+* [`lagInFrame(x)`](/reference/functions/window-functions/lagInFrame) - Retorna um valor avaliado na linha que está em um deslocamento físico especificado antes da linha atual dentro do frame ordenado.
+* [`leadInFrame(x)`](/reference/functions/window-functions/leadInFrame) - Retorna um valor avaliado na linha que está a um número de linhas após a linha atual dentro do frame ordenado.
+
+
 
 <div id="examples">
   ## Exemplos
@@ -192,6 +206,8 @@ SELECT
 FROM salaries;
 ```
 
+
+
 ```text
 ┌─player──────────┬─salary─┬─team──────────────────────┬─teamMax─┬───diff─┐
 │ Charles Juarez  │ 190000 │ New Coreystad Archdukes   │  190000 │      0 │
@@ -238,7 +254,7 @@ ORDER BY
 ```
 
 <div id="frame-bounding">
-  ### Delimitação do frame
+  ### Definição dos limites do frame
 </div>
 
 ```sql
@@ -255,7 +271,7 @@ INSERT INTO wf_frame FORMAT Values
 ```
 
 ```sql
--- Frame is bounded by bounds of a partition (BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
+-- O frame é delimitado pelos limites de uma partição (BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
 SELECT
     part_key,
     value,
@@ -279,9 +295,11 @@ ORDER BY
 └──────────┴───────┴───────┴──────────────┘
 ```
 
+
+
 ```sql
--- short form - no bound expression, no order by,
--- an equalent of `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`
+-- forma curta - sem expressão de limite, sem order by,
+-- equivalente a `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING`
 SELECT
     part_key,
     value,
@@ -304,7 +322,7 @@ ORDER BY
 ```
 
 ```sql
--- frame is bounded by the beginning of a partition and the current row
+-- o frame é delimitado pelo início de uma partição e pela linha atual
 SELECT
     part_key,
     value,
@@ -329,8 +347,8 @@ ORDER BY
 ```
 
 ```sql
--- short form (frame is bounded by the beginning of a partition and the current row)
--- an equalent of `ORDER BY order ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`
+-- forma curta (o frame é delimitado pelo início de uma partição e a linha atual)
+-- equivalente a `ORDER BY order ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`
 SELECT
     part_key,
     value,
@@ -353,8 +371,10 @@ ORDER BY
 └──────────┴───────┴───────┴────────────────────┴──────────────┘
 ```
 
+
+
 ```sql
--- frame is bounded by the beginning of a partition and the current row, but order is backward
+-- o frame é delimitado pelo início de uma partição e pela linha atual, mas a ordem é invertida
 SELECT
     part_key,
     value,
@@ -375,7 +395,7 @@ ORDER BY
 ```
 
 ```sql
--- sliding frame - 1 PRECEDING ROW AND CURRENT ROW
+-- frame deslizante - 1 LINHA PRECEDENTE E LINHA ATUAL
 SELECT
     part_key,
     value,
@@ -400,7 +420,7 @@ ORDER BY
 ```
 
 ```sql
--- sliding frame - ROWS BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING 
+-- frame deslizante - ROWS BETWEEN 1 PRECEDING AND UNBOUNDED FOLLOWING 
 SELECT
     part_key,
     value,
@@ -425,7 +445,7 @@ ORDER BY
 ```
 
 ```sql
--- row_number does not respect the frame, so rn_1 = rn_2 = rn_3 != rn_4
+-- row_number não respeita o frame, portanto rn_1 = rn_2 = rn_3 != rn_4
 SELECT
     part_key,
     value,
@@ -446,18 +466,22 @@ WINDOW
 ORDER BY
     part_key ASC,
     value ASC;
+```
 
-┌─part_key─┬─value─┬─order─┬─frame_values─┬─rn_1─┬─rn_2─┬─rn_3─┬─rn_4─┐
+
+
+┌─part&#95;key─┬─value─┬─order─┬─frame&#95;values─┬─rn&#95;1─┬─rn&#95;2─┬─rn&#95;3─┬─rn&#95;4─┐
 │        1 │     1 │     1 │ [5,4,3,2,1]  │    5 │    5 │    5 │    2 │
 │        1 │     2 │     2 │ [5,4,3,2]    │    4 │    4 │    4 │    2 │
 │        1 │     3 │     3 │ [5,4,3]      │    3 │    3 │    3 │    2 │
 │        1 │     4 │     4 │ [5,4]        │    2 │    2 │    2 │    2 │
 │        1 │     5 │     5 │ [5]          │    1 │    1 │    1 │    1 │
 └──────────┴───────┴───────┴──────────────┴──────┴──────┴──────┴──────┘
-```
+
+````
 
 ```sql
--- first_value and last_value respect the frame
+-- first_value e last_value respeitam o frame
 SELECT
     groupArray(value) OVER w1 AS frame_values_1,
     first_value(value) OVER w1 AS first_value_1,
@@ -480,10 +504,10 @@ ORDER BY
 │ [1,2,3,4]      │             1 │            4 │ [3,4]          │             3 │            4 │
 │ [1,2,3,4,5]    │             1 │            5 │ [4,5]          │             4 │            5 │
 └────────────────┴───────────────┴──────────────┴────────────────┴───────────────┴──────────────┘
-```
+````
 
 ```sql
--- second value within the frame
+-- segundo valor no frame
 SELECT
     groupArray(value) OVER w1 AS frame_values_1,
     nth_value(value, 2) OVER w1 AS second_value
@@ -503,7 +527,7 @@ ORDER BY
 ```
 
 ```sql
--- second value within the frame + Null for missing values
+-- segundo valor dentro do frame + Null para valores ausentes
 SELECT
     groupArray(value) OVER w1 AS frame_values_1,
     nth_value(toNullable(value), 2) OVER w1 AS second_value
@@ -512,15 +536,22 @@ WINDOW w1 AS (PARTITION BY part_key ORDER BY order ASC ROWS BETWEEN 3 PRECEDING 
 ORDER BY
     part_key ASC,
     value ASC;
+```
 
-┌─frame_values_1─┬─second_value─┐
+
+
+┌─frame&#95;values&#95;1─┬─second&#95;value─┐
 │ [1]            │         ᴺᵁᴸᴸ │
 │ [1,2]          │            2 │
 │ [1,2,3]        │            2 │
 │ [1,2,3,4]      │            2 │
 │ [2,3,4,5]      │            3 │
 └────────────────┴──────────────┘
+
 ```
+```
+
+
 
 <div id="real-world-examples">
   ## Exemplos práticos
@@ -630,7 +661,7 @@ ORDER BY
 ```
 
 <div id="moving--sliding-average-per-3-rows">
-  ### Média móvel/deslizante (a cada 3 linhas)
+  ### Média móvel / deslizante (em 3 linhas)
 </div>
 
 ```sql
@@ -641,16 +672,20 @@ CREATE TABLE sensors
     `value` Float
 )
 ENGINE = Memory;
-
-insert into sensors values('cpu_temp', '2020-01-01 00:00:00', 87),
-                          ('cpu_temp', '2020-01-01 00:00:01', 77),
-                          ('cpu_temp', '2020-01-01 00:00:02', 93),
-                          ('cpu_temp', '2020-01-01 00:00:03', 87),
-                          ('cpu_temp', '2020-01-01 00:00:04', 87),
-                          ('cpu_temp', '2020-01-01 00:00:05', 87),
-                          ('cpu_temp', '2020-01-01 00:00:06', 87),
-                          ('cpu_temp', '2020-01-01 00:00:07', 87);
 ```
+
+
+
+insert into sensors values(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:00&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:01&#39;, 77),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:02&#39;, 93),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:03&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:04&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:05&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:06&#39;, 87),
+(&#39;cpu&#95;temp&#39;, &#39;2020-01-01 00:00:07&#39;, 87);
+
+````
 
 ```sql
 SELECT
@@ -677,7 +712,7 @@ ORDER BY
 │ cpu_temp │ 2020-01-01 00:00:06 │    87 │                87 │
 │ cpu_temp │ 2020-01-01 00:00:07 │    87 │                87 │
 └──────────┴─────────────────────┴───────┴───────────────────┘
-```
+````
 
 <div id="moving--sliding-average-per-10-seconds">
   ### Média móvel/deslizante (a cada 10 segundos)
@@ -708,10 +743,10 @@ ORDER BY
 ```
 
 <div id="moving--sliding-average-per-10-days">
-  ### Média móvel / deslizante (a cada 10 dias)
+  ### Média móvel / deslizante (de 10 dias)
 </div>
 
-A temperatura é armazenada com precisão de segundos, mas, ao usar `Range` e `ORDER BY toDate(ts)`, formamos um frame de 10 unidades e, como usamos `toDate(ts)`, a unidade é o dia.
+A temperatura é armazenada com precisão de segundos, mas, ao usar `Range` e `ORDER BY toDate(ts)`, formamos um frame de 10 unidades e, por causa de `toDate(ts)`, a unidade é um dia.
 
 ```sql
 CREATE TABLE sensors
@@ -721,20 +756,24 @@ CREATE TABLE sensors
     `value` Float
 )
 ENGINE = Memory;
-
-insert into sensors values('ambient_temp', '2020-01-01 00:00:00', 16),
-                          ('ambient_temp', '2020-01-01 12:00:00', 16),
-                          ('ambient_temp', '2020-01-02 11:00:00', 9),
-                          ('ambient_temp', '2020-01-02 12:00:00', 9),                          
-                          ('ambient_temp', '2020-02-01 10:00:00', 10),
-                          ('ambient_temp', '2020-02-01 12:00:00', 10),
-                          ('ambient_temp', '2020-02-10 12:00:00', 12),                          
-                          ('ambient_temp', '2020-02-10 13:00:00', 12),
-                          ('ambient_temp', '2020-02-20 12:00:01', 16),
-                          ('ambient_temp', '2020-03-01 12:00:00', 16),
-                          ('ambient_temp', '2020-03-01 12:00:00', 16),
-                          ('ambient_temp', '2020-03-01 12:00:00', 16);
 ```
+
+
+
+insert into sensors values(&#39;ambient&#95;temp&#39;, &#39;2020-01-01 00:00:00&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-01-01 12:00:00&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-01-02 11:00:00&#39;, 9),
+(&#39;ambient&#95;temp&#39;, &#39;2020-01-02 12:00:00&#39;, 9),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-01 10:00:00&#39;, 10),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-01 12:00:00&#39;, 10),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-10 12:00:00&#39;, 12),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-10 13:00:00&#39;, 12),
+(&#39;ambient&#95;temp&#39;, &#39;2020-02-20 12:00:01&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-03-01 12:00:00&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-03-01 12:00:00&#39;, 16),
+(&#39;ambient&#95;temp&#39;, &#39;2020-03-01 12:00:00&#39;, 16);
+
+````
 
 ```sql
 SELECT
@@ -762,7 +801,9 @@ ORDER BY
 │ ambient_temp │ 2020-03-01 12:00:00 │    16 │                      16 │
 │ ambient_temp │ 2020-03-01 12:00:00 │    16 │                      16 │
 └──────────────┴─────────────────────┴───────┴─────────────────────────┘
-```
+````
+
+
 
 <div id="references">
   ## Referências
@@ -807,6 +848,8 @@ https://dev.mysql.com/doc/refman/8.0/en/window-function-descriptions.html
 https://dev.mysql.com/doc/refman/8.0/en/window-functions-usage.html
 
 https://dev.mysql.com/doc/refman/8.0/en/window-functions-frames.html
+
+
 
 <div id="related-content">
   ## Conteúdo relacionado

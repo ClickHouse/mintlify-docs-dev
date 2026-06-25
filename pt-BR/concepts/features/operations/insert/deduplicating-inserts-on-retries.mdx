@@ -86,7 +86,7 @@ Ao inserir blocos em tabelas sob visões materializadas, o ClickHouse calcula o 
   ### Blocos idênticos após transformações em uma visão materializada
 </div>
 
-Blocos idênticos gerados durante a transformação em uma visão materializada não são desduplicados, porque se baseiam em dados inseridos diferentes.
+Blocos idênticos gerados durante a transformação em uma visão materializada não são deduplicados, porque se baseiam em dados inseridos diferentes.
 
 Veja um exemplo:
 
@@ -139,9 +139,7 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─key─┬─value─┬─_part─────┐
 │   1 │ B     │ all_0_0_0 │
 │   2 │ B     │ all_1_1_0 │
@@ -156,16 +154,14 @@ SELECT
     _part
 FROM mv_dst
 ORDER BY all;
-```
 
-```response
 ┌─key─┬─value─┬─_part─────┐
 │   0 │ B     │ all_0_0_0 │
 │   0 │ B     │ all_1_1_0 │
 └─────┴───────┴───────────┘
 ```
 
-Aqui vemos que 2 partes foram inseridas na tabela `mv_dst`. Essas partes contêm os mesmos dados, no entanto, não são desduplicadas.
+Aqui vemos que 2 partes foram inseridas na tabela `mv_dst`. Essas partes contêm os mesmos dados, no entanto, não são deduplicadas.
 
 ```sql
 INSERT INTO dst SELECT
@@ -178,24 +174,18 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─key─┬─value─┬─_part─────┐
 │   1 │ B     │ all_0_0_0 │
 │   2 │ B     │ all_1_1_0 │
 └─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─key─┬─value─┬─_part─────┐
 │   0 │ B     │ all_0_0_0 │
 │   0 │ B     │ all_1_1_0 │
@@ -237,9 +227,7 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   0 │ A     │ all_0_0_0 │
 └────────────┴─────┴───────┴───────────┘
@@ -281,9 +269,7 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   0 │ A     │ all_2_2_0 │
 │ from dst   │   0 │ A     │ all_3_3_0 │
@@ -307,16 +293,14 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   0 │ A     │ all_2_2_0 │
 │ from dst   │   0 │ A     │ all_3_3_0 │
 └────────────┴─────┴───────┴───────────┘
 ```
 
-A nova tentativa de inserção é desduplicada como esperado.
+A nova tentativa de inserção é deduplicada como esperado.
 
 ```sql
 SELECT 'third attempt';
@@ -333,9 +317,7 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   0 │ A     │ all_2_2_0 │
 │ from dst   │   0 │ A     │ all_3_3_0 │
@@ -383,30 +365,22 @@ SELECT
     _part
 FROM dst
 ORDER by all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   1 │ A     │ all_0_0_0 │
 └────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     'from mv_dst',
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─'from mv_dst'─┬─key─┬─value─┬─_part─────┐
 │ from mv_dst   │   0 │ A     │ all_0_0_0 │
 └───────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 select 'second attempt';
 
 INSERT INTO dst VALUES (2, 'A');
@@ -417,32 +391,26 @@ SELECT
     _part
 FROM dst
 ORDER by all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   1 │ A     │ all_0_0_0 │
 │ from dst   │   2 │ A     │ all_1_1_0 │
 └────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     'from mv_dst',
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─'from mv_dst'─┬─key─┬─value─┬─_part─────┐
 │ from mv_dst   │   0 │ A     │ all_0_0_0 │
 │ from mv_dst   │   0 │ A     │ all_1_1_0 │
 └───────────────┴─────┴───────┴───────────┘
 ```
 
-Inserimos dados diferentes a cada vez. No entanto, os mesmos dados são inseridos na tabela `mv_dst`. Os dados não são desduplicados porque os dados de origem eram diferentes.
+Inserimos dados diferentes a cada vez. No entanto, os mesmos dados são inseridos na tabela `mv_dst`. Os dados não são deduplicados porque os dados de origem eram diferentes.
 
 <div id="different-materialized-view-inserts-into-one-underlying-table-with-equivalent-data">
   ### Inserções de diferentes visões materializadas em uma única tabela subjacente com dados equivalentes
@@ -493,24 +461,18 @@ SELECT
     _part
 FROM dst
 ORDER by all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   1 │ A     │ all_0_0_0 │
 └────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     'from mv_dst',
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─'from mv_dst'─┬─key─┬─value─┬─_part─────┐
 │ from mv_dst   │   0 │ A     │ all_0_0_0 │
 │ from mv_dst   │   0 │ A     │ all_1_1_0 │
@@ -530,28 +492,22 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   1 │ A     │ all_0_0_0 │
 └────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     'from mv_dst',
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─'from mv_dst'─┬─key─┬─value─┬─_part─────┐
 │ from mv_dst   │   0 │ A     │ all_0_0_0 │
 │ from mv_dst   │   0 │ A     │ all_1_1_0 │
 └───────────────┴─────┴───────┴───────────┘
 ```
 
-Essa operação de retry é desduplicada em ambas as tabelas `dst` e `mv_dst`.
+Essa operação de retry é deduplicada em ambas as tabelas `dst` e `mv_dst`.

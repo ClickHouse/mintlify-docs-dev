@@ -47,10 +47,10 @@ CREATE TABLE s3_engine_table (name String, value UInt32)
 
 * `path` — URL do bucket com o caminho para o arquivo. Suporta os seguintes curingas no modo somente leitura: `*`, `**`, `?`, `{abc,def}` e `{N..M}`, em que `N`, `M` — números, `'abc'`, `'def'` — strings. Para mais informações, veja [abaixo](#wildcards-in-path).
 * `NOSIGN` - Se esta palavra-chave for fornecida no lugar das credenciais, nenhuma solicitação será assinada.
-* `format` — O [formato](/pt-BR/reference/formats/index#formats-overview) do arquivo.
+* `format` — O [formato](/pt-BR/reference/formats#formats-overview) do arquivo.
 * `aws_access_key_id`, `aws_secret_access_key` - Credenciais de longo prazo para o usuário da conta [AWS](https://aws.amazon.com/). Você pode usá-las para autenticar suas solicitações. O parâmetro é opcional. Se as credenciais não forem especificadas, elas serão obtidas do arquivo de configuração. Para mais informações, veja [Usar o S3 para armazenamento de dados](/pt-BR/reference/engines/table-engines/mergetree-family/mergetree#table_engine-mergetree-s3).
 * `compression` — Tipo de compressão. Valores compatíveis: `none`, `gzip/gz`, `brotli/br`, `xz/LZMA`, `zstd/zst`. O parâmetro é opcional. Por padrão, a compressão será detectada automaticamente pela extensão do arquivo.
-* `partition_strategy` – Opções: `WILDCARD` ou `HIVE`. `WILDCARD` exige um `{_partition_id}` no `path`, que é substituído pela chave de partição. `HIVE` não permite curingas, assume que o `path` é a raiz da tabela e gera diretórios particionados no estilo Hive, com ID Snowflake como nomes de arquivo e o formato do arquivo como extensão. O padrão é a configuração `file_like_engine_default_partition_strategy` (`WILDCARD` nas configurações de `compatibility` anteriores à `26.6`, `HIVE` caso contrário).
+* `partition_strategy` – Opções: `WILDCARD` ou `HIVE`. `WILDCARD` exige um `{_partition_id}` no `path`, que é substituído pela chave de partição. `HIVE` não permite curingas, assume que o `path` é a raiz da tabela e gera diretórios particionados no estilo Hive, com Snowflake IDs como nomes de arquivo e o formato do arquivo como extensão. O padrão é `WILDCARD`
 * `partition_columns_in_data_file` - Usado apenas com a estratégia de particionamento `HIVE`. Informa ao ClickHouse se ele deve esperar que as colunas de partição sejam gravadas no arquivo de dados. O padrão é `false`.
 * `storage_class_name` - Opções: `STANDARD` ou `INTELLIGENT_TIERING`; permite especificar o [AWS S3 Intelligent Tiering](https://aws.amazon.com/s3/storage-classes/intelligent-tiering/).
 * `extra_credentials` - Opcional. Usado para passar um `role_arn` para acesso baseado em funções no ClickHouse Cloud. Veja [Secure S3](/pt-BR/products/cloud/guides/data-sources/accessing-s3-data-securely) para as etapas de configuração.
@@ -100,7 +100,7 @@ Para particionamento por mês, use a expressão `toYYYYMM(date_column)`, em que 
   #### Estratégia de particionamento
 </div>
 
-`WILDCARD`: substitui o curinga `{_partition_id}` no caminho do arquivo pela chave de partição real. Leitura não é suportada. Selecionado por padrão apenas em configurações de `compatibility` anteriores à `26.6`; caso contrário, o padrão é `HIVE` (consulte a configuração `file_like_engine_default_partition_strategy`).
+`WILDCARD` (padrão): substitui o curinga `{_partition_id}` no caminho do arquivo pela chave de partição real. Leitura não é suportada.
 
 `HIVE` implementa o particionamento no estilo Hive para leituras &amp; gravações. A leitura é implementada usando um padrão glob recursivo; isso é equivalente a `SELECT * FROM s3('table_root/**.parquet')`.
 A gravação gera arquivos no seguinte formato: `<prefix>/<key1=val1/key2=val2...>/<snowflakeid>.<toLower(file_format)>`.
@@ -273,7 +273,7 @@ Observe que só é possível inserir linhas em arquivos novos. Não há ciclos d
 * `_etag` — ETag do arquivo. Tipo: `LowCardinality(String)`. Se o ETag for desconhecido, o valor será `NULL`.
 * `_tags` — Tags do arquivo. Tipo: `Map(String, String)`. Se não houver tags, o valor será um map vazio &#96;{}&#39;.
 
-Para mais informações sobre colunas virtuais, veja [aqui](/pt-BR/reference/engines/table-engines/index#table_engines-virtual_columns).
+Para mais informações sobre colunas virtuais, veja [aqui](/pt-BR/reference/engines/table-engines#table_engines-virtual_columns).
 
 <div id="implementation-details">
   ## Detalhes de implementação
@@ -482,13 +482,6 @@ Após a configuração, um `roleARN` pode ser informado por meio do parâmetro `
 ```sql
 CREATE TABLE my_s3_table(name String, value UInt32)
 ENGINE = S3('https://my-bucket.s3.amazonaws.com/data/*.csv', extra_credentials(role_arn = 'arn:aws:iam::111111111111:role/ClickHouseAccessRole-001'), 'CSV')
-```
-
-Um `external_id` opcional também pode ser fornecido junto com `role_arn`. Ele é passado como o parâmetro `ExternalId` da chamada `AssumeRole` do AWS STS, permitindo que a política de confiança da função exija um segredo compartilhado para mitigar o [problema do intermediário confuso](https://docs.aws.amazon.com/IAM/latest/UserGuide/confused-deputy.html):
-
-```sql
-CREATE TABLE my_s3_table(name String, value UInt32)
-ENGINE = S3('https://my-bucket.s3.amazonaws.com/data/*.csv', extra_credentials(role_arn = 'arn:aws:iam::111111111111:role/ClickHouseAccessRole-001', external_id = 'my-external-id'), 'CSV')
 ```
 
 <div id="see-also">

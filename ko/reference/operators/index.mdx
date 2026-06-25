@@ -257,55 +257,6 @@ SELECT number AS a FROM numbers(10) WHERE a > ANY (SELECT number FROM numbers(3,
 └───┘
 ```
 
-<div id="some-all-on-arrays">
-  ### 배열에 대한 `SOME` / `ALL`
-</div>
-
-위에서 설명한 서브쿼리 형식 외에도 `SOME` / `ALL`의 오른쪽에는 배열 표현식(배열 리터럴, 배열 타입의 컬럼, 또는 배열을 반환하는 임의의 표현식)이 올 수 있습니다. 이는 PostgreSQL 스타일의 배열 한정자 구문입니다. 이 구문은 구문 분석 시점에 인식되어 배열 함수로 재작성되므로 수동으로 재작성할 필요가 없습니다:
-
-| 구문                                   | 재작성 결과                             |
-| ------------------------------------ | ---------------------------------- |
-| `expr = SOME(arr)`                   | `has(arr, expr)`                   |
-| `expr <> ALL(arr)`                   | `NOT has(arr, expr)`               |
-| `expr OP SOME(arr)` (그 밖의 모든 비교 연산자) | `arrayExists(x -> expr OP x, arr)` |
-| `expr OP ALL(arr)` (그 밖의 모든 비교 연산자)  | `arrayAll(x -> expr OP x, arr)`    |
-
-`SOME`은 존재 한정자입니다(`ANY`의 SQL 동의어). `=` 및 `<>`는 최적화된 구현이 있으므로 예외적으로 `has` / `NOT has`로 재작성됩니다. 일반 형식은 고차 함수인 `arrayExists` / `arrayAll`로 처리됩니다.
-
-배열 형식은 비교 연산자 `=`, `==`, `!=`, `<>`, `<=>`, `<`, `<=`, `>`, `>=`에서만 인식됩니다. 오른쪽에 배열을 받을 수 있는 다른 연산자(예: `LIKE`, `ILIKE`, `NOT LIKE`, `REGEXP`, `IN`)는 배열 한정자로 **재작성되지 않으며** 원래 의미를 유지합니다. 예를 들어 `'abc' LIKE SOME(['a%', 'b%'])`는 배열 한정자 구문이 아닙니다. 이런 경우에는 `arrayExists` / `arrayAll`를 직접 사용하십시오.
-
-<Info>
-  **배열 형식에서는 `ANY`가 지원되지 않습니다**
-
-  오른쪽에 배열을 받을 수 있는 것은 `SOME`과 `ALL`뿐입니다. `ANY`는 `any`가 집계 함수이기도 하므로 제외됩니다. 따라서 `expr = any(x)` 형태의 표현식은 함수 호출이라는 의미를 유지합니다. 배열 한정자에는 `SOME`을 사용하십시오.
-</Info>
-
-```sql title="Query"
-SELECT
-    3 = SOME([1, 2, 3, 4]) AS in_array,
-    5 < SOME([1, 2, 6])    AS less_than_some,
-    5 > ALL([1, 2, 3])     AS greater_than_all;
-```
-
-```text title="Response"
-┌─in_array─┬─less_than_some─┬─greater_than_all─┐
-│        1 │              1 │                1 │
-└──────────┴────────────────┴──────────────────┘
-```
-
-<Info>
-  **`NULL` 처리는 서브쿼리 형식과 다릅니다**
-
-  배열 형식은 파서에서 재작성되므로(`transform_null_in`과 같은 쿼리 설정을 사용할 수 없고, 행별 배열 컬럼은 분석기의 null-safe `IN` 경로를 사용할 수 없음) `has`의 2값 의미론(`=` / `<>`의 경우)과 `arrayExists` / `arrayAll`을 사용합니다(`NULL` 비교의 미확정 결과는 `0`으로 접힘). 따라서 `NULL` 처리가 `IN` / `NOT IN`을 통해 수행되고 `transform_null_in`에 따라 달라지는 서브쿼리 형식과는 결과가 다를 수 있습니다:
-
-  ```sql
-  SELECT NULL = SOME([NULL]);   -- has([NULL], NULL)                  -> 1
-  SELECT NULL <> ALL([NULL]);   -- NOT has([NULL], NULL)              -> 0
-  SELECT NULL < SOME([1]);      -- arrayExists(x -> NULL < x, [1])    -> 0
-  SELECT NULL > ALL([1]);       -- arrayAll(x -> NULL > x, [1])       -> 0
-  ```
-</Info>
-
 <div id="operators-for-working-with-dates-and-times">
   ## 날짜 및 시간을 다루는 연산자
 </div>
@@ -322,9 +273,6 @@ EXTRACT(part FROM date);
 
 `part` 매개변수는 날짜에서 추출할 부분을 지정합니다. 사용할 수 있는 값은 다음과 같습니다.
 
-* `NANOSECOND` — 나노초입니다. 가능한 값: 0–999999999.
-* `MICROSECOND` — 마이크로초입니다. 가능한 값: 0–999999.
-* `MILLISECOND` — 밀리초입니다. 가능한 값: 0–999.
 * `SECOND` — 초입니다. 가능한 값: 0–59.
 * `MINUTE` — 분입니다. 가능한 값: 0–59.
 * `HOUR` — 시입니다. 가능한 값: 0–23.
@@ -341,12 +289,10 @@ EXTRACT(part FROM date);
 * `CENTURY` — 세기입니다. 예를 들어, 2024년은 21세기에 속합니다.
 * `DECADE` — 10년 단위입니다(연도를 10으로 나눈 값). 예를 들어, 2024년의 decade는 202입니다.
 * `MILLENNIUM` — 천년 단위입니다. 예를 들어, 2024년은 세 번째 millennium에 속합니다.
-* `TIMEZONE_HOUR` — 피연산자 시간대의 UTC 오프셋에서 부호 있는 시 부분입니다. 예를 들어, `+5:30`은 `5`를 반환하고 `-3:30`은 `-3`을 반환합니다.
-* `TIMEZONE_MINUTE` — 피연산자 시간대의 UTC 오프셋에서 부호 있는 분 부분입니다. 예를 들어, `+5:30`은 `30`을 반환하고 `-3:30`은 `-30`을 반환합니다.
 
 `part` 매개변수는 대소문자를 구분하지 않습니다.
 
-`date` 매개변수는 처리할 값을 지정합니다. [Date](/ko/reference/data-types/date), [Date32](/ko/reference/data-types/date32), [DateTime](/ko/reference/data-types/datetime), [DateTime64](/ko/reference/data-types/datetime64), [Interval](/ko/reference/data-types/special-data-types/interval) 타입을 지원합니다. `date`가 `Interval`인 경우, 요청한 `part`는 인터벌에 저장된 종류와 일치해야 합니다(예: `EXTRACT(DAY FROM INTERVAL 5 DAY)`는 허용되지만 `EXTRACT(HOUR FROM INTERVAL 5 DAY)`는 거부됩니다. ClickHouse 인터벌은 단일 종류만 저장하기 때문입니다). `Interval` 피연산자에 대한 결과는 `Int64`입니다.
+`date` 매개변수는 처리할 날짜 또는 시간을 지정합니다. [Date](/ko/reference/data-types/date), [Date32](/ko/reference/data-types/date32), [DateTime](/ko/reference/data-types/datetime), [DateTime64](/ko/reference/data-types/datetime64) 타입을 지원합니다.
 
 예시:
 
@@ -357,10 +303,6 @@ SELECT EXTRACT(YEAR FROM toDate('2017-06-15'));
 SELECT EXTRACT(EPOCH FROM toDateTime('2024-01-15 12:30:45', 'UTC'));
 SELECT EXTRACT(DOW FROM toDate('2024-01-15'));
 SELECT EXTRACT(CENTURY FROM toDate('2024-01-01'));
-SELECT EXTRACT(TIMEZONE_HOUR   FROM toDateTime('2024-01-15 12:00:00', 'Asia/Kolkata'));    -- 5
-SELECT EXTRACT(TIMEZONE_MINUTE FROM toDateTime('2024-01-15 12:00:00', 'Asia/Kolkata'));    -- 30
-SELECT EXTRACT(DAY   FROM INTERVAL 40 DAY);                                                -- 40
-SELECT EXTRACT(MONTH FROM INTERVAL 7 MONTH);                                               -- 7
 ```
 
 다음 예시에서는 테이블을 생성한 다음 `DateTime` 유형의 값을 삽입합니다.
@@ -658,36 +600,3 @@ SELECT * FROM t_null WHERE y IS NOT NULL
 ```
 
 [optimize&#95;functions&#95;to&#95;subcolumns](/ko/reference/settings/session-settings#optimize_functions_to_subcolumns) 설정을 활성화하면 이를 최적화할 수 있습니다. `optimize_functions_to_subcolumns = 1`이면 함수는 전체 컬럼 데이터를 읽고 처리하는 대신 [null](/ko/reference/data-types/nullable#finding-null) 서브컬럼만 읽습니다. 쿼리 `SELECT n IS NOT NULL FROM table`는 `SELECT NOT n.null FROM TABLE`로 변환됩니다.
-
-<div id="checking-boolean-values">
-  ## 불리언 값 확인
-</div>
-
-ClickHouse는 `IS TRUE`, `IS FALSE`, `IS UNKNOWN`, `IS NOT TRUE`, `IS NOT FALSE`, `IS NOT UNKNOWN` 연산자를 지원합니다.
-이 연산자들은 [Bool](/ko/reference/data-types/boolean) 및 `Nullable(Bool)` 표현식과 함께 사용됩니다.
-
-* `expr IS TRUE`는 `expr`가 `true`인 경우에만 `1`을 반환합니다.
-* `expr IS FALSE`는 `expr`가 `false`인 경우에만 `1`을 반환합니다.
-* `expr IS UNKNOWN`는 `expr`가 `NULL`인 경우에만 `1`을 반환합니다.
-* `expr IS NOT TRUE`는 `expr`가 `false` 또는 `NULL`인 경우 `1`을 반환합니다.
-* `expr IS NOT FALSE`는 `expr`가 `true` 또는 `NULL`인 경우 `1`을 반환합니다.
-* `expr IS NOT UNKNOWN`는 `expr`가 `NULL`이 아닌 경우 `1`을 반환합니다.
-
-불리언 표현식에서 `IS UNKNOWN`은 `IS NULL`과 동일하며, `IS NOT UNKNOWN`은 `IS NOT NULL`과 동일합니다.
-
-{/* */}
-
-```sql
-CREATE TABLE t_bool (x Nullable(Bool)) ENGINE = Memory;
-INSERT INTO t_bool VALUES (true), (false), (NULL);
-
-SELECT
-    x,
-    x IS TRUE,
-    x IS FALSE,
-    x IS UNKNOWN,
-    x IS NOT TRUE,
-    x IS NOT FALSE,
-    x IS NOT UNKNOWN
-FROM t_bool;
-```

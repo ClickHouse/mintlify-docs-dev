@@ -25,7 +25,7 @@ CREATE TABLE s3_queue_engine_table (name String, value UInt32)
     [mode = '',]
     [after_processing = 'keep',]
     [keeper_path = '',]
-    [loading_retries = 10,]
+    [loading_retries = 0,]
     [processing_threads_num = 16,]
     [parallel_inserts = false,]
     [enable_logging_to_queue_log = true,]
@@ -33,10 +33,10 @@ CREATE TABLE s3_queue_engine_table (name String, value UInt32)
     [tracked_files_limit = 1000,]
     [tracked_file_ttl_sec = 0,]
     [polling_min_timeout_ms = 1000,]
-    [polling_max_timeout_ms = 600000,]
-    [polling_backoff_ms = 30000,]
-    [cleanup_interval_min_ms = 60000,]
-    [cleanup_interval_max_ms = 60000,]
+    [polling_max_timeout_ms = 10000,]
+    [polling_backoff_ms = 0,]
+    [cleanup_interval_min_ms = 10000,]
+    [cleanup_interval_max_ms = 30000,]
     [buckets = 0,]
     [list_objects_batch_size = 1000,]
     [enable_hash_ring_filtering = 0,]
@@ -69,8 +69,8 @@ Usando named collections:
 <clickhouse>
     <named_collections>
         <s3queue_conf>
-            <url>https://clickhouse-public-datasets.s3.amazonaws.com/my-test-bucket-768/*</url>
-            <access_key_id>test</access_key_id>
+            <url>'https://clickhouse-public-datasets.s3.amazonaws.com/my-test-bucket-768/*</url>
+            <access_key_id>test<access_key_id>
             <secret_access_key>test</secret_access_key>
         </s3queue_conf>
     </named_collections>
@@ -186,18 +186,6 @@ Valores possíveis:
 
 Valor padrão: string vazia.
 
-<div id="after_processing_move_preserve_path">
-  ### `after_processing_move_preserve_path`
-</div>
-
-Se `true`, o caminho completo do objeto de origem é acrescentado a `after_processing_move_prefix` ao mover um arquivo processado com sucesso, para que a estrutura de diretórios de origem no bucket seja preservada no destino. Se `false`, apenas o nome do arquivo é usado, e a estrutura de diretórios de origem é achatada.
-
-Valores possíveis:
-
-* `true` / `false`.
-
-Valor padrão: `false`.
-
 <div id="after_processing_move_secret_access_key">
   ### `after_processing_move_secret_access_key`
 </div>
@@ -264,12 +252,12 @@ Valor padrão: `/`.
   ### `loading_retries`
 </div>
 
-Tenta recarregar o arquivo até o número de vezes especificado.
+Tenta recarregar o arquivo até o número de vezes especificado. Por padrão, não há novas tentativas.
 Valores possíveis:
 
-* Inteiro não negativo.
+* Inteiro positivo.
 
-Valor padrão: `10`.
+Valor padrão: `0`.
 
 <div id="processing_threads_num">
   ### `processing_threads_num`
@@ -292,13 +280,13 @@ Mas isso limita o paralelismo, então, para obter melhor throughput, use `parall
 
 Valor padrão: `false`.
 
-<div id="enable_logging_to_queue_log">
-  ### `enable_logging_to_queue_log`
+<div id="enable_logging_to_s3queue_log">
+  ### `enable_logging_to_s3queue_log`
 </div>
 
 Ativa o logging em `system.s3queue_log`.
 
-Valor padrão: `1`.
+Valor padrão: `0`.
 
 <div id="polling_min_timeout_ms">
   ### `polling_min_timeout_ms`
@@ -322,7 +310,7 @@ Valores possíveis:
 
 * Inteiro positivo.
 
-Valor padrão: `600000`.
+Valor padrão: `10000`.
 
 <div id="polling_backoff_ms">
   ### `polling_backoff_ms`
@@ -334,7 +322,7 @@ Valores possíveis:
 
 * Inteiro positivo.
 
-Valor padrão: `30000`.
+Valor padrão: `0`.
 
 <div id="tracked_files_limit">
   ### `tracked_files_limit`
@@ -366,9 +354,9 @@ Valor padrão: `0`.
   ### `cleanup_interval_min_ms`
 </div>
 
-Para o modo &#39;Ordered&#39;. Define um limite mínimo para o intervalo de reagendamento de uma tarefa em segundo plano, responsável por manter o TTL dos arquivos rastreados e o limite máximo de arquivos rastreados.
+Para o modo &#39;Ordered&#39;. Define um limite mínimo para o intervalo de reagendamento de uma tarefa em segundo plano, responsável por manter o TTL dos arquivos monitorados e o limite máximo de arquivos monitorados.
 
-Valor padrão: `60000`.
+Valor padrão: `10000`.
 
 <div id="cleanup_interval_max_ms">
   ### `cleanup_interval_max_ms`
@@ -376,7 +364,7 @@ Valor padrão: `60000`.
 
 No modo &#39;Ordered&#39;. Define o limite máximo do intervalo de reagendamento de uma tarefa em segundo plano responsável por manter o TTL dos arquivos rastreados e o conjunto máximo de arquivos rastreados.
 
-Valor padrão: `60000`.
+Valor padrão: `30000`.
 
 <div id="buckets">
   ### `buckets`
@@ -390,13 +378,13 @@ Para o modo &#39;Ordered&#39;. Disponível desde a versão `24.6`. Se houver vá
 
 Por padrão, a tabela S3Queue sempre usou nós de processamento efêmeros, o que poderia levar à duplicação de dados caso a sessão do ZooKeeper expire depois que o processamento já tiver sido iniciado, mas antes de o S3Queue fazer o commit dos arquivos processados no ZooKeeper. Essa configuração força o servidor a eliminar a possibilidade de duplicações em caso de expiração da sessão do Keeper.
 
-<div id="persistent_processing_node_ttl_seconds">
-  ### `persistent_processing_node_ttl_seconds`
+<div id="persistent_processing_nodes_ttl_seconds">
+  ### `persistent_processing_nodes_ttl_seconds`
 </div>
 
-Em caso de encerramento não gracioso do servidor, é possível que, se `use_persistent_processing_nodes` estiver habilitado, haja nós de processamento que não foram removidos. Essa configuração define um período durante o qual esses nós de processamento podem ser removidos com segurança. O mesmo TTL também é usado para o bloqueio do bucket no modo `Ordered`, que pode permanecer ativo por mais tempo do que um único nó de processamento, portanto o valor também deve levar isso em consideração.
+Em caso de encerramento não gracioso do servidor, é possível que, se `use_persistent_processing_nodes` estiver habilitado, haja nós de processamento que não foram removidos. Essa configuração define um período durante o qual esses nós de processamento podem ser removidos com segurança.
 
-Valor padrão: `21600` (6 horas).
+Valor padrão: `3600` (1 hora).
 
 <div id="s3-settings">
   ## Configurações relacionadas ao S3
@@ -489,7 +477,7 @@ Exemplo:
 * `_size` — Tamanho do arquivo.
 * `_time` — Horário de criação do arquivo.
 
-Para mais informações sobre colunas virtuais, consulte [aqui](/pt-BR/reference/engines/table-engines/index#table_engines-virtual_columns).
+Para mais informações sobre colunas virtuais, consulte [aqui](/pt-BR/reference/engines/table-engines#table_engines-virtual_columns).
 
 <div id="wildcards-in-path">
   ## Curingas em path

@@ -2,16 +2,12 @@
 description: 'Documentación de las funciones definidas por el usuario en WebAssembly'
 sidebarTitle: 'UDFs de WebAssembly'
 slug: /sql-reference/functions/wasm_udf
-title: 'Funciones definidas por el usuario en WebAssembly'
+title: Funciones definidas por el usuario en WebAssembly
 doc_type: 'guide'
 ---
 
 import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
 import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-
-<div id="webassembly-user-defined-functions">
-  # Funciones definidas por el usuario en WebAssembly
-</div>
 
 ClickHouse admite la creación de funciones definidas por el usuario (UDFs) escritas en WebAssembly. Esto permite ejecutar lógica personalizada escrita en lenguajes como Rust, C, C++ u otros, tras compilarla en módulos de WebAssembly.
 
@@ -145,47 +141,6 @@ SELECT 'my_module', base64Decode('...'), reinterpretAsUInt256(unhex('369f...c57d
 
 Si el hash proporcionado no coincide con el SHA256 calculado para el código del módulo, la inserción falla. Esto puede resultar útil al cargar módulos desde fuentes externas, como S3 o HTTP.
 
-<div id="distribute-a-module-across-a-cluster">
-  ### Distribuir un módulo en un clúster
-</div>
-
-`system.webassembly_modules` es una tabla por instancia: un `INSERT` solo se aplica a la réplica que gestiona la conexión. No existe una forma `ON CLUSTER` de la sentencia `INSERT`, por lo que un `CREATE FUNCTION ... ON CLUSTER` posterior fallará en las réplicas que no tengan el módulo:
-
-```text
-Code: 674. DB::Exception: WebAssembly module 'collatz' not found:
-while adding user defined function `collatz_steps`. (RESOURCE_NOT_FOUND)
-```
-
-Para distribuir una inserción a todos los nodos, escriba en la función de tabla `cluster` en lugar de la tabla local `system.webassembly_modules`:
-
-```bash
-cat collatz.wasm | clickhouse client -q "
-  INSERT INTO FUNCTION cluster('default', 'system', 'webassembly_modules') (name, code)
-  SELECT 'collatz', code FROM input('code String') FORMAT RawBlob"
-```
-
-<Note>
-  Este patrón depende de que la ruta subyacente de escritura distribuida recorra todas las réplicas de cada segmento, lo que solo ocurre cuando el clúster está configurado con `internal_replication=false`. Con `internal_replication=true` (el valor predeterminado en los clústeres que usan `ReplicatedMergeTree` para gestionar por sí mismos la replicación), el insert se envía a una sola réplica en buen estado por segmento, y `system.webassembly_modules` no se replica por esa ruta, por lo que algunas réplicas seguirán sin tener el módulo. En esa configuración, debes hacer el insert en cada réplica por separado, por ejemplo, iterando sobre `system.clusters` y escribiendo mediante `remote(...)` por host, o copiando el binario en `user_scripts/wasm/` en cada host.
-
-  Puedes consultar `internal_replication` de un clúster con `SELECT cluster, shard_num, internal_replication FROM system.clusters`.
-</Note>
-
-Después del insert distribuido, el módulo está presente en todas las réplicas y `CREATE FUNCTION ... ON CLUSTER` se ejecuta correctamente:
-
-```sql
-CREATE FUNCTION collatz_steps ON CLUSTER 'default'
-LANGUAGE WASM FROM 'collatz' :: 'steps'
-ARGUMENTS (n UInt32) RETURNS UInt32;
-```
-
-Puede verificar que el módulo esté cargado en todo el clúster con `clusterAllReplicas`:
-
-```sql
-SELECT hostName(), name FROM clusterAllReplicas('default', system.webassembly_modules) WHERE name = 'collatz';
-```
-
-Las inserciones en `system.webassembly_modules` son idempotentes para el mismo par `(name, hash)`, por lo que volver a ejecutar la inserción distribuida es seguro y una forma razonable de reparar el estado después de reemplazar una réplica. Tenga en cuenta que los servidores recién añadidos no reciben retroactivamente los módulos existentes; debe volver a ejecutar la inserción en el clúster actualizado, o colocar el binario en el directorio `user_scripts/wasm/` del nuevo host.
-
 <div id="list-modules">
   ### Listar módulos
 </div>
@@ -226,7 +181,7 @@ LANGUAGE WASM
 FROM 'module_name' [:: 'source_function_name']
 ARGUMENTS ( [name type[, ...]] | [type[, ...]] )
 RETURNS return_type
-[ABI ROW_DIRECT | ABI BUFFERED_V1 | ABI ASSEMBLYSCRIPT]
+[ABI ROW_DIRECT | ABI BUFFERED_V1]
 [DETERMINISTIC]
 [SHA256_HASH 'hex']
 [SETTINGS key = value[, ...]];
@@ -240,22 +195,19 @@ RETURNS return_type
 * `ABI`: Versión de la interfaz binaria de aplicación
   * `ROW_DIRECT`: Mapeo directo de tipos, procesamiento fila por fila
   * `BUFFERED_V1`: Procesamiento por bloques con serialización
-  * `ASSEMBLYSCRIPT`: Procesamiento fila por fila para módulos generados por el compilador [AssemblyScript](https://www.assemblyscript.org). Los tipos numéricos se asignan a primitivas de AssemblyScript; ClickHouse `String` se asigna a `string`.
 * `DETERMINISTIC`: Declara la función como determinista: siempre devuelve el mismo resultado para la misma entrada. Cuando se especifica, ClickHouse puede plegar a constantes las llamadas en las que todos los argumentos son constantes: la función se evalúa una vez durante el análisis de la consulta y el resultado se reutiliza para cada fila.
 * `SHA256_HASH`: Hash esperado del módulo para su verificación (se completa automáticamente si se omite); puede usarse para garantizar que se cargue el módulo WASM correcto en distintas réplicas.
 * `SETTINGS`: Configuración por función
-  * `serialization_format` String — Formato de serialización para las ABI que lo requieran. Valores admitidos: `MsgPack`, `JSONEachRow`, `CSV`, `TSV`, `TSVRaw`, `RowBinary` y `Buffers`. Predeterminado: `MsgPack`. Los formatos basados en bloques, como `Buffers`, deben devolver una sola columna cuyo tipo coincida con la firma de la función declarada.
-  * `webassembly_udf_enable_fuel` Bool — Habilita un presupuesto de fuel finito para la función. Predeterminado: `true`. Cuando es `false`, la configuración de nivel de consulta `webassembly_udf_max_fuel` se ignora para esta función. Deshabilitar los límites de fuel puede mejorar el rendimiento al usar el engine `wasmtime`. Sin embargo, para código guest no confiable o con errores, puede aumentar el riesgo de ejecución descontrolada.
+  * `serialization_format` String — Formato de serialización para ABI que lo requiera. Predeterminado: `MsgPack`.
 
 <div id="abis-versions">
   ## Versiones de las ABI
 </div>
 
-Para interactuar con ClickHouse, los módulos de WebAssembly deben cumplir con una de las ABI (interfaz binaria de aplicación) compatibles.
+Para interactuar con ClickHouse, los módulos de WebAssembly deben cumplir con una de las ABI (Application Binary Interface) compatibles.
 
 * `ROW_DIRECT`: mapeo directo de tipos (solo tipos primitivos `Int32`, `UInt32`, `Int64`, `UInt64`, `Float32`, `Float64`)
 * `BUFFERED_V1`: tipos complejos con serialización
-* `ASSEMBLYSCRIPT`: interoperabilidad fila por fila con módulos de [AssemblyScript](https://www.assemblyscript.org); admite tipos numéricos y `String`.
 
 <div id="abi-row_direct">
   ### ABI ROW_DIRECT
@@ -335,57 +287,6 @@ ClickhouseBuffer * user_defined_function1(ClickhouseBuffer * span, uint32_t n) {
 ClickhouseBuffer * user_defined_function2(ClickhouseBuffer * span, uint32_t n) { /* ... */ }
 ```
 
-<div id="abi-assemblyscript">
-  ### ABI ASSEMBLYSCRIPT
-</div>
-
-Se aplica a módulos generados por el compilador [AssemblyScript](https://www.assemblyscript.org). Cada fila desencadena una llamada a la función exportada, asignando los valores de ClickHouse a primitivos de AssemblyScript y objetos `string`.
-
-**Tipos compatibles**:
-
-* Numéricos: `Int8`/`UInt8`, `Int16`/`UInt16` (ampliados a `i32` en el límite), `Int32`/`UInt32`, `Int64`/`UInt64`, `Float32`, `Float64`
-
-* `String` — se asigna a `string` de AssemblyScript (UTF-16 en la memoria de WASM). ClickHouse gestiona automáticamente la conversión UTF-8 ↔ UTF-16.
-
-* No se admiten clases personalizadas de AssemblyScript como tipos de argumento o de retorno; sus identificadores de clase en tiempo de ejecución no son estables entre compilaciones (consulta [AssemblyScript#2982](https://github.com/AssemblyScript/assemblyscript/issues/2982)).
-
-**Requisitos del módulo**:
-
-El módulo debe compilarse con el entorno de ejecución administrado de AssemblyScript para que se exporten `__new`, `__pin` y `__unpin`. El manejo estándar de cadenas de entrada y salida da por hecho esto. La invocación recomendada:
-
-```bash
-asc src.ts --runtime incremental --exportRuntime -o src.wasm
-```
-
-AssemblyScript también importa `env.abort` para interrupciones del runtime (falta de memoria, comprobaciones de límites, etc.). ClickHouse proporciona esta importación automáticamente: cuando se activa un `abort`, la consulta activa falla con una excepción `WASM_ERROR` que incluye el mensaje de AssemblyScript decodificado y la ubicación en el código fuente.
-
-**Ejemplo**:
-
-```typescript
-// src.ts
-export function add(a: u32, b: u32): u32 {
-  return a + b;
-}
-
-export function greet(name: string): string {
-  return "Hello, " + name + "!";
-}
-```
-
-Después de compilar con `asc` y cargar el archivo `.wasm` resultante en `system.webassembly_modules`, declare las UDFs de la siguiente manera:
-
-```sql
-CREATE FUNCTION as_add
-    LANGUAGE WASM ABI ASSEMBLYSCRIPT
-    FROM 'as_example' :: 'add'
-    ARGUMENTS (a UInt32, b UInt32) RETURNS UInt32;
-
-CREATE FUNCTION as_greet
-    LANGUAGE WASM ABI ASSEMBLYSCRIPT
-    FROM 'as_example' :: 'greet'
-    ARGUMENTS (name String) RETURNS String;
-```
-
 <div id="note-for-developing-udfs-in-rust">
   ### Nota para desarrollar UDFs en Rust
 </div>
@@ -417,7 +318,6 @@ Las siguientes funciones del host pueden importarse y usarse en los módulos:
 * `clickhouse_throw(ptr: i32, size: i32)` — genera un error con el mensaje proporcionado. Acepta un puntero a la ubicación de memoria que contiene la cadena con el mensaje de error y el tamaño de la cadena.
 * `clickhouse_log(ptr: i32, size: i32)` — registra un mensaje en el log de texto del servidor ClickHouse.
 * `clickhouse_random(ptr: i32, size: i32)` — rellena la memoria con bytes aleatorios.
-* `env.abort(message: i32, fileName: i32, line: i32, column: i32)` — se proporciona para módulos compatibles con AssemblyScript. Al llamarlo (o al activar una trampa del runtime de AssemblyScript que lo invoque), finaliza la UDF con una excepción `WASM_ERROR` que contiene el mensaje decodificado y la ubicación de origen. Los módulos que no importan `env.abort` no se ven afectados.
 
 <div id="settings">
   ## Configuración
@@ -425,7 +325,7 @@ Las siguientes funciones del host pueden importarse y usarse en los módulos:
 
 Las siguientes configuraciones a nivel de consulta controlan la ejecución de WebAssembly UDF:
 
-* `webassembly_udf_max_fuel` — Límite de fuel por ejecución de una instancia de WebAssembly UDF. Cada instrucción de WebAssembly consume cierta cantidad de fuel. El valor se escala por 1024 antes de pasarse al runtime, por lo que `webassembly_udf_max_fuel = 1` corresponde a aproximadamente 1024 unidades de fuel. Establézcalo en 0 para no tener ningún límite finito. Se aplica solo a las funciones cuya configuración por función `webassembly_udf_enable_fuel` es true, que es el valor predeterminado.
+* `webassembly_udf_max_fuel` — Límite de fuel por ejecución de una instancia de WebAssembly UDF. Cada instrucción de WebAssembly consume cierta cantidad de fuel. Establézcalo en 0 para no tener límite.
 
 * `webassembly_udf_max_memory` — Límite de memoria en bytes por instancia de WebAssembly UDF.
 

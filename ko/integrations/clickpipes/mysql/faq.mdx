@@ -32,28 +32,6 @@ integration:
 
 초기 적재가 시작될 때 시작 지점이 되는 binlog 오프셋을 기록합니다. CDC가 계속 진행되려면 초기 적재가 완료될 때도 이 오프셋이 여전히 유효해야 합니다. 많은 양의 데이터를 수집하는 경우 적절한 binlog 보존 기간을 반드시 설정하십시오. 테이블을 설정하는 동안에는 고급 설정에서 대형 테이블에 대해 *Use a custom partitioning key for initial load*를 구성하면 단일 테이블을 병렬로 적재할 수 있어 초기 적재 속도를 높일 수 있습니다.
 
-<div id="binlog-event-exceeded-max-allowed-packet">
-  ### max_allowed_packet binlog 오류로 파이프가 실패하는 이유는 무엇인가요?
-</div>
-
-파이프가 다음과 유사한 오류와 함께 실패하는 경우:
-
-```text
-MySQL execute error: ERROR 1236 (HY000): log event entry exceeded max_allowed_packet;
-Increase max_allowed_packet on source
-```
-
-이는 단일 binlog 이벤트(한 번의 행 변경에 해당)의 크기가 MySQL 서버의 [`max_allowed_packet`](https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_max_allowed_packet) 설정값보다 크다는 뜻입니다. server는 이 한도를 초과하는 이벤트를 전송할 수 없으므로 binlog 스트림 읽기가 중단되고, CDC가 더 이상 진행되지 않습니다.
-
-대부분 `BLOB`, `TEXT` 또는 `JSON` 값이 큰 행에서 이런 문제가 발생합니다. 해결 방법은 다음과 같습니다.
-
-* **원본에서 `max_allowed_packet` 값을 늘리십시오.** 가장 큰 행 변경 크기보다 크게 설정하십시오. 일반적으로 최대값인 `1G`로 설정해도 안전합니다:
-  ```sql
-  SET GLOBAL max_allowed_packet = 1073741824; -- 1 GiB
-  ```
-  재시작 후에도 유지되도록 서버 구성(예: `my.cnf` 또는 DB Parameter Group)에도 함께 설정하십시오.
-* **단일 행의 크기가 1G보다 큰 경우:** 파이프를 resync하십시오.
-
 <div id="tls-certificate-validation-error">
   ### MySQL에 연결할 때 TLS 인증서 유효성 검사 오류가 발생하는 이유는 무엇인가요?
 </div>

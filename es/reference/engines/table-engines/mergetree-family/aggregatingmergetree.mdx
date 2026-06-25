@@ -9,7 +9,7 @@ title: 'motor de tabla de AggregatingMergeTree'
 doc_type: 'reference'
 ---
 
-Este motor hereda de [MergeTree](/es/reference/engines/table-engines/mergetree-family/mergetree) y modifica la lógica de fusión de las partes de datos. ClickHouse reemplaza todas las filas que tienen la misma clave primaria (o, más exactamente, la misma [clave de ordenación](/es/reference/engines/table-engines/mergetree-family/mergetree)) por una sola fila (dentro de una única parte de datos) que almacena una combinación de estados de funciones de agregación.
+Este motor hereda de [MergeTree](/es/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree) y modifica la lógica de fusión de las partes de datos. ClickHouse reemplaza todas las filas que tienen la misma clave primaria (o, más exactamente, la misma [clave de ordenación](/es/reference/engines/table-engines/mergetree-family/mergetree)) por una sola fila (dentro de una única parte de datos) que almacena una combinación de estados de funciones de agregación.
 
 Puede usar tablas `AggregatingMergeTree` para la agregación incremental de datos, incluidas las vistas materializadas agregadas.
 
@@ -189,48 +189,6 @@ FROM test.visits;
   Cada fila de origen produce una fila en la vista materializada, y la agregación real se realiza más tarde, cuando
   `AggregatingMergeTree` fusiona las partes. Esto solo es cierto si `optimize_on_insert = 0`.
 </Note>
-
-<div id="tuple-element-aggregation">
-  ## Agregación de elementos de Tuple
-</div>
-
-Cuando la configuración `allow_tuple_element_aggregation` está habilitada, las columnas `Tuple` se aplanan de forma recursiva para que cada elemento hoja participe en la agregación de manera independiente. Esto significa que las subcolumnas `AggregateFunction` o `SimpleAggregateFunction` dentro de un `Tuple` se agregan según sus respectivas funciones, como si fueran columnas de nivel superior.
-
-Las subcolumnas que pertenecen a un `Tuple` en la clave de ordenación se excluyen de la agregación. Las subcolumnas no agregadas se tratan como columnas ordinarias (se conserva el primer valor).
-
-<Note>
-  Esta configuración es inmutable y debe especificarse al crear la tabla.
-</Note>
-
-```sql
-CREATE TABLE agg_tuples
-(
-    key UInt32,
-    metrics Tuple(
-        total_visits SimpleAggregateFunction(sum, UInt64),
-        unique_users SimpleAggregateFunction(max, UInt64)
-    )
-) ENGINE = AggregatingMergeTree()
-ORDER BY key
-SETTINGS allow_tuple_element_aggregation = 1;
-
-INSERT INTO agg_tuples VALUES (1, (100, 5));
-INSERT INTO agg_tuples VALUES (1, (200, 8));
-INSERT INTO agg_tuples VALUES (2, (50, 3));
-
-OPTIMIZE TABLE agg_tuples FINAL;
-
-SELECT key, metrics.total_visits, metrics.unique_users FROM agg_tuples ORDER BY key;
-```
-
-```text
-┌─key─┬─metrics.total_visits─┬─metrics.unique_users─┐
-│   1 │                  300 │                    8 │
-│   2 │                   50 │                    3 │
-└─────┴──────────────────────┴──────────────────────┘
-```
-
-`total_visits` se agrega mediante `sum` (100 + 200 = 300), mientras que `unique_users` se agrega mediante `max` (max(5, 8) = 8).
 
 <div id="related-content">
   ## Contenido relacionado

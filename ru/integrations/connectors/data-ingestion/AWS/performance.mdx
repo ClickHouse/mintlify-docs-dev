@@ -73,18 +73,18 @@ ClickHouse будет непрерывно [сливать части](https://c
 Один сервер ClickHouse использует несколько [потоков фоновых слияний](/ru/reference/settings/server-settings/settings#background_pool_size) для выполнения параллельных [слияний частей](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#more-parts--more-background-part-merges:~:text=to%20execute%20concurrent-,part%20merges,-.%20Each%20thread%20executes). Каждый поток выполняет цикл:
 
 ```bash
-① Decide which parts to merge next, and load these parts as blocks into memory.
+① Определить, какие части объединить следующими, и загрузить эти части как блоки в память.
 
-② Merge the loaded blocks in memory into a larger block.
+② Объединить загруженные блоки в памяти в один более крупный блок.
 
-③ Write the merged block into a new part on disk.
+③ Записать слитый блок в новую часть на диске.
 
-Go to ①
+Перейти к ①
 ```
 
 Обратите внимание, что [увеличение](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#hardware-size) количества ядер процессора и объема оперативной памяти повышает скорость фоновых слияний.
 
-Части, объединенные в более крупные, помечаются как [неактивные](/ru/reference/system-tables/parts) и в конечном итоге удаляются по истечении [настраиваемого](/ru/reference/settings/merge-tree-settings#old_parts_lifetime) количества минут. Со временем это формирует дерево слитых частей (отсюда и название таблицы [`MergeTree`](/ru/reference/engines/table-engines/mergetree-family/index)).
+Части, объединенные в более крупные, помечаются как [неактивные](/ru/reference/system-tables/parts) и в конечном итоге удаляются по истечении [настраиваемого](/ru/reference/settings/merge-tree-settings#old_parts_lifetime) количества минут. Со временем это формирует дерево слитых частей (отсюда и название таблицы [`MergeTree`](/ru/reference/engines/table-engines/mergetree-family)).
 
 <div id="insert-parallelism">
   ### Параллелизм вставки
@@ -144,7 +144,7 @@ Go to ①
   ## Форматы
 </div>
 
-ClickHouse может читать файлы, хранящиеся в S3 бакетах, в [поддерживаемых форматах](/ru/reference/formats/index#formats-overview) с помощью функции `s3` и движка `S3`. При чтении сырых файлов некоторые из этих форматов имеют явные преимущества:
+ClickHouse может читать файлы, хранящиеся в S3 бакетах, в [поддерживаемых форматах](/ru/reference/formats#formats-overview) с помощью функции `s3` и движка `S3`. При чтении сырых файлов некоторые из этих форматов имеют явные преимущества:
 
 * Форматы с закодированными именами столбцов, такие как Native, Parquet, CSVWithNames и TabSeparatedWithNames, позволяют писать менее многословные запросы, поскольку пользователю не нужно указывать имя столбца в функции `s3`. Имена столбцов позволяют определить эту информацию автоматически.
 * Форматы различаются по производительности, в частности по пропускной способности при чтении и записи. Native и Parquet — наиболее оптимальные форматы с точки зрения производительности чтения, поскольку они изначально ориентированы на столбцы и более компактны. Формат Native также выигрывает за счет соответствия тому, как ClickHouse хранит данные в памяти, что снижает накладные расходы на обработку при потоковой передаче данных в ClickHouse.

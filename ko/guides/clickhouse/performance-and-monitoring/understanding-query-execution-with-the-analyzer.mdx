@@ -41,9 +41,7 @@ INSERT INTO session_events SELECT * FROM generateRandom('clientId UUID,
 
 ```sql
 EXPLAIN AST SELECT min(timestamp), max(timestamp) FROM session_events;
-```
 
-```response
 ┌─explain────────────────────────────────────────────┐
 │ SelectWithUnionQuery (children 1)                  │
 │  ExpressionList (children 1)                       │
@@ -82,9 +80,7 @@ ClickHouse에는 현재 분석기에 두 가지 아키텍처가 있습니다. `e
 
 ```sql
 EXPLAIN QUERY TREE passes=0 SELECT min(timestamp) AS minimum_date, max(timestamp) AS maximum_date FROM session_events SETTINGS allow_experimental_analyzer=1;
-```
 
-```response
 ┌─explain────────────────────────────────────────────────────────────────────────────────┐
 │ QUERY id: 0                                                                            │
 │   PROJECTION                                                                           │
@@ -105,9 +101,7 @@ EXPLAIN QUERY TREE passes=0 SELECT min(timestamp) AS minimum_date, max(timestamp
 
 ```sql
 EXPLAIN QUERY TREE passes=20 SELECT min(timestamp) AS minimum_date, max(timestamp) AS maximum_date FROM session_events SETTINGS allow_experimental_analyzer=1;
-```
 
-```response
 ┌─explain───────────────────────────────────────────────────────────────────────────────────┐
 │ QUERY id: 0                                                                               │
 │   PROJECTION COLUMNS                                                                      │
@@ -144,9 +138,7 @@ EXPLAIN PLAN WITH
        FROM session_events
    ) AS total_rows
 SELECT type, min(timestamp) AS minimum_date, max(timestamp) AS maximum_date, count(*) /total_rows * 100 AS percentage FROM session_events GROUP BY type
-```
 
-```response
 ┌─explain──────────────────────────────────────────┐
 │ Expression ((Projection + Before ORDER BY))      │
 │   Aggregating                                    │
@@ -170,9 +162,7 @@ SELECT
    (count(*) / total_rows) * 100 AS percentage
 FROM session_events
 GROUP BY type
-```
 
-```response
 ┌─explain──────────────────────────────────────────┐
 │ Expression ((Projection + Before ORDER BY))      │
 │ Header: type String                              │
@@ -208,9 +198,7 @@ SELECT
    (count(*) / total_rows) * 100 AS percentage
 FROM session_events
 GROUP BY type
-```
 
-```response
 ┌─explain────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Expression ((Projection + Before ORDER BY))                                                                                                │
 │ Actions: INPUT :: 0 -> type String : 0                                                                                                     │
@@ -252,10 +240,10 @@ GROUP BY type
 이제 사용되고 있는 모든 입력, 함수, 별칭, 데이터 타입을 확인할 수 있습니다. 플래너가 적용하는 일부 최적화는 [여기](https://github.com/ClickHouse/ClickHouse/blob/master/src/Processors/QueryPlan/Optimizations/Optimizations.h)에서 확인할 수 있습니다.
 
 <div id="query-pipeline">
-  ## 쿌리 파이프라인
+  ## 쿼리 파이프라인
 </div>
 
-쿼리 파이프라인은 쿼리 실행 계획으로부터 생성됩니다. 쿼리 파이프라인은 쿼리 실행 계획과 매우 유사하지만, 트리가 아닌 그래프 구조라는 점이 다릅니다. 쿼리 파이프라인은 ClickHouse가 쿼리를 어떻게 실행하는지, 그리고 어떤 리소스가 사용되는지를 보여줍니다. 쿼리 파이프라인을 분석하면 입출력 측면에서 병목 지점을 파악하는 데 매우 유용합니다. 앞서 사용한 쿼리를 바탕으로 쿼리 파이프라인 실행을 살펴보겠습니다.
+쿼리 파이프라인은 쿼리 플랜으로부터 생성됩니다. 쿼리 파이프라인은 쿼리 플랜과 매우 유사하지만, 트리가 아닌 그래프 구조라는 점이 다릅니다. 쿼리 파이프라인은 ClickHouse가 쿼리를 어떻게 실행하는지, 그리고 어떤 리소스가 사용되는지를 보여줍니다. 쿼리 파이프라인을 분석하면 입출력 측면에서 병목 지점을 파악하는 데 매우 유용합니다. 앞서 사용한 쿼리를 바탕으로 쿼리 파이프라인 실행을 살펴보겠습니다.
 
 ```sql
 EXPLAIN PIPELINE
@@ -270,9 +258,7 @@ SELECT
    (count(*) / total_rows) * 100 AS percentage
 FROM session_events
 GROUP BY type;
-```
 
-```response
 ┌─explain────────────────────────────────────────────────────────────────────┐
 │ (Expression)                                                               │
 │ ExpressionTransform × 2                                                    │
@@ -286,7 +272,7 @@ GROUP BY type;
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-괄호 안에는 쿼리 실행 계획 단계가, 그 옆에는 프로세서가 표시됩니다. 유용한 정보이지만, 이것이 그래프 구조인 만큼 시각적으로 확인할 수 있으면 더욱 편리합니다. `graph` 설정을 1로 지정하고 출력 형식을 TSV로 설정할 수 있습니다:
+괄호 안에는 쿼리 플랜 단계가, 그 옆에는 프로세서가 표시됩니다. 유용한 정보이지만, 이것이 그래프 구조인 만큼 시각적으로 확인할 수 있으면 더욱 편리합니다. `graph` 설정을 1로 지정하고 출력 형식을 TSV로 설정할 수 있습니다:
 
 ```sql
 EXPLAIN PIPELINE graph=1 WITH
@@ -351,7 +337,7 @@ digraph
 
 <Image img="/images/guides/developer/analyzer3.png" alt="그래프 출력" size="md" />
 
-흰색 직사각형은 파이프라인 노드를, 회색 직사각형은 쿼리 실행 계획 단계를 나타내며, `x` 뒤에 오는 숫자는 사용 중인 입력/출력의 수를 나타냅니다. `compact` 형식으로 표시하지 않으려면 `compact=0`을 추가하세요:
+흰색 직사각형은 파이프라인 노드를, 회색 직사각형은 쿼리 플랜 단계를 나타내며, `x` 뒤에 오는 숫자는 사용 중인 입력/출력의 수를 나타냅니다. `compact` 형식으로 표시하지 않으려면 `compact=0`을 추가하세요:
 
 ```sql
 EXPLAIN PIPELINE graph = 1, compact = 0

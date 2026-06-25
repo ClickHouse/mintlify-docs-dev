@@ -258,7 +258,7 @@ Esse recurso é útil ao usar os motores de tabela [SummingMergeTree](/pt-BR/ref
 
 Nesse caso, faz sentido manter apenas algumas colunas na chave primária para garantir varreduras de intervalo eficientes e adicionar as colunas de dimensão restantes à tupla da chave de ordenação.
 
-O [ALTER](/pt-BR/reference/statements/alter/index) da chave de ordenação é uma operação leve porque, quando uma nova coluna é adicionada simultaneamente à tabela e à chave de ordenação, as partes de dados existentes não precisam ser alteradas. Como a chave de ordenação antiga é um prefixo da nova chave de ordenação e não há dados na coluna recém-adicionada, os dados ficam ordenados tanto pela chave de ordenação antiga quanto pela nova no momento da modificação da tabela.
+O [ALTER](/pt-BR/reference/statements/alter) da chave de ordenação é uma operação leve porque, quando uma nova coluna é adicionada simultaneamente à tabela e à chave de ordenação, as partes de dados existentes não precisam ser alteradas. Como a chave de ordenação antiga é um prefixo da nova chave de ordenação e não há dados na coluna recém-adicionada, os dados ficam ordenados tanto pela chave de ordenação antiga quanto pela nova no momento da modificação da tabela.
 
 <div id="use-of-indexes-and-partitions-in-queries">
   ### Uso de índices e partições em consultas
@@ -635,9 +635,7 @@ As condições na cláusula `WHERE` contêm chamadas a funções que operam sobr
 | [match](/pt-BR/reference/functions/regular-functions/string-search-functions#match)                                                       | ✗              | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [startsWith](/pt-BR/reference/functions/regular-functions/string-functions#startsWith)                                                    | ✔              | ✔      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [endsWith](/pt-BR/reference/functions/regular-functions/string-functions#endsWith)                                                        | ✗              | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
-| [multiSearchAny](/pt-BR/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗              | ✗      | ✔              | ✗              | ✗                | ✗                | ✔    |
-| [multiSearchAnyUTF8](/pt-BR/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8)                             | ✗              | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
-| [multiMatchAny](/pt-BR/reference/functions/regular-functions/string-search-functions#multiMatchAny)                                       | ✗              | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
+| [multiSearchAny](/pt-BR/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗              | ✗      | ✔              | ✗              | ✗                | ✗                | ✗    |
 | [in](/pt-BR/reference/functions/regular-functions/in-functions)                                                                           | ✔              | ✔      | ✔              | ✔              | ✔                | ✔                | ✔    |
 | [notIn](/pt-BR/reference/functions/regular-functions/in-functions)                                                                        | ✔              | ✔      | ✔              | ✔              | ✔                | ✔                | ✗    |
 | [menor (`<`)](/pt-BR/reference/functions/regular-functions/comparison-functions#less)                                                     | ✔              | ✔      | ✗              | ✗              | ✗                | ✗                | ✗    |
@@ -800,7 +798,7 @@ TTL time_column
 TTL time_column + interval
 ```
 
-Para definir `interval`, use os operadores de [intervalo de tempo](/pt-BR/reference/operators/index#operators-for-working-with-dates-and-times), por exemplo:
+Para definir `interval`, use os operadores de [intervalo de tempo](/pt-BR/reference/operators#operators-for-working-with-dates-and-times), por exemplo:
 
 ```sql
 TTL date_time + INTERVAL 1 MONTH
@@ -1183,7 +1181,7 @@ O número de threads que executam movimentações em segundo plano de partes de 
 No caso das tabelas `MergeTree`, os dados chegam ao disco de diferentes maneiras:
 
 * Como resultado de um insert (consulta `INSERT`).
-* Durante mesclagens em segundo plano e [mutações](/pt-BR/reference/statements/alter/index#mutations).
+* Durante mesclagens em segundo plano e [mutações](/pt-BR/reference/statements/alter#mutations).
 * Ao serem baixados de outra réplica.
 * Como resultado do congelamento de uma partição [ALTER TABLE ... FREEZE PARTITION](/pt-BR/reference/statements/alter/partition#freeze-partition).
 
@@ -1389,13 +1387,13 @@ Elas só podem ser usadas para a otimização PREWHERE se habilitarmos `set use_
 </div>
 
 Quando `use_statistics_for_part_pruning` está habilitado, as estatísticas podem ser usadas para a poda de partes.
-Atualmente, apenas as estatísticas `MinMax` e `Basic` dão suporte à poda de partes. Quando essas estatísticas são definidas para uma coluna, o ClickHouse acompanha os valores mínimo e máximo dessa coluna em cada parte.
+Atualmente, as estatísticas `MinMax` e `NullCount` dão suporte à poda de partes. Quando estatísticas `MinMax` são definidas para uma coluna, o ClickHouse acompanha os valores mínimo e máximo dessa coluna em cada parte. Quando estatísticas `NullCount` são definidas para uma coluna `Nullable`, o ClickHouse acompanha o número de valores NULL em cada parte, permitindo a poda com base em predicados `IS NULL` / `IS NOT NULL` e melhorando a precisão da poda com filtros de intervalo para colunas com valores NULL.
 A poda de partes permite evitar a leitura de partes de dados inteiras quando a condição de filtro da consulta não pode corresponder a nenhuma linha nessa parte.
 
 **Exemplo:**
 
 ```sql
--- Create a table with MinMax statistics on the 'value' column
+-- Cria uma tabela com estatísticas MinMax na coluna 'value'
 CREATE TABLE test_stats
 (
     id UInt64,
@@ -1406,35 +1404,23 @@ ORDER BY id;
 
 SYSTEM STOP MERGES test_stats;
 
--- Insert data in separate inserts to create multiple parts
-INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- Part 1: value range [0, 999]
-INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- Part 2: value range [10000, 10999]
+-- Insere dados em inserções separadas para criar múltiplas partes
+INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- Parte 1: intervalo de value [0, 999]
+INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- Parte 2: intervalo de value [10000, 10999]
 
 SET use_statistics_for_part_pruning = 1;
 
--- This query will skip Part 1 entirely because its max value (999) < 5000
+-- Esta consulta ignorará a Parte 1 completamente porque seu valor máximo (999) < 5000
 SELECT count() FROM test_stats WHERE value > 5000;
 
--- Use EXPLAIN to see the pruning effect
+-- Use EXPLAIN para ver o efeito do pruning
 EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
--- The output will show "Parts: 1/2" indicating one part was pruned
+-- A saída mostrará "Parts: 1/2" indicando que uma parte foi removida pelo pruning
 ```
 
 <div id="available-types-of-column-statistics">
   ### Tipos disponíveis de estatísticas de coluna
 </div>
-
-* `Basic`
-
-  Um conjunto compacto de resumos de valor único derivados de uma coluna. Dependendo do tipo da coluna, os seguintes elementos são preenchidos:
-
-  * para qualquer coluna cujos valores sejam representados por um número (inteiros, floats, `Decimal*`, `Date*`, `DateTime*`, `Enum*`, `IPv4`, ...): os valores mínimo e máximo, que permitem estimar a seletividade de filtros por intervalo e habilitam a poda de partes;
-  * para colunas `String` e `FixedString`: o comprimento total em bytes dos valores não `NULL` (a partir do qual é possível derivar o comprimento médio da string);
-  * para colunas `Nullable` e `LowCardinality(Nullable)`: a contagem de valores `NULL`, que o otimizador usa para descontar linhas `NULL` das estimativas de seletividade.
-
-    Uma única estatística `Basic` pode preencher vários desses elementos ao mesmo tempo — por exemplo, em uma coluna `Nullable(UInt32)` ela rastreia tanto o mínimo/máximo numérico quanto a contagem de nulos. Em comparação com `MinMax`, `Basic` também funciona em colunas `String` / `FixedString` e pode ser declarada em wrappers `Nullable` de tipos como `UUID` ou `IPv6` apenas para rastrear a contagem de nulos.
-
-    Sintaxe: `basic`
 
 * `MinMax`
 
@@ -1454,6 +1440,12 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
 
   Sintaxe: `uniq`
 
+* `NullCount`
+
+  Rastreia o número de valores `NULL` em colunas `Nullable`. É usado para estimar com precisão a seletividade de predicados `IS NULL`/`IS NOT NULL` na otimização PREWHERE e permite a poda de parte com base na presença de NULL.
+
+  Sintaxe: `nullcount`
+
 * `CountMin`
 
   Sketches [CountMin](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch) que fornecem uma contagem aproximada da frequência de cada valor em uma coluna.
@@ -1461,34 +1453,28 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
   Sintaxe: `countmin`
 
 <div id="supported-data-types">
-  ### Tipos de dados suportados
+  ### Tipos de dados compatíveis
 </div>
 
-|          | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | IPv4 | String ou FixedString |
-| -------- | -------------------------------------------------- | ---- | --------------------- |
-| Basic    | ✔                                                  | ✔    | ✔                     |
-| CountMin | ✔                                                  | ✔    | ✔                     |
-| MinMax   | ✔                                                  | ✔    | ✗                     |
-| TDigest  | ✔                                                  | ✗    | ✗                     |
-| Uniq     | ✔                                                  | ✔    | ✔                     |
-
-Todos os itens acima também aceitam wrappers `Nullable` e `LowCardinality(Nullable)` dos tipos listados. `Basic` também pode ser declarado em wrappers `Nullable` de tipos como `UUID` ou `IPv6` exclusivamente para rastrear a contagem de valores nulos.
+|           | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | String ou FixedString | Nullable(*) / LowCardinality(Nullable(*)) |
+| --------- | -------------------------------------------------- | --------------------- | ----------------------------------------- |
+| CountMin  | ✔                                                  | ✔                     | ✗                                         |
+| MinMax    | ✔                                                  | ✗                     | ✔                                         |
+| NullCount | ✗                                                  | ✗                     | ✔                                         |
+| TDigest   | ✔                                                  | ✗                     | ✔                                         |
+| Uniq      | ✔                                                  | ✔                     | ✔                                         |
 
 <div id="supported-operations">
-  ### Operações suportadas
+  ### Operações compatíveis
 </div>
 
-|          | Filtros de igualdade (==) | Filtros por intervalo (`>, >=, <, <=`) |
-| -------- | ------------------------- | -------------------------------------- |
-| Basic    | ✗                         | ✔ (somente colunas numéricas)          |
-| CountMin | ✔                         | ✗                                      |
-| MinMax   | ✗                         | ✔ (somente colunas numéricas)          |
-| TDigest  | ✗                         | ✔ (somente colunas numéricas)          |
-| Uniq     | ✔                         | ✗                                      |
-
-Para `Basic` em colunas `String` / `FixedString`, a estatística registra apenas o comprimento total, em bytes, dos valores não NULL
-(usado para estimar o comprimento médio da string) e a contagem de nulos;
-filtros por intervalo e poda de partes não usam essa estatística.
+|           | Filtros por igualdade (==) | Filtros por intervalo (`>, >=, <, <=`) | `IS NULL` / `IS NOT NULL` |
+| --------- | -------------------------- | -------------------------------------- | ------------------------- |
+| CountMin  | ✔                          | ✗                                      | ✗                         |
+| MinMax    | ✗                          | ✔                                      | ✗                         |
+| NullCount | ✗                          | ✗                                      | ✔                         |
+| TDigest   | ✗                          | ✔                                      | ✗                         |
+| Uniq      | ✔                          | ✗                                      | ✗                         |
 
 <div id="column-level-settings">
   ## Configurações em nível de coluna

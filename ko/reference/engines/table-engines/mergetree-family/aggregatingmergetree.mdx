@@ -6,7 +6,7 @@ title: 'AggregatingMergeTree 테이블 엔진'
 doc_type: 'reference'
 ---
 
-이 엔진은 [MergeTree](/ko/reference/engines/table-engines/mergetree-family/mergetree)를 상속하며, 데이터 파트 머지 로직을 변경합니다. ClickHouse는 동일한 프라이머리 키(더 정확히는 동일한 [정렬 키](/ko/reference/engines/table-engines/mergetree-family/mergetree))를 가진 모든 행을 집계 함수 상태의 조합을 저장하는 단일 행(단일 데이터 파트 내에서)으로 대체합니다.
+이 엔진은 [MergeTree](/ko/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree)를 상속하며, 데이터 파트 머지 로직을 변경합니다. ClickHouse는 동일한 프라이머리 키(더 정확히는 동일한 [정렬 키](/ko/reference/engines/table-engines/mergetree-family/mergetree))를 가진 모든 행을 집계 함수 상태의 조합을 저장하는 단일 행(단일 데이터 파트 내에서)으로 대체합니다.
 
 `AggregatingMergeTree` 테이블은 집계된 materialized view를 포함해 데이터의 증분 집계에 사용할 수 있습니다.
 
@@ -186,48 +186,6 @@ FROM test.visits;
   각 소스 행은 materialized view에 하나의 행을 생성하며, 실제 집계는 나중에
   `AggregatingMergeTree`가 파트를 머지할 때 이루어집니다. 이는 `optimize_on_insert = 0`인 경우에만 적용됩니다.
 </Note>
-
-<div id="tuple-element-aggregation">
-  ## Tuple 요소 집계
-</div>
-
-`allow_tuple_element_aggregation` 설정이 활성화되면 `Tuple` 컬럼은 각 리프 요소가 독립적으로 집계에 참여할 수 있도록 재귀적으로 평탄화됩니다. 즉, `Tuple` 내부의 `AggregateFunction` 또는 `SimpleAggregateFunction` 서브컬럼은 최상위 컬럼인 것처럼 각 함수에 따라 집계됩니다.
-
-정렬 키에 속하는 `Tuple`의 서브컬럼은 집계에서 제외됩니다. 집계 함수가 아닌 서브컬럼은 일반 컬럼으로 처리되며 첫 번째 값이 유지됩니다.
-
-<Note>
-  이 설정은 변경할 수 없으며 테이블 생성 시 지정해야 합니다.
-</Note>
-
-```sql
-CREATE TABLE agg_tuples
-(
-    key UInt32,
-    metrics Tuple(
-        total_visits SimpleAggregateFunction(sum, UInt64),
-        unique_users SimpleAggregateFunction(max, UInt64)
-    )
-) ENGINE = AggregatingMergeTree()
-ORDER BY key
-SETTINGS allow_tuple_element_aggregation = 1;
-
-INSERT INTO agg_tuples VALUES (1, (100, 5));
-INSERT INTO agg_tuples VALUES (1, (200, 8));
-INSERT INTO agg_tuples VALUES (2, (50, 3));
-
-OPTIMIZE TABLE agg_tuples FINAL;
-
-SELECT key, metrics.total_visits, metrics.unique_users FROM agg_tuples ORDER BY key;
-```
-
-```text
-┌─key─┬─metrics.total_visits─┬─metrics.unique_users─┐
-│   1 │                  300 │                    8 │
-│   2 │                   50 │                    3 │
-└─────┴──────────────────────┴──────────────────────┘
-```
-
-`total_visits`는 `sum`으로 집계되고(100 + 200 = 300), `unique_users`는 `max`로 집계됩니다(max(5, 8) = 8).
 
 <div id="related-content">
   ## 관련 콘텐츠

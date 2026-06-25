@@ -101,7 +101,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | `default_query_settings`            | `null`         | Permite pasar ajustes de consulta predeterminados en las operaciones de consulta                                                                                                                                                                        |
   | `jdbc_resultset_auto_close`         | `true`         | Cierra automáticamente `ResultSet` cuando se cierra el `Statement`                                                                                                                                                                                      |
   | `beta.row_binary_for_simple_insert` | `false`        | Utiliza la implementación de `PreparedStatement` basada en el generador `RowBinary`. Solo funciona con consultas `INSERT INTO ... VALUES`.                                                                                                              |
-  | `jdbc_resultset_auto_close`         | `true`         | Cierra automáticamente `ResultSet` cuando se cierra el `Statement`                                                                                                                                                                                      |
+  | `jdbc_resultset_auto_close`         | `true`         | Cierra automáticamente `ResultSet` al cerrar `Statement`                                                                                                                                                                                                |
   | `jdbc_use_max_result_rows`          | `false`        | Permite usar la propiedad del servidor `max_result_rows` para limitar la cantidad de filas que devuelve la consulta. Cuando está habilitado, anula el modo de desbordamiento configurado por el usuario. Consulte JavaDoc para obtener más información. |
   | `jdbc_sql_parser`                   | `JAVACC`       | Configura qué parser de SQL usar. Opciones: `ANTLR4`, `ANTLR4_PARAMS_PARSER`, `JAVACC`.                                                                                                                                                                 |
   | `remember_last_set_roles`           | `true`         | Recuerda los últimos roles establecidos para la conexión.                                                                                                                                                                                               |
@@ -116,7 +116,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
     config.setProperty("user", "default");
     config.setProperty("password", getPassword());
 
-    // set server setting
+    // establecer la configuración del servidor
     config.put(ClientConfigProperties.serverSetting("allow_experimental_time_time64_type"), "1");
 
     Connection conn = Driver.connect("jdbc:ch:http://localhost:8123/", config);
@@ -129,7 +129,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Properties properties = new Properties();
   properties.setProperty("user", "default");
   properties.setProperty("password", getPassword());
-  properties.setProperty("client_name", "my-app-01"); // when http protocol is used it will be `http_user_agent` in the query log but not `client_name`.
+  properties.setProperty("client_name", "my-app-01"); // cuando se usa el protocolo HTTP, será `http_user_agent` en el log de consultas y no `client_name`.
 
   Connection conn = Driver.connect("jdbc:ch:http://localhost:8123/", properties);
   ```
@@ -138,16 +138,10 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   ```sql
   jdbc:ch:http://localhost:8123/?user=default&password=password&client_name=my-app-01 
-  // credentials shoud be passed in `Properties`. Here it is just for example.
+  // las credenciales deben pasarse en `Properties`. Aquí es solo a modo de ejemplo.
   ```
 
   Nota: no es necesario codificar en URL la URL JDBC ni las propiedades; se codificarán automáticamente.
-
-  **Perfiles de solo lectura**
-
-  Evitamos deliberadamente añadir configuraciones predeterminadas a las propiedades de conexión para evitar problemas con los perfiles de solo lectura.
-  Sin embargo, algunos usuarios necesitan pasar configuraciones de formato (por ejemplo, para leer JSON como String) y recomendamos usar el perfil `readonly=2`.
-  Lea más sobre los perfiles de solo lectura [aquí](/es/concepts/features/configuration/settings/constraints-on-settings#read-only).
 
   ### Identificación del cliente
 
@@ -187,7 +181,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   ## Tipos de datos compatibles
 
-  El JDBC driver admite los mismos formatos de datos que el [java client](/es/integrations/language-clients/java/index#supported-data-types) subyacente.
+  El JDBC driver admite los mismos formatos de datos que el [java client](/es/integrations/language-clients/java#supported-data-types) subyacente.
 
   ### Correspondencia de tipos JDBC
 
@@ -208,15 +202,15 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | Int16              | SMALLINT  | java.lang.Short      |
   | Int32              | INTEGER   | java.lang.Integer    |
   | Int64              | BIGINT    | java.lang.Long       |
-  | Int128             | NUMERIC   | java.math.BigInteger |
-  | Int256             | NUMERIC   | java.math.BigInteger |
-  | UInt8              | SMALLINT  | java.lang.Short      |
-  | UInt16             | INTEGER   | java.lang.Integer    |
-  | UInt32             | BIGINT    | java.lang.Long       |
-  | UInt64             | NUMERIC   | java.math.BigInteger |
-  | UInt128            | NUMERIC   | java.math.BigInteger |
-  | UInt256            | NUMERIC   | java.math.BigInteger |
-  | Float32            | FLOAT     | java.lang.Float      |
+  | Int128             | OTHER     | java.math.BigInteger |
+  | Int256             | OTHER     | java.math.BigInteger |
+  | UInt8              | OTHER     | java.lang.Short      |
+  | UInt16             | OTHER     | java.lang.Integer    |
+  | UInt32             | OTHER     | java.lang.Long       |
+  | UInt64             | OTHER     | java.math.BigInteger |
+  | UInt128            | OTHER     | java.math.BigInteger |
+  | UInt256            | OTHER     | java.math.BigInteger |
+  | Float32            | REAL      | java.lang.Float      |
   | Float64            | DOUBLE    | java.lang.Double     |
   | Decimal32          | DECIMAL   | java.math.BigDecimal |
   | Decimal64          | DECIMAL   | java.math.BigDecimal |
@@ -247,8 +241,8 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   | Tipo de ClickHouse | Tipo JDBC | Clase Java       |
   | ------------------ | --------- | ---------------- |
-  | Enum8              | VARCHAR   | java.lang.String |
-  | Enum16             | VARCHAR   | java.lang.String |
+  | Enum8              | OTHER     | java.lang.String |
+  | Enum16             | OTHER     | java.lang.String |
 
   * `Enum8` y `Enum16` se asignan a `java.lang.String` de manera predeterminada.
   * Los valores `enum` pueden leerse como valores numéricos mediante el método getter correspondiente o el método `getObject(columnIndex, Integer.class)`.
@@ -276,77 +270,20 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **Tipos anidados**
 
-  | Tipo de ClickHouse | Tipo JDBC | Clase Java                |
-  | ------------------ | --------- | ------------------------- |
-  | Array              | ARRAY     | java.sql.Array            |
-  | Tuple              | OTHER     | com.clickhouse.data.Tuple |
-  | Map                | OTHER     | java.util.Map             |
-  | Nested             | ARRAY     | java.sql.Array            |
+  | Tipo de ClickHouse | Tipo JDBC       | Clase Java                |
+  | ------------------ | --------------- | ------------------------- |
+  | Array              | ARRAY           | java.sql.Array            |
+  | Tuple              | OTHER           | com.clickhouse.data.Tuple |
+  | Map                | JAVA&#95;OBJECT | java.util.Map             |
+  | Nested             | ARRAY           | java.sql.Array            |
 
   * `Array` se asigna a `java.sql.Array` de forma predeterminada para mantener la compatibilidad con JDBC. Esto también se hace para proporcionar más información sobre el valor de array devuelto. Resulta útil para la inferencia de tipos.
   * `Array` implementa el método `getResultSet()` para devolver un `java.sql.ResultSet` con el mismo contenido que el array original.
   * Los tipos de colección no deberían interpretarse como `java.lang.String`, ya que no es una forma válida de representar los datos (p. ej., en un array no se usan comillas para los valores de cadena).
-  * `Map` se asigna a `OTHER` porque el valor solo puede leerse mediante el método `getObject(columnIndex, Class<T>)`.
+  * `Map` se asigna a `JAVA_OBJECT` porque el valor solo puede leerse con el método `getObject(columnIndex, Class<T>)`.
     * `Map` no es un `java.sql.Struct` porque no tiene columnas con nombres.
   * `Tuple` se mapea a `Object[]` porque puede contener distintos tipos y no es válido usar `List`.
   * `Tuple` puede leerse como `Array` mediante el método `getObject(columnIndex, Array.class)`. En este caso, `Array#baseTypeName` devolverá la definición de la columna `Tuple`.
-
-  **Metadatos del tipo de elemento de Array**
-
-  `Array.getBaseTypeName()` devuelve el nombre del tipo de elemento de ClickHouse; `Array.getBaseType()` devuelve el código de tipo JDBC.
-  JDBC V2 conserva las firmas de tipo completas (tipos envoltorio, parámetros de tipo) que V1 elimina.
-
-  Las reglas generales de correspondencia para los arrays son:
-
-  | Tipo de ClickHouse                         | `getBaseTypeName()`                                | `getBaseType()`                        |
-  | ------------------------------------------ | -------------------------------------------------- | -------------------------------------- |
-  | `Array(<Tipo primitivo>)`                  | `<Tipo primitivo>`                                 | `<Tipo primitivo de JDBC>`             |
-  | `Array(<Parameterized Type>(<N>))`         | `<Tipo parametrizado>(<N>)`                        | `<tipo JDBC del tipo base>`            |
-  | `Array(Nullable(<Type>))`                  | `Nullable(<Type>)`                                 | `<Tipo JDBC del Type interno>`         |
-  | `Array(LowCardinality(<Type>))`            | `LowCardinality(<Type>)`                           | `<tipo JDBC del Type interno>`         |
-  | `Array(Array(...(<Type>)))`                | `<Type>` (elemento más interno)                    | `<Tipo JDBC del elemento más interno>` |
-  | `Array(Tuple(...))`                        | `Tuple(...)` (definición completa)                 | `OTHER`                                |
-  | `Array(Enum8(...))` / `Array(Enum16(...))` | `Enum8(...)` / `Enum16(...)` (definición completa) | `VARCHAR`                              |
-
-  Notas sobre las reglas anteriores:
-
-  * Los tipos de envoltorio (`Nullable`, `LowCardinality`) se conservan en `getBaseTypeName()`, pero `getBaseType()` se resuelve como el código JDBC del tipo interno.
-  * Los arrays anidados se aplanan en los metadatos: `getBaseTypeName()` devuelve el tipo del elemento más interno que no sea un array, no el hijo inmediato.
-  * Los tipos parametrizados (`FixedString(N)`, definiciones completas de `Enum`/`Tuple`) conservan sus parámetros en `getBaseTypeName()`.
-
-  **Ejemplos:**
-
-  | Tipo de ClickHouse (Ejemplo)                                               | `getBaseTypeName()`                                                 | `getBaseType()` |
-  | -------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------- |
-  | Array(Int8)                                                                | Int8                                                                | TINYINT         |
-  | Array(Int16)                                                               | Int16                                                               | SMALLINT        |
-  | Array(Int32)                                                               | Int32                                                               | INTEGER         |
-  | Array(Int64)                                                               | Int64                                                               | BIGINT          |
-  | Array(UInt8)                                                               | UInt8                                                               | SMALLINT        |
-  | Array(UInt16)                                                              | UInt16                                                              | INTEGER         |
-  | Array(UInt32)                                                              | UInt32                                                              | BIGINT          |
-  | Array(UInt64)                                                              | UInt64                                                              | NUMERIC         |
-  | Array(Float32)                                                             | Float32                                                             | FLOAT           |
-  | Array(Float64)                                                             | Float64                                                             | DOUBLE          |
-  | Array(String)                                                              | String                                                              | VARCHAR         |
-  | Array(FixedString(8))                                                      | FixedString(8)                                                      | VARCHAR         |
-  | Array(Bool)                                                                | Bool                                                                | BOOLEAN         |
-  | Array(Date)                                                                | Date                                                                | DATE            |
-  | Array(DateTime)                                                            | DateTime                                                            | TIMESTAMP       |
-  | Array(UUID)                                                                | UUID                                                                | OTHER           |
-  | Array(Nullable(Int32))                                                     | Nullable(Int32)                                                     | INTEGER         |
-  | Array(Nullable(String))                                                    | Nullable(String)                                                    | VARCHAR         |
-  | Array(LowCardinality(String))                                              | LowCardinality(String)                                              | VARCHAR         |
-  | Array(LowCardinality(Nullable(String)))                                    | LowCardinality(Nullable(String))                                    | VARCHAR         |
-  | Array(Array(Int32))                                                        | Int32                                                               | INTEGER         |
-  | Array(Array(Array(String)))                                                | String                                                              | VARCHAR         |
-  | Array(Tuple(name String, val Int32))                                       | Tuple(name String, val Int32)                                       | OTHER           |
-  | Array(Enum8(&#39;alpha&#39; = 1, &#39;beta&#39; = 2, &#39;gamma&#39; = 3)) | Enum8(&#39;alpha&#39; = 1, &#39;beta&#39; = 2, &#39;gamma&#39; = 3) | VARCHAR         |
-
-  * En V2, `getBaseTypeName()` conserva la firma de tipo completa, incluidos los tipos envoltorio (`Nullable`, `LowCardinality`) y los parámetros de tipo (`FixedString(8)`, las definiciones completas de `Enum` y `Tuple`). V1 los elimina y devuelve solo el nombre del tipo base.
-  * Los arrays de `Tuple` usan `OTHER (1111)` en V2 en lugar de `STRUCT (2002)` porque las tuplas de ClickHouse tienen campos con nombre, algo que `java.sql.Struct` no admite.
-  * Los arrays de `UUID` usan `OTHER (1111)` en V2, en consonancia con la asignación escalar de `UUID`.
-  * Los valores `Enum` se asignan a `VARCHAR`: los miembros de `enum` se identifican por su nombre de cadena, independientemente de su codificación numérica subyacente.
 
   **Escritura de Arrays**
 
@@ -391,7 +328,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
                   Object[] arr = (Object[]) array;
                   Arrays.stream(arr).forEach(this::handleArrayElement);
 
-                  // or by using `ResultSet`
+                  // o mediante `ResultSet`
                   ResultSet resultSet = array.getResultSet();
                   while (resultSet.next()) {
                       // ...
@@ -447,7 +384,6 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
           }
       }
   }
-
   ```
 
   **Escritura de Maps**
@@ -488,7 +424,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   }
   ```
 
-  **Escritura de Nested**
+  **Escritura anidada**
 
   Utilice `java.sql.Connection#createStruct` para instanciar el objeto `java.sql.Struct`. Este objeto está diseñado para unificar el manejo de estructuras anidadas en distintas bases de datos.
   Se necesita una conexión para pasar la configuración al método de fábrica de Struct.
@@ -510,7 +446,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   }
   ```
 
-  **Lectura de Nested**
+  **Lectura anidada**
 
   Use `ResultSet#getStruct(columnIndex, StructDescriptor)` para leer el objeto `Nested`. El objeto puede utilizarse para acceder a elementos anidados de cualquier nivel de profundidad.
   El método `Struct#getResultSet()` puede emplearse para leer elementos anidados de forma más uniforme, como `java.sql.ResultSet`. Resulta útil
@@ -528,7 +464,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
                   Object[] tuple = (Object[]) struct;
                   Arrays.stream(tuple).forEach(this::handleTupleElement);
 
-                  // or by using `ResultSet`
+                  // o mediante `ResultSet`
                   ResultSet resultSet = struct.getResultSet();
                   while (resultSet.next()) {
                       // ...
@@ -541,11 +477,11 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **Geo Types**
 
-  | Tipo de ClickHouse | Tipo JDBC | Clase Java                                     |
-  | ------------------ | --------- | ---------------------------------------------- |
-  | Point              | OTHER     | double[]                               |
-  | Ring               | OTHER     | double[][]                     |
-  | Polygon            | OTHER     | double[][][]           |
+  | Tipo de ClickHouse | Tipo JDBC | Clase Java     |
+  | ------------------ | --------- | -------------- |
+  | Point              | OTHER     | double[]       |
+  | Ring               | OTHER     | double[][]     |
+  | Polygon            | OTHER     | double[][][]   |
   | MultiPolygon       | OTHER     | double[][][][] |
 
   **Tipos Nullable y LowCardinality**
@@ -555,74 +491,19 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **Tipos especiales**
 
-  | Tipo de ClickHouse      | Tipo JDBC       | Clase Java               |
-  | ----------------------- | --------------- | ------------------------ |
-  | UUID                    | OTHER           | java.util.UUID           |
-  | IPv4                    | OTHER           | java.net.Inet4Address    |
-  | IPv6                    | OTHER           | java.net.Inet6Address    |
-  | JSON                    | OTHER           | java.lang.String         |
-  | AggregateFunction       | OTHER           | (representación binaria) |
-  | SimpleAggregateFunction | (tipo envuelto) | (clase envuelta)         |
+  | Tipo de ClickHouse      | Tipo JDBC          | Clase Java               |
+  | ----------------------- | ------------------ | ------------------------ |
+  | UUID                    | OTHER              | java.util.UUID           |
+  | IPv4                    | OTHER              | java.net.Inet4Address    |
+  | IPv6                    | OTHER              | java.net.Inet6Address    |
+  | JSON                    | OTHER              | java.lang.String         |
+  | AggregateFunction       | OTHER              | (representación binaria) |
+  | SimpleAggregateFunction | (tipo encapsulado) | (clase encapsulada)      |
 
   * `UUID` no es un tipo estándar de JDBC. Sin embargo, forma parte del JDK. De forma predeterminada, el método `getObject()` devuelve `java.util.UUID`.
   * `UUID` puede leerse y escribirse como `String` mediante el método `getObject(columnIndex, String.class)`.
   * `IPv4` e `IPv6` no son tipos estándar de JDBC. Sin embargo, forman parte del JDK. De forma predeterminada, el método `getObject()` devuelve `java.net.Inet4Address` y `java.net.Inet6Address`.
   * `IPv4` y `IPv6` se pueden leer y escribir como `String` mediante el método `getObject(columnIndex, String.class)`.
-
-  **Tipo JSON**
-
-  El tipo JSON se asigna a `Map<String, Object>` de forma predeterminada, donde las claves son las claves del objeto JSON y los valores son los valores del objeto JSON.
-  Por ejemplo:
-
-  ```json
-  {
-      "key1": "value1",
-      "key2": ["value2", "value3"]
-      "key3": {
-          "key4": "value4",
-          "key5": "value5"
-      }
-  }
-  ```
-
-  se asignará a:
-
-  ```java
-  Map<String, Object> map = new HashMap<>();
-  map.put("key1", "value1");
-  map.put("key2", Arrays.asList("value2", "value3"));
-  map.put("key3", new HashMap<String, Object>() {{
-      put("key4", "value4");
-      put("key5", "value5");
-  }});
-  ```
-
-  Existe una opción más conveniente para leer JSON como String pasando la configuración del servidor `jdbc_read_json_as_string=true` a las propiedades de conexión.
-  Esto hace que el driver devuelva los valores JSON como String y permite procesarlos con cualquier biblioteca JSON.
-
-  ```java
-  Properties properties = new Properties();
-  properties.setProperty(
-                  ClientConfigProperties.serverSetting(ServerSettings.OUTPUT_FORMAT_BINARY_WRITE_JSON_AS_STRING),
-                  "1");
-  try (Connection conn = DriverManager.getConnection(url, properties)) {
-       try (ResultSet rs = stmt.executeQuery("SELECT * FROM test_json ORDER BY order")) {
-          while (rs.next()) {
-              String json = rs.getString("json");
-              // ...
-          }
-      }
-  }
-  ```
-
-  A partir de la versión 25.8 de ClickHouse, los números ya no se entrecomillan de forma predeterminada. Para versiones anteriores, puede deshabilitar el entrecomillado pasando la configuración del servidor a las propiedades de conexión:
-
-  ```java
-  Properties properties = new Properties();
-  properties.put(ClientConfigProperties.serverSetting("output_format_json_quote_64bit_integers"), "0");
-  properties.put(ClientConfigProperties.serverSetting("output_format_json_quote_64bit_floats"), "0");
-  properties.put(ClientConfigProperties.serverSetting("output_format_json_quote_decimals"), "0");
-  ```
 
   ### Manejo de fechas, horas y zonas horarias
 
@@ -635,9 +516,9 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   String url = "jdbc:ch://my-server:8123/system";
 
   Properties properties = new Properties();
-  DataSource dataSource = new DataSource(url, properties);//DataSource or DriverManager are the main entry points
+  DataSource dataSource = new DataSource(url, properties);//DataSource o DriverManager son los puntos de entrada principales
   try (Connection conn = dataSource.getConnection()) {
-  ... // do something with the connection
+  ... // hacer algo con la conexión
   ```
 
   ## Suministro de credenciales y configuración
@@ -650,13 +531,13 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   info.put("password", "password");
   info.put("database", "some_db");
 
-  //Creating a connection with DataSource
+  //Creando una conexión con DataSource
   DataSource dataSource = new DataSource(url, info);
   try (Connection conn = dataSource.getConnection()) {
   ... // do something with the connection
   }
 
-  //Alternate approach using the DriverManager
+  //Enfoque alternativo con DriverManager
   try (Connection conn = DriverManager.getConnection(url, info)) {
   ... // do something with the connection
   }
@@ -665,7 +546,6 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ## Instrucción simple
 
   ```java showLineNumbers
-
   try (Connection conn = dataSource.getConnection(...);
       Statement stmt = conn.createStatement()) {
       ResultSet rs = stmt.executeQuery("select * from numbers(50000)");
@@ -680,19 +560,19 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ```java showLineNumbers
   try (PreparedStatement ps = conn.prepareStatement("INSERT INTO mytable VALUES (?, ?)")) {
       ps.setString(1, "test"); // id
-      ps.setObject(2, LocalDateTime.now()); // timestamp
+      ps.setObject(2, LocalDateTime.now()); // marca de tiempo
       ps.addBatch();
       ...
-      ps.executeBatch(); // stream everything on-hand into ClickHouse
+      ps.executeBatch(); // enviar todo lo disponible a ClickHouse
   }
   ```
 
   ## `HikariCP`
 
   ```java showLineNumbers
-  // connection pooling won't help much in terms of performance,
-  // because the underlying implementation has its own pool.
-  // for example: HttpURLConnection has a pool for sockets
+  // el connection pooling no ayudará mucho en términos de rendimiento,
+  // porque la implementación subyacente tiene su propio pool.
+  // por ejemplo: HttpURLConnection tiene un pool para sockets
   HikariConfig poolConfig = new HikariConfig();
   poolConfig.setConnectionTimeout(5000L);
   poolConfig.setMaximumPoolSize(20);
@@ -704,8 +584,8 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
        Statement s = conn.createStatement();
        ResultSet rs = s.executeQuery("SELECT * FROM system.numbers LIMIT 3")) {
       while (rs.next()) {
-          // handle row
-          log.info("Integer: {}, String: {}", rs.getInt(1), rs.getString(1));//Same column but different types
+          // procesar fila
+          log.info("Integer: {}, String: {}", rs.getInt(1), rs.getString(1));//Misma columna pero diferentes tipos
       }
   }
   ```
@@ -808,9 +688,9 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Properties properties = new Properties();
   properties.setProperty("socket_rcvbuf", "900000");
   try (Connection conn = DriverManager.getConnection(url, properties)) {
-      // Connection will use socket_rcvbuf=800000 and jdbc_ignore_unsupported_values=true
-      // Endpoints: my-server:8443 protocol: http (not secure)
-      // Database: default
+      // La conexión usará socket_rcvbuf=800000 y jdbc_ignore_unsupported_values=true
+      // Endpoints: my-server:8443 protocol: http (no seguro)
+      // Base de datos: default
   }
   ```
 
@@ -824,15 +704,15 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   | Int16              | ✅                 | SMALLINT       | java.lang.Short      | SMALLINT       | java.lang.Short                           |
   | Int32              | ✅                 | INTEGER        | java.lang.Integer    | INTEGER        | java.lang.Integer                         |
   | Int64              | ✅                 | BIGINT         | java.lang.Long       | BIGINT         | java.lang.Long                            |
-  | Int128             | ✅                 | NUMERIC        | java.math.BigInteger | NUMERIC        | java.math.BigInteger                      |
-  | Int256             | ✅                 | NUMERIC        | java.math.BigInteger | NUMERIC        | java.math.BigInteger                      |
-  | UInt8              | ❌                 | SMALLINT       | java.lang.Short      | SMALLINT       | com.clickhouse.data.value.UnsignedByte    |
-  | UInt16             | ❌                 | INTEGER        | java.lang.Integer    | INTEGER        | com.clickhouse.data.value.UnsignedShort   |
-  | UInt32             | ❌                 | BIGINT         | java.lang.Long       | BIGINT         | com.clickhouse.data.value.UnsignedInteger |
-  | UInt64             | ❌                 | NUMERIC        | java.math.BigInteger | NUMERIC        | com.clickhouse.data.value.UnsignedLong    |
-  | UInt128            | ✅                 | NUMERIC        | java.math.BigInteger | NUMERIC        | java.math.BigInteger                      |
-  | UInt256            | ✅                 | NUMERIC        | java.math.BigInteger | NUMERIC        | java.math.BigInteger                      |
-  | Float32            | ✅                 | FLOAT          | java.lang.Float      | FLOAT          | java.lang.Float                           |
+  | Int128             | ✅                 | OTHER          | java.math.BigInteger | OTHER          | java.math.BigInteger                      |
+  | Int256             | ✅                 | OTHER          | java.math.BigInteger | OTHER          | java.math.BigInteger                      |
+  | UInt8              | ❌                 | OTHER          | java.lang.Short      | OTHER          | com.clickhouse.data.value.UnsignedByte    |
+  | UInt16             | ❌                 | OTHER          | java.lang.Integer    | OTHER          | com.clickhouse.data.value.UnsignedShort   |
+  | UInt32             | ❌                 | OTHER          | java.lang.Long       | OTHER          | com.clickhouse.data.value.UnsignedInteger |
+  | UInt64             | ❌                 | OTHER          | java.math.BigInteger | OTHER          | com.clickhouse.data.value.UnsignedLong    |
+  | UInt128            | ✅                 | OTHER          | java.math.BigInteger | OTHER          | java.math.BigInteger                      |
+  | UInt256            | ✅                 | OTHER          | java.math.BigInteger | OTHER          | java.math.BigInteger                      |
+  | Float32            | ✅                 | REAL           | java.lang.Float      | REAL           | java.lang.Float                           |
   | Float64            | ✅                 | DOUBLE         | java.lang.Double     | DOUBLE         | java.lang.Double                          |
   | Decimal32          | ✅                 | DECIMAL        | java.math.BigDecimal | DECIMAL        | java.math.BigDecimal                      |
   | Decimal64          | ✅                 | DECIMAL        | java.math.BigDecimal | DECIMAL        | java.math.BigDecimal                      |
@@ -842,12 +722,12 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   * La principal diferencia es que los tipos sin signo se corresponden con tipos de Java para mejorar la portabilidad.
 
-  **Tipos de cadena**
+  **Tipos String**
 
-  | Tipo de ClickHouse | Compatible con V1 | Tipo JDBC (V2) | Clase Java (V2)  | Tipo JDBC (V1) | Clase Java (V1)  |
-  | ------------------ | ----------------- | -------------- | ---------------- | -------------- | ---------------- |
-  | String             | ✅                 | VARCHAR        | java.lang.String | VARCHAR        | java.lang.String |
-  | FixedString        | ✅                 | VARCHAR        | java.lang.String | VARCHAR        | java.lang.String |
+  | Tipo de dato de ClickHouse | Compatible con V1 | Tipo JDBC (V2) | Clase Java (V2)  | Tipo JDBC (V1) | Clase de Java (V1) |
+  | -------------------------- | ----------------- | -------------- | ---------------- | -------------- | ------------------ |
+  | String                     | ✅                 | VARCHAR        | java.lang.String | VARCHAR        | java.lang.String   |
+  | FixedString                | ✅                 | VARCHAR        | java.lang.String | VARCHAR        | java.lang.String   |
 
   * `FixedString` se lee tal cual en ambas versiones. Por ejemplo, `FixedString(10)` para `'John'` se leerá como `'John\0\0\0\0\0\0\0\0\0'`.
   * Cuando se utiliza `PreparedStatement#setBytes`, se convierte en `unhex('<hex_string>')` y luego se interpreta como `String`.
@@ -855,34 +735,34 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **Tipos de fecha/hora**
 
-  | Tipo de ClickHouse | Compatible con V1 | Tipo JDBC (V2) | Clase Java (V2)    | Tipo JDBC (V1)                  | Clase Java (V1)          |
-  | ------------------ | ----------------- | -------------- | ------------------ | ------------------------------- | ------------------------ |
-  | Fecha              | ❌                 | DATE           | java.sql.Date      | DATE                            | java.time.LocalDate      |
-  | Date32             | ❌                 | DATE           | java.sql.Date      | DATE                            | java.time.LocalDate      |
-  | DateTime           | ❌                 | TIMESTAMP      | java.sql.Timestamp | TIMESTAMP&#95;WITH&#95;TIMEZONE | java.time.OffsetDateTime |
-  | DateTime64         | ❌                 | TIMESTAMP      | java.sql.Timestamp | TIMESTAMP&#95;WITH&#95;TIMEZONE | java.time.OffsetDateTime |
-  | Time               | ✅                 | TIME           | java.sql.Time      | nuevo tipo/no compatible        | nuevo tipo/no compatible |
-  | Time64             | ✅                 | TIME           | java.sql.Time      | tipo nuevo/no compatible        | tipo nuevo/no compatible |
+  | Tipo de ClickHouse | Compatible con V1 | Tipo de JDBC (V2) | Clase de Java (V2) | Tipo de JDBC (V1)        | Clase Java (V1)          |
+  | ------------------ | ----------------- | ----------------- | ------------------ | ------------------------ | ------------------------ |
+  | Fecha              | ❌                 | DATE              | java.sql.Date      | DATE                     | java.time.LocalDate      |
+  | Date32             | ❌                 | DATE              | java.sql.Date      | DATE                     | java.time.LocalDate      |
+  | DateTime           | ❌                 | TIMESTAMP         | java.sql.Timestamp | TIMESTAMP                | java.time.OffsetDateTime |
+  | DateTime64         | ❌                 | TIMESTAMP         | java.sql.Timestamp | TIMESTAMP                | java.time.OffsetDateTime |
+  | Time               | ✅                 | TIME              | java.sql.Time      | nuevo tipo/no compatible | nuevo tipo/no compatible |
+  | Time64             | ✅                 | TIME              | java.sql.Time      | tipo nuevo/no compatible | tipo nuevo/no compatible |
 
   * `Time` y `Time64` solo son compatibles en V2 como tipos nuevos.
   * `DateTime` y `DateTime64` se asignan a `java.sql.Timestamp` para mejorar la compatibilidad con JDBC.
 
   **Tipos enum**
 
-  | Tipo de ClickHouse | Compatible con V1 | Tipo JDBC (V2) | Clase Java (V2)  | Tipo JDBC (V1) | Clase de Java (V1) |
-  | ------------------ | ----------------- | -------------- | ---------------- | -------------- | ------------------ |
-  | Enum               | ✅                 | VARCHAR        | java.lang.String | OTHER          | java.lang.String   |
-  | Enum8              | ✅                 | VARCHAR        | java.lang.String | OTHER          | java.lang.String   |
-  | Enum16             | ✅                 | VARCHAR        | java.lang.String | OTHER          | java.lang.String   |
+  | Tipo de ClickHouse | Compatible con V1 | Tipo JDBC (V2) | Clase Java (V2)  | Tipo JDBC (V1) | Clase Java (V1)  |
+  | ------------------ | ----------------- | -------------- | ---------------- | -------------- | ---------------- |
+  | Enum               | ✅                 | VARCHAR        | java.lang.String | OTHER          | java.lang.String |
+  | Enum8              | ✅                 | VARCHAR        | java.lang.String | OTHER          | java.lang.String |
+  | Enum16             | ✅                 | VARCHAR        | java.lang.String | OTHER          | java.lang.String |
 
   **Tipos anidados**
 
-  | Tipo de ClickHouse | Compatible con V1 | Tipo JDBC (V2)  | Clase Java (V2)  | Tipo JDBC (V1) | Clase de Java (V1)                              |
-  | ------------------ | ----------------- | --------------- | ---------------- | -------------- | ----------------------------------------------- |
-  | Array              | ❌                 | ARRAY           | java.sql.Array   | ARRAY          | Object[] o un array de tipos primitivos |
-  | Tuple              | ❌                 | OTHER           | Object[] | STRUCT         | java.sql.Struct                                 |
-  | Map                | ❌                 | JAVA&#95;OBJECT | java.util.Map    | STRUCT         | java.util.Map                                   |
-  | Nested             | ❌                 | ARRAY           | java.sql.Array   | STRUCT         | java.sql.Struct                                 |
+  | Tipo de ClickHouse | Compatible con V1 | Tipo JDBC (V2)  | Clase Java (V2) | Tipo JDBC (V1) | Clase de Java (V1)                      |
+  | ------------------ | ----------------- | --------------- | --------------- | -------------- | --------------------------------------- |
+  | Array              | ❌                 | ARRAY           | java.sql.Array  | ARRAY          | Object[] o un array de tipos primitivos |
+  | Tuple              | ❌                 | OTHER           | Object[]        | STRUCT         | java.sql.Struct                         |
+  | Map                | ❌                 | JAVA&#95;OBJECT | java.util.Map   | STRUCT         | java.util.Map                           |
+  | Nested             | ❌                 | ARRAY           | java.sql.Array  | STRUCT         | java.sql.Struct                         |
 
   * En V2, `Array` se asigna a `java.sql.Array` de forma predeterminada para ser compatible con JDBC. Esto también se hace para proporcionar más información sobre el valor de array devuelto. Útil para la inferencia de tipos.
   * En V2, `Array` implementa el método `getResultSet()` para devolver un `java.sql.ResultSet` con el mismo contenido que el array original.
@@ -896,12 +776,12 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **Geo Types**
 
-  | Tipo de ClickHouse | Compatible con V1 | Tipo JDBC (V2) | Clase Java (V2)                                | Tipo JDBC (V1) | Clase Java (V1)                                |
-  | ------------------ | ----------------- | -------------- | ---------------------------------------------- | -------------- | ---------------------------------------------- |
-  | Point              | ✅                 | OTHER          | double[]                               | OTHER          | double[]                               |
-  | Ring               | ✅                 | OTHER          | double[][]                     | OTHER          | double[][]                     |
-  | Polygon            | ✅                 | OTHER          | double[][][]           | OTHER          | double[][][]           |
-  | MultiPolygon       | ✅                 | OTHER          | double[][][][] | OTHER          | double[][][][] |
+  | Tipo de ClickHouse | Compatible con V1 | Tipo JDBC (V2) | Clase Java (V2) | Tipo JDBC (V1) | Clase Java (V1) |
+  | ------------------ | ----------------- | -------------- | --------------- | -------------- | --------------- |
+  | Point              | ✅                 | OTHER          | double[]        | OTHER          | double[]        |
+  | Ring               | ✅                 | OTHER          | double[][]      | OTHER          | double[][]      |
+  | Polygon            | ✅                 | OTHER          | double[][][]    | OTHER          | double[][][]    |
+  | MultiPolygon       | ✅                 | OTHER          | double[][][][]  | OTHER          | double[][][][]  |
 
   **Tipos Nullable y LowCardinality**
 
@@ -910,7 +790,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   **Tipos especiales**
 
-  | Tipo de ClickHouse      | Compatible con V1 | Tipo JDBC (V2)  | Clase Java (V2)          | Tipo JDBC (V1)  | Clase de Java (V1)       |
+  | Tipo de ClickHouse      | Compatible con V1 | Tipo JDBC (V2)  | Clase Java (V2)          | Tipo JDBC (V1)  | Clase Java (V1)          |
   | ----------------------- | ----------------- | --------------- | ------------------------ | --------------- | ------------------------ |
   | JSON                    | ❌                 | OTHER           | java.lang.String         | no admitido     | no admitido              |
   | AggregateFunction       | ✅                 | OTHER           | (representación binaria) | OTHER           | (representación binaria) |
@@ -932,18 +812,16 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
 
   * V2 usa únicamente el término `Schema` para referirse a las bases de datos. El término `Catalog` queda reservado para usos futuros.
   * V2 devuelve `false` para `DatabaseMetaData.supportsTransactions()` y `DatabaseMetaData.supportsSavepoints()`. Esto cambiará en el futuro.
-  * En `DatabaseMetaData.getTypeInfo()`, las columnas `LITERAL_PREFIX` y `LITERAL_SUFFIX` ahora devuelven `null` para los tipos de datos en los que no se esperan prefijos ni sufijos (por ejemplo, los tipos numéricos).
-    En V1, estas columnas devolvían valores no nulos para esos tipos. Estas columnas deben usarse al generar consultas SQL para entrecomillar correctamente los valores literales según su tipo de dato.
 </View>
 
 <View title="v0.7.x">
-  `clickhouse-jdbc` implementa la interfaz JDBC estándar. Al estar construido sobre [clickhouse-client](/es/integrations/connectors/sql-clients/sql-console), ofrece funcionalidades adicionales como correspondencia de tipos personalizada, soporte de transacciones y sentencias `UPDATE` y `DELETE` síncronas estándar, entre otras, lo que permite integrarlo fácilmente con aplicaciones y herramientas heredadas.
+  `clickhouse-jdbc` implementa la interfaz JDBC estándar. Al estar construido sobre [clickhouse-client](/es/concepts/features/interfaces/client), ofrece funcionalidades adicionales como correspondencia de tipos personalizada, soporte de transacciones y sentencias `UPDATE` y `DELETE` síncronas estándar, entre otras, lo que permite integrarlo fácilmente con aplicaciones y herramientas heredadas.
 
   <Note>
     La última versión de JDBC (0.7.2) usa Client-V1
   </Note>
 
-  La API de `clickhouse-jdbc` es síncrona y, en general, presenta mayor sobrecarga (por ejemplo, análisis de SQL y correspondencia/conversión de tipos, etc.). Considere usar [clickhouse-client](/es/integrations/connectors/sql-clients/sql-console) cuando el rendimiento sea crítico o si prefiere una forma más directa de acceder a ClickHouse.
+  La API de `clickhouse-jdbc` es síncrona y, en general, presenta mayor sobrecarga (por ejemplo, análisis de SQL y correspondencia/conversión de tipos, etc.). Considere usar [clickhouse-client](/es/concepts/features/interfaces/client) cuando el rendimiento sea crítico o si prefiere una forma más directa de acceder a ClickHouse.
 
   ## Requisitos del entorno
 
@@ -1050,7 +928,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ## Creación de conexión
 
   ```java
-  String url = "jdbc:ch://my-server/system"; // use http protocol and port 8123 by default
+  String url = "jdbc:ch://my-server/system"; // usa el protocolo HTTP y el puerto 8123 por defecto
 
   Properties properties = new Properties();
 
@@ -1063,7 +941,6 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ## Instrucción simple
 
   ```java showLineNumbers
-
   try (Connection conn = dataSource.getConnection(...);
       Statement stmt = conn.createStatement()) {
       ResultSet rs = stmt.executeQuery("select * from numbers(50000)");
@@ -1084,10 +961,10 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ```java showLineNumbers
   try (PreparedStatement ps = conn.prepareStatement("insert into mytable(* except (description))")) {
       ps.setString(1, "test"); // id
-      ps.setObject(2, LocalDateTime.now()); // timestamp
-      ps.addBatch(); // parameters will be write into buffered stream immediately in binary format
+      ps.setObject(2, LocalDateTime.now()); // marca de tiempo
+      ps.addBatch(); // los parámetros se escribirán en el flujo en búfer inmediatamente en formato binario
       ...
-      ps.executeBatch(); // stream everything on-hand into ClickHouse
+      ps.executeBatch(); // envía todo lo disponible a ClickHouse
   }
   ```
 
@@ -1098,13 +975,13 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   ```java showLineNumbers
   try (PreparedStatement ps = conn.prepareStatement(
       "insert into mytable select col1, col2 from input('col1 String, col2 DateTime64(3), col3 Int32')")) {
-      // The column definition will be parsed so the driver knows there are 3 parameters: col1, col2 and col3
+      // La definición de la columna se analizará para que el driver sepa que hay 3 parámetros: col1, col2 y col3
       ps.setString(1, "test"); // col1
-      ps.setObject(2, LocalDateTime.now()); // col2, setTimestamp is slow and not recommended
+      ps.setObject(2, LocalDateTime.now()); // col2, setTimestamp es lento y no se recomienda
       ps.setInt(3, 123); // col3
-      ps.addBatch(); // parameters will be write into buffered stream immediately in binary format
+      ps.addBatch(); // los parámetros se escribirán en el stream en búfer de inmediato en formato binario
       ...
-      ps.executeBatch(); // stream everything on-hand into ClickHouse
+      ps.executeBatch(); // envía todo lo disponible a ClickHouse a través del stream
   }
   ```
 
@@ -1118,10 +995,10 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   try (PreparedStatement ps = conn.prepareStatement("insert into mytable values(trim(?),?,?)")) {
       ps.setString(1, "test"); // id
       ps.setObject(2, LocalDateTime.now()); // timestamp
-      ps.setString(3, null); // description
-      ps.addBatch(); // append parameters to the query
+      ps.setString(3, null); // descripción
+      ps.addBatch(); // agregar parámetros a la consulta
       ...
-      ps.executeBatch(); // issue the composed query: insert into mytable values(...)(...)...(...)
+      ps.executeBatch(); // ejecutar la consulta compuesta: insert into mytable values(...)(...)...(...)
   }
   ```
 
@@ -1147,7 +1024,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   </Note>
 
   ```java showLineNumbers
-  // batch insert using input function
+  // inserción por lotes usando la función input
   try (ClickHouseConnection conn = newConnection(props);
           Statement s = conn.createStatement();
           PreparedStatement stmt = conn.prepareStatement(
@@ -1170,7 +1047,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
       ...
   }
 
-  // use bitmap as query parameter
+  // usar bitmap como parámetro de consulta
   try (PreparedStatement stmt = conn.prepareStatement(
       "SELECT bitmapContains(my_bitmap, toUInt32(1)) as v1, bitmapContains(my_bitmap, toUInt32(2)) as v2 from {tt 'ext_table'}")) {
       stmt.setObject(1, ClickHouseExternalTable.builder().name("ext_table")
@@ -1232,11 +1109,11 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   Estas propiedades garantizan que su aplicación Java se comunique con el servidor de ClickHouse a través de una conexión cifrada, lo que mejora la seguridad de los datos durante la transmisión.
 
   ```java showLineNumbers
-    String url = "jdbc:ch://your-server:8443/system";
+  String url = "jdbc:ch://your-server:8443/system";
 
     Properties properties = new Properties();
     properties.setProperty("ssl", "true");
-    properties.setProperty("sslmode", "strict"); // NONE to trust all servers; STRICT for trusted only
+    properties.setProperty("sslmode", "strict"); // NONE para confiar en todos los servidores; STRICT solo para los de confianza
     properties.setProperty("sslrootcert", "/mine.crt");
     try (Connection con = DriverManager
             .getConnection(url, properties)) {
@@ -1305,7 +1182,7 @@ import WideTableWrapper from "/snippets/components/WideTableWrapper/WideTableWra
   El socket predeterminado y el timeout de conexión para el driver JDBC es de 30 segundos. El timeout puede aumentarse para admitir operaciones de inserción de grandes volúmenes de datos. Utilice el método `options` en `ClickHouseClient` junto con las opciones `SOCKET_TIMEOUT` y `CONNECTION_TIMEOUT` tal como las define `ClickHouseClientOption`:
 
   ```java showLineNumbers
-  final int MS_12H = 12 * 60 * 60 * 1000; // 12 h in ms
+  final int MS_12H = 12 * 60 * 60 * 1000; // 12 h en ms
   final String sql = "insert into table_a (c1, c2, c3) select c1, c2, c3 from table_b;";
 
   try (ClickHouseClient client = ClickHouseClient.newInstance(ClickHouseProtocol.HTTP)) {

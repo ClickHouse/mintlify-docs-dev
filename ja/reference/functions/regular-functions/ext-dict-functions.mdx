@@ -358,33 +358,28 @@ LIMIT 3;
 
 導入バージョン: v23.5.0
 
-[正規表現ツリー辞書](/ja/reference/statements/create/dictionary/layouts/regexp-tree) で、各キーに一致したすべてのノードの属性値を取得します。
-
-`T` ではなく `Array(T)` 型の値を返す点を除き、この関数の動作は [`dictGet`](#dictGet) と同様です。
+Dictionary の属性値を、Dictionary の設定にかかわらず `All` データ型に変換します。
 
 **構文**
 
 ```sql
-dictGetAll(dict_name, attr_names, id_expr[, limit])
+dictGetAll(dict_name, attr_name, id_expr)
 ```
 
 **引数**
 
 * `dict_name` — Dictionary の名前。 [`String`](/ja/reference/data-types/string)
-* `attr_names` — Dictionary のカラム名、またはカラム名のタプル。 [`String`](/ja/reference/data-types/string) または [`Tuple(String)`](/ja/reference/data-types/tuple)
+* `attr_name` — Dictionary のカラム名。 [`String`](/ja/reference/data-types/string) または [`Tuple(String)`](/ja/reference/data-types/tuple)
 * `id_expr` — キー値。辞書キー型の値またはタプル値を返す式 (Dictionary の設定に依存) 。 [`Expression`](/ja/reference/data-types/special-data-types/expression) または [`Tuple(T)`](/ja/reference/data-types/tuple)
-* `limit` — 任意。返される各値配列の最大長。切り詰める場合は、親ノードよりも子ノードが優先され、それ以外では regexp tree Dictionary で定義されたリスト順が尊重されます。指定しない場合、配列長は無制限です。 [`UInt*`](/ja/reference/data-types/int-uint)
 
 **戻り値**
 
-`attr_names` で指定された各属性について、`id_expr` に対応する Dictionary 属性の値の配列を返します。
-Dictionary に `id_expr` に対応するキーがない場合は、空の配列を返します。
+`id_expr` に対応する Dictionary 属性の値を返します。
+対応する値がない場合は、Dictionary の設定でその属性に指定された `<null_value>` 要素の内容を返します。
 
 <Note>
   ClickHouse は、属性の値をパースできない場合、または値が属性のデータ型と一致しない場合に例外をスローします。
 </Note>
-
-[`Array(T)`](/ja/reference/data-types/array)
 
 **例**
 
@@ -394,10 +389,10 @@ Dictionary に `id_expr` に対応するキーがない場合は、空の配列�
 SELECT
     'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36' AS user_agent,
 
-    -- This will match ALL applicable patterns
+    -- 該当するすべてのパターンに一致します
     dictGetAll('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS all_matches,
 
-    -- This returns only the first match
+    -- 最初の一致のみを返します
     dictGet('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS first_match;
 ```
 

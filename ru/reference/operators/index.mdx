@@ -257,55 +257,6 @@ SELECT number AS a FROM numbers(10) WHERE a > ANY (SELECT number FROM numbers(3,
 └───┘
 ```
 
-<div id="some-all-on-arrays">
-  ### `SOME` / `ALL` для массивов
-</div>
-
-Помимо формы с подзапросом, описанной выше, в правой части `SOME` / `ALL` может использоваться выражение массива (литерал массива, столбец типа массива или любое выражение, возвращающее массив). Это синтаксис квантификатора массива в стиле PostgreSQL. Он распознаётся на этапе разбора и переписывается в функции для работы с массивами, поэтому вручную ничего переписывать не нужно:
-
-| Синтаксис                                             | Переписывается в                   |
-| ----------------------------------------------------- | ---------------------------------- |
-| `expr = SOME(arr)`                                    | `has(arr, expr)`                   |
-| `expr <> ALL(arr)`                                    | `NOT has(arr, expr)`               |
-| `expr OP SOME(arr)` (любой другой оператор сравнения) | `arrayExists(x -> expr OP x, arr)` |
-| `expr OP ALL(arr)` (любой другой оператор сравнения)  | `arrayAll(x -> expr OP x, arr)`    |
-
-`SOME` — это квантификатор существования (SQL-синоним `ANY`). Для `=` и `<>` предусмотрена специальная обработка через `has` / `NOT has`, поскольку для них есть оптимизированная реализация; в общем случае используются функции высшего порядка `arrayExists` / `arrayAll`.
-
-Форма с массивом распознаётся только для операторов сравнения `=`, `==`, `!=`, `<>`, `<=>`, `<`, `<=`, `>`, и `>=`. Другие операторы, принимающие массив справа, — например, `LIKE`, `ILIKE`, `NOT LIKE`, `REGEXP` и `IN` — **не** переписываются в квантификатор массива и сохраняют своё обычное значение. Например, `'abc' LIKE SOME(['a%', 'b%'])` — это не синтаксис квантификатора массива; в таких случаях используйте `arrayExists` / `arrayAll` напрямую.
-
-<Info>
-  **`ANY` не поддерживается для формы с массивом**
-
-  Только `SOME` и `ALL` допускают массив в правой части. `ANY` исключён, потому что `any` также является агрегатной функцией, поэтому выражение вида `expr = any(x)` сохраняет смысл вызова функции. Для квантификатора массива используйте `SOME`.
-</Info>
-
-```sql title="Query"
-SELECT
-    3 = SOME([1, 2, 3, 4]) AS in_array,
-    5 < SOME([1, 2, 6])    AS less_than_some,
-    5 > ALL([1, 2, 3])     AS greater_than_all;
-```
-
-```text title="Response"
-┌─in_array─┬─less_than_some─┬─greater_than_all─┐
-│        1 │              1 │                1 │
-└──────────┴────────────────┴──────────────────┘
-```
-
-<Info>
-  **Обработка `NULL` отличается от варианта с подзапросом**
-
-  Поскольку вариант с массивом переписывается парсером (где недоступны настройки запроса, такие как `transform_null_in`, а столбец типа Array на уровне отдельной строки не может использовать null-safe путь `IN` анализатора), он использует двузначную семантику `has` (для `=` / `<>`) и `arrayExists` / `arrayAll` (которые сводят неизвестный результат сравнения с `NULL` к `0`). Это может отличаться от варианта с подзапросом, где обработка `NULL` реализуется через `IN` / `NOT IN` и зависит от `transform_null_in`:
-
-  ```sql
-  SELECT NULL = SOME([NULL]);   -- has([NULL], NULL)                  -> 1
-  SELECT NULL <> ALL([NULL]);   -- NOT has([NULL], NULL)              -> 0
-  SELECT NULL < SOME([1]);      -- arrayExists(x -> NULL < x, [1])    -> 0
-  SELECT NULL > ALL([1]);       -- arrayAll(x -> NULL > x, [1])       -> 0
-  ```
-</Info>
-
 <div id="operators-for-working-with-dates-and-times">
   ## Операторы для работы с датами и временем
 </div>
@@ -322,9 +273,6 @@ EXTRACT(part FROM date);
 
 Параметр `part` указывает, какую часть даты нужно извлечь. Доступны следующие значения:
 
-* `NANOSECOND` — Наносекунда. Возможные значения: 0–999999999.
-* `MICROSECOND` — Микросекунда. Возможные значения: 0–999999.
-* `MILLISECOND` — Миллисекунда. Возможные значения: 0–999.
 * `SECOND` — Секунда. Возможные значения: 0–59.
 * `MINUTE` — Минута. Возможные значения: 0–59.
 * `HOUR` — Час. Возможные значения: 0–23.
@@ -341,12 +289,10 @@ EXTRACT(part FROM date);
 * `CENTURY` — Век. Например, 2024 год относится к XXI веку.
 * `DECADE` — Десятилетие (год, делённый на 10). Например, для 2024 года десятилетие равно 202.
 * `MILLENNIUM` — Тысячелетие. Например, 2024 год относится к III тысячелетию.
-* `TIMEZONE_HOUR` — Знаковая часовая часть смещения от UTC для часового пояса операнда. Например, `+5:30` возвращает `5`, `-3:30` возвращает `-3`.
-* `TIMEZONE_MINUTE` — Знаковая минутная часть смещения от UTC для часового пояса операнда. Например, `+5:30` возвращает `30`, `-3:30` возвращает `-30`.
 
 Параметр `part` регистронезависимый.
 
-Параметр `date` задаёт значение для обработки. Поддерживаются типы [Date](/ru/reference/data-types/date), [Date32](/ru/reference/data-types/date32), [DateTime](/ru/reference/data-types/datetime), [DateTime64](/ru/reference/data-types/datetime64) и [Interval](/ru/reference/data-types/special-data-types/interval). Если `date` — это `Interval`, запрошенная часть `part` должна соответствовать виду интервала (например, `EXTRACT(DAY FROM INTERVAL 5 DAY)` допустим, а `EXTRACT(HOUR FROM INTERVAL 5 DAY)` отклоняется, поскольку интервалы ClickHouse поддерживают только один вид). Результат для операнда `Interval` имеет тип `Int64`.
+Параметр `date` задаёт дату или время для обработки. Поддерживаются типы [Date](/ru/reference/data-types/date), [Date32](/ru/reference/data-types/date32), [DateTime](/ru/reference/data-types/datetime) и [DateTime64](/ru/reference/data-types/datetime64).
 
 Примеры:
 
@@ -357,10 +303,6 @@ SELECT EXTRACT(YEAR FROM toDate('2017-06-15'));
 SELECT EXTRACT(EPOCH FROM toDateTime('2024-01-15 12:30:45', 'UTC'));
 SELECT EXTRACT(DOW FROM toDate('2024-01-15'));
 SELECT EXTRACT(CENTURY FROM toDate('2024-01-01'));
-SELECT EXTRACT(TIMEZONE_HOUR   FROM toDateTime('2024-01-15 12:00:00', 'Asia/Kolkata'));    -- 5
-SELECT EXTRACT(TIMEZONE_MINUTE FROM toDateTime('2024-01-15 12:00:00', 'Asia/Kolkata'));    -- 30
-SELECT EXTRACT(DAY   FROM INTERVAL 40 DAY);                                                -- 40
-SELECT EXTRACT(MONTH FROM INTERVAL 7 MONTH);                                               -- 7
 ```
 
 В следующем примере мы создаём таблицу и вставляем в неё значение типа `DateTime`.
@@ -658,36 +600,3 @@ SELECT * FROM t_null WHERE y IS NOT NULL
 ```
 
 Можно повысить производительность, включив настройку [optimize&#95;functions&#95;to&#95;subcolumns](/ru/reference/settings/session-settings#optimize_functions_to_subcolumns). При `optimize_functions_to_subcolumns = 1` функция читает только подстолбец [null](/ru/reference/data-types/nullable#finding-null) вместо чтения и обработки всех данных столбца. Запрос `SELECT n IS NOT NULL FROM table` преобразуется в `SELECT NOT n.null FROM TABLE`.
-
-<div id="checking-boolean-values">
-  ## Проверка булевых значений
-</div>
-
-ClickHouse поддерживает операторы `IS TRUE`, `IS FALSE`, `IS UNKNOWN`, `IS NOT TRUE`, `IS NOT FALSE` и `IS NOT UNKNOWN`.
-Они используются с выражениями [Bool](/ru/reference/data-types/boolean) и `Nullable(Bool)`.
-
-* `expr IS TRUE` возвращает `1` только в том случае, если `expr` равно `true`.
-* `expr IS FALSE` возвращает `1` только в том случае, если `expr` равно `false`.
-* `expr IS UNKNOWN` возвращает `1` только в том случае, если `expr` равно `NULL`.
-* `expr IS NOT TRUE` возвращает `1`, если `expr` равно `false` или `NULL`.
-* `expr IS NOT FALSE` возвращает `1`, если `expr` равно `true` или `NULL`.
-* `expr IS NOT UNKNOWN` возвращает `1`, если `expr` не равно `NULL`.
-
-Для булевых выражений `IS UNKNOWN` эквивалентно `IS NULL`, а `IS NOT UNKNOWN` — `IS NOT NULL`.
-
-{/* */}
-
-```sql
-CREATE TABLE t_bool (x Nullable(Bool)) ENGINE = Memory;
-INSERT INTO t_bool VALUES (true), (false), (NULL);
-
-SELECT
-    x,
-    x IS TRUE,
-    x IS FALSE,
-    x IS UNKNOWN,
-    x IS NOT TRUE,
-    x IS NOT FALSE,
-    x IS NOT UNKNOWN
-FROM t_bool;
-```

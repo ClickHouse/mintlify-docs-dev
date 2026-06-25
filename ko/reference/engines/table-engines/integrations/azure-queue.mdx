@@ -104,19 +104,17 @@ AzureQueue 엔진에는 SELECT 쿼리용 특별 설정인 `commit_on_select`가 
 
 `SELECT`는 스트리밍 가져오기에는 그다지 유용하지 않습니다(디버깅은 예외). 각 파일은 한 번만 가져올 수 있기 때문입니다. 더 실용적인 방법은 [materialized view](/ko/reference/statements/create/view)를 사용해 실시간 스레드를 만드는 것입니다. 이렇게 하려면 다음 단계를 수행하십시오.
 
-1. 엔진을 사용해 Azure Blob Storage의 지정된 경로에서 데이터를 소비하는 테이블을 만들고, 이를 데이터 스트림으로 간주합니다.
+1. 엔진을 사용해 S3의 지정된 경로에서 데이터를 소비하는 테이블을 만들고, 이를 데이터 스트림으로 간주합니다.
 2. 원하는 구조의 테이블을 생성합니다.
 3. 엔진의 데이터를 변환해 앞서 생성한 테이블에 넣는 materialized view를 생성합니다.
 
 `MATERIALIZED VIEW`가 엔진에 연결되면 백그라운드에서 데이터 수집을 시작합니다.
 
-엔진 인수는 `AzureQueue(connection_string, container_name, blobpath, format[, compression])` 형식입니다.
-
 예시:
 
 ```sql
 CREATE TABLE azure_queue_engine_table (key UInt64, data String)
-  ENGINE=AzureQueue('DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite1:10000/devstoreaccount1/;', 'testcontainer', '*', 'CSV')
+  ENGINE=AzureQueue('<endpoint>', 'CSV', 'gzip')
   SETTINGS
       mode = 'unordered';
 
@@ -136,7 +134,7 @@ SELECT * FROM stats ORDER BY key;
 * `_path` — 파일 경로입니다.
 * `_file` — 파일 이름입니다.
 
-가상 컬럼에 대한 자세한 내용은 [여기](/ko/reference/engines/table-engines/index#table_engines-virtual_columns)를 참조하십시오.
+가상 컬럼에 대한 자세한 내용은 [여기](/ko/reference/engines/table-engines#table_engines-virtual_columns)를 참조하십시오.
 
 <div id="introspection">
   ## 내부 검사

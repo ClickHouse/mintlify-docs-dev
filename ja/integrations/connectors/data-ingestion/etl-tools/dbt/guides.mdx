@@ -19,16 +19,16 @@ import ClickHouseSupportedBadge from "/snippets/components/ClickHouseSupported/C
 2. モデルを定義する。
 3. モデルを更新する。
 4. incremental モデルを作成する。
-5. スナップショット モデルを作成する。
+5. snapshot モデルを作成する。
 6. materialized view を使用する。
 
-これらのガイドは、[ドキュメント](/ja/integrations/connectors/data-ingestion/etl-tools/dbt/index)、[機能と設定](/ja/integrations/connectors/data-ingestion/etl-tools/dbt/features-and-configurations)、および [マテリアライゼーション リファレンス](/ja/integrations/connectors/data-ingestion/etl-tools/dbt/materializations) とあわせて利用することを想定しています。
+これらのガイドは、[ドキュメント](/ja/integrations/connectors/data-ingestion/etl-tools/dbt)、[機能と設定](/ja/integrations/connectors/data-ingestion/etl-tools/dbt/features-and-configurations)、および [マテリアライゼーション リファレンス](/ja/integrations/connectors/data-ingestion/etl-tools/dbt/materializations) とあわせて利用することを想定しています。
 
 <div id="setup">
   ## セットアップ
 </div>
 
-環境を準備するには、[dbt と ClickHouse アダプターのセットアップ](/ja/integrations/connectors/data-ingestion/etl-tools/dbt/index) セクションの手順に従ってください。
+環境を準備するには、[dbt と ClickHouse アダプターのセットアップ](/ja/integrations/connectors/data-ingestion/etl-tools/dbt) セクションの手順に従ってください。
 
 **重要: 以下の内容は Python 3.9 でテストされています。**
 
@@ -407,7 +407,7 @@ LIMIT 5;
   ## テーブルとしてのマテリアライゼーションの作成
 </div>
 
-前の例では、モデルはビューとしてマテリアライズされました。これは一部のクエリには十分なパフォーマンスを提供する場合もありますが、より複雑なSELECTや頻繁に実行されるクエリでは、テーブルとしてマテリアライズしたほうが適していることがあります。このマテリアライゼーションは、BIツールからクエリされるモデルに適しており、ユーザーにより高速な操作性を提供できます。これにより、クエリ結果は新しいテーブルとして保存され、その分のストレージオーバーヘッドが発生します。つまり、実質的には `INSERT TO SELECT` が実行されます。このテーブルは毎回再構築されるため、増分ではない点に注意してください。そのため、結果セットが大きい場合は実行時間が長くなる可能性があります。詳細は [dbt Limitations](/ja/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations) を参照してください。
+前の例では、モデルはビューとしてマテリアライズされました。これは一部のクエリには十分なパフォーマンスを提供する場合もありますが、より複雑なSELECTや頻繁に実行されるクエリでは、テーブルとしてマテリアライズしたほうが適していることがあります。このマテリアライゼーションは、BIツールからクエリされるモデルに適しており、ユーザーにより高速な操作性を提供できます。これにより、クエリ結果は新しいテーブルとして保存され、その分のストレージオーバーヘッドが発生します。つまり、実質的には `INSERT TO SELECT` が実行されます。このテーブルは毎回再構築されるため、増分ではない点に注意してください。そのため、結果セットが大きい場合は実行時間が長くなる可能性があります。詳細は [dbt Limitations](/ja/integrations/connectors/data-ingestion/etl-tools/dbt#limitations) を参照してください。
 
 1. `actors_summary.sql` ファイルを修正し、`materialized` パラメータが `table` に設定されるようにします。`ORDER BY` がどのように定義されているか、また `MergeTree` テーブルエンジンを使用していることに注目してください。
 
@@ -487,7 +487,7 @@ LIMIT 5;
   ## インクリメンタルマテリアライゼーションの作成
 </div>
 
-前の例では、モデルをマテリアライズするためのテーブルを作成しました。このテーブルは、dbt の実行のたびに再構築されます。結果セットが大きい場合や変換が複雑な場合、これは現実的でなく、コストも非常に高くなる可能性があります。この課題に対処してビルド時間を短縮するために、dbt にはインクリメンタルマテリアライゼーションが用意されています。これにより、dbt は前回の実行以降にテーブル内のレコードを挿入または更新できるため、イベント形式のデータに適しています。内部的には、まず更新されたすべてのレコードを含む一時テーブルが作成され、その後、変更されていないすべてのレコードと更新済みのレコードが新しいターゲットテーブルに挿入されます。そのため、大きな結果セットでは、テーブルモデルと同様の[制約](/ja/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations)があります。
+前の例では、モデルをマテリアライズするためのテーブルを作成しました。このテーブルは、dbt の実行のたびに再構築されます。結果セットが大きい場合や変換が複雑な場合、これは現実的でなく、コストも非常に高くなる可能性があります。この課題に対処してビルド時間を短縮するために、dbt にはインクリメンタルマテリアライゼーションが用意されています。これにより、dbt は前回の実行以降にテーブル内のレコードを挿入または更新できるため、イベント形式のデータに適しています。内部的には、まず更新されたすべてのレコードを含む一時テーブルが作成され、その後、変更されていないすべてのレコードと更新済みのレコードが新しいターゲットテーブルに挿入されます。そのため、大きな結果セットでは、テーブルモデルと同様の[制約](/ja/integrations/connectors/data-ingestion/etl-tools/dbt#limitations)があります。
 
 大規模なセットでこれらの制約を回避するために、アダプターは `inserts_only` モードをサポートしています。このモードでは、一時テーブルを作成せずに、すべての更新がターゲットテーブルに挿入されます (詳細は後述します) 。
 
@@ -683,7 +683,7 @@ AND event_time > subtractMinutes(now(), 15) ORDER BY event_time LIMIT 100;
 
 <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_05.png" size="lg" alt="dbt の増分更新" />
 
-この戦略は、非常に大規模なモデルでは課題が生じる可能性があります。詳細については、[制限事項](/ja/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations) を参照してください。
+この戦略は、非常に大規模なモデルでは課題が生じる可能性があります。詳細については、[制限事項](/ja/integrations/connectors/data-ingestion/etl-tools/dbt#limitations) を参照してください。
 
 <div id="append-strategy-inserts-only-mode">
   ### Append 戦略 (insert のみモード)
@@ -792,9 +792,9 @@ WHERE id > (SELECT max(id) FROM imdb_dbt.actor_summary) OR updated_at > (SELECT 
   ### 削除と挿入モード (実験的)
 </div>
 
-これまでの ClickHouse では、更新と削除のサポートは、非同期の [Mutations](/ja/reference/statements/alter/index) による限定的なものにとどまっていました。これは非常に IO 負荷が高くなる可能性があるため、通常は避けるべきです。
+これまでの ClickHouse では、更新と削除のサポートは、非同期の [Mutations](/ja/reference/statements/alter) による限定的なものにとどまっていました。これは非常に IO 負荷が高くなる可能性があるため、通常は避けるべきです。
 
-ClickHouse 22.8 では [論理削除](/ja/snippets/delete)、ClickHouse 25.7 では [論理更新](/ja/reference/statements/update) が導入されました。これらの機能により、単一の更新クエリによる変更は、非同期で実体化される場合でも、ユーザーからは即座に反映されたように見えます。
+ClickHouse 22.8 では [論理削除](/ja/reference/statements/delete)、ClickHouse 25.7 では [論理更新](/ja/reference/statements/update) が導入されました。これらの機能により、単一の更新クエリによる変更は、非同期で実体化される場合でも、ユーザーからは即座に反映されたように見えます。
 
 このモードは、たとえば `incremental_strategy` パラメータでモデルに設定できます。
 
@@ -1016,7 +1016,7 @@ dbtのスナップショットの詳細については、[こちら](https://doc
   ## seed の使用
 </div>
 
-dbt には、CSVファイルからデータを読み込む機能があります。この機能は、database の大規模なエクスポートを読み込む用途には適しておらず、主にコード表や [ディクショナリ](/ja/concepts/features/dictionaries/index) などで使われる小さなファイル向けに設計されています。たとえば、国コードを国名に対応付けるようなケースです。簡単な例として、seed 機能を使ってジャンルコードの一覧を生成し、アップロードします。
+dbt には、CSVファイルからデータを読み込む機能があります。この機能は、database の大規模なエクスポートを読み込む用途には適しておらず、主にコード表や [ディクショナリ](/ja/concepts/features/dictionaries) などで使われる小さなファイル向けに設計されています。たとえば、国コードを国名に対応付けるようなケースです。簡単な例として、seed 機能を使ってジャンルコードの一覧を生成し、アップロードします。
 
 1. 既存のデータセットからジャンルコードの一覧を生成します。dbt ディレクトリで、`clickhouse-client` を使用して `seeds/genre_codes.csv` ファイルを作成します。
 

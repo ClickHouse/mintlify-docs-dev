@@ -139,9 +139,7 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─key─┬─value─┬─_part─────┐
 │   1 │ B     │ all_0_0_0 │
 │   2 │ B     │ all_1_1_0 │
@@ -156,9 +154,7 @@ SELECT
     _part
 FROM mv_dst
 ORDER BY all;
-```
 
-```response
 ┌─key─┬─value─┬─_part─────┐
 │   0 │ B     │ all_0_0_0 │
 │   0 │ B     │ all_1_1_0 │
@@ -178,24 +174,18 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─key─┬─value─┬─_part─────┐
 │   1 │ B     │ all_0_0_0 │
 │   2 │ B     │ all_1_1_0 │
 └─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─key─┬─value─┬─_part─────┐
 │   0 │ B     │ all_0_0_0 │
 │   0 │ B     │ all_1_1_0 │
@@ -237,9 +227,7 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   0 │ A     │ all_0_0_0 │
 └────────────┴─────┴───────┴───────────┘
@@ -248,7 +236,7 @@ ORDER BY all;
 С указанными выше настройками в результате `select` получаются два блока — следовательно, для вставки в таблицу `dst` тоже должно быть два блока. Однако мы видим, что в таблицу `dst` был вставлен только один блок. Это произошло потому, что для второго блока была выполнена дедупликация. В нём те же данные и тот же ключ дедупликации `block_id`, который вычисляется как хеш от вставленных данных. Такое поведение не соответствует ожидаемому. Такие случаи редки, но теоретически возможны. Чтобы корректно обрабатывать такие ситуации, пользователь должен указать `insert_deduplication_token`. Исправим это на следующих примерах:
 
 <div id="identical-blocks-in-insertion-with-insert_deduplication_token">
-  ### Идентичные блоки при вставке с `insert_deduplication_token`
+  ### Одинаковые блоки при вставке с `insert_deduplication_token`
 </div>
 
 ```sql
@@ -281,16 +269,14 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   0 │ A     │ all_2_2_0 │
 │ from dst   │   0 │ A     │ all_3_3_0 │
 └────────────┴─────┴───────┴───────────┘
 ```
 
-Как и ожидалось, были вставлены два идентичных блока.
+Как и ожидалось, были вставлены два одинаковых блока.
 
 ```sql
 SELECT 'second attempt';
@@ -307,9 +293,7 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   0 │ A     │ all_2_2_0 │
 │ from dst   │   0 │ A     │ all_3_3_0 │
@@ -333,9 +317,7 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   0 │ A     │ all_2_2_0 │
 │ from dst   │   0 │ A     │ all_3_3_0 │
@@ -383,30 +365,22 @@ SELECT
     _part
 FROM dst
 ORDER by all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   1 │ A     │ all_0_0_0 │
 └────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     'from mv_dst',
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─'from mv_dst'─┬─key─┬─value─┬─_part─────┐
 │ from mv_dst   │   0 │ A     │ all_0_0_0 │
 └───────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 select 'second attempt';
 
 INSERT INTO dst VALUES (2, 'A');
@@ -417,25 +391,19 @@ SELECT
     _part
 FROM dst
 ORDER by all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   1 │ A     │ all_0_0_0 │
 │ from dst   │   2 │ A     │ all_1_1_0 │
 └────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     'from mv_dst',
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─'from mv_dst'─┬─key─┬─value─┬─_part─────┐
 │ from mv_dst   │   0 │ A     │ all_0_0_0 │
 │ from mv_dst   │   0 │ A     │ all_1_1_0 │
@@ -493,24 +461,18 @@ SELECT
     _part
 FROM dst
 ORDER by all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   1 │ A     │ all_0_0_0 │
 └────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     'from mv_dst',
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─'from mv_dst'─┬─key─┬─value─┬─_part─────┐
 │ from mv_dst   │   0 │ A     │ all_0_0_0 │
 │ from mv_dst   │   0 │ A     │ all_1_1_0 │
@@ -530,24 +492,18 @@ SELECT
     _part
 FROM dst
 ORDER BY all;
-```
 
-```response
 ┌─'from dst'─┬─key─┬─value─┬─_part─────┐
 │ from dst   │   1 │ A     │ all_0_0_0 │
 └────────────┴─────┴───────┴───────────┘
-```
 
-```sql
 SELECT
     'from mv_dst',
     *,
     _part
 FROM mv_dst
 ORDER by all;
-```
 
-```response
 ┌─'from mv_dst'─┬─key─┬─value─┬─_part─────┐
 │ from mv_dst   │   0 │ A     │ all_0_0_0 │
 │ from mv_dst   │   0 │ A     │ all_1_1_0 │

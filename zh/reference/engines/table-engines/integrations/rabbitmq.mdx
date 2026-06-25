@@ -34,6 +34,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
     [rabbitmq_num_consumers = N,]
     [rabbitmq_num_queues = N,]
     [rabbitmq_queue_base = 'queue',]
+    [rabbitmq_deadletter_exchange = 'dl-exchange',]
     [rabbitmq_persistent = 0,]
     [rabbitmq_skip_broken_messages = N,]
     [rabbitmq_max_block_size = N,]
@@ -53,7 +54,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 
 * `rabbitmq_host_port` – host:port (例如 `localhost:5672`) 。
 * `rabbitmq_exchange_name` – RabbitMQ 的 exchange 名称。
-* `rabbitmq_format` – 消息格式。使用与 SQL `FORMAT` 函数相同的记法，例如 `JSONEachRow`。更多信息，请参见 [Formats](/zh/reference/formats/index) 章节。
+* `rabbitmq_format` – 消息格式。使用与 SQL `FORMAT` 函数相同的记法，例如 `JSONEachRow`。更多信息，请参见 [Formats](/zh/reference/formats) 章节。
 
 可选参数：
 
@@ -69,8 +70,8 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 * `rabbitmq_flush_interval_ms` - 从 RabbitMQ 刷新数据的超时时间。默认值：[stream&#95;flush&#95;interval&#95;ms](/zh/reference/settings/session-settings#stream_flush_interval_ms)。
 * `rabbitmq_queue_settings_list` - 允许在创建队列时设置 RabbitMQ 参数。可用设置：`x-max-length`、`x-max-length-bytes`、`x-message-ttl`、`x-expires`、`x-priority`、`x-max-priority`、`x-overflow`、`x-dead-letter-exchange`、`x-queue-type`。队列的 `durable` 设置会自动启用。
 * `rabbitmq_address` - 连接地址。使用此设置或 `rabbitmq_host_port`。
-* `rabbitmq_vhost` - RabbitMQ vhost。默认值：`'/'`。
-* `rabbitmq_queue_consume` - 使用用户定义的队列，且不执行任何 RabbitMQ 设置：声明 exchanges、队列、bindings。默认值：`false`。
+* `rabbitmq_vhost` - RabbitMQ vhost。默认值：`'\'`。
+* `rabbitmq_queue_consume` - 使用用户定义的队列，且不执行任何 RabbitMQ 设置：声明 exchanges、queues、bindings。默认值：`false`。
 * `rabbitmq_username` - RabbitMQ 用户名。
 * `rabbitmq_password` - RabbitMQ 密码。
 * `reject_unhandled_messages` - 发生错误时拒绝消息 (向 RabbitMQ 发送负确认) 。如果在 `rabbitmq_queue_settings_list` 中定义了 `x-dead-letter-exchange`，则会自动启用此设置。
@@ -214,7 +215,7 @@ exchange 类型选项：
   ## 数据格式支持
 </div>
 
-RabbitMQ engine 支持 ClickHouse 支持的所有[格式](/zh/reference/formats/index)。
+RabbitMQ engine 支持 ClickHouse 支持的所有[格式](/zh/reference/formats)。
 单条 RabbitMQ 消息中的行数取决于格式是按行还是按块组织的：
 
 * 对于按行组织的格式，可通过设置 `rabbitmq_max_rows_per_message` 控制单条 RabbitMQ 消息中的行数。

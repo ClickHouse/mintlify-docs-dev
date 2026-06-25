@@ -257,55 +257,6 @@ SELECT number AS a FROM numbers(10) WHERE a > ANY (SELECT number FROM numbers(3,
 └───┘
 ```
 
-<div id="some-all-on-arrays">
-  ### 配列に対する `SOME` / `ALL`
-</div>
-
-上で説明したサブクエリ形式に加えて、`SOME` / `ALL` の右辺には配列式 (配列リテラル、配列型のカラム、または配列を返す任意の式) を指定できます。これは PostgreSQL スタイルの配列量化子構文です。この構文は parse 時に認識され、配列関数に書き換えられるため、手動で書き換える必要はありません。
-
-| 構文                              | 書き換え後                              |
-| ------------------------------- | ---------------------------------- |
-| `expr = SOME(arr)`              | `has(arr, expr)`                   |
-| `expr <> ALL(arr)`              | `NOT has(arr, expr)`               |
-| `expr OP SOME(arr)` (その他の比較演算子) | `arrayExists(x -> expr OP x, arr)` |
-| `expr OP ALL(arr)` (その他の比較演算子)  | `arrayAll(x -> expr OP x, arr)`    |
-
-`SOME` は存在量化子です (`ANY` の SQL における同義語) 。`=` と `<>` は最適化された実装があるため、特別に `has` / `NOT has` に書き換えられます。一般形では、高階関数の `arrayExists` / `arrayAll` が使われます。
-
-配列形式が認識されるのは、比較演算子 `=`, `==`, `!=`, `<>`, `<=>`, `<`, `<=`, `>`, `>=` のみです。右辺に配列を取れるその他の演算子 — たとえば `LIKE`, `ILIKE`, `NOT LIKE`, `REGEXP`, `IN` — は配列量化子には **書き換えられず**、通常どおりの意味を保ちます。たとえば `'abc' LIKE SOME(['a%', 'b%'])` は配列量化子構文ではありません。そのような場合は、`arrayExists` / `arrayAll` を直接使用してください。
-
-<Info>
-  **配列形式では `ANY` はサポートされていません**
-
-  右辺に配列を指定できるのは `SOME` と `ALL` だけです。`any` は aggregate function でもあるため、`expr = any(x)` という shape の式は関数呼び出しとしての意味のまま扱われます。配列量化子には `SOME` を使用してください。
-</Info>
-
-```sql title="Query"
-SELECT
-    3 = SOME([1, 2, 3, 4]) AS in_array,
-    5 < SOME([1, 2, 6])    AS less_than_some,
-    5 > ALL([1, 2, 3])     AS greater_than_all;
-```
-
-```text title="Response"
-┌─in_array─┬─less_than_some─┬─greater_than_all─┐
-│        1 │              1 │                1 │
-└──────────┴────────────────┴──────────────────┘
-```
-
-<Info>
-  **`NULL` の扱いはサブクエリ形式とは異なります**
-
-  配列形式はパーサー内で書き換えられるため (この段階では `transform_null_in` などのクエリ設定は利用できず、また行単位の配列カラムではアナライザの null-safe な `IN` パスを使えません) 、`has` (`=` / `<>` の場合) および `arrayExists` / `arrayAll` の二値セマンティクスを使用します (これらは `NULL` 比較の不明な結果を `0` に畳み込みます) 。この挙動は、`NULL` の処理が `IN` / `NOT IN` を介して行われ、`transform_null_in` に依存するサブクエリ形式とは異なる場合があります。
-
-  ```sql
-  SELECT NULL = SOME([NULL]);   -- has([NULL], NULL)                  -> 1
-  SELECT NULL <> ALL([NULL]);   -- NOT has([NULL], NULL)              -> 0
-  SELECT NULL < SOME([1]);      -- arrayExists(x -> NULL < x, [1])    -> 0
-  SELECT NULL > ALL([1]);       -- arrayAll(x -> NULL > x, [1])       -> 0
-  ```
-</Info>
-
 <div id="operators-for-working-with-dates-and-times">
   ## 日付と時刻を扱う演算子
 </div>
@@ -322,9 +273,6 @@ EXTRACT(part FROM date);
 
 `part` パラメータは、日付のどの要素を取得するかを指定します。使用できる値は次のとおりです。
 
-* `NANOSECOND` — ナノ秒。設定可能な値: 0–999999999。
-* `MICROSECOND` — マイクロ秒。設定可能な値: 0–999999。
-* `MILLISECOND` — ミリ秒。設定可能な値: 0–999。
 * `SECOND` — 秒。設定可能な値: 0–59。
 * `MINUTE` — 分。設定可能な値: 0–59。
 * `HOUR` — 時。設定可能な値: 0–23。
@@ -341,12 +289,10 @@ EXTRACT(part FROM date);
 * `CENTURY` — 世紀。たとえば、2024年は21世紀です。
 * `DECADE` — 十年単位 (年を 10 で割ったもの) 。たとえば、2024年の十年単位の値は 202 です。
 * `MILLENNIUM` — 千年紀。たとえば、2024年は第3千年紀です。
-* `TIMEZONE_HOUR` — オペランドの timezone の UTC オフセットの符号付き時部分。たとえば、`+5:30` は `5` を返し、`-3:30` は `-3` を返します。
-* `TIMEZONE_MINUTE` — オペランドの timezone の UTC オフセットの符号付き分部分。たとえば、`+5:30` は `30` を返し、`-3:30` は `-30` を返します。
 
 `part` パラメータでは大文字と小文字は区別されません。
 
-`date` パラメータは、処理する値を指定します。[Date](/ja/reference/data-types/date)、[Date32](/ja/reference/data-types/date32)、[DateTime](/ja/reference/data-types/datetime)、[DateTime64](/ja/reference/data-types/datetime64)、および [Interval](/ja/reference/data-types/special-data-types/interval) 型がサポートされています。`date` が `Interval` の場合、要求する `part` は、その interval に格納されている kind と一致している必要があります (たとえば、`EXTRACT(DAY FROM INTERVAL 5 DAY)` は許可されますが、`EXTRACT(HOUR FROM INTERVAL 5 DAY)` は拒否されます。これは ClickHouse の interval が単一の kind であるためです) 。`Interval` オペランドの結果は `Int64` です。
+`date` パラメータは、処理する日付または時刻を指定します。[Date](/ja/reference/data-types/date)、[Date32](/ja/reference/data-types/date32)、[DateTime](/ja/reference/data-types/datetime)、および [DateTime64](/ja/reference/data-types/datetime64) 型がサポートされています。
 
 例:
 
@@ -357,10 +303,6 @@ SELECT EXTRACT(YEAR FROM toDate('2017-06-15'));
 SELECT EXTRACT(EPOCH FROM toDateTime('2024-01-15 12:30:45', 'UTC'));
 SELECT EXTRACT(DOW FROM toDate('2024-01-15'));
 SELECT EXTRACT(CENTURY FROM toDate('2024-01-01'));
-SELECT EXTRACT(TIMEZONE_HOUR   FROM toDateTime('2024-01-15 12:00:00', 'Asia/Kolkata'));    -- 5
-SELECT EXTRACT(TIMEZONE_MINUTE FROM toDateTime('2024-01-15 12:00:00', 'Asia/Kolkata'));    -- 30
-SELECT EXTRACT(DAY   FROM INTERVAL 40 DAY);                                                -- 40
-SELECT EXTRACT(MONTH FROM INTERVAL 7 MONTH);                                               -- 7
 ```
 
 次の例では、テーブルを作成し、そのテーブルに `DateTime` 型の値を挿入します。
@@ -658,36 +600,3 @@ SELECT * FROM t_null WHERE y IS NOT NULL
 ```
 
 [optimize&#95;functions&#95;to&#95;subcolumns](/ja/reference/settings/session-settings#optimize_functions_to_subcolumns) 設定を有効にすると、最適化できます。`optimize_functions_to_subcolumns = 1` の場合、関数はカラムデータ全体を読み取って処理する代わりに、[null](/ja/reference/data-types/nullable#finding-null) サブカラムだけを読み取ります。クエリ `SELECT n IS NOT NULL FROM table` は `SELECT NOT n.null FROM TABLE` に変換されます。
-
-<div id="checking-boolean-values">
-  ## ブール値の確認
-</div>
-
-ClickHouse は、`IS TRUE`、`IS FALSE`、`IS UNKNOWN`、`IS NOT TRUE`、`IS NOT FALSE`、`IS NOT UNKNOWN` の演算子をサポートしています。
-これらは、[Bool](/ja/reference/data-types/boolean) および `Nullable(Bool)` の式に対して使用されます。
-
-* `expr IS TRUE` は、`expr` が `true` の場合にのみ `1` を返します。
-* `expr IS FALSE` は、`expr` が `false` の場合にのみ `1` を返します。
-* `expr IS UNKNOWN` は、`expr` が `NULL` の場合にのみ `1` を返します。
-* `expr IS NOT TRUE` は、`expr` が `false` または `NULL` の場合に `1` を返します。
-* `expr IS NOT FALSE` は、`expr` が `true` または `NULL` の場合に `1` を返します。
-* `expr IS NOT UNKNOWN` は、`expr` が `NULL` ではない場合に `1` を返します。
-
-ブール式では、`IS UNKNOWN` は `IS NULL` と等価であり、`IS NOT UNKNOWN` は `IS NOT NULL` と等価です。
-
-{/* */}
-
-```sql
-CREATE TABLE t_bool (x Nullable(Bool)) ENGINE = Memory;
-INSERT INTO t_bool VALUES (true), (false), (NULL);
-
-SELECT
-    x,
-    x IS TRUE,
-    x IS FALSE,
-    x IS UNKNOWN,
-    x IS NOT TRUE,
-    x IS NOT FALSE,
-    x IS NOT UNKNOWN
-FROM t_bool;
-```

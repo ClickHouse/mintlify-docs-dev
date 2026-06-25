@@ -19,8 +19,8 @@ doc_type: 'reference'
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 (
-    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1],
-    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2],
+    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1] [TTL expr1],
+    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2] [TTL expr2],
 ) ENGINE = Join(join_strictness, join_type, k1[, k2, ...])
 ```
 
@@ -77,7 +77,7 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
   ### データの削除
 </div>
 
-`Join` エンジンのテーブルに対する `ALTER DELETE` クエリは、[ミューテーション](/ja/reference/statements/alter/index#mutations) として実装されています。`DELETE` ミューテーションは、フィルタされたデータを読み取り、メモリ上およびディスク上のデータを上書きします。
+`Join` エンジンのテーブルに対する `ALTER DELETE` クエリは、[ミューテーション](/ja/reference/statements/alter#mutations) として実装されています。`DELETE` ミューテーションは、フィルタされたデータを読み取り、メモリ上およびディスク上のデータを上書きします。
 
 <div id="join-limitations-and-settings">
   ### 制限事項と設定
@@ -134,9 +134,9 @@ I/O のオーバーヘッドを削減します。パフォーマンスを重視�
 
 デフォルト値: `1`。
 
-`Join` エンジンのテーブルは、`GLOBAL JOIN` JOIN演算では使用できません。
+`Join` エンジンのテーブルは、`GLOBAL JOIN` 操作では使用できません。
 
-`Join` エンジンでは、`CREATE TABLE` ステートメントで [join&#95;use&#95;nulls](/ja/reference/settings/session-settings#join_use_nulls) 設定を指定できます。[SELECT](/ja/reference/statements/select/index) クエリでも、`join_use_nulls` の値を同じにする必要があります。
+`Join` エンジンでは、`CREATE TABLE` ステートメントで [join&#95;use&#95;nulls](/ja/reference/settings/session-settings#join_use_nulls) 設定を指定できます。[SELECT](/ja/reference/statements/select) クエリでも、`join_use_nulls` の値を同じにする必要があります。
 
 <div id="example">
   ## 使用例
@@ -149,7 +149,7 @@ CREATE TABLE id_val(`id` UInt32, `val` UInt32) ENGINE = TinyLog;
 ```
 
 ```sql
-INSERT INTO id_val VALUES (1,11), (2,12), (3,13);
+INSERT INTO id_val VALUES (1,11)(2,12)(3,13);
 ```
 
 右側の`Join`テーブルを作成します。
@@ -159,7 +159,7 @@ CREATE TABLE id_val_join(`id` UInt32, `val` UInt8) ENGINE = Join(ANY, LEFT, id);
 ```
 
 ```sql
-INSERT INTO id_val_join VALUES (1,21), (1,22), (3,23);
+INSERT INTO id_val_join VALUES (1,21)(1,22)(3,23);
 ```
 
 テーブルの結合:

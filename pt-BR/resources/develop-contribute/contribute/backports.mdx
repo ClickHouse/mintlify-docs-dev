@@ -71,10 +71,6 @@ Uma branch de release ativa é qualquer branch cujo PR de release correspondente
 
 Uma branch de release pode estar no estado **rolling-out** (seu PR de release tem o rótulo `rolling-out`) durante o período em que uma nova release está sendo implantada. Os backports gerais são pausados para branches em rolling-out para evitar complicar o rollout. Rótulos específicas de versão (por exemplo, `v25.3-must-backport`) substituem esse comportamento e forçam o backport mesmo durante um rollout.
 
-Um rótulo específico de versão define a release *mais antiga* que o PR precisa alcançar: ele recebe backport para essa release **e para todas as branches de release ativas mais recentes**, não apenas para a nomeada. Por exemplo, `v25.3-must-backport` em um PR merged na branch de development faz backport para `25.3` e para todas as releases ativas posteriores (`25.4`, `25.5`, …). Se houver vários rótulos específicos de versão, a menor versão prevalece, já que ela já cobre as mais recentes.
-
-A release nomeada não precisa estar ativa. Um rótulo para uma release em fim de vida (uma sem PR de release aberto) ainda leva a correção adiante para todas as releases ativas posteriores, para que uma atualização a partir dessa release nunca perca a correção silenciosamente. Por exemplo, `v25.12-must-backport` em um PR continua fazendo backport para `26.1`, `26.2`, … mesmo depois de a própria `25.12` ter chegado ao fim de vida.
-
 <div id="implementation">
   ## Implementação
 </div>
@@ -96,17 +92,17 @@ O processo ocorre em duas etapas para cada par (PR original, branch de release):
 
 Os rótulos no PR original controlam se e onde o backport será feito.
 
-| Rótulo                                                      | Efeito                                                                                                                                                                                                                                                                                                                                                            |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pr-must-backport`                                          | Backport para todas as branches de release ativas (ignorando branches marcadas como `rolling-out`)                                                                                                                                                                                                                                                                |
-| `pr-must-backport-force`                                    | Backport para todas as branches de release ativas, ignorando as restrições de `rolling-out`                                                                                                                                                                                                                                                                       |
-| `pr-critical-bugfix`                                        | Aciona `pr-must-backport` automaticamente (via `AUTO_BACKPORT` em `pr_labels_and_category.py`)                                                                                                                                                                                                                                                                    |
-| `v{VER}-must-backport` (por exemplo, `v25.3-must-backport`) | Backport para essa branch de release **e para todas as branches de release ativas mais novas** — a versão marca o *lançamento* mais antigo que o PR deve alcançar, mesmo quando o lançamento nomeado já estiver em fim de vida. Com vários rótulos desse tipo, a menor versão prevalece. Sobrescreve o comportamento de ignorar `rolling-out` para essas branches |
-| `pr-backports-created`                                      | Definido pelo bot quando todos os PRs de backport obrigatórios tiverem sido criados; removido se um PR de cherry-pick for reaberto                                                                                                                                                                                                                                |
-| `pr-cherrypick`                                             | Aplicado aos PRs de cherry-pick criados pelo bot                                                                                                                                                                                                                                                                                                                  |
-| `pr-backport`                                               | Aplicado aos PRs de backport criados pelo bot                                                                                                                                                                                                                                                                                                                     |
-| `do not test`                                               | Aplicado aos PRs de cherry-pick para que o CI não seja executado neles                                                                                                                                                                                                                                                                                            |
-| `rolling-out`                                               | Definido em um **PR de release** para indicar que sua branch está em rollout no momento; backports gerais a ignoram                                                                                                                                                                                                                                               |
+| Rótulo                                                      | Efeito                                                                                                                             |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `pr-must-backport`                                          | Backport para todas as branches de release ativas (ignorando branches marcadas como `rolling-out`)                                 |
+| `pr-must-backport-force`                                    | Backport para todas as branches de release ativas, ignorando as restrições de `rolling-out`                                        |
+| `pr-critical-bugfix`                                        | Aciona `pr-must-backport` automaticamente (via `AUTO_BACKPORT` em `pr_labels_and_category.py`)                                     |
+| `v{VER}-must-backport` (por exemplo, `v25.3-must-backport`) | Backport apenas para essa branch de release específica; sobrescreve o comportamento de ignorar `rolling-out` para essa branch      |
+| `pr-backports-created`                                      | Definido pelo bot quando todos os PRs de backport obrigatórios tiverem sido criados; removido se um PR de cherry-pick for reaberto |
+| `pr-cherrypick`                                             | Aplicado aos PRs de cherry-pick criados pelo bot                                                                                   |
+| `pr-backport`                                               | Aplicado aos PRs de backport criados pelo bot                                                                                      |
+| `do not test`                                               | Aplicado aos PRs de cherry-pick para que o CI não seja executado neles                                                             |
+| `rolling-out`                                               | Definido em um **PR de release** para indicar que sua branch está em rollout no momento; backports gerais a ignoram                |
 
 <div id="branch-and-pr-naming">
   ### Nomenclatura de branches e PRs
@@ -127,7 +123,7 @@ Para cada número de PR original `N` e branch de release `release/X.Y`:
   #### 1. Identifique as releases ativas
 </div>
 
-`BackportPRs.receive_release_prs` consulta o GitHub em busca de todos os PRs abertos com o rótulo `release`. As refs de origem desses PRs correspondem aos nomes dos branches de release (por exemplo, `release/25.3`). A partir delas, é derivado o conjunto de rótulos específicos de versão a serem procurados: todos os rótulos `v{VER}-must-backport` que existirem no repositório e cuja versão não seja mais recente do que a release ativa mais recente. Rótulos mais antigos são incluídos mesmo quando sua release não está mais ativa (um rótulo mais recente do que todas as releases ativas é ignorado, pois não poderia se expandir para nenhum branch ativo), de modo que um PR rotulado para uma release em fim de vida útil ainda seja encontrado, desde que uma release mais recente esteja ativa.
+`BackportPRs.receive_release_prs` consulta o GitHub em busca de todos os PRs abertos com o rótulo `release`. As refs de origem desses PRs correspondem aos nomes dos branches de release (por exemplo, `release/25.3`). A partir delas, é gerado um conjunto de rótulos de compatibilidade: `v25.3-must-backport` etc.
 
 <div id="find-prs-to-backport">
   #### 2. Encontrar PRs para backport
@@ -144,7 +140,7 @@ Para cada número de PR original `N` e branch de release `release/X.Y`:
   #### 3. Tratamento de branch em `rolling-out`
 </div>
 
-Quando uma PR de release recebe o rótulo `rolling-out`, os rótulos gerais de backport (`pr-must-backport`, `pr-critical-bugfix`) ignoram esse branch. O bot fecha todas as PRs de cherry-pick ou backport criadas anteriormente para esse branch com um comentário explicativo. Um rótulo específico de versão (por exemplo, `v25.3-must-backport`) sempre prevalece sobre isso — para o release nomeado e para todos os release branches ativos mais recentes aos quais ele se expande. `pr-must-backport-force` ignora a verificação de `rolling-out` para todos os branches.
+Quando uma PR de release recebe o rótulo `rolling-out`, os rótulos gerais de backport (`pr-must-backport`, `pr-critical-bugfix`) ignoram esse branch. O bot fecha todas as PRs de cherry-pick ou backport criadas anteriormente para esse branch com um comentário explicativo. Um rótulo específico da versão (por exemplo, `v25.3-must-backport`) sempre prevalece sobre isso. `pr-must-backport-force` ignora a verificação de `rolling-out` para todos os branches.
 
 <div id="cherry-pick-stage">
   #### 4. Etapa de cherry-pick (`ReleaseBranch.create_cherrypick`)

@@ -7,7 +7,7 @@ title: 'SummingMergeTree 테이블 엔진'
 doc_type: '참고'
 ---
 
-이 엔진은 [MergeTree](/ko/reference/engines/table-engines/mergetree-family/mergetree)를 상속합니다. 차이점은 `SummingMergeTree` 테이블의 데이터 파트를 머지할 때 ClickHouse가 동일한 프라이머리 키(primary key), 더 정확히는 동일한 [정렬 키](/ko/reference/engines/table-engines/mergetree-family/mergetree)를 가진 모든 행을 숫자 데이터 타입 컬럼의 값이 합산된 하나의 행으로 대체한다는 점입니다. 정렬 키가 하나의 키 값에 많은 수의 행이 대응되도록 구성되어 있으면 저장 용량이 크게 줄고 데이터 조회 속도도 빨라집니다.
+이 엔진은 [MergeTree](/ko/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree)를 상속합니다. 차이점은 `SummingMergeTree` 테이블의 데이터 파트를 머지할 때 ClickHouse가 동일한 프라이머리 키(primary key), 더 정확히는 동일한 [정렬 키](/ko/reference/engines/table-engines/mergetree-family/mergetree)를 가진 모든 행을 숫자 데이터 타입 컬럼의 값이 합산된 하나의 행으로 대체한다는 점입니다. 정렬 키가 하나의 키 값에 많은 수의 행이 대응되도록 구성되어 있으면 저장 용량이 크게 줄고 데이터 조회 속도도 빨라집니다.
 
 이 엔진은 `MergeTree`와 함께 사용할 것을 권장합니다. 전체 데이터는 `MergeTree` 테이블에 저장하고, 예를 들어 보고서 작성 시에는 집계된 데이터를 저장하는 용도로 `SummingMergeTree`를 사용하십시오. 이렇게 하면 프라이머리 키를 잘못 구성해 중요한 데이터를 잃는 일을 방지할 수 있습니다.
 
@@ -203,52 +203,6 @@ ARRAY JOIN
 데이터를 요청할 때는 `Map` 집계에 [sumMap(key, value)](/ko/reference/functions/aggregate-functions/sumMap) 함수를 사용합니다.
 
 중첩된 데이터 구조에서는 합산할 컬럼의 튜플에 해당 컬럼들을 지정할 필요가 없습니다.
-
-<div id="tuple-element-aggregation">
-  ### Tuple 요소 집계
-</div>
-
-`allow_tuple_element_aggregation` 설정이 활성화되면 `Tuple` 컬럼은 각 리프 요소가 독립적으로 합산에 참여할 수 있도록 재귀적으로 평탄화됩니다. 이를 통해 여러 메트릭을 하나의 `Tuple` 컬럼에 저장하고, 머지 중 요소별로 합산할 수 있습니다.
-
-평탄화된 서브컬럼에는 일반 컬럼과 동일한 규칙이 적용됩니다:
-
-* 숫자형 서브컬럼만 합산됩니다.
-* 정렬 키 또는 파티션 키에 포함된 `Tuple`의 서브컬럼은 합산에서 제외됩니다.
-* `columns`를 지정한 경우, 나열된 `Tuple` 컬럼의 서브컬럼만 합산됩니다.
-* 합산 후 행의 모든 숫자형 서브컬럼이 0이면 해당 행은 삭제됩니다.
-
-<Note>
-  이 설정은 변경할 수 없으며 테이블 생성 시에 지정해야 합니다.
-</Note>
-
-```sql
-CREATE TABLE summing_tuples
-(
-    key UInt32,
-    metrics Tuple(
-        impressions UInt64,
-        clicks UInt64,
-        nested Tuple(
-            conversions UInt64
-        )
-    )
-) ENGINE = SummingMergeTree()
-ORDER BY key
-SETTINGS allow_tuple_element_aggregation = 1;
-
-INSERT INTO summing_tuples VALUES (1, (100, 10, (1)));
-INSERT INTO summing_tuples VALUES (1, (200, 20, (3)));
-
-OPTIMIZE TABLE summing_tuples FINAL;
-
-SELECT key, metrics.impressions, metrics.clicks, metrics.nested.conversions FROM summing_tuples;
-```
-
-```text
-┌─key─┬─metrics.impressions─┬─metrics.clicks─┬─metrics.nested.conversions─┐
-│   1 │                 300 │             30 │                          4 │
-└─────┴─────────────────────┴────────────────┴────────────────────────────┘
-```
 
 <div id="related-content">
   ## 관련 콘텐츠

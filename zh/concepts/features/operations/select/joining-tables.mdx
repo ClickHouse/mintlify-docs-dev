@@ -12,7 +12,7 @@ ClickHouse [完整支持 `JOIN`](https://clickhouse.com/blog/clickhouse-fully-su
 
 * 为了获得最佳性能，应尽量减少查询中的 `JOIN` 数量，尤其是在要求毫秒级响应的实时分析工作负载中。建议将单个查询中的 `JOIN` 数量控制在 3 到 4 个以内。我们在[数据建模部分](/zh/guides/clickhouse/data-modelling/schema-design)中详细介绍了多种减少 JOIN 的方法，包括反规范化、字典和 materialized views。
 * 从 ClickHouse 24.12 开始，查询规划器会自动调整双表 JOIN 的顺序，将较小的表放在右侧以获得最佳性能。到了 25.9 版本，这一能力进一步扩展到可优化包含三个或更多表的查询的 JOIN 顺序。
-* 如果你的查询需要 direct join，即 `LEFT ANY JOIN` (如下所示) ，我们建议在可能的情况下使用[字典](/zh/concepts/features/dictionaries/index)。
+* 如果你的查询需要直接 JOIN，即 `LEFT ANY JOIN` (如下所示) ，我们建议在可能的情况下使用[字典](/zh/concepts/features/dictionaries)。
 
 <Image img="/images/guides/joins-1.png" size="sm" alt="Left any join" />
 
@@ -23,15 +23,13 @@ SELECT count()
 FROM stackoverflow.posts AS p
 ANY INNER `JOIN` stackoverflow.comments AS c ON p.Id = c.PostId
 WHERE (p.Title != '') AND (p.Title NOT ILIKE '%clickhouse%') AND (p.Body NOT ILIKE '%clickhouse%') AND (c.Text ILIKE '%clickhouse%')
-```
 
-```response
 ┌─count()─┐
 │       86 │
 └─────────┘
 
 1 row in set. Elapsed: 8.209 sec. Processed 150.20 million rows, 56.05 GB (18.30 million rows/s., 6.83 GB/s.)
-Peak memory usage: 1.23 GiB.
+峰值内存占用: 1.23 GiB.
 ```
 
 请注意，这里我们使用的是 `ANY INNER JOIN`，而不是普通的 `INNER JOIN`，因为我们不希望产生笛卡尔积；也就是说，我们希望每篇帖子只匹配一条记录。
@@ -46,15 +44,12 @@ WHERE (Title != '') AND (Title NOT ILIKE '%clickhouse%') AND (Body NOT ILIKE '%c
         FROM stackoverflow.comments
         WHERE Text ILIKE '%clickhouse%'
 ))
-```
-
-```response
 ┌─count()─┐
 │       86 │
 └─────────┘
 
 1 row in set. Elapsed: 2.284 sec. Processed 150.20 million rows, 16.61 GB (65.76 million rows/s., 7.27 GB/s.)
-Peak memory usage: 323.52 MiB.
+峰值内存占用: 323.52 MiB.
 ```
 
 尽管 ClickHouse 会尝试将条件下推到所有 JOIN 子句和子查询中，但我们仍建议用户在可能的情况下，始终手动将条件应用到所有子子句上，从而尽量减少参与 `JOIN` 的数据量。请看下面的示例，我们想计算自 2020 年以来与 Java 相关的帖子获得的赞成票数量。
@@ -66,9 +61,7 @@ SELECT countIf(VoteTypeId = 2) AS upvotes
 FROM stackoverflow.posts AS p
 INNER JOIN stackoverflow.votes AS v ON p.Id = v.PostId
 WHERE has(arrayFilter(t -> (t != ''), splitByChar('|', p.Tags)), 'java') AND (p.CreationDate >= '2020-01-01')
-```
 
-```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
@@ -83,9 +76,7 @@ SELECT countIf(VoteTypeId = 2) AS upvotes
 FROM stackoverflow.votes AS v
 INNER JOIN stackoverflow.posts AS p ON v.PostId = p.Id
 WHERE has(arrayFilter(t -> (t != ''), splitByChar('|', p.Tags)), 'java') AND (p.CreationDate >= '2020-01-01')
-```
 
-```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
@@ -100,15 +91,13 @@ SELECT countIf(VoteTypeId = 2) AS upvotes
 FROM stackoverflow.votes AS v
 INNER JOIN stackoverflow.posts AS p ON v.PostId = p.Id
 WHERE has(arrayFilter(t -> (t != ''), splitByChar('|', p.Tags)), 'java') AND (p.CreationDate >= '2020-01-01') AND (v.CreationDate >= '2020-01-01')
-```
 
-```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
 
-1 row in set. Elapsed: 0.597 sec. Processed 81.14 million rows, 1.31 GB (135.82 million rows/s., 2.19 GB/s.)
-Peak memory usage: 249.42 MiB.
+已选取 1 行。耗时：0.597 秒。已处理 8114 万行，1.31 GB（1.3582 亿行/秒，2.19 GB/秒）
+峰值内存占用：249.42 MiB。
 ```
 
 如前所述，将 `INNER JOIN` 移到子查询中，并在外层查询和内层查询中都保留过滤器后，此查询还可以进一步优化。
@@ -121,15 +110,13 @@ WHERE (VoteTypeId = 2) AND (PostId IN (
         FROM stackoverflow.posts
         WHERE (CreationDate >= '2020-01-01') AND has(arrayFilter(t -> (t != ''), splitByChar('|', Tags)), 'java')
 ))
-```
 
-```response
 ┌─upvotes─┐
 │  261915 │
 └─────────┘
 
 1 row in set. Elapsed: 0.383 sec. Processed 99.64 million rows, 804.55 MB (259.85 million rows/s., 2.10 GB/s.)
-Peak memory usage: 250.66 MiB.
+峰值内存占用: 250.66 MiB.
 ```
 
 <div id="choosing-a-join-algorithm">

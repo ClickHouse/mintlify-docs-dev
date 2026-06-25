@@ -7,11 +7,11 @@ title: 'Client de C de ClickHouse'
 doc_type: 'reference'
 ---
 
-`clickhouse-c` es un client de C de solo cabecera para el [protocolo nativo](/es/concepts/features/interfaces/tcp) de ClickHouse.
+`clickhouse-c` es un client de C de solo cabecera para el [protocolo nativo](/es/interfaces/tcp) de ClickHouse.
 El código fuente y la referencia de cada cabecera están en el [repositorio de GitHub](https://github.com/ClickHouse/clickhouse-c).
 
 A diferencia de los clients de más alto nivel, deliberadamente hace muy poco por ti. La cabecera principal decodifica y
-codifica bloques en formato [Native](/es/reference/formats/Native) mediante una callback de E/S que tú proporcionas. Tú te encargas
+codifica bloques en formato [Native](/es/interfaces/formats/Native) mediante una callback de E/S que tú proporcionas. Tú te encargas
 del socket, el contexto TLS, el asignador de memoria, los reintentos y el pooling de conexiones. Eso hace que sea lo bastante pequeño como para
 integrarse: incluir solo `clickhouse.h` no añade dependencias de enlazado aparte de libc.
 
@@ -27,11 +27,11 @@ integrarse: incluir solo `clickhouse.h` no añade dependencias de enlazado apart
 
 Estos son objetivos deliberadamente fuera de alcance. Gestiónelos en su aplicación o con una biblioteca complementaria:
 
-* Protocolo HTTP. Envuelva libcurl directamente para la [interfaz HTTP](/es/concepts/features/interfaces/http).
+* Protocolo HTTP. Envuelva libcurl directamente para la [interfaz HTTP](/es/interfaces/http).
 * Resolución DNS, failover de endpoints, pooling de conexiones, reintentos y backoff.
 * Ciclo de vida del contexto TLS. El backend de OpenSSL usa un `SSL` que ya debe estar conectado.
 * Hilos. Cada `chc_client` es monohilo por diseño.
-* E/S asíncrona dentro de la biblioteca. El client con bloqueo llama a `chc_io.read` de forma síncrona. Para un
+* E/S asíncrona dentro de la biblioteca. El client bloqueante llama a `chc_io.read` de forma síncrona. Para un
   client de bucle de eventos que no realiza ninguna E/S por sí mismo, use el [client sin E/S](#async-client).
 
 <div id="headers">
@@ -352,7 +352,7 @@ chc_openssl_io_init(&state, &io, ssl, NULL, NULL);
 /* hand &io to chc_client_init, same as the POSIX backend */
 ```
 
-[ClickHouse Cloud](/es/products/cloud/getting-started/intro) y otros despliegues con TLS habilitado usan el protocolo nativo en
+[ClickHouse Cloud](/es/cloud/overview) y otros despliegues con TLS habilitado usan el protocolo nativo en
 el puerto 9440. Ambos backends aceptan un callback opcional `check_cancel`, que se consulta entre lecturas, y un
 tiempo límite de lectura mediante `chc_openssl_io_set_deadline` / `chc_posix_io_set_deadline`.
 

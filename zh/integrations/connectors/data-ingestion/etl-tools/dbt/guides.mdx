@@ -22,13 +22,13 @@ import ClickHouseSupportedBadge from "/snippets/components/ClickHouseSupported/C
 5. 创建快照模型。
 6. 使用 materialized view。
 
-这些指南应结合其余[文档](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/index)、[功能和配置](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/features-and-configurations)以及[物化类型参考](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/materializations)一并使用。
+这些指南应结合其余[文档](/zh/integrations/connectors/data-ingestion/etl-tools/dbt)、[功能和配置](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/features-and-configurations)以及[物化类型参考](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/materializations)一并使用。
 
 <div id="setup">
   ## 设置
 </div>
 
-请按照 [dbt 和 ClickHouse 适配器 的设置](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/index) 部分中的说明准备环境。
+请按照 [dbt 和 ClickHouse 适配器 的设置](/zh/integrations/connectors/data-ingestion/etl-tools/dbt) 部分中的说明准备环境。
 
 **重要提示：以下内容已在 Python 3.9 下测试。**
 
@@ -407,7 +407,7 @@ LIMIT 5;
   ## 创建表物化
 </div>
 
-在前面的示例中，我们的模型被物化为视图。虽然这对某些查询来说可能已经足够快，但对于更复杂的 SELECT 查询或执行频繁的查询，将其物化为表通常更合适。对于会被 BI 工具查询的模型，这种物化方式尤其有用，能够确保用户获得更快的使用体验。它实际上会将查询结果存储为一张新表，并带来相应的存储开销——本质上就是执行一次 `INSERT TO SELECT`。请注意，这张表每次都会被重新构建，也就是说，它不是增量式的。因此，较大的结果集可能会导致较长的执行时间——请参阅 [dbt Limitations](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations)。
+在前面的示例中，我们的模型被物化为视图。虽然这对某些查询来说可能已经足够快，但对于更复杂的 SELECT 查询或执行频繁的查询，将其物化为表通常更合适。对于会被 BI 工具查询的模型，这种物化方式尤其有用，能够确保用户获得更快的使用体验。它实际上会将查询结果存储为一张新表，并带来相应的存储开销——本质上就是执行一次 `INSERT TO SELECT`。请注意，这张表每次都会被重新构建，也就是说，它不是增量式的。因此，较大的结果集可能会导致较长的执行时间——请参阅 [dbt Limitations](/zh/integrations/connectors/data-ingestion/etl-tools/dbt#limitations)。
 
 1. 修改文件 `actors_summary.sql`，将 `materialized` 参数设置为 `table`。注意 `ORDER BY` 的定义方式，以及这里使用的是 `MergeTree` 表引擎：
 
@@ -487,7 +487,7 @@ LIMIT 5;
   ## 创建增量物化
 </div>
 
-前面的示例创建了一张用于物化模型的表。每次执行 dbt 时，这张表都会被重新构建。对于较大的结果集或复杂的转换，这种做法可能既不现实，成本也极其高昂。为了解决这一问题并缩短构建时间，dbt 提供了增量物化。这使 dbt 能够将自上次执行以来的记录插入或更新到表中，因此非常适合事件型数据。在底层实现上，系统会先创建一张包含所有已更新记录的临时表，然后将所有未变更的记录以及已更新的记录一并插入到新的目标表中。因此，对于大型结果集，它与表模型一样存在类似的[限制](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations)。
+前面的示例创建了一张用于物化模型的表。每次执行 dbt 时，这张表都会被重新构建。对于较大的结果集或复杂的转换，这种做法可能既不现实，成本也极其高昂。为了解决这一问题并缩短构建时间，dbt 提供了增量物化。这使 dbt 能够将自上次执行以来的记录插入或更新到表中，因此非常适合事件型数据。在底层实现上，系统会先创建一张包含所有已更新记录的临时表，然后将所有未变更的记录以及已更新的记录一并插入到新的目标表中。因此，对于大型结果集，它与表模型一样存在类似的[限制](/zh/integrations/connectors/data-ingestion/etl-tools/dbt#limitations)。
 
 为了解决大型数据集上的这些限制，适配器支持 &#39;inserts&#95;only&#39; 模式。在该模式下，所有更新都会直接插入到目标表中，而不会创建临时表 (下文会进一步介绍) 。
 
@@ -683,7 +683,7 @@ AND event_time > subtractMinutes(now(), 15) ORDER BY event_time LIMIT 100;
 
 <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_05.png" size="lg" alt="dbt 增量更新" />
 
-这种策略在非常大的模型上可能会遇到一些挑战。更多细节请参见 [限制](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations)。
+这种策略在非常大的模型上可能会遇到一些挑战。更多细节请参见 [限制](/zh/integrations/connectors/data-ingestion/etl-tools/dbt#limitations)。
 
 <div id="append-strategy-inserts-only-mode">
   ### 追加策略 (仅插入模式)
@@ -792,9 +792,9 @@ WHERE id > (SELECT max(id) FROM imdb_dbt.actor_summary) OR updated_at > (SELECT 
   ### 删除和插入模式 (Experimental)
 </div>
 
-一直以来，ClickHouse 对更新和删除的支持都比较有限，主要通过异步的[变更](/zh/reference/statements/alter/index)实现。这类操作可能会产生极高的 IO 开销，因此通常应尽量避免。
+一直以来，ClickHouse 对更新和删除的支持都比较有限，主要通过异步的[变更](/zh/reference/statements/alter)实现。这类操作可能会产生极高的 IO 开销，因此通常应尽量避免。
 
-ClickHouse 22.8 引入了[轻量级删除](/zh/snippets/delete)，ClickHouse 25.7 引入了[轻量级更新](/zh/reference/statements/update)。随着这些功能的推出，单条更新查询带来的修改即使以异步方式物化，从用户视角看也会立即生效。
+ClickHouse 22.8 引入了[轻量级删除](/zh/reference/statements/delete)，ClickHouse 25.7 引入了[轻量级更新](/zh/reference/statements/update)。随着这些功能的推出，单条更新查询带来的修改即使以异步方式物化，从用户视角看也会立即生效。
 
 可以通过 `incremental_strategy` 参数为模型配置此模式，即
 
@@ -1016,7 +1016,7 @@ dbt 快照可用于记录可变模型随时间发生的变化。这样一来，�
   ## 使用 seed
 </div>
 
-dbt 支持从 CSV 文件加载数据。不过，这一功能并不适合加载数据库的大型导出数据，更适用于通常作为代码表和[字典](/zh/concepts/features/dictionaries/index)的小型文件，例如将国家代码映射为国家名称。下面通过一个简单示例，使用 seed 功能生成并上传一份类型代码列表。
+dbt 支持从 CSV 文件加载数据。不过，这一功能并不适合加载数据库的大型导出数据，更适用于通常作为代码表和[字典](/zh/concepts/features/dictionaries)的小型文件，例如将国家代码映射为国家名称。下面通过一个简单示例，使用 seed 功能生成并上传一份类型代码列表。
 
 1. 我们先从现有数据集中生成一份类型代码列表。在 dbt 目录中，使用 `clickhouse-client` 创建文件 `seeds/genre_codes.csv`：
 

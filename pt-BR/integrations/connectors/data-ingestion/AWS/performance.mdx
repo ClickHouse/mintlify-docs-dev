@@ -73,18 +73,18 @@ O ClickHouse [mescla partes](https://clickhouse.com/blog/asynchronous-data-inser
 Um único servidor ClickHouse utiliza várias [threads de mesclagem em segundo plano](/pt-BR/reference/settings/server-settings/settings#background_pool_size) para executar [mesclagens de partes](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#more-parts--more-background-part-merges:~:text=to%20execute%20concurrent-,part%20merges,-.%20Each%20thread%20executes) simultaneamente. Cada thread executa um loop:
 
 ```bash
-① Decide which parts to merge next, and load these parts as blocks into memory.
+① Decidir quais partes mesclar a seguir e carregar essas partes como blocos na memória.
 
-② Merge the loaded blocks in memory into a larger block.
+② Mesclar os blocos carregados na memória em um bloco maior.
 
-③ Write the merged block into a new part on disk.
+③ Gravar o bloco mesclado em uma nova parte no disco.
 
-Go to ①
+Ir para ①
 ```
 
 Observe que [aumentar](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#hardware-size) o número de núcleos de CPU e a quantidade de RAM aumenta o throughput das mesclas em segundo plano.
 
-As partes que foram mescladas em partes maiores são marcadas como [inativas](/pt-BR/reference/system-tables/parts) e, por fim, excluídas após um número [configurável](/pt-BR/reference/settings/merge-tree-settings#old_parts_lifetime) de minutos. Com o tempo, isso cria uma árvore de partes mescladas (daí o nome da tabela [`MergeTree`](/pt-BR/reference/engines/table-engines/mergetree-family/index)).
+As partes que foram mescladas em partes maiores são marcadas como [inativas](/pt-BR/reference/system-tables/parts) e, por fim, excluídas após um número [configurável](/pt-BR/reference/settings/merge-tree-settings#old_parts_lifetime) de minutos. Com o tempo, isso cria uma árvore de partes mescladas (daí o nome da tabela [`MergeTree`](/pt-BR/reference/engines/table-engines/mergetree-family)).
 
 <div id="insert-parallelism">
   ### Paralelismo de inserção
@@ -144,7 +144,7 @@ Certifique-se de que seus buckets estejam na mesma região que suas instâncias 
   ## Formatos
 </div>
 
-O ClickHouse pode ler arquivos armazenados em buckets do S3 nos [formatos compatíveis](/pt-BR/reference/formats/index#formats-overview) usando a função `s3` e o engine `S3`. Ao ler arquivos brutos, alguns desses formatos têm vantagens específicas:
+O ClickHouse pode ler arquivos armazenados em buckets do S3 nos [formatos compatíveis](/pt-BR/reference/formats#formats-overview) usando a função `s3` e o engine `S3`. Ao ler arquivos brutos, alguns desses formatos têm vantagens específicas:
 
 * Formatos com nomes de coluna codificados, como Native, Parquet, CSVWithNames e TabSeparatedWithNames, tornam as consultas menos verbosas, já que o usuário não precisa especificar o nome da coluna na função `s3`. Os nomes das colunas permitem inferir essa informação.
 * Os formatos diferem em desempenho em termos de taxas de leitura e gravação. Native e Parquet são os formatos mais adequados para desempenho de leitura, pois já são orientados a colunas e mais compactos. O formato Native também se beneficia do alinhamento com a forma como o ClickHouse armazena dados na memória, reduzindo assim a sobrecarga de processamento à medida que os dados são transmitidos para o ClickHouse.

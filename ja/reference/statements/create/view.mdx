@@ -112,23 +112,23 @@ AS SELECT ...
 **例:**
 
 ```sql
--- Create a materialized view with an inner table
+-- 内部テーブルを持つ materialized view を作成する
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, sum(y) AS total FROM src GROUP BY x;
 
--- Replace with a new definition (old inner table data is lost)
+-- 新しい定義に置き換える（古い内部テーブルのデータは失われる）
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, count() AS cnt FROM src GROUP BY x;
 
--- Replace with POPULATE to backfill from existing source data
+-- POPULATE を使用して既存のソースデータをバックフィルしながら置き換える
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     POPULATE
     AS SELECT x FROM src;
 
--- Replace an inner-table MV with a TO-table MV (target data is preserved)
+-- 内部テーブル MV を TO テーブル MV に置き換える（ターゲットのデータは保持される）
 CREATE OR REPLACE MATERIALIZED VIEW mv TO target
     AS SELECT x FROM src;
 ```
@@ -137,7 +137,7 @@ CREATE OR REPLACE MATERIALIZED VIEW mv TO target
   [materialized view](/ja/concepts/features/materialized-views/cascading-materialized-views) の使い方をステップごとに説明したガイドはこちらです。
 </Tip>
 
-materialized view は、対応する [SELECT](/ja/reference/statements/select/index) クエリで変換されたデータを格納します。
+materialized view は、対応する [SELECT](/ja/reference/statements/select) クエリで変換されたデータを格納します。
 
 `TO [db].[table]` を指定せずに materialized view を作成する場合は、データを格納するためのテーブルエンジンである `ENGINE` を指定する必要があります。
 
@@ -146,20 +146,18 @@ materialized view は、対応する [SELECT](/ja/reference/statements/select/in
 materialized view は次のように実装されています。`SELECT` で指定されたテーブルにデータが挿入されると、その挿入データの一部がこの `SELECT` クエリによって変換され、その結果がビューに挿入されます。
 
 <Note>
-  ClickHouse の materialized view は、宛先テーブルへの挿入時にカラム順ではなく **カラム名** を使用します。`SELECT` クエリの結果に一部のカラム名が含まれていない場合、ClickHouse はそのカラムが [Nullable](/ja/reference/data-types/nullable) でなくてもデフォルト値を使用します。安全策として、Materialized views を使用する際はすべてのカラムに別名を付けることを推奨します。
+  ClickHouse の materialized view では、宛先テーブルへの挿入時にカラム順ではなく **カラム名** が使用されます。`SELECT` クエリの結果に一部のカラム名が存在しない場合、たとえそのカラムが [Nullable](/ja/reference/data-types/nullable) でなくても、ClickHouse はデフォルト値を使用します。materialized view を使用する場合は、すべてのカラムに別名を付けるのが安全です。
 
-  ClickHouse の materialized view は、insert trigger に近い形で実装されています。view クエリに集約が含まれている場合、それは新たに挿入されたデータのバッチに対してのみ適用されます。source table の既存データに対する変更 (update、delete、drop partition など) は、materialized view には反映されません。
+  ClickHouse の materialized view は、どちらかといえば挿入トリガーのように実装されています。ビューのクエリに集約が含まれている場合、それは新たに挿入されたデータのバッチに対してのみ適用されます。ソーステーブルの既存データに対する変更 (update、delete、drop partition など) によって materialized view が変更されることはありません。
 
-  ClickHouse の materialized view は、エラー発生時の動作が決定論的ではありません。つまり、すでに書き込まれた blocks は宛先テーブルに保持されますが、エラー発生後の blocks は保持されません。
+  ClickHouse の materialized view は、エラー発生時の動作が決定論的ではありません。つまり、すでに書き込まれた block は宛先テーブルに保持されますが、エラー発生後の block は保持されません。
 
-  デフォルトでは、いずれかの view への書き込みで例外が発生すると、`INSERT` クエリは失敗します。その時点までに block がすでに source table に到達しているかどうかは保証されません。これは view 側のエラーではなく、insert pipeline のタイミングに依存します。失敗した `INSERT` は、挿入の重複排除 (`insert_deduplicate`、`deduplicate_blocks_in_dependent_materialized_views`) を有効にして再試行し、source table とそれに依存するすべての views への exactly-once 配信を実現してください。
+  デフォルトでは、いずれかのビューへの push に失敗すると、INSERT クエリも失敗し、一部の block が宛先テーブルに書き込まれない可能性があります。これは `materialized_views_ignore_errors` 設定 (`INSERT` クエリに対して設定する必要があります) で変更できます。`materialized_views_ignore_errors=true` を設定すると、ビューへの push 中に発生したエラーはすべて無視され、すべての block が宛先テーブルに書き込まれます。
 
-  `INSERT` クエリに `materialized_views_ignore_errors=true` を設定しても、変わるのはエラー報告だけです。各 view のエラーは警告としてログに記録され、`INSERT` クエリ自体は成功します。失敗した view の宛先への配信は部分的になります。つまり、例外発生前に処理された blocks は保持され、失敗した block とそれ以降の blocks はその view から破棄されます。その宛先の下流にある views には到達した blocks だけが渡されるため、それらへの配信も部分的になります。例外を発生させなかった sibling view (およびその下流チェーン) には完全に書き込まれ、source table にも通常どおり書き込まれます。`INSERT` は成功として報告されるため、クライアントには失敗のシグナルが返らず、自動的な再試行もトリガーされません。この設定は、view 側の問題によって source table への書き込みを妨げてはならない場合にのみ使用してください (たとえば `system.*_log` tables) 。
-
-  `materialized_views_ignore_errors` は、`system.*_log` tables ではデフォルトで `true` です。
+  また、`system.*_log` テーブルでは `materialized_views_ignore_errors` がデフォルトで `true` に設定されていることにも注意してください。
 </Note>
 
-`POPULATE` を指定すると、既存の table データは、`CREATE TABLE ... AS SELECT ...` を行う場合のように、作成時に view に挿入されます。そうでない場合、クエリに含まれるのは view 作成後に table に挿入されたデータのみです。view の作成中に table に挿入されたデータはそこに挿入されないため、`POPULATE` の使用は **推奨しません**。
+`POPULATE` を指定すると、既存のテーブルデータは、`CREATE TABLE ... AS SELECT ...` を実行した場合と同様に、作成時にビューへ挿入されます。指定しない場合、クエリにはビューの作成後にテーブルへ挿入されたデータのみが含まれます。ビューの作成中にテーブルへ挿入されたデータはビューに挿入されないため、`POPULATE` の使用は **推奨しません**。
 
 <Note>
   `POPULATE` は `CREATE TABLE ... AS SELECT ...` のように動作するため、いくつかの制限があります。
@@ -246,7 +244,7 @@ AS SELECT ...
 
 ```sql
 CREATE MATERIALIZED VIEW [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
-REFRESH [EVERY|AFTER interval [OFFSET interval]]
+REFRESH EVERY|AFTER interval [OFFSET interval]
 [RANDOMIZE FOR interval]
 [DEPENDS ON [db.]name [, [db.]name [, ...]]]
 [SETTINGS name = value [, name = value [, ...]]]
@@ -263,8 +261,6 @@ AS SELECT ...
 ```sql
 number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 ```
-
-`REFRESH` clause では、`EVERY`、`AFTER`、`DEPENDS ON` の少なくとも 1 つを指定する必要があります。これらを 1 つも指定しない単独の `REFRESH` は拒否されます。`EVERY`/`AFTER` を伴わない `REFRESH DEPENDS ON ...` は、`REFRESH AFTER 0 SECOND DEPENDS ON ...` の省略形です。詳細は以下の [Refresh Dependencies](#refresh-dependencies) を参照してください。
 
 対応するクエリを定期的に実行し、その結果をテーブルに格納します。
 
@@ -287,28 +283,28 @@ number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 リフレッシュ スケジュールの例:
 
 ```sql
-REFRESH EVERY 1 DAY -- every day, at midnight (UTC)
-REFRESH EVERY 1 MONTH -- on 1st day of every month, at midnight
-REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- on 6th day of every month, at 2:00 am
-REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- every other Saturday, at 3:10 pm
-REFRESH EVERY 30 MINUTE -- at 00:00, 00:30, 01:00, 01:30, etc
-REFRESH AFTER 30 MINUTE -- 30 minutes after the previous refresh completes, no alignment with time of day
--- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- syntax error, OFFSET is not allowed with AFTER
-REFRESH EVERY 1 WEEK 2 DAYS -- every 9 days, not on any particular day of the week or month;
-                            -- specifically, when day number (since 1969-12-29) is divisible by 9
-REFRESH EVERY 5 MONTHS -- every 5 months, different months each year (as 12 is not divisible by 5);
-                       -- specifically, when month number (since 1970-01) is divisible by 5
+REFRESH EVERY 1 DAY -- 毎日深夜0時（UTC）
+REFRESH EVERY 1 MONTH -- 毎月1日の深夜0時
+REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- 毎月6日の午前2:00
+REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- 隔週土曜日の午後3:10
+REFRESH EVERY 30 MINUTE -- 00:00、00:30、01:00、01:30 など
+REFRESH AFTER 30 MINUTE -- 前回のリフレッシュ完了から30分後（時刻への整合なし）
+-- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- 構文エラー：AFTERにはOFFSETを使用できない
+REFRESH EVERY 1 WEEK 2 DAYS -- 9日ごと、曜日や月の特定の日には依存しない；
+                            -- 具体的には、日番号（1969-12-29以降）が9の倍数のとき
+REFRESH EVERY 5 MONTHS -- 5か月ごと、毎年異なる月になる（12が5で割り切れないため）；
+                       -- 具体的には、月番号（1970-01以降）が5の倍数のとき
 ```
 
 `RANDOMIZE FOR` は、各リフレッシュの時刻をランダムに調整します。例:
 
 ```sql
-REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- every day at random time between 01:30 and 02:30
+REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- 毎日01:30から02:30の間のランダムな時刻に実行
 ```
 
 特定のビューでは、同時に実行できる refresh は最大 1 つまでです。たとえば、`REFRESH EVERY 1 MINUTE` を設定したビューの refresh に 2 分かかる場合、実際の refresh 間隔は 2 分になります。その後、処理が速くなって 10 秒で refresh できるようになれば、再び 1 分ごとの refresh に戻ります。 (つまり、実行されなかった refresh の遅れを取り戻すために 10 秒ごとに refresh されることはありません。そのような未実行分の backlog は存在しません。)
 
-通常、最初の refresh は materialized view の作成直後に開始されます。前回の refresh からの経過時間は無限大であるため、どのスケジュールでも「今すぐ refresh すべき時刻」と判断されるからです。`EMPTY` が指定されている場合、この初回の refresh はスキップされ、最初の refresh は次にスケジュールされた時刻に実行されます。たとえば `EVERY 1 HOUR` では、最初の refresh は現在の時刻のちょうど1時間の区切りで実行されます。
+さらに、`CREATE` クエリで `EMPTY` が指定されていない限り、materialized view の作成直後に refresh が開始されます。`EMPTY` が指定されている場合、最初の refresh はスケジュールに従って実行されます。
 
 <div id="in-replicated-db">
   ### Replicated DB 内で
@@ -326,103 +322,47 @@ REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- every day at random ti
   ### リフレッシュの依存関係
 </div>
 
-`DEPENDS ON` は、異なるテーブルのリフレッシュを同期します:
+`DEPENDS ON` は、異なるテーブル間のリフレッシュを同期します。たとえば、2 つのリフレッシャブルmaterialized view からなる一連の連鎖があるとします。
 
 ```sql
-CREATE MATERIALIZED VIEW dependent REFRESH EVERY 1 HOUR DEPENDS ON dependency [...]
+CREATE MATERIALIZED VIEW source REFRESH EVERY 1 DAY AS SELECT * FROM url(...)
+CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY AS SELECT ... FROM source
 ```
 
-依存ビューのリフレッシュは、依存先のすべてのビューのリフレッシュが完了してから開始されます。
-
-別のビューのリフレッシュ直後にリフレッシュするには:
+`DEPENDS ON` がない場合、両方のビューは深夜にリフレッシュを開始するため、通常 `destination` には `source` の前日のデータが反映されます。依存関係を追加すると:
 
 ```sql
-CREATE MATERIALIZED VIEW dependent REFRESH AFTER 0 SECOND DEPENDS ON dependency [...]
+CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY DEPENDS ON source AS SELECT ... FROM source
 ```
 
-あるいは、次のようにも書けます:
+この場合、`destination` の refresh はその日の `source` の refresh が完了してから初めて開始されるため、`destination` は最新のデータに基づくことになります。
+
+あるいは、同じ結果は次の方法でも得られます。
 
 ```sql
-CREATE MATERIALIZED VIEW dependent REFRESH DEPENDS ON dependency [...]
+CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS SELECT ... FROM source
 ```
+
+`1 HOUR` には、`source` のリフレッシュ間隔より短い任意の期間を指定できます。依存先のテーブルが、その依存先のいずれよりも高い頻度でリフレッシュされることはありません。これは、実際のリフレッシュ間隔を複数回指定せずに、リフレッシュ可能なビューのチェーンを設定する有効な方法です。
+
+さらにいくつか例を示します。
+
+* `REFRESH EVERY 1 DAY OFFSET 10 MINUTE` (`destination`) は `REFRESH EVERY 1 DAY` (`source`) に依存します。<br />
+  `source` のリフレッシュに 10 分以上かかる場合、`destination` はそれを待ちます。
+* `REFRESH EVERY 1 DAY OFFSET 1 HOUR` は `REFRESH EVERY 1 DAY OFFSET 23 HOUR` に依存します。<br />
+  対応するリフレッシュが異なる暦日に発生する場合でも、考え方は上記と同じです。
+  `X+1` 日目の `destination` のリフレッシュは、`X` 日目の `source` のリフレッシュを待ちます (2 時間以上かかる場合) 。
+* `REFRESH EVERY 2 HOUR` は `REFRESH EVERY 1 HOUR` に依存します。<br />
+  `2 HOUR` のリフレッシュは、1 時間おきのリフレッシュのうち 1 回おきに `1 HOUR` のリフレッシュの後で発生します。たとえば、深夜の
+  リフレッシュの後、次に午前 2 時のリフレッシュの後、という具合です。
+* `REFRESH EVERY 1 MINUTE` は `REFRESH EVERY 2 HOUR` に依存します。<br />
+  `destination` は `source` がリフレッシュされるたびに 1 回、つまり 2 時間ごとにリフレッシュされます。`1 MINUTE` は実質的に無視されます。
+* `REFRESH AFTER 1 HOUR` は `REFRESH AFTER 1 HOUR` に依存します。<br />
+  現時点では、これは推奨されません。
 
 <Note>
-  `DEPENDS ON` は、リフレッシャブルmaterialized view 間でのみ機能します。特に、依存先のビューが `TO <table>` を使用している場合は、テーブル名ではなくビュー名を使用してください。`DEPENDS ON` のリストに通常のテーブルやリフレッシャブルでないビューが含まれている場合、またはタイプミスがある場合、そのビューはリフレッシュされず、`system.view_refreshes` に状態 `MissingDependencies` と表示されます。依存関係は `ALTER` を使用して変更または削除できます。詳しくは [リフレッシュパラメータの変更](#changing-refresh-parameters) を参照してください。
+  `DEPENDS ON` は、リフレッシャブルmaterialized view間でのみ機能します。通常のテーブルを `DEPENDS ON` の一覧に含めると、そのビューはまったくリフレッシュされなくなります (依存関係は `ALTER` で削除できます。詳細は [Changing Refresh Parameters](#changing-refresh-parameters) を参照してください) 。
 </Note>
-
-<div id="using-depends-on-for-consistent-propagation-latency">
-  #### 伝播レイテンシを一定に保つための `DEPENDS ON` の使用
-</div>
-
-両方のビューが同じ周期で `REFRESH EVERY` を使用している場合、依存関係は各時間スロットに適用されます。
-
-たとえば、ビュー X と Y がどちらも `REFRESH EVERY 1 HOUR` を使用し、Y が X の出力テーブルを読み取るとします。依存関係がない場合、Y は通常、前の時間のリフレッシュで生成された X のデータを参照します。`DEPENDS ON X` を使用すると、Y の 11:00 のリフレッシュは、X の 11:00 のリフレッシュが完了した後にのみ開始されます。
-
-```text
-           10:00            11:00            12:00
-           │                │                │
-  X:        [run]┐           [run]┐           [run]┐
-                 │                │                │
-  Y:             └►[run]          └►[run]          └►[run]
-```
-
-依存対象と依存側は、リフレッシュの実行時間がリフレッシュ間隔より長い場合、それぞれ独立してタイムスロットをスキップすることがあります。依存側が依存対象の各リフレッシュに対してちょうど1回ずつリフレッシュされる保証はありません。
-
-```text
-           10:00          11:00          12:00          13:00
-           │              │              │              |
-  X:        [run]┐         [run]┐         [run]┐         [run]┐
-                 │              └────┐    (Y skips 12:00)     └───┐
-  Y:             └►[10:00 ru------un]└►[11:00 ru---------------un]└►[13:00 run]
-```
-
-<div id="using-depends-on-for-batched-stream-processing">
-  #### バッチ単位のストリーム処理での DEPENDS ON の使用
-</div>
-
-`REFRESH EVERY` を使用しない場合、依存するビュー X は、X の前回のリフレッシュ以降に、そのすべての依存関係が少なくとも 1 回リフレッシュされていればリフレッシュされます。`REFRESH AFTER T` は遅延を追加するもので、依存先は依存元のリフレッシュ完了から T 時間後にリフレッシュを開始します。
-
-循環依存は許可されており、有用でもあります。次のリフレッシャブルmaterialized view のグラフを考えてみましょう。
-
-1. X はある stream から行の batch を取り出し、それをテーブルに格納します。
-2. 次に、Y と Z はどちらもそのテーブルを読み取り、異なる集計を行って、結果を別のテーブルに追記します。
-3. batch の処理が完了すると、X は次の batch を取り出し、この cycle が繰り返されます。
-
-```text
-            source
-               │
-               ▼
-          ┌─────────┐
-     ┌───►│    X    │◄───┐
-     │    └──┬───┬──┘    │
-  DEPENDS    │   │    DEPENDS
-    ON       ▼   ▼      ON
-     │      ┌─┐ ┌─┐      │
-     └──────┤Y│ │Z├──────┘
-            └─┘ └─┘
-```
-
-全体の例:
-
-```sql
-CREATE TABLE current_batch (t UInt64, v Int64) ENGINE ReplicatedMergeTree ORDER BY t;
-CREATE TABLE batch_log (max_t UInt64, n Int64, v_sum Int64, processed_at DateTime64) ENGINE ReplicatedMergeTree ORDER BY max_t;
-CREATE TABLE stats (h UInt64, n UInt64) ENGINE ReplicatedSummingMergeTree ORDER BY h;
-
--- (system.numbers stands in for a data source with monotonically increasing timestamps or sequence numbers)
-CREATE MATERIALIZED VIEW current_batch_v REFRESH EVERY 10 SECOND DEPENDS ON batch_log_v, stats_v TO current_batch AS SELECT number as t, number * 10 as v FROM system.numbers WHERE number > (SELECT max(max_t) FROM batch_log) LIMIT 100;
-
-CREATE MATERIALIZED VIEW batch_log_v REFRESH DEPENDS ON current_batch_v APPEND TO batch_log AS SELECT max(t) as max_t, count() as n, sum(v) as v_sum, now64() as processed_at FROM current_batch;
-
-CREATE MATERIALIZED VIEW stats_v REFRESH DEPENDS ON current_batch_v APPEND TO stats AS SELECT cityHash64(v) % 20 as h, count() as n FROM current_batch GROUP BY h;
-
--- Must trigger initial refresh manually.
-SYSTEM REFRESH VIEW current_batch_v;
-```
-
-より長いチェーンでも機能します。
-
-これは、リフレッシュの協調が有効になっている場合、つまりビューが Replicated または Shared データベースにある場合にのみ、うまく機能します。協調がないと、サーバーの再起動でその連鎖が途切れるため、ビューの作成後に一度だけではなく、再起動のたびに手動で `SYSTEM REFRESH VIEW` を実行する必要があります。
 
 <div id="refresh-settings">
   ### リフレッシュ設定
@@ -434,6 +374,8 @@ SYSTEM REFRESH VIEW current_batch_v;
 * `refresh_retry_initial_backoff_ms` - `refresh_retries` が 0 でない場合の、最初の再試行までの待機時間です。以降の再試行では、待機時間が回ごとに 2 倍になり、最大で `refresh_retry_max_backoff_ms` まで増加します。デフォルト: 100 ms。
 * `refresh_retry_max_backoff_ms` - リフレッシュ試行の間隔が指数的に増加する際の上限です。デフォルト: 60000 ms (1 分) 。
 * `all_replicas` - `APPEND` を使用する [Replicated database](/ja/reference/engines/database-engines/replicated) で、すべてのレプリカが独立してリフレッシュするか、スケジュール時刻ごとに 1 つのレプリカだけがリフレッシュするかを制御します。ビューの作成後は変更できません。デフォルト: `false`。
+* `prefer_dependency_replica` - ビューに `DEPENDS ON` がある場合、親のリフレッシュを実行したレプリカが、依存先のリフレッシュ実行でも優先されます。ほかのレプリカは、`prefer_dependency_replica_delay_ms` の分だけ試行を遅らせます。`SharedMergeTree` と組み合わせると、レプリケーションラグによって依存リフレッシュの連鎖でデータ欠落が発生するのを防ぐのに役立ちます。デフォルト: `false`。
+* `prefer_dependency_replica_delay_ms` - `prefer_dependency_replica` が有効な場合に、優先されないレプリカが依存先のリフレッシュ実行を試みるまでの待機時間です。デフォルト: 2000 ms。
 
 <div id="changing-refresh-parameters">
   ### リフレッシュパラメータの変更

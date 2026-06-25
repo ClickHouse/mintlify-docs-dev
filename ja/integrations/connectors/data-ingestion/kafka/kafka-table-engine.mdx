@@ -27,9 +27,9 @@ Kafka テーブルエンジン を使用するには、[ClickHouse materialized 
 
 まずは、最も一般的なユースケースである、Kafka テーブルエンジン を使って Kafka から ClickHouse にデータを挿入する方法を見ていきます。
 
-Kafka テーブルエンジン を使うと、ClickHouse は Kafka トピックから直接データを読み取れます。トピック上のメッセージを確認する用途には便利ですが、この engine は設計上、一回限りの取得しかできません。つまり、テーブルエンジン に対してクエリを実行すると、結果を呼び出し元に返す前にキューからデータを消費し、consumer の OFFSET を進めます。そのため、これらの OFFSET をリセットしない限り、実質的にデータを再読込することはできません。
+Kafka テーブルエンジン を使うと、ClickHouse は Kafka トピックから直接データを読み取れます。トピック上のメッセージを確認する用途には便利ですが、この engine は設計上、一回限りの取得しかできません。つまり、table に対してクエリを実行すると、結果を呼び出し元に返す前にキューからデータを消費し、consumer の OFFSET を進めます。そのため、これらの OFFSET をリセットしない限り、実質的にデータを再読込することはできません。
 
-テーブルエンジン から読み取ったデータを永続化するには、そのデータを取り込み、別の table に挿入する仕組みが必要です。トリガーベースの materialized view は、この機能をネイティブに提供します。materialized view は テーブルエンジン に対する読み取りを開始し、ドキュメントの batches を受け取ります。TO 句はデータの宛先を決定します。通常は [MergeTree ファミリー](/ja/reference/engines/table-engines/mergetree-family/index) の table です。この処理を以下に示します。
+table engine から読み取ったデータを永続化するには、そのデータを取り込み、別の table に挿入する仕組みが必要です。トリガーベースの materialized view は、この機能をネイティブに提供します。materialized view は table engine に対する読み取りを開始し、ドキュメントの batches を受け取ります。TO 句はデータの宛先を決定します。通常は [MergeTree ファミリー](/ja/reference/engines/table-engines/mergetree-family) の table です。この処理を以下に示します。
 
 <Image img="/images/integrations/data-ingestion/kafka/kafka_01.png" size="lg" alt="Kafka テーブルエンジン アーキテクチャ図" style={{width: '80%'}} />
 
@@ -78,7 +78,7 @@ USE KafkaEngine;
   ##### 3. 宛先テーブルを作成する
 </div>
 
-宛先テーブルを準備します。以下の例では、簡潔にするため、簡略化した GitHub のスキーマを使用しています。ここでは MergeTree テーブルエンジンを使用していますが、この例は [MergeTree family](/ja/reference/engines/table-engines/mergetree-family/index) のどのメンバーにも簡単に適用できます。
+宛先テーブルを準備します。以下の例では、簡潔にするため、簡略化した GitHub のスキーマを使用しています。ここでは MergeTree テーブルエンジンを使用していますが、この例は [MergeTree family](/ja/reference/engines/table-engines/mergetree-family) のどのメンバーにも簡単に適用できます。
 
 ```sql
 CREATE TABLE github
@@ -248,7 +248,7 @@ ATTACH TABLE github_queue;
   ##### Kafka メタデータの追加
 </div>
 
-ClickHouse に取り込んだ後も、元の Kafka メッセージのメタデータを追跡できると便利です。たとえば、特定のトピックやパーティションをどれだけ消費したかを把握したい場合があります。このため、Kafka テーブルエンジンは複数の[仮想カラム](/ja/reference/engines/table-engines/index#table_engines-virtual_columns)を公開しています。スキーマと materialized view の SELECT ステートメントを変更することで、これらをターゲットテーブルのカラムとして永続化できます。
+ClickHouse に取り込んだ後も、元の Kafka メッセージのメタデータを追跡できると便利です。たとえば、特定のトピックやパーティションをどれだけ消費したかを把握したい場合があります。このため、Kafka テーブルエンジンは複数の[仮想カラム](/ja/reference/engines/table-engines#table_engines-virtual_columns)を公開しています。スキーマと materialized view の SELECT ステートメントを変更することで、これらをターゲットテーブルのカラムとして永続化できます。
 
 まず、ターゲットテーブルにカラムを追加する前に、前述の停止操作を実行します。
 

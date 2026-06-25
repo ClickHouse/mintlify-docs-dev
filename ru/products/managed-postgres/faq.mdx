@@ -9,7 +9,7 @@ doc_type: 'reference'
 
 import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
 
-<BetaBadge link="https://clickhouse.com/cloud/postgres" galaxyTrack={true} galaxyEvent="docs.managed-postgres.faq-beta" />
+<BetaBadge />
 
 <div id="monitoring-and-metrics">
   ## Мониторинг и метрики
@@ -21,7 +21,9 @@ import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
 
 Вы можете отслеживать использование CPU, памяти, IOPS и хранилища напрямую в консоли ClickHouse Cloud на вкладке **Мониторинг** вашего экземпляра Managed Postgres.
 
-Кроме того, вы можете ознакомиться с [Query Performance Insights](https://clickhouse.com/blog/postgres-query-insights-clickhouse-cloud) для подробного анализа ваших запросов на вкладке **Query Insights**.
+<Note>
+  Функция Query Performance Insights с подробным анализом запросов скоро появится.
+</Note>
 
 <div id="backup-and-recovery">
   ## Резервное копирование и восстановление
@@ -43,7 +45,7 @@ Managed Postgres включает автоматическое ежедневн�
   ### Доступна ли поддержка Terraform для Managed Postgres?
 </div>
 
-Поддержка Terraform для Managed Postgres в настоящее время недоступна. Мы рекомендуем использовать консоль ClickHouse Cloud или [OpenAPI](/ru/products/managed-postgres/openapi) для создания экземпляров и управления ими.
+Поддержка Terraform для Managed Postgres в настоящее время недоступна. Мы рекомендуем использовать консоль ClickHouse Cloud для создания экземпляров и управления ими.
 
 <div id="extensions-and-configuration">
   ## Расширения и конфигурация
@@ -53,7 +55,7 @@ Managed Postgres включает автоматическое ежедневн�
   ### Какие расширения поддерживаются?
 </div>
 
-Managed Postgres включает более 90 расширений PostgreSQL, в том числе популярные PostGIS, pgvector, pg&#95;cron и многие другие. Полный список доступных расширений и инструкции по установке см. в документации [Расширения](/ru/products/managed-postgres/extensions).
+Managed Postgres включает более 100 расширений PostgreSQL, в том числе популярные PostGIS, pgvector, pg&#95;cron и многие другие. Полный список доступных расширений и инструкции по установке см. в документации [Расширения](/ru/products/managed-postgres/extensions).
 
 <div id="config-customization">
   ### Можно ли настраивать параметры конфигурации PostgreSQL?
@@ -75,7 +77,7 @@ Managed Postgres включает более 90 расширений PostgreSQL,
 
 Managed Postgres использует PgBouncer в режиме **transaction pooling**. В этом режиме backend-соединение Postgres выделяется вашему клиенту только на время одной транзакции, а затем возвращается в пул — следующая транзакция того же клиента может попасть на другое backend-соединение.
 
-Из-за этого не работают **серверные подготовленные операторы**, привязанные к конкретному backend-соединению, на котором был выполнен `PREPARE` (или `Parse` в extended query). Если соответствующий `EXECUTE` попадает на другое backend-соединение, возникают ошибки вида:
+Из-за этого не работают **серверные подготовленные операторы**, привязанные к конкретному backend-соединению, на котором был выполнен `PREPARE` (или `Parse` в extended query). Если соответствующий `Execute` попадает на другое backend-соединение, возникают ошибки вида:
 
 ```text
 ERROR:  prepared statement "..." does not exist
@@ -101,13 +103,13 @@ ERROR:  unnamed prepared statement does not exist
 Если ваша рабочая нагрузка зависит от подготовленных операторов, подключайтесь **напрямую к PostgreSQL** (порт 5432), а не через пулер PgBouncer — прямые подключения штатно поддерживают подготовленные операторы. Подробнее о выборе между pooled и direct конечными точками см. в разделе [Connection](/ru/products/managed-postgres/connection).
 
 <div id="pgbouncer-vs-pg-connections">
-  ### Что означает параметр `max_client_conn` в PgBouncer и как он соотносится с `max_connections` в Postgres?
+  ### Что означает параметр &quot;max_client_conn&quot; в PgBouncer и как он соотносится с `max_connections` в Postgres?
 </div>
 
 Они отвечают за разные вещи:
 
 * **`max_connections` в Postgres** ограничивает число **backend-соединений** с самим PostgreSQL. Это затратный показатель — каждое backend-соединение потребляет память и занимает слот процесса.
-* **`max_client_conn` в PgBouncer** ограничивает число **клиентских** соединений, которые могут быть одновременно открыты в пулере. PgBouncer мультиплексирует множество таких клиентских соединений на значительно меньшее число backend-соединений.
+* **`max_client_conn` в PgBouncer** ограничивает число **клиентских** соединений, которые могут быть одновременно открыты к пулеру. PgBouncer мультиплексирует множество таких клиентских соединений на значительно меньшее число backend-соединений.
 
 Типичный экземпляр Managed Postgres настроен так, что PgBouncer принимает примерно **в 10 раз больше клиентских соединений, чем есть backend-соединений Postgres** (например, 5000 клиентских / 500 backend-соединений). Если вы видите ошибки соединения на стороне пулера, гораздо вероятнее, что вы упираетесь в лимит backend-соединений для конкретного пула (`default_pool_size`), а не в основной лимит клиентских соединений.
 

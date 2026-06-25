@@ -90,7 +90,7 @@ Caminho para uma pasta em que o servidor ClickHouse armazena as configurações 
   ## allow_experimental_webterminal
 </div>
 
-<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Não" />Nome anterior (experimental) de `enable_webterminal`. Ainda é reconhecido por compatibilidade retroativa quando `enable_webterminal` não está definido. Esta configuração está obsoleta.
+<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="Não" />Ativa a interface experimental de terminal web no endpoint HTTP `/webterminal`. Ela fornece uma sessão interativa do `clickhouse-client` no navegador via WebSocket.
 
 <div id="allow_feature_tier">
   ## allow_feature_tier
@@ -311,7 +311,7 @@ Use o endereço de origem na autenticação de clientes conectados por meio de p
   ## background_common_pool_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="8" changeable_without_restart="No" />O número máximo de threads que serão usadas em segundo plano para realizar diversas operações (principalmente coleta de lixo) em tabelas [*MergeTree-engine](/pt-BR/reference/engines/table-engines/mergetree-family/index).
+<SettingsInfoBlock type="UInt64" default_value="8" changeable_without_restart="No" />O número máximo de threads que serão usadas em segundo plano para realizar diversas operações (principalmente coleta de lixo) em tabelas [*MergeTree-engine](/pt-BR/reference/engines/table-engines/mergetree-family).
 
 <div id="background_distributed_schedule_pool_size">
   ## background_distributed_schedule_pool_size
@@ -323,7 +323,7 @@ Use o endereço de origem na autenticação de clientes conectados por meio de p
   ## background_fetches_pool_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="16" changeable_without_restart="No" />O número máximo de threads que serão usados para buscar partes de dados de outra réplica em segundo plano para tabelas [*MergeTree-engine](/pt-BR/reference/engines/table-engines/mergetree-family/index).
+<SettingsInfoBlock type="UInt64" default_value="16" changeable_without_restart="No" />O número máximo de threads que serão usados para buscar partes de dados de outra réplica em segundo plano para tabelas [*MergeTree-engine](/pt-BR/reference/engines/table-engines/mergetree-family).
 
 <div id="background_merges_mutations_concurrency_ratio">
   ## background_merges_mutations_concurrency_ratio
@@ -384,9 +384,9 @@ Define o número de threads que executam merges e mutações em segundo plano pa
   * Ao ajustar essa configuração, você gerencia a carga de CPU e disco.
 </Note>
 
-<Danger>
+<Warning>
   Um pool menor usa menos recursos de CPU e disco, mas os processos em segundo plano avançam mais lentamente, o que pode acabar afetando o desempenho das consultas.
-</Danger>
+</Warning>
 
 Antes de alterá-la, veja também as configurações relacionadas do MergeTree, como:
 
@@ -1377,12 +1377,6 @@ Interrompe novas tentativas de atualizar o cache DNS de um hostname após esse n
 
 <SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />Habilita o logging do SDK do Azure
 
-<div id="enable_webterminal">
-  ## enable_webterminal
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Não" />Ativa a interface de terminal web no endpoint HTTP `/webterminal`. Ela fornece uma sessão interativa do `clickhouse-client` no navegador via WebSocket. Quando `false`, as solicitações para `/webterminal` retornam o status HTTP `403 Forbidden`.
-
 <div id="encryption">
   ## criptografia
 </div>
@@ -1715,28 +1709,16 @@ Permite usar handlers HTTP personalizados.
 Para adicionar um novo handler HTTP, basta adicionar uma nova `<rule>`.
 As regras são verificadas de cima para baixo, na ordem em que são definidas,
 e a primeira correspondência executará o handler.
-Uma regra sem condições de correspondência (apenas `handler`) corresponde a todas as requisições; como as regras são verificadas em ordem,
-esse tipo de regra só é útil como fallback, colocada por último.
 
-As seguintes configurações podem ser definidas por subtags (todas essas subtags são opcionais, exceto `handler`):
+As seguintes configurações podem ser definidas por subtags:
 
-| Sub-tags             | Definition                                                                                                                                                                                                                                                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `url`                | Para corresponder ao caminho da URL da requisição. A string de consulta é ignorada na correspondência                                                                                                                                                                                                                          |
-| `url_prefix`         | Para corresponder ao caminho da URL da requisição em relação a um caminho base: o próprio caminho ou qualquer item abaixo dele no limite de um segmento do caminho (por exemplo, &#39;/api/v1&#39; corresponde a /api/v1, /api/v1/ e /api/v1/write, mas não a /api/v1beta). A string de consulta é ignorada na correspondência |
-| `url_regexp`         | Para corresponder ao caminho da URL da requisição em relação a uma expressão regular. A string de consulta é ignorada na correspondência                                                                                                                                                                                       |
-| `full_url`           | Para corresponder à URL completa da requisição `scheme://host:port/path`. A string de consulta é ignorada na correspondência, e o host é o endereço IP da conexão (não o header `Host`)                                                                                                                                        |
-| `full_url_prefix`    | Para corresponder à URL completa da requisição `scheme://host:port/path` em relação à base URL `scheme://host:port/base_path`, no limite de um segmento do caminho (consulte `url_prefix`). A string de consulta é ignorada na correspondência                                                                                 |
-| `full_url_regexp`    | Para corresponder à URL completa da requisição `scheme://host:port/path` em relação a uma expressão regular. A string de consulta é ignorada na correspondência                                                                                                                                                                |
-| `methods`            | Para corresponder aos métodos da requisição, você pode usar vírgulas para separar vários métodos                                                                                                                                                                                                                               |
-| `headers`            | Para corresponder aos headers da requisição, faça a correspondência de cada elemento filho (o nome do elemento filho é o nome do header)                                                                                                                                                                                       |
-| `headers_regexp`     | Como em `headers`, mas o valor de cada elemento filho é comparado com uma expressão regular                                                                                                                                                                                                                                    |
-| `empty_query_string` | Verifica se não há string de consulta na URL                                                                                                                                                                                                                                                                                   |
-| `handler`            | O handler da requisição (obrigatório)                                                                                                                                                                                                                                                                                          |
-
-<Note>
-  Em vez de `url_regexp`, `full_url_regexp` e `headers_regexp`, você também pode escrever uma expressão regular em `url`, `full_url` ou `headers` usando o prefixo `regex:` (por exemplo, `<url>regex:/api/.*</url>`). Isso ainda é compatível com versões anteriores, mas está obsoleto: prefira as subtags dedicadas `url_regexp`, `full_url_regexp` e `headers_regexp`.
-</Note>
+| Sub-tags             | Definition                                                                                                                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`                | Para corresponder à URL da requisição, você pode usar o prefixo &#39;regex:&#39; para fazer a correspondência por regex (opcional)                                                                                                    |
+| `methods`            | Para corresponder aos métodos da requisição, você pode usar vírgulas para separar vários métodos (opcional)                                                                                                                           |
+| `headers`            | Para corresponder aos headers da requisição, faça a correspondência de cada elemento filho (o nome do elemento filho é o nome do header); você pode usar o prefixo &#39;regex:&#39; para fazer a correspondência por regex (opcional) |
+| `handler`            | O handler da requisição                                                                                                                                                                                                               |
+| `empty_query_string` | Verifica se não há string de consulta na URL                                                                                                                                                                                          |
 
 `handler` contém as seguintes configurações, que podem ser definidas por subtags:
 
@@ -1881,7 +1863,7 @@ Abre `https://tabix.io/` ao acessar `http://localhost: http_port`.
   ## iceberg_metadata_files_cache_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="134217728" changeable_without_restart="Yes" />Tamanho máximo do cache de metadados do Iceberg, em bytes. Zero significa desativado.
+<SettingsInfoBlock type="UInt64" default_value="1073741824" changeable_without_restart="Yes" />Tamanho máximo do cache de metadados do Iceberg, em bytes. Zero significa desativado.
 
 <div id="iceberg_metadata_files_cache_size_ratio">
   ## iceberg_metadata_files_cache_size_ratio
@@ -2407,26 +2389,26 @@ O local e o formato das mensagens de log.
 
 **Chaves**:
 
-| Key                          | Description                                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `async`                      | Quando `true` (padrão), o logging ocorre de forma assíncrona (uma thread em segundo plano por canal de saída). Caso contrário, o registro é feito na thread que chama LOG                                                                                                                                                                                       |
-| `async_queue_max_size`       | Ao usar logging assíncrono, é a quantidade máxima de mensagens mantidas na fila aguardando flush. Mensagens extras serão descartadas                                                                                                                                                                                                                            |
-| `console`                    | Habilita o logging no console. Defina como `1` ou `true` para habilitar. O padrão é `1` se o ClickHouse não estiver em execução no modo daemon; caso contrário, `0`.                                                                                                                                                                                            |
-| `console_log_level`          | Nível de log da saída no console. O padrão é `level`.                                                                                                                                                                                                                                                                                                           |
-| `console_shutdown_log_level` | nível de desligamento é usado para definir o nível de log do console no desligamento do servidor.                                                                                                                                                                                                                                                               |
-| `console_startup_log_level`  | nível de inicialização é usado para definir o nível de log do console na inicialização do servidor. Após a inicialização, o nível de log volta para a configuração `console_log_level`                                                                                                                                                                          |
-| `count`                      | Política de rotação: quantidade máxima de arquivos de log históricos mantidos pelo ClickHouse.                                                                                                                                                                                                                                                                  |
-| `errorlog`                   | O caminho para o arquivo de log de erro.                                                                                                                                                                                                                                                                                                                        |
-| `formatting.type`            | Formato de log da saída no console. No momento, apenas `json` é compatível                                                                                                                                                                                                                                                                                      |
-| `level`                      | Nível de log. Valores aceitos: `none` (desativa o logging), `fatal`, `critical`, `error`, `warning`, `notice`, `information`,`debug`, `trace`, `test`                                                                                                                                                                                                           |
-| `log`                        | O caminho para o arquivo de log.                                                                                                                                                                                                                                                                                                                                |
+| Key                          | Description                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `async`                      | Quando `true` (padrão), o logging ocorre de forma assíncrona (uma thread em segundo plano por canal de saída). Caso contrário, o registro é feito na thread que chama LOG                                                                                                                                                                                   |
+| `async_queue_max_size`       | Ao usar logging assíncrono, é a quantidade máxima de mensagens mantidas na fila aguardando flush. Mensagens extras serão descartadas                                                                                                                                                                                                                        |
+| `console`                    | Habilita o logging no console. Defina como `1` ou `true` para habilitar. O padrão é `1` se o ClickHouse não estiver em execução no modo daemon; caso contrário, `0`.                                                                                                                                                                                        |
+| `console_log_level`          | Nível de log da saída no console. O padrão é `level`.                                                                                                                                                                                                                                                                                                       |
+| `console_shutdown_log_level` | nível de desligamento é usado para definir o nível de log do console no desligamento do servidor.                                                                                                                                                                                                                                                           |
+| `console_startup_log_level`  | nível de inicialização é usado para definir o nível de log do console na inicialização do servidor. Após a inicialização, o nível de log volta para a configuração `console_log_level`                                                                                                                                                                      |
+| `count`                      | Política de rotação: quantidade máxima de arquivos de log históricos mantidos pelo ClickHouse.                                                                                                                                                                                                                                                               |
+| `errorlog`                   | O caminho para o arquivo de log de erro.                                                                                                                                                                                                                                                                                                                    |
+| `formatting.type`            | Formato de log da saída no console. No momento, apenas `json` é compatível                                                                                                                                                                                                                                                                                  |
+| `level`                      | Nível de log. Valores aceitos: `none` (desativa o logging), `fatal`, `critical`, `error`, `warning`, `notice`, `information`,`debug`, `trace`, `test`                                                                                                                                                                                                       |
+| `log`                        | O caminho para o arquivo de log.                                                                                                                                                                                                                                                                                                                            |
 | `rotation`                   | Política de rotação: controla quando os arquivos de log são rotacionados. A rotação pode ser baseada em tamanho, tempo ou em uma combinação de ambos. Exemplos: 100M, daily, 100M,daily. Quando o arquivo de log excede o tamanho especificado ou o intervalo de tempo especificado é atingido, ele é renomeado e arquivado, e um novo arquivo de log é criado. |
-| `shutdown_level`             | nível de desligamento é usado para definir o nível do logger raiz no desligamento do servidor.                                                                                                                                                                                                                                                                  |
-| `size`                       | Política de rotação: tamanho máximo dos arquivos de log em bytes. Quando o tamanho do arquivo de log excede esse limite, ele é renomeado e arquivado, e um novo arquivo de log é criado.                                                                                                                                                                        |
-| `startup_level`              | nível de inicialização é usado para definir o nível do logger raiz na inicialização do servidor. Após a inicialização, o nível de log volta para a configuração `level`                                                                                                                                                                                         |
-| `stream_compress`            | Compacta as mensagens de log usando LZ4. Defina como `1` ou `true` para habilitar.                                                                                                                                                                                                                                                                              |
-| `syslog_level`               | Nível de log para envio ao syslog.                                                                                                                                                                                                                                                                                                                              |
-| `use_syslog`                 | Também encaminha a saída de log para o syslog.                                                                                                                                                                                                                                                                                                                  |
+| `shutdown_level`             | nível de desligamento é usado para definir o nível do logger raiz no desligamento do servidor.                                                                                                                                                                                                                                                              |
+| `size`                       | Política de rotação: tamanho máximo dos arquivos de log em bytes. Quando o tamanho do arquivo de log excede esse limite, ele é renomeado e arquivado, e um novo arquivo de log é criado.                                                                                                                                                                    |
+| `startup_level`              | nível de inicialização é usado para definir o nível do logger raiz na inicialização do servidor. Após a inicialização, o nível de log volta para a configuração `level`                                                                                                                                                                                     |
+| `stream_compress`            | Compacta as mensagens de log usando LZ4. Defina como `1` ou `true` para habilitar.                                                                                                                                                                                                                                                                          |
+| `syslog_level`               | Nível de log para envio ao syslog.                                                                                                                                                                                                                                                                                                                          |
+| `use_syslog`                 | Também encaminha a saída de log para o syslog.                                                                                                                                                                                                                                                                                                              |
 
 **Especificadores de formato de log**
 
@@ -2724,7 +2706,7 @@ Para mais informações, consulte a seção [Criando tabelas replicadas](/pt-BR/
 
 <SettingsInfoBlock type="UInt64" default_value="5368709120" changeable_without_restart="Yes" />
 
-Tamanho máximo do cache de marcas (índice da família de tabelas [`MergeTree`](/pt-BR/reference/engines/table-engines/mergetree-family/index)).
+Tamanho máximo do cache de marcas (índice da família de tabelas [`MergeTree`](/pt-BR/reference/engines/table-engines/mergetree-family)).
 
 <Note>
   Essa configuração pode ser modificada em tempo de execução e passará a valer imediatamente.
@@ -3263,13 +3245,6 @@ Por exemplo, um valor de `0.9` (padrão) significa que o servidor pode consumir 
 Permite reduzir o uso de memória em sistemas com pouca memória.
 Em hosts com pouca RAM e swap, pode ser necessário definir [`max_server_memory_usage_to_ram_ratio`](#max_server_memory_usage_to_ram_ratio) com um valor maior que 1.
 
-Essa proporção é aplicada de duas formas:
-
-* Na inicialização (e ao recarregar a configuração), ela limita o limite rígido de memória do servidor a esta fração da RAM física total, como descrito acima.
-* Em tempo de execução, o worker de memória em segundo plano recalcula periodicamente o limite rígido de memória como `(resident memory + system available memory) * max_server_memory_usage_to_ram_ratio`, para que o servidor mantenha uma folga de recursos para outros processos em execução no mesmo host. Ao executar dentro de um cgroup com um limite de memória finito, a memória disponível do cgroup é usada em vez do valor do host como um todo. À medida que outros processos crescem e a memória disponível diminui, o limite rígido do servidor acompanha essa redução, limitando o crescimento antes que o host (ou o cgroup) fique sem memória.
-
-Definir a proporção como `0` desabilita tanto o limite na inicialização quanto o ajuste em tempo de execução. O ajuste em tempo de execução também é um no-op em sistemas não Linux e em `clickhouse-keeper`, que não expõe essa configuração. Para manter o limite estático de inicialização/recarregamento, mas desabilitar o ajuste em tempo de execução (o comportamento das versões anteriores), defina `memory_worker_dynamic_hard_limit` como `0`.
-
 <Note>
   O consumo máximo de memória do servidor é limitado adicionalmente pela configuração `max_server_memory_usage`.
 </Note>
@@ -3510,18 +3485,6 @@ Indica se o worker de memória em segundo plano deve corrigir o memory tracker i
 
 Duração, em milissegundos, durante a qual a pressão de memória deve persistir antes de ajustar dinamicamente o `dirty_decay_ms` do jemalloc. Quando o uso de memória permanece acima do limite de limpeza por esse período, o decaimento automático de páginas sujas é desativado (`dirty_decay_ms=0`) para recuperar memória de forma mais agressiva. Quando o uso permanece abaixo do limite por esse período, o comportamento padrão de decaimento é restaurado. Defina como 0 para desativar o ajuste dinâmico e usar as configurações padrão de decaimento do jemalloc.
 
-<div id="memory_worker_dynamic_hard_limit">
-  ## memory_worker_dynamic_hard_limit
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="No" />
-
-Se o worker de memória em segundo plano recalcula periodicamente, em tempo de execução, o limite rígido de memória do servidor como `(resident memory + system available memory) * max_server_memory_usage_to_ram_ratio`, para que o servidor mantenha uma margem para outros processos em execução no mesmo host.
-
-Quando desabilitado, `max_server_memory_usage_to_ram_ratio` apenas limita estaticamente o limite rígido de memória, na inicialização e ao recarregar a configuração, como nas versões anteriores.
-
-Não tem efeito quando `max_server_memory_usage_to_ram_ratio` é `0`.
-
 <div id="memory_worker_period_ms">
   ## memory_worker_period_ms
 </div>
@@ -3612,12 +3575,6 @@ O valor padrão de `merges_mutations_memory_usage_soft_limit` é calculado por `
 * [max&#95;memory&#95;usage](/pt-BR/reference/settings/session-settings#max_memory_usage)
 * [merges&#95;mutations&#95;memory&#95;usage&#95;soft&#95;limit](/pt-BR/reference/settings/server-settings/settings#merges_mutations_memory_usage_soft_limit)
 
-<div id="message_queue_disable_insertion">
-  ## message_queue_disable_insertion
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="Sim" />Desabilita a inserção a partir de motores de fila de mensagens (Kafka, RabbitMQ, NATS) em visões materializadas anexadas
-
 <div id="metric_log">
   ## metric_log
 </div>
@@ -3654,20 +3611,6 @@ Para desativar a configuração `metric_log`, crie o arquivo `/etc/clickhouse-se
 ```
 
 <SystemLogParameters />
-
-<div id="min_allocation_size_to_throw_on_memory_limit">
-  ## min_allocation_size_to_throw_on_memory_limit
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="0" changeable_without_restart="Sim" />
-
-Tamanho mínimo, em bytes, de uma alocação genérica em C++ (como as feitas por contêineres padrão, strings, crescimento de `std::vector`, smart pointers etc.) que pode gerar `MEMORY_LIMIT_EXCEEDED` quando `max_server_memory_usage` é atingido. Alocações genéricas menores ainda são contabilizadas pelo rastreador de memória, mas podem ser concluídas com sucesso mesmo acima do limite, o que reduz falhas espúrias durante rotinas de limpeza e tratamento de exceções perto de OOM.
-
-As alocações feitas pelos próprios buffers grandes do ClickHouse — dados de coluna, tabelas hash, arenas, pipelines de consulta, buffers de E/S — sempre respeitam o limite de memória e podem lançar uma exceção independentemente desse valor. Essa configuração afeta apenas alocações implícitas que passam por `operator new`.
-
-Um valor de `0` (padrão) preserva o comportamento legado: alocações implícitas de `operator new` nunca são recusadas pelo rastreador de memória, e apenas alocações explícitas do ClickHouse podem gerar `MEMORY_LIMIT_EXCEEDED`.
-
-Observação: para evitar efeitos colaterais, recomenda-se definir um valor maior que `max_untracked_memory`.
 
 <div id="min_os_cpu_wait_time_ratio_to_drop_connection">
   ## min_os_cpu_wait_time_ratio_to_drop_connection
@@ -3755,75 +3698,6 @@ Porta para comunicação com clientes pelo protocolo MySQL.
 </div>
 
 <SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="Não" />Se definido como true, a comunicação segura com os clientes por [mysql&#95;port](/pt-BR/reference/settings/server-settings/settings#mysql_port) será obrigatória. Conexões com a opção `<--ssl-mode=none>` serão recusadas. Use essa configuração com as configurações do [OpenSSL](/pt-BR/reference/settings/server-settings/settings#openssl).
-
-<div id="oom_canary_enable">
-  ## oom_canary_enable
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />
-
-Experimental. Habilita o canário de OOM: um processo filho sacrificial que atrai o OOM killer do Linux
-antes do processo principal do servidor ClickHouse, dando ao servidor a chance de aliviar a carga.
-Requer Linux &gt;= 5.3 (para `pidfd_open`); o canário é desabilitado na inicialização em kernels mais antigos.
-A resposta a OOM requer evidência de OOM-kill em `memory.events.local` do cgroup v2 e pode executar cancelamento global de
-consultas, cancelamento de merge e gravações em `system.crash_log`.
-O canário não consegue proteger o servidor quando `memory.oom.group` do cgroup v2 está habilitado para o
-cgroup do servidor: nesse caso, o kernel mata todo o cgroup como uma única unidade, incluindo o servidor,
-portanto a resposta a OOM nunca é executada. Um aviso é registrado na inicialização nesse modo.
-O comportamento pode mudar entre versões do ClickHouse até que a validação em produção seja concluída.
-
-<div id="oom_canary_initial_backoff_seconds">
-  ## oom_canary_initial_backoff_seconds
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="1" changeable_without_restart="No" />
-
-Atraso inicial de backoff, em segundos, entre reinicializações consecutivas do canário de OOM.
-O atraso dobra a cada reinicialização até `oom_canary_max_backoff_seconds`.
-
-<div id="oom_canary_max_backoff_seconds">
-  ## oom_canary_max_backoff_seconds
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="60" changeable_without_restart="No" />
-
-Atraso máximo de backoff, em segundos, entre reinicializações consecutivas do canário de OOM.
-
-<div id="oom_canary_max_rapid_relaunches">
-  ## oom_canary_max_rapid_relaunches
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="10" changeable_without_restart="No" />
-
-Número máximo de relançamentos rápidos consecutivos do canário de OOM antes que o relançamento automático seja desativado
-para evitar instabilidade sob pressão de memória persistente. O contador e o backoff de relançamento são redefinidos
-assim que um canário sobrevive por mais tempo que `oom_canary_max_backoff_seconds`, de modo que um canário que morre apenas
-esporadicamente ao longo de um longo tempo de atividade não acabe sendo desativado.
-Aplica-se somente quando `oom_canary_relaunch` é true.
-
-<div id="oom_canary_relaunch">
-  ## oom_canary_relaunch
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Não" />
-
-Quando `true`, o canário de OOM é reiniciado automaticamente depois que o processo do canário é encerrado por qualquer
-motivo que não seja uma falha permanente de Setup ou o desligamento do servidor — incluindo encerramentos por OOM, outros
-sinais e saídas transitórias — de acordo com `oom_canary_max_rapid_relaunches` e as configurações de backoff.
-A própria sequência de resposta a OOM é executada apenas quando `memory.events.local` do cgroup v2
-fornece evidências de encerramento por OOM.
-
-<div id="oom_canary_size">
-  ## oom_canary_size
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="104857600" changeable_without_restart="No" />
-
-Tamanho em bytes da região de memória que o processo filho do canário de OOM aloca e acessa.
-O bloqueio da região com `mlock` é feito em regime de melhor esforço: requer `CAP_IPC_LOCK` ou um
-`RLIMIT_MEMLOCK` suficiente, e, quando o bloqueio falha, o canário emite um aviso e a memória permanece
-alocada, mas pode ser movida para swap.
-O padrão é 100 MB (104857600). Valores maiores tornam o canário um alvo de OOM mais atraente.
 
 <div id="oom_score">
   ## oom_score
@@ -4297,14 +4171,6 @@ Período para remover completamente as partes do SharedMergeTree. Disponível ap
 <SettingsInfoBlock type="UInt64" default_value="10" changeable_without_restart="No" />
 
 Adiciona a `kill_delay_period` um valor com distribuição uniforme de 0 a x segundos para evitar o efeito de thundering herd e o DoS subsequente do ZooKeeper no caso de um número muito grande de tabelas. Disponível apenas no ClickHouse Cloud
-
-<div id="parts_killer_max_condemned_parts_per_batch">
-  ## parts_killer_max_condemned_parts_per_batch
-</div>
-
-<SettingsInfoBlock type="NonZeroUInt64" default_value="100000" changeable_without_restart="No" />
-
-Número máximo de partes condenadas que uma tabela SharedMergeTree obtém do Keeper em um único ciclo de limpeza. Limitar o lote mantém a listagem e o multi-get dentro do timeout da operação do Keeper, para que a limpeza continue avançando mesmo quando uma tabela tiver acumulado um volume muito grande de partes condenadas pendentes. Deve ser maior que zero: um valor de `0` faria o Keeper retornar uma listagem vazia em cada ciclo, interrompendo permanentemente a limpeza. Disponível apenas no ClickHouse Cloud
 
 <div id="parts_killer_pool_size">
   ## parts_killer_pool_size
@@ -5810,24 +5676,6 @@ O cache de dados não comprimidos é vantajoso, em alguns casos, para consultas 
 
 <SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />O tamanho da fila protegida (no caso da política SLRU) no cache não comprimido em relação ao tamanho total do cache.
 
-<div id="unique_key_index_cache_policy">
-  ## unique_key_index_cache_policy
-</div>
-
-<SettingsInfoBlock type="String" default_value="SLRU" changeable_without_restart="Não" />Nome da política de cache do índice UNIQUE KEY (SLRU ou LRU).
-
-<div id="unique_key_index_cache_size_bytes">
-  ## unique_key_index_cache_size_bytes
-</div>
-
-<SettingsInfoBlock type="UInt64" default_value="1073741824" changeable_without_restart="No" />Tamanho máximo do cache no processo para blocos do índice UNIQUE KEY (SST), em bytes. Defina como 0 para desativar o cache.
-
-<div id="unique_key_index_cache_size_ratio">
-  ## unique_key_index_cache_size_ratio
-</div>
-
-<SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />O tamanho da fila protegida (no caso da política SLRU) no cache de índice UNIQUE KEY, em relação ao tamanho total do cache.
-
 <div id="url_scheme_mappers">
   ## url_scheme_mappers
 </div>
@@ -5854,7 +5702,7 @@ Exemplo:
   ## use_minimalistic_part_header_in_zookeeper
 </div>
 
-Método de armazenamento para cabeçalhos de partes de dados no ZooKeeper. Esta configuração se aplica apenas à família [`MergeTree`](/pt-BR/reference/engines/table-engines/mergetree-family/index). Ela pode ser especificada:
+Método de armazenamento para cabeçalhos de partes de dados no ZooKeeper. Esta configuração se aplica apenas à família [`MergeTree`](/pt-BR/reference/engines/table-engines/mergetree-family). Ela pode ser especificada:
 
 **Globalmente na seção [merge&#95;tree](#merge_tree) do arquivo `config.xml`**
 
@@ -6188,16 +6036,14 @@ As configurações a seguir podem ser definidas por meio de subtags:
 
 Também há a configuração `zookeeper_load_balancing` (opcional), que permite selecionar o algoritmo de seleção de nós do ZooKeeper:
 
-| Algorithm Name                   | Description                                                                                                                           |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `random`                         | seleciona aleatoriamente um dos nós do ZooKeeper.                                                                                     |
-| `in_order`                       | seleciona o primeiro nó do ZooKeeper; se ele não estiver disponível, seleciona o segundo, e assim por diante.                         |
-| `nearest_hostname`               | seleciona um nó do ZooKeeper com um hostname mais semelhante ao hostname do servidor; o hostname é comparado com o prefixo do nome.   |
-| `hostname_levenshtein_distance`  | assim como nearest&#95;hostname, mas compara o hostname usando a distância de Levenshtein.                                            |
-| `hostname_longest_common_prefix` | assim como nearest&#95;hostname, mas prefere o nó cujo hostname compartilha o prefixo em comum mais longo com o hostname do servidor. |
-| `hostname_longest_common_suffix` | assim como nearest&#95;hostname, mas prefere o nó cujo hostname compartilha o sufixo em comum mais longo com o hostname do servidor.  |
-| `first_or_random`                | seleciona o primeiro nó do ZooKeeper; se ele não estiver disponível, seleciona aleatoriamente um dos nós restantes do ZooKeeper.      |
-| `round_robin`                    | seleciona o primeiro nó do ZooKeeper; se houver reconexão, seleciona o próximo.                                                       |
+| Algorithm Name                  | Description                                                                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `random`                        | seleciona aleatoriamente um dos nós do ZooKeeper.                                                                                   |
+| `in_order`                      | seleciona o primeiro nó do ZooKeeper; se ele não estiver disponível, seleciona o segundo, e assim por diante.                       |
+| `nearest_hostname`              | seleciona um nó do ZooKeeper com um hostname mais semelhante ao hostname do servidor; o hostname é comparado com o prefixo do nome. |
+| `hostname_levenshtein_distance` | assim como nearest&#95;hostname, mas compara o hostname usando a distância de Levenshtein.                                          |
+| `first_or_random`               | seleciona o primeiro nó do ZooKeeper; se ele não estiver disponível, seleciona aleatoriamente um dos nós restantes do ZooKeeper.    |
+| `round_robin`                   | seleciona o primeiro nó do ZooKeeper; se houver reconexão, seleciona o próximo.                                                     |
 
 **Configuração de exemplo**
 
@@ -6213,15 +6059,15 @@ Também há a configuração `zookeeper_load_balancing` (opcional), que permite 
     </node>
     <session_timeout_ms>30000</session_timeout_ms>
     <operation_timeout_ms>10000</operation_timeout_ms>
-    <!-- Optional. Chroot suffix. Should exist. -->
+    <!-- Opcional. Sufixo chroot. Deve existir. -->
     <root>/path/to/zookeeper/node</root>
-    <!-- Optional. Zookeeper digest ACL string. -->
+    <!-- Opcional. String de ACL digest do ZooKeeper. -->
     <identity>user:password</identity>
-    <!--<zookeeper_load_balancing>random / in_order / nearest_hostname / hostname_levenshtein_distance / hostname_longest_common_prefix / hostname_longest_common_suffix / first_or_random / round_robin</zookeeper_load_balancing>-->
+    <!--<zookeeper_load_balancing>random / in_order / nearest_hostname / hostname_levenshtein_distance / first_or_random / round_robin</zookeeper_load_balancing>-->
     <zookeeper_load_balancing>random</zookeeper_load_balancing>
-    <!-- Optional. Enable 64-bit transaction IDs. -->
+    <!-- Opcional. Habilita IDs de transação de 64 bits. -->
     <use_xid_64>false</use_xid_64>
-    <!-- Optional. Enable OpenTelemetry tracing context propagation. -->
+    <!-- Opcional. Habilita a propagação do contexto de rastreamento do OpenTelemetry. -->
     <pass_opentelemetry_tracing_context>false</pass_opentelemetry_tracing_context>
 </zookeeper>
 ```

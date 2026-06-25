@@ -257,7 +257,7 @@ ClickHouse 不要求主键是唯一的。你可以插入多行具有相同主键
 
 在这种情况下，更合理的做法是仅在主键中保留少量能够提供高效范围扫描的列，并将其余维度列加入排序键 Tuple。
 
-对排序键执行 [ALTER](/zh/reference/statements/alter/index) 是一种轻量级操作，因为当新列同时添加到表和排序键中时，现有的数据 parts 不需要修改。由于旧排序键是新排序键的前缀，并且新添加的列中还没有数据，因此在修改表的那一刻，数据同时满足按旧排序键和新排序键排序。
+对排序键执行 [ALTER](/zh/reference/statements/alter) 是一种轻量级操作，因为当新列同时添加到表和排序键中时，现有的数据 parts 不需要修改。由于旧排序键是新排序键的前缀，并且新添加的列中还没有数据，因此在修改表的那一刻，数据同时满足按旧排序键和新排序键排序。
 
 <div id="use-of-indexes-and-partitions-in-queries">
   ### 在查询中使用索引和分区
@@ -634,9 +634,7 @@ sparse_grams(min_ngram_length, max_ngram_length, min_cutoff_length, size_of_bloo
 | [match](/zh/reference/functions/regular-functions/string-search-functions#match)                                                       | ✗  | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [startsWith](/zh/reference/functions/regular-functions/string-functions#startsWith)                                                    | ✔  | ✔      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [endsWith](/zh/reference/functions/regular-functions/string-functions#endsWith)                                                        | ✗  | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
-| [multiSearchAny](/zh/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗  | ✗      | ✔              | ✗              | ✗                | ✗                | ✔    |
-| [multiSearchAnyUTF8](/zh/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8)                             | ✗  | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
-| [multiMatchAny](/zh/reference/functions/regular-functions/string-search-functions#multiMatchAny)                                       | ✗  | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
+| [multiSearchAny](/zh/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗  | ✗      | ✔              | ✗              | ✗                | ✗                | ✗    |
 | [in](/zh/reference/functions/regular-functions/in-functions)                                                                           | ✔  | ✔      | ✔              | ✔              | ✔                | ✔                | ✔    |
 | [notIn](/zh/reference/functions/regular-functions/in-functions)                                                                        | ✔  | ✔      | ✔              | ✔              | ✔                | ✔                | ✗    |
 | [less (`<`)](/zh/reference/functions/regular-functions/comparison-functions#less)                                                      | ✔  | ✔      | ✗              | ✗              | ✗                | ✗                | ✗    |
@@ -799,7 +797,7 @@ TTL time_column
 TTL time_column + interval
 ```
 
-要定义 `interval`，请使用[时间间隔](/zh/reference/operators/index#operators-for-working-with-dates-and-times)运算符，例如：
+要定义 `interval`，请使用[时间间隔](/zh/reference/operators#operators-for-working-with-dates-and-times)运算符，例如：
 
 ```sql
 TTL date_time + INTERVAL 1 MONTH
@@ -1182,28 +1180,28 @@ SETTINGS storage_policy = 'moving_from_ssd_to_hdd'
 对于 `MergeTree` 表，数据会通过不同方式写入磁盘：
 
 * 作为插入 (`INSERT` 查询) 的结果。
-* 在后台合并和[变更](/zh/reference/statements/alter/index#mutations)期间。
+* 在后台合并和[变更](/zh/reference/statements/alter#mutations)期间。
 * 从另一个副本下载时。
 * 作为分区冻结 [ALTER TABLE ... FREEZE PARTITION](/zh/reference/statements/alter/partition#freeze-partition) 的结果。
 
-除变更和分区冻结外，在上述所有情况下，parts 都会根据给定的存储策略存储到某个卷和磁盘上：
+除变更和分区冻结外，在上述所有情况下，分片 都会根据给定的存储策略存储到某个卷和磁盘上：
 
-1. 选择第一个 (按定义顺序) 有足够磁盘空间存储 parts (`unreserved_space > current_part_size`) ，并且允许存储该大小 parts (`max_data_part_size_bytes > current_part_size`) 的卷。
-2. 在该卷内，选择紧随上一个用于存储前一个 chunk 数据的磁盘之后的那个磁盘，并且该磁盘的可用空间大于 parts 的大小 (`unreserved_space - keep_free_space_bytes > current_part_size`) 。
+1. 选择第一个 (按定义顺序) 有足够磁盘空间存储 分片 (`unreserved_space > current_part_size`) ，并且允许存储该大小 分片 (`max_data_part_size_bytes > current_part_size`) 的卷。
+2. 在该卷内，选择紧随上一个用于存储前一个 chunk 数据的磁盘之后的那个磁盘，并且该磁盘的可用空间大于 分片 的大小 (`unreserved_space - keep_free_space_bytes > current_part_size`) 。
 
-在底层实现中，变更和分区冻结会使用[硬链接](https://en.wikipedia.org/wiki/Hard_link)。不同磁盘之间不支持硬链接，因此在这种情况下，生成的 parts 会存储在与原始 parts 相同的磁盘上。
+在底层实现中，变更和分区冻结会使用[硬链接](https://en.wikipedia.org/wiki/Hard_link)。不同磁盘之间不支持硬链接，因此在这种情况下，生成的 分片 会存储在与原始 分片 相同的磁盘上。
 
-在后台，parts 会根据空闲空间量 (`move_factor` parameter) ，按照各卷在配置文件中声明的顺序，在卷之间移动。
+在后台，分片 会根据空闲空间量 (`move_factor` parameter) ，按照各卷在配置文件中声明的顺序，在卷之间移动。
 数据永远不会从最后一个卷转移到第一个卷，也不会从第一个卷转移到最后一个卷。可以使用系统表 [system.part&#95;log](/zh/reference/system-tables/part_log) (field `type = MOVE_PART`) 和 [system.parts](/zh/reference/system-tables/parts) (fields `path` 和 `disk`) 来监控后台移动。此外，也可以在服务器日志中找到详细信息。
 
-用户可以使用查询 [ALTER TABLE ... MOVE PART|PARTITION ... TO VOLUME|DISK ...](/zh/reference/statements/alter/partition) 强制将某个 parts 或分区从一个卷移动到另一个卷或磁盘，同时会考虑后台操作的所有限制条件。该查询会自行发起移动，不会等待后台操作完成。如果可用空间不足，或者任何必需条件未满足，用户将收到错误消息。
+用户可以使用查询 [ALTER TABLE ... MOVE PART|PARTITION ... TO VOLUME|DISK ...](/zh/reference/statements/alter/partition) 强制将某个 分片 或分区从一个卷移动到另一个卷或磁盘，同时会考虑后台操作的所有限制条件。该查询会自行发起移动，不会等待后台操作完成。如果可用空间不足，或者任何必需条件未满足，用户将收到错误消息。
 
 移动数据不会干扰数据复制。因此，对于同一张表，可以在不同副本上指定不同的存储策略。
 
-后台合并和变更完成后，旧 parts 只有在经过一定时间 (`old_parts_lifetime`) 之后才会被删除。
-在此期间，它们不会被移动到其他卷或磁盘。因此，在这些 parts 最终被删除之前，它们仍会被计入已占用磁盘空间的评估中。
+后台合并和变更完成后，旧 分片 只有在经过一定时间 (`old_parts_lifetime`) 之后才会被删除。
+在此期间，它们不会被移动到其他卷或磁盘。因此，在这些 分片 最终被删除之前，它们仍会被计入已占用磁盘空间的评估中。
 
-用户可以使用 [min&#95;bytes&#95;to&#95;rebalance&#95;partition&#95;over&#95;jbod](/zh/reference/settings/merge-tree-settings#min_bytes_to_rebalance_partition_over_jbod) setting，将新的大 parts 以均衡方式分配到某个 [JBOD](https://en.wikipedia.org/wiki/Non-RAID_drive_architectures) 卷的不同磁盘上。
+用户可以使用 [min&#95;bytes&#95;to&#95;rebalance&#95;partition&#95;over&#95;jbod](/zh/reference/settings/merge-tree-settings#min_bytes_to_rebalance_partition_over_jbod) setting，将新的大 分片 以均衡方式分配到某个 [JBOD](https://en.wikipedia.org/wiki/Non-RAID_drive_architectures) 卷的不同磁盘上。
 
 <div id="table_engine-mergetree-s3">
   ## 使用外部存储来存储数据
@@ -1385,17 +1383,17 @@ ALTER TABLE tab DROP STATISTICS a;
 只有启用 `set use_statistics = 1` 后，才能将其用于 prewhere 优化。
 
 <div id="part-pruning-with-statistics">
-  #### 利用统计信息进行分片裁剪
+  #### 利用统计信息进行数据分片裁剪
 </div>
 
-启用 `use_statistics_for_part_pruning` 后，即可使用统计信息进行分片裁剪。
-目前，只有 `MinMax` 和 `Basic` 统计信息支持分片裁剪。为某一列定义此类统计信息后，ClickHouse 会跟踪该列在每个数据分片中的最小值和最大值。
-分片裁剪可以在查询过滤条件不可能匹配该分片中的任何行时，跳过读取整个数据分片。
+启用 `use_statistics_for_part_pruning` 后，即可使用统计信息进行数据分片裁剪。
+目前，`MinMax` 和 `NullCount` 统计信息支持数据分片裁剪。为某一列定义 MinMax 统计信息后，ClickHouse 会跟踪该列在每个数据分片中的最小值和最大值。为 `Nullable` 列定义 NullCount 统计信息后，ClickHouse 会跟踪每个数据分片中的 NULL 值数量，从而支持基于 `IS NULL` / `IS NOT NULL` 谓词进行裁剪，并提高包含 NULL 值的列在范围过滤裁剪中的准确性。
+数据分片裁剪可以在查询过滤条件不可能匹配该分片中的任何行时，跳过读取整个数据分片。
 
 **示例：**
 
 ```sql
--- Create a table with MinMax statistics on the 'value' column
+-- 在 'value' 列上创建带有 MinMax 统计信息的表
 CREATE TABLE test_stats
 (
     id UInt64,
@@ -1406,35 +1404,23 @@ ORDER BY id;
 
 SYSTEM STOP MERGES test_stats;
 
--- Insert data in separate inserts to create multiple parts
-INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- Part 1: value range [0, 999]
-INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- Part 2: value range [10000, 10999]
+-- 分批插入数据以创建多个 parts
+INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- Part 1：value 范围 [0, 999]
+INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- Part 2：value 范围 [10000, 10999]
 
 SET use_statistics_for_part_pruning = 1;
 
--- This query will skip Part 1 entirely because its max value (999) < 5000
+-- 此查询将完全跳过 Part 1，因为其最大值 (999) < 5000
 SELECT count() FROM test_stats WHERE value > 5000;
 
--- Use EXPLAIN to see the pruning effect
+-- 使用 EXPLAIN 查看裁剪效果
 EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
--- The output will show "Parts: 1/2" indicating one part was pruned
+-- 输出将显示 "Parts: 1/2"，表示有一个 分片 被裁剪掉了
 ```
 
 <div id="available-types-of-column-statistics">
   ### 可用的列统计信息类型
 </div>
-
-* `Basic`
-
-  从列中提取的一组紧凑的单值摘要。根据列类型，会填充以下内容：
-
-  * 对于任何以数字表示值的列 (整数、浮点数、`Decimal*`、`Date*`、`DateTime*`、`Enum*`、`IPv4`，……) ：最小值和最大值，可用于估算范围过滤器的选择性并启用分片裁剪；
-  * 对于 `String` 和 `FixedString` 列：非 `NULL` 值的总字节长度 (可由此推导出平均字符串长度) ；
-  * 对于 `Nullable` 和 `LowCardinality(Nullable)` 列：`NULL` 值的数量，优化器会用它在选择性估算中扣除 `NULL` 行。
-
-    单个 `Basic` 统计信息可以同时填充其中多项——例如在 `Nullable(UInt32)` 列上，它会同时跟踪数值最小/最大值和 `NULL` 计数。与 `MinMax` 相比，`Basic` 还可用于 `String` / `FixedString` 列，并且也可以仅为了跟踪 `NULL` 计数而声明在 `UUID` 或 `IPv6` 等类型的 `Nullable` 包装类型上。
-
-    语法：`basic`
 
 * `MinMax`
 
@@ -1454,6 +1440,12 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
 
   语法：`uniq`
 
+* `NullCount`
+
+  跟踪 `Nullable` 列中 `NULL` 值的数量。用于在 PREWHERE 优化中准确估算 `IS NULL`/`IS NOT NULL` 谓词的选择性，并可根据是否存在 NULL 进行分片裁剪。
+
+  语法：`nullcount`
+
 * `CountMin`
 
   [CountMin](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch) sketch，可提供列中各个值出现频率的近似计数。
@@ -1464,31 +1456,25 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
   ### 支持的数据类型
 </div>
 
-|          | (U)Int*, Float*, Decimal(*), Date*, 布尔值, Enum* | IPv4 | String 或 FixedString |
-| -------- | ---------------------------------------------- | ---- | -------------------- |
-| Basic    | ✔                                              | ✔    | ✔                    |
-| CountMin | ✔                                              | ✔    | ✔                    |
-| MinMax   | ✔                                              | ✔    | ✗                    |
-| TDigest  | ✔                                              | ✗    | ✗                    |
-| Uniq     | ✔                                              | ✔    | ✔                    |
-
-上述各项也都支持所列类型的 `Nullable` 和 `LowCardinality(Nullable)` 包装类型。`Basic` 还可以额外声明在诸如 `UUID` 或 `IPv6` 等类型的 `Nullable` 包装器上，仅用于统计空值数量。
+|           | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | String or FixedString | Nullable(*) / LowCardinality(Nullable(*)) |
+| --------- | -------------------------------------------------- | --------------------- | ----------------------------------------- |
+| CountMin  | ✔                                                  | ✔                     | ✗                                         |
+| MinMax    | ✔                                                  | ✗                     | ✔                                         |
+| NullCount | ✗                                                  | ✗                     | ✔                                         |
+| TDigest   | ✔                                                  | ✗                     | ✔                                         |
+| Uniq      | ✔                                                  | ✔                     | ✔                                         |
 
 <div id="supported-operations">
   ### 支持的操作
 </div>
 
-|          | 等值过滤器 (==) | 范围过滤器 (`>, >=, <, <=`) |
-| -------- | ---------- | ---------------------- |
-| Basic    | ✗          | ✔ (仅限数值列)              |
-| CountMin | ✔          | ✗                      |
-| MinMax   | ✗          | ✔ (仅限数值列)              |
-| TDigest  | ✗          | ✔ (仅限数值列)              |
-| Uniq     | ✔          | ✗                      |
-
-对于 `String` / `FixedString` 列上的 `Basic`，该统计信息仅记录非 `NULL` 值的总字节长度
-(用于估算平均字符串长度) 以及 `NULL` 计数；
-它不用于范围过滤器或分片裁剪。
+|           | 等值过滤 (==) | 范围过滤器 (`>, >=, <, <=`) | `IS NULL` / `IS NOT NULL` |
+| --------- | --------- | ---------------------- | ------------------------- |
+| CountMin  | ✔         | ✗                      | ✗                         |
+| MinMax    | ✗         | ✔                      | ✗                         |
+| NullCount | ✗         | ✗                      | ✔                         |
+| TDigest   | ✗         | ✔                      | ✗                         |
+| Uniq      | ✔         | ✗                      | ✗                         |
 
 <div id="column-level-settings">
   ## 列级设置

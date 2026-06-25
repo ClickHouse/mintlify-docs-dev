@@ -1,5 +1,5 @@
 ---
-title: '为可观测性设计 schema'
+title: 为可观测性设计 schema
 description: '为可观测性设计 schema'
 keywords: ['可观测性', '日志', '链路追踪', '指标', 'OpenTelemetry', 'Grafana', 'OTel']
 slug: /use-cases/observability/schema-design
@@ -21,15 +21,6 @@ import { Image } from "/snippets/components/Image.jsx";
 *下面我们将详细介绍上述每一种使用场景。*
 
 **重要：** 虽然我们鼓励用户扩展和修改自己的 schema 以获得最佳压缩率和查询性能，但在可能的情况下，仍应遵循 OTel 对核心列的 schema 命名。ClickHouse Grafana 插件会假定某些基础 OTel 列存在，以帮助构建查询，例如 Timestamp 和 SeverityText。日志和链路追踪所需的列分别记录在这里 [[1]](https://grafana.com/developers/plugin-tools/tutorials/build-a-logs-data-source-plugin#logs-data-frame-format)[[2]](https://grafana.com/docs/grafana/latest/explore/logs-integration/) 和 [这里](https://grafana.com/docs/grafana/latest/explore/trace-integration/#data-frame-structure)。你也可以选择更改这些列名，并在插件配置中覆盖默认值。
-
-<Tip>
-  **ClickStack 提供经过优化的默认 schema**
-
-  **ClickStack 为日志、链路追踪和指标提供开箱即用的 schema**，其中整合了最新的 ClickHouse 功能 (用于全文和 map 键搜索的文本索引、用于直接读取过滤的物化列和 ALIAS 数组、基于块号的行查找) ，并且已经过基准测试，可为日志和链路追踪工作负载提供强劲的开箱即用性能。你可以将它们作为自己设计 schema 时的参考起点。
-
-  * 规范 DDL：[ClickStack 使用的表和 schema](/zh/clickstack/ingesting-data/schemas)。
-  * 优化方案：[ClickStack 性能调优](/zh/clickstack/managing/performance-tuning)。该页面上的许多建议 (物化列、跳过索引、主键选择、projections、materialized views) 都可直接应用于自行构建的部署。
-</Tip>
 
 <div id="extracting-structure-with-sql">
   ## 使用 SQL 提取结构
@@ -252,7 +243,7 @@ LIMIT 5
   ## Materialized views
 </div>
 
-[Materialized views](/zh/concepts/features/materialized-views/index) 提供了对日志和链路追踪应用 SQL 过滤与转换的更强大方式。
+[Materialized views](/zh/concepts/features/materialized-views) 提供了对日志和链路追踪应用 SQL 过滤与转换的更强大方式。
 
 Materialized Views 允许你将计算成本从查询时转移到写入时。ClickHouse materialized view 本质上只是一个 trigger：当数据块插入表中时，它会对这些块执行查询。该查询的结果会被插入到第二个“目标”表中。
 
@@ -643,17 +634,17 @@ LIMIT 5
   ## 使用字典
 </div>
 
-[字典](/zh/reference/statements/create/dictionary)是 ClickHouse 的一项[核心特性](https://clickhouse.com/blog/faster-queries-dictionaries-clickhouse)，为来自各种内部和外部[数据源](/zh/reference/statements/create/dictionary/sources/overview#dictionary-sources)的数据提供内存中的[键值](https://en.wikipedia.org/wiki/Key%E2%80%93value_database)表示，并针对超低延迟查找查询进行了优化。
+[字典](/zh/reference/statements/create/dictionary)是 ClickHouse 的一项[核心特性](https://clickhouse.com/blog/faster-queries-dictionaries-clickhouse)，为来自各种内部和外部[数据源](/zh/reference/statements/create/dictionary/sources/overview#dictionary-sources/)的数据提供内存中的[键值](https://en.wikipedia.org/wiki/Key%E2%80%93value_database)表示，并针对超低延迟查找查询进行了优化。
 
 <Image img="/images/use-cases/observability/observability-12.png" alt="可观测性与字典" size="md" />
 
-这在多种场景下都很实用，例如在不拖慢摄取过程的情况下实时富集已摄取的数据，以及整体提升查询性能，其中对 JOIN 的加速尤为明显。
-虽然在可观测性场景中很少需要使用 JOIN，但字典在富集方面仍然很有用——无论是在写入时还是查询时。下面我们会分别给出这两种示例。
+这在多种场景下都很实用，例如在不拖慢摄取过程的情况下实时富化已摄取的数据，以及整体提升查询性能，其中对 JOIN 的加速尤为明显。
+虽然在可观测性场景中很少需要使用 JOIN，但字典在富集方面仍然很有用——无论是在插入时还是查询时。下面我们会分别给出这两种示例。
 
 <Info>
   **加速 JOIN**
 
-  如果你希望使用字典来加速 JOIN，可以在[这里](/zh/concepts/features/dictionaries/index)了解更多详情。
+  如果你希望使用字典来加速 JOIN，可以在[这里](/zh/concepts/features/dictionaries)了解更多详情。
 </Info>
 
 <div id="insert-time-vs-query-time">
@@ -667,7 +658,7 @@ LIMIT 5
 
 我们建议用户先熟悉一下字典的基础知识。字典提供了一个内存中的查找表，可通过专用的[函数](/zh/reference/functions/regular-functions/ext-dict-functions#dictGetAll)从中获取值。
 
-如需查看简单的富集示例，请参阅[此处](/zh/concepts/features/dictionaries/index)的字典指南。下面我们将重点介绍常见的可观测性富集任务。
+如需查看简单的富集示例，请参阅[此处](/zh/concepts/features/dictionaries)的字典指南。下面我们将重点介绍常见的可观测性富集任务。
 
 <div id="using-ip-dictionaries">
   ### 使用 IP 字典
@@ -1111,7 +1102,7 @@ Os:     ('Other','0','0','0')
 
 如需查看更多有关字典的示例和详细说明，推荐阅读以下文章：
 
-* [高级字典主题](/zh/concepts/features/dictionaries/index#advanced-dictionary-topics)
+* [高级字典主题](/zh/concepts/features/dictionaries#advanced-dictionary-topics)
 * [“使用字典加速查询”](https://clickhouse.com/blog/faster-queries-dictionaries-clickhouse)
 * [字典](/zh/reference/statements/create/dictionary)
 

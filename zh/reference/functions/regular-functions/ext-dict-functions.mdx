@@ -358,33 +358,28 @@ LIMIT 3;
 
 引入版本：v23.5.0
 
-获取[正则表达式树字典](/zh/reference/statements/create/dictionary/layouts/regexp-tree)中与每个键匹配的所有节点的属性值。
-
-除返回 `Array(T)` 类型的值而非 `T` 外，此函数的行为与 [`dictGet`](#dictGet) 类似。
+将字典属性值转换为 `All` 数据类型，与字典配置无关。
 
 **语法**
 
 ```sql
-dictGetAll(dict_name, attr_names, id_expr[, limit])
+dictGetAll(dict_name, attr_name, id_expr)
 ```
 
 **参数**
 
 * `dict_name` — 字典名称。 [`String`](/zh/reference/data-types/string)
-* `attr_names` — 字典中列的名称，或列名元组。 [`String`](/zh/reference/data-types/string) 或 [`Tuple(String)`](/zh/reference/data-types/tuple)
+* `attr_name` — 字典的列名。 [`String`](/zh/reference/data-types/string) 或 [`Tuple(String)`](/zh/reference/data-types/tuple)
 * `id_expr` — 键值。返回字典键类型值或元组值的表达式 (取决于字典配置) 。 [`Expression`](/zh/reference/data-types/special-data-types/expression) 或 [`Tuple(T)`](/zh/reference/data-types/tuple)
-* `limit` — 可选。每个返回的值数组的最大长度。截断时，子节点优先于父节点，否则遵循 regexp tree 字典定义的列表顺序。如果未指定，则数组长度不受限制。 [`UInt*`](/zh/reference/data-types/int-uint)
 
 **返回值**
 
-返回由 `attr_names` 中指定的每个属性对应的、与 `id_expr` 相对应的字典属性值数组。
-如果字典中不存在与 `id_expr` 对应的键，则返回空数组。
+返回与 `id_expr` 对应的字典属性值，
+否则返回字典配置中为该属性指定的 `<null_value>` 元素内容。
 
 <Note>
   如果 ClickHouse 无法解析该属性的值，或者该值与属性的数据类型不匹配，则会抛出异常。
 </Note>
-
-[`Array(T)`](/zh/reference/data-types/array)
 
 **示例**
 
@@ -394,10 +389,10 @@ dictGetAll(dict_name, attr_names, id_expr[, limit])
 SELECT
     'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36' AS user_agent,
 
-    -- This will match ALL applicable patterns
+    -- 这将匹配所有适用的模式
     dictGetAll('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS all_matches,
 
-    -- This returns only the first match
+    -- 这只返回第一个匹配项
     dictGet('regexp_tree', 'os_replacement', 'Mozilla/5.0 (Linux; Android 12; SM-G998B) Mobile Safari/537.36') AS first_match;
 ```
 

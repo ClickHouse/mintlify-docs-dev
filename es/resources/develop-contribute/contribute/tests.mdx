@@ -178,36 +178,6 @@ sudo ./install.sh
   * asegurarse de que otras pruebas no estén comprobando lo mismo (es decir, use primero grep).
 </Note>
 
-<div id="templated-tests-with-jinja">
-  ### Pruebas con plantillas Jinja
-</div>
-
-Una prueba `.sql` puede escribirse como una plantilla de [Jinja2](https://jinja.palletsprojects.com/) añadiendo el sufijo `.j2` al nombre del archivo, de modo que `foo.sql` pasa a ser `foo.sql.j2`. Antes de ejecutar la prueba, `clickhouse-test` procesa la plantilla para convertirla en un script `.sql` normal y ejecuta el resultado.
-
-Esto resulta útil cuando una prueba repite la misma consulta con pequeñas variaciones: un bucle genera las consultas a partir de una plantilla compacta, en lugar de escribir cada una a mano. Las construcciones más utilizadas son:
-
-* `{% for ... %} ... {% endfor %}` para repetir un bloque,
-* `{{ expression }}` para sustituir un valor en la salida,
-* `-%}` y `{%-` para eliminar los espacios en blanco adyacentes y mantener limpio el script generado.
-
-Por ejemplo, esta plantilla:
-
-```sql
-{% for type in ['UInt8', 'UInt16', 'UInt32'] -%}
-SELECT toTypeName(0::{{ type }});
-{% endfor -%}
-```
-
-se muestra como:
-
-```sql
-SELECT toTypeName(0::UInt8);
-SELECT toTypeName(0::UInt16);
-SELECT toTypeName(0::UInt32);
-```
-
-La salida esperada puede proporcionarse como un archivo `<name>.reference` sin formato que contenga los resultados completamente expandidos, o como una plantilla `<name>.reference.j2`, que `clickhouse-test` procesa de la misma manera antes de compararla. Use la forma de plantilla cuando la salida esperada también siga un patrón repetitivo. Para ver más ejemplos, consulte los archivos `*.sql.j2` existentes en `tests/queries/0_stateless/`.
-
 <div id="restricting-test-runs">
   ### Restringir la ejecución de pruebas
 </div>
@@ -218,8 +188,8 @@ En las pruebas `.sql`, las etiquetas se colocan en la primera línea como un com
 
 ```sql
 -- Tags: no-fasttest, no-replicated-database
--- no-fasttest: <provide_a_reason_for_the_tag_here>
--- no-replicated-database: <provide_a_reason_here>
+-- no-fasttest: <proporciona_una_razón_para_la_etiqueta_aquí>
+-- no-replicated-database: <proporciona_una_razón_aquí>
 
 SELECT 1
 ```
@@ -229,8 +199,8 @@ En las pruebas `.sh`, las etiquetas se escriben como comentario en la segunda l�
 ```bash
 #!/usr/bin/env bash
 # Tags: no-fasttest, no-replicated-database
-# - no-fasttest: <provide_a_reason_for_the_tag_here>
-# - no-replicated-database: <provide_a_reason_here>
+# - no-fasttest: <proporciona_una_razón_para_la_etiqueta_aquí>
+# - no-replicated-database: <proporciona_una_razón_aquí>
 ```
 
 Lista de etiquetas disponibles:
@@ -257,7 +227,7 @@ Lista de etiquetas disponibles:
 | `no-release`                   | Deshabilita las pruebas en compilaciones Release                                            |                                                                                                                     |
 | `no-darwin`                    | Deshabilita la prueba en macOS (Darwin)                                                     | La prueba depende de características específicas de Linux, como consultas distribuidas, `procfs` o el servidor HTTP |
 
-También se admiten las siguientes opciones: `no-polymorphic-parts`, `no-random-settings`, `no-random-merge-tree-settings`, `no-backward-compatibility-check`, `no-cpu-x86_64`, `no-cpu-aarch64`, `no-cpu-ppc64le`, `no-s3-storage`.
+También se admiten las siguientes opciones: `no-stress`, `no-polymorphic-parts`, `no-random-settings`, `no-random-merge-tree-settings`, `no-backward-compatibility-check`, `no-cpu-x86_64`, `no-cpu-aarch64`, `no-cpu-ppc64le`, `no-s3-storage`.
 
 Además de los ajustes anteriores, puede usar flags `USE_*` de `system.build_options` para definir el uso de características concretas de ClickHouse.
 Por ejemplo, si su prueba usa una tabla MySQL, debe añadir la etiqueta `use-mysql`.
@@ -666,6 +636,9 @@ La configuración está en `uncrustify.cfg`, en la raíz del código fuente.
 Se ha probado menos que `clang-format`.
 
 `CLion` tiene su propio formateador de código, que debe ajustarse a nuestro estilo de código.
+
+También usamos `codespell` para detectar errores tipográficos en el código.
+Esto también está automatizado.
 
 <div id="test-coverage">
   ## Cobertura de pruebas

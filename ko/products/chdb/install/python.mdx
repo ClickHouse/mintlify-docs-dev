@@ -1,5 +1,5 @@
 ---
-title: 'Python용 chDB 설치'
+title: 혼합된 JSON 객체를 포함한 DataFrame
 sidebarTitle: 'Python'
 slug: /chdb/install/python
 description: 'Python용 chDB 설치 방법'
@@ -290,12 +290,12 @@ sess.close()  # 선택 사항 - 객체 삭제 시 자동으로 닫힙니다
 </div>
 
 ```python
-# Session with custom settings
+# 사용자 지정 설정을 사용한 세션
 sess = session.Session(
     path="/tmp/analytics_db",
 )
 
-# Query performance optimization
+# 쿼리 성능 최적화
 result = sess.query("""
     SELECT product, sum(amount) as total
     FROM sales 
@@ -305,7 +305,7 @@ result = sess.query("""
 """, "JSON")
 ```
 
-관련 항목: [test&#95;stateful.py](https://github.com/chdb-io/chdb-core/blob/main/tests/test_stateful.py).
+관련 항목: [test&#95;stateful.py](https://github.com/chdb-io/chdb/blob/main/tests/test_stateful.py).
 
 <div id="python-db-api-20">
   ### Python DB-API 2.0 인터페이스
@@ -619,17 +619,17 @@ from typing import List, Tuple, Any
 import json
 
 class DatabaseReader(chdb.PyReader):
-    """Custom reader for database-like data sources"""
+    """데이터베이스 유형의 데이터 소스를 위한 커스텀 리더"""
     
     def __init__(self, connection_string: str):
-        # Simulate database connection
+        # 데이터베이스 연결 시뮬레이션
         self.data = self._load_data(connection_string)
         self.cursor = 0
         self.batch_size = 1000
         super().__init__(self.data)
     
     def _load_data(self, conn_str):
-        # Simulate loading from database
+        # 데이터베이스에서 로딩 시뮬레이션
         return {
             "id": list(range(1, 10001)),
             "name": [f"user_{i}" for i in range(1, 10001)],
@@ -641,28 +641,28 @@ class DatabaseReader(chdb.PyReader):
         }
     
     def get_schema(self) -> List[Tuple[str, str]]:
-        """Define table schema with explicit types"""
+        """명시적 타입으로 테이블 스키마 정의"""
         return [
             ("id", "UInt64"),
             ("name", "String"),
             ("score", "Int64"),
-            ("metadata", "String")  # JSON stored as string
+            ("metadata", "String")  # JSON을 문자열로 저장
         ]
     
     def read(self, col_names: List[str], count: int) -> List[List[Any]]:
-        """Read data in batches"""
+        """배치 단위로 데이터 읽기"""
         if self.cursor >= len(self.data["id"]):
-            return []  # No more data
+            return []  # 데이터 없음
         
         end_pos = min(self.cursor + min(count, self.batch_size), len(self.data["id"]))
         
-        # Return data for requested columns
+        # 요청된 컬럼의 데이터 반환
         result = []
         for col in col_names:
             if col in self.data:
                 result.append(self.data[col][self.cursor:end_pos])
             else:
-                # Handle missing columns
+                # 누락된 컬럼 처리
                 result.append([None] * (end_pos - self.cursor))
         
         self.cursor = end_pos
@@ -676,7 +676,6 @@ chDB automatically handles complex nested data structures:
 import pandas as pd
 import chdb
 
-# DataFrame with mixed JSON objects
 df_with_json = pd.DataFrame({
     "user_id": [1, 2, 3, 4],
     "profile": [
@@ -687,7 +686,7 @@ df_with_json = pd.DataFrame({
     ]
 })
 
-# Control JSON inference with settings
+# 설정을 통한 JSON 타입 추론 제어
 result = chdb.query("""
     SELECT 
         user_id,
@@ -696,11 +695,11 @@ result = chdb.query("""
         length(profile.preferences) as pref_count,
         profile.location.city as city
     FROM Python(df_with_json)
-    SETTINGS pandas_analyze_sample = 1000  -- Analyze all rows for JSON detection
+    SETTINGS pandas_analyze_sample = 1000  -- JSON 감지를 위해 전체 행 분석
 """, "Pretty")
 print(result)
 
-# Advanced JSON operations
+# 고급 JSON 연산
 complex_json = chdb.query("""
     SELECT 
         user_id,

@@ -21,7 +21,7 @@ La creación de tablas `Paimon*` está condicionada por `allow_experimental_paim
 SET allow_experimental_paimon_storage_engine = 1;
 
 CREATE TABLE paimon_table_s3
-    ENGINE = PaimonS3(url,  [, access_key_id, secret_access_key] [,format] [,compression])
+    ENGINE = PaimonS3(url,  [, access_key_id, secret_access_key] [,format] [,structure] [,compression])
 
 CREATE TABLE paimon_table_azure
     ENGINE = PaimonAzure(connection_string|storage_account_url, container_name, blobpath, [,account_name], [,account_key] [,format] [,compression_method])
@@ -134,16 +134,16 @@ SETTINGS max_consume_snapshots = 2;
   ## De Paimon a MergeTree mediante una vista materializada actualizable
 </div>
 
-Puede crear un pipeline de extremo a extremo que sincronice continuamente datos de una tabla Paimon a una tabla MergeTree mediante una vista materializada actualizable en modo `APPEND`. Cada ciclo de actualización lee solo los datos incrementales nuevos de Paimon y los añade a la tabla de destino.
+Puede crear un pipeline de extremo a extremo que sincronice continuamente datos de una tabla de Paimon a una tabla MergeTree mediante una vista materializada actualizable en modo `APPEND`. Cada ciclo de actualización lee solo los datos incrementales nuevos de Paimon y los añade a la tabla de destino.
 
 **Paso 1 — Cree la tabla de origen de Paimon con la lectura incremental y la actualización de metadatos habilitados.**
 
-En el ejemplo siguiente se usa `PaimonLocal`. Sustituya el motor por `PaimonS3`, `PaimonAzure`, `PaimonHDFS` o el motor `Paimon` con detección automática, según corresponda para su backend de almacenamiento:
+En el ejemplo siguiente se usa `PaimonLocal`. Sustituya el motor por `PaimonS3`, `PaimonAzure`, `PaimonHDFS` o el alias `Paimon`, según corresponda para su backend de almacenamiento:
 
 ```sql
 SET allow_experimental_paimon_storage_engine = 1;
 
--- Local storage
+-- Almacenamiento local
 CREATE TABLE paimon_mv_source
 ENGINE = PaimonLocal('/path/to/paimon/table')
 SETTINGS
@@ -152,7 +152,7 @@ SETTINGS
     paimon_replica_name = '{replica}',
     paimon_metadata_refresh_interval_sec = 1;
 
--- S3 storage (the `Paimon` engine defaults to the S3 implementation when no `disk` is specified)
+-- Almacenamiento S3 (Paimon es un alias de PaimonS3)
 CREATE TABLE paimon_mv_source
 ENGINE = Paimon('http://minio:9000/bucket/path/to/table', 'access_key', 'secret_key')
 SETTINGS
@@ -212,7 +212,7 @@ DROP TABLE IF EXISTS paimon_mv_source SYNC;
   ## Alias
 </div>
 
-El motor de tabla `Paimon` detecta automáticamente el backend de almacenamiento según la configuración de `disk` y selecciona `PaimonS3`, `PaimonAzure` o `PaimonLocal` según corresponda. Si no se especifica ningún `disk`, usa de forma predeterminada la implementación `PaimonS3`.
+El motor de tabla `Paimon` ahora es un alias de `PaimonS3`.
 
 <div id="virtual-columns">
   ## Columnas virtuales

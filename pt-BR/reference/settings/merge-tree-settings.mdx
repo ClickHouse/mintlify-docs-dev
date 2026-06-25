@@ -172,11 +172,40 @@ com as configurações `min_age_to_force_merge_seconds`,
   ## allow_experimental_reverse_key
 </div>
 
+<ExperimentalBadge />
+
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.12"},{"label": "0"},{"label": "Nova configuração"}]}]} />
 
-Configuração obsoleta, sem efeito.
+Habilita o suporte à ordenação decrescente nas chaves de ordenação do MergeTree. Essa
+configuração é particularmente útil para análises de séries temporais e consultas Top-N,
+permitindo armazenar os dados em ordem cronológica inversa para otimizar o
+desempenho das consultas.
+
+Com `allow_experimental_reverse_key` habilitada, você pode definir ordenações
+decrescentes na cláusula `ORDER BY` de uma tabela MergeTree. Isso permite o
+uso de otimizações `ReadInOrder` mais eficientes em vez de `ReadInReverseOrder`
+para consultas em ordem decrescente.
+
+**Exemplo**
+
+```sql
+CREATE TABLE example
+(
+time DateTime,
+key Int32,
+value String
+) ENGINE = MergeTree
+ORDER BY (time DESC, key)  -- Ordem decrescente no campo 'time'
+SETTINGS allow_experimental_reverse_key = 1;
+
+SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
+```
+
+Ao usar `ORDER BY time DESC` na consulta, `ReadInOrder` é usado.
+
+**Valor padrão:** false
 
 <div id="allow_floating_point_partition_key">
   ## allow_floating_point_partition_key
@@ -248,20 +277,6 @@ na partição ou na chave de ordenação.
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 Rejeita índices primários/secundários e chaves de ordenação com expressões idênticas
-
-<div id="allow_tuple_element_aggregation">
-  ## allow_tuple_element_aggregation
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nova configuração"}]}]} />
-
-Quando habilitada, elementos individuais em colunas Tuple participam da
-agregação durante a mesclagem em SummingMergeTree, AggregatingMergeTree e
-CoalescingMergeTree. Tuples aninhadas são expandidas recursivamente para que todos os
-elementos finais sejam agregados de forma independente. Essa configuração é imutável
-e deve ser especificada no momento da criação da tabela.
 
 <div id="allow_vertical_merges_from_compact_to_wide_parts">
   ## allow_vertical_merges_from_compact_to_wide_parts
@@ -358,7 +373,7 @@ na tabela em segundo plano.
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "minmax, uniq"},{"label": "Habilita as estatísticas automáticas por padrão"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": ""},{"label": "Nova configuração"}]}]} />
 
 Lista separada por vírgulas dos tipos de estatísticas calculados automaticamente em todas as colunas compatíveis.
-Tipos de estatísticas compatíveis: basic, tdigest, countmin, minmax, uniq.
+Tipos de estatísticas compatíveis: tdigest, countmin, minmax, nullcount, uniq.
 
 <div id="background_task_preferred_step_execution_time_ms">
   ## background_task_preferred_step_execution_time_ms
@@ -766,7 +781,7 @@ Comprime, na memória, os valores da granularidade do índice, se possível
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "Limita o tamanho das partes mesmo com min_age_to_force_merge_seconds por padrão"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "Nova configuração"}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "Adicionada nova configuração para limitar o número máximo de bytes para min_age_to_force_merge."}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "Limita o tamanho das partes mesmo com min_age_to_force_merge_seconds por padrão"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "Adicionada nova configuração para limitar o número máximo de bytes para min_age_to_force_merge."}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "Nova configuração"}]}]} />
 
 Define se as configurações `min_age_to_force_merge_seconds` e
 `min_age_to_force_merge_on_partition_only` devem respeitar a configuração
@@ -1230,33 +1245,6 @@ Tamanho do bloco de compressão das marcas; é o tamanho real do bloco a ser com
 
 Codec de compressão usado pelas marcas; como as marcas são pequenas e ficam em cache,
 a compressão padrão é ZSTD(3).
-
-<div id="materialize_projections_on_insert">
-  ## materialize_projections_on_insert
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nova configuração"}]}]} />
-
-Quando habilitada, os INSERTs criam novas partes com projeções.
-Caso contrário, elas podem ser criadas por um [MATERIALIZE PROJECTION](/pt-BR/reference/statements/alter/projection#materialize-projection) explícito
-ou durante mesclagens com [materialize&#95;projections&#95;on&#95;merge](/pt-BR/reference/settings/merge-tree-settings#materialize_projections_on_merge).
-
-<div id="materialize_projections_on_merge">
-  ## materialize_projections_on_merge
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nova configuração"}]}]} />
-
-Quando habilitada, uma mesclagem recria uma projeção que está ausente em todas as suas partes de origem (por exemplo, porque elas foram
-inseridas com `materialize_projections_on_insert = 0`), para que a parte mesclada passe a ter a projeção.
-
-As mesclagens ainda combinam apenas partes que compartilham o mesmo conjunto de projeções. Para preencher uma projeção em todas as partes existentes,
-use um [MATERIALIZE PROJECTION](/pt-BR/reference/statements/alter/projection#materialize-projection) explícito. As projeções
-também são criadas durante INSERTs com [materialize&#95;projections&#95;on&#95;insert](/pt-BR/reference/settings/merge-tree-settings#materialize_projections_on_insert).
 
 <div id="materialize_skip_indexes_on_merge">
   ## materialize_skip_indexes_on_merge
@@ -2732,47 +2720,6 @@ ou seja, uma tabela com apenas poucos valores distintos de chave primária.
 Não se espera que chaves primárias de alta cardinalidade, por exemplo, envolvendo colunas de timestamp do tipo
 `DateTime64`, se beneficiem dessa configuração.
 
-<div id="packed_skip_index_max_bytes">
-  ## packed_skip_index_max_bytes
-</div>
-
-<ExperimentalBadge />
-
-<SettingsInfoBlock type="UInt64" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nova configuração. Empacote qualquer subfluxo de skip-index cujo tamanho serializado em disco seja, no máximo, esta quantidade de bytes em um único arquivo `skp_idx.packed` por parte; subfluxos maiores permanecem no layout independente `skp_idx_<name>.idx2` / `.mrk2`. A decisão é tomada por subfluxo no momento da gravação."}]}]} />
-
-Limiar (bytes serializados em disco, ou seja, após a cadeia de compressão e hashing
-do subfluxo) abaixo do qual um subfluxo de skip-index é agrupado em um único arquivo
-`skp_idx.packed` por parte, em vez de ser gravado como um arquivo separado `skp_idx_<name>.idx2` / `.mrk2`.
-Subfluxos maiores que isso permanecem no layout legado por arquivo. A decisão é
-tomada independentemente por subfluxo no momento da gravação, portanto uma única parte pode ter índices pequenos
-(por exemplo, `minmax`) empacotados e grandes (por exemplo, um `bloom_filter` pesado) gravados por arquivo. Defina como 0
-para desabilitar totalmente o empacotamento (padrão).
-
-Cada subfluxo de skip-index, na prática, consiste em um arquivo de dados e um arquivo de marcas; ambos ficam em buffer
-na memória até o limiar antes que a decisão de spill seja tomada. Portanto, a memória de pico durante
-a gravação escala com `2 * packed_skip_index_max_bytes * (number of substreams that stay
-below the threshold)`.
-
-Índices de texto completo não são compatíveis com esta configuração e nunca são empacotados.
-
-O empacotamento reduz a pressão sobre os inodes quando muitos índices de skipping são definidos em uma tabela (por exemplo,
-com `add_minmax_index_for_numeric_columns`).
-
-O formato em disco é autodescritivo: os leitores detectam `skp_idx.packed` e leem subfluxos empacotados
-a partir dele de forma transparente. Alterar esta configuração afeta apenas partes recém-gravadas;
-as partes existentes mantêm o layout que tinham no momento da gravação.
-
-Limitação conhecida: `system.data_skipping_indices.data_uncompressed_bytes` e
-`system.parts.secondary_indices_uncompressed_bytes` reportam o tamanho comprimido para subfluxos empacotados
-(o índice do arquivo não armazena tamanhos descomprimidos). Isso é apenas cosmético no
-monitoramento, com uma consequência funcional:
-`distributed_index_analysis_min_indexes_bytes_to_activate` compara com
-`data_uncompressed`, portanto um índice empacotado que comprime bem (`set` ou `bloom_filter` em
-strings) pode não ultrapassar o limiar de ativação, mesmo que o tamanho real descomprimido ultrapassasse esse limite.
-O fallback é o plano de consulta normal, não um resultado incorreto.
-
 <div id="part_minmax_index_columns">
   ## part_minmax_index_columns
 </div>
@@ -3883,17 +3830,6 @@ a implementação aplica um mínimo de 200 ms, portanto a próxima execução te
 Se habilitada, todas as réplicas tentam buscar em outras réplicas os dados em memória da parte (como a chave primária,
 as informações de partição etc.) quando esses dados já existirem nelas.
 
-<div id="shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup">
-  ## shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nova configuração que permite ao SMT baixar, na inicialização, os dados em memória das partes das réplicas em vez do S3"}]}]} />
-
-Se habilitada, todas as réplicas tentam, na inicialização, buscar de outras réplicas os dados em memória da parte (como
-chave primária, informações de partição e assim por diante) quando eles já existirem nelas.
-
 <div id="shared_merge_tree_update_replica_flags_delay_ms">
   ## shared_merge_tree_update_replica_flags_delay_ms
 </div>
@@ -4044,50 +3980,6 @@ Se estiver definido como true, a tabela ficará em modo somente leitura. Qualque
 Por quantos segundos os diretórios tmp&#95; devem ser mantidos. Você não deve reduzir esse valor,
 porque operações de merge e mutações podem não conseguir funcionar com um valor baixo
 dessa configuração.
-
-<div id="text_index_dictionary_block_frontcoding_compression">
-  ## text_index_dictionary_block_frontcoding_compression
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="1" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nova configuração"}]}]} />
-
-Compressão front-coding padrão para blocos do dicionário do índice de texto.
-Pode ser substituída pelo argumento explícito do índice `dictionary_block_frontcoding_compression`.
-
-<div id="text_index_dictionary_block_size">
-  ## text_index_dictionary_block_size
-</div>
-
-<SettingsInfoBlock type="NonZeroUInt64" default_value="512" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "512"},{"label": "Nova configuração"}]}]} />
-
-Tamanho padrão do bloco do dicionário para índices de texto.
-Pode ser substituído pelo argumento de índice explícito `dictionary_block_size`.
-
-<div id="text_index_posting_list_block_size">
-  ## text_index_posting_list_block_size
-</div>
-
-<SettingsInfoBlock type="NonZeroUInt64" default_value="1048576" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1048576"},{"label": "Nova configuração"}]}]} />
-
-Tamanho de bloco padrão da posting list em índices de texto (linhas).
-Pode ser sobrescrito pelo argumento de índice explícito `posting_list_block_size`.
-
-<div id="text_index_posting_list_codec">
-  ## text_index_posting_list_codec
-</div>
-
-<SettingsInfoBlock type="TextIndexPostingListCodec" default_value="none" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "none"},{"label": "Nova configuração"}]}]} />
-
-Codec padrão da posting list para índices de texto.
-Pode ser substituído pelo argumento de índice explícito `posting_list_codec`.
 
 <div id="try_fetch_recompressed_part_timeout">
   ## try_fetch_recompressed_part_timeout

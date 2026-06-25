@@ -41,26 +41,26 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
     [nats_password = 'password',]
     [nats_token = 'clickhouse',]
     [nats_credential_file = '/var/nats_credentials',]
-    [nats_startup_connect_tries = 5,]
+    [nats_startup_connect_tries = '5']
     [nats_max_rows_per_message = 1,]
     [nats_handle_error_mode = 'default']
 ```
 
 必需参数：
 
-* `nats_url` – host:port (例如 `localhost:4222`) 。
+* `nats_url` – host:port (例如 `localhost:5672`) 。
 * `nats_subjects` – NATS 表要订阅/发布的 subject 列表。支持通配符 subject，例如 `foo.*.bar` 或 `baz.>`
-* `nats_format` – 消息格式。使用与 SQL `FORMAT` 函数相同的表示法，例如 `JSONEachRow`。更多信息，请参见[Formats](/zh/reference/formats/index)部分。
+* `nats_format` – 消息格式。使用与 SQL `FORMAT` 函数相同的表示法，例如 `JSONEachRow`。更多信息，请参见[Formats](/zh/reference/formats)部分。
 
 可选参数：
 
 * `nats_schema` – 如果格式需要 schema 定义，则必须使用此参数。例如，[Cap&#39;n Proto](https://capnproto.org/) 需要提供 schema 文件的 path 以及根对象 `schema.capnp:Message` 的名称。
 * `nats_stream` – NATS JetStream 中现有 stream 的名称。
-* `nats_consumer_name` – NATS JetStream 中现有持久化拉取消费者的名称。
+* `nats_consumer` – NATS JetStream 中现有持久 pull 消费者的名称。
 * `nats_num_consumers` – 每个表的消费者数量。默认值：`1`。仅适用于 NATS core：如果单个消费者的吞吐量不足，可指定更多消费者。
 * `nats_queue_group` – NATS 订阅者的 queue group 名称。默认值为表名。
 * `nats_max_reconnect` – 已弃用且不起作用；系统会按 `nats_reconnect_wait` timeout 永久执行重连。
-* `nats_reconnect_wait` – 每次重连尝试之间的休眠时间 (毫秒) 。默认值：`2000`。
+* `nats_reconnect_wait` – 每次重连尝试之间的休眠时间 (毫秒) 。默认值：`5000`。
 * `nats_server_list` - 用于 connection 的 server 列表。可用于连接到 NATS cluster。
 * `nats_skip_broken_messages` - NATS 消息解析器对每个块中与 schema 不兼容消息的容忍数量。默认值：`0`。如果 `nats_skip_broken_messages = N`，则该引擎会跳过 *N* 条无法解析的 NATS 消息 (1 条消息等于 1 行数据) 。
 * `nats_max_block_size` - 为从 NATS flush 数据而通过 poll 收集的行数。默认值：[max&#95;insert&#95;block&#95;size](/zh/reference/settings/session-settings#max_insert_block_size)。
@@ -187,7 +187,7 @@ SSL 连接：
   ## 数据格式支持
 </div>
 
-NATS 引擎 支持 ClickHouse 支持的所有[格式](/zh/reference/formats/index)。
+NATS 引擎 支持 ClickHouse 支持的所有[格式](/zh/reference/formats)。
 单条 NATS 消息中的行数取决于格式是按行还是按块：
 
 * 对于按行的格式，可通过设置 `nats_max_rows_per_message` 来控制单条 NATS 消息中的行数。

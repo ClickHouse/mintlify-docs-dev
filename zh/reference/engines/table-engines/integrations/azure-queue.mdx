@@ -101,21 +101,19 @@ AzureQueue 引擎还为 SELECT 查询提供了一个特殊设置：`commit_on_se
   ## 描述
 </div>
 
-`SELECT` 对流式导入并不是特别有用 (调试除外) ，因为每个文件只能导入一次。更实用的做法是使用 [materialized views](/zh/reference/statements/create/view) 创建实时处理链路。为此：
+`SELECT` 对流式导入并不是特别有用 (调试除外) ，因为每个文件只能导入一次。更实用的做法是使用 [materialized view](/zh/reference/statements/create/view) 创建实时处理链路。为此：
 
-1. 使用该引擎创建一个表，用于从 Azure Blob 存储中的指定路径消费数据，并将其视为数据流。
+1. 使用该引擎创建一个表，用于从 S3 中指定路径消费数据，并将其视为数据流。
 2. 创建一个具有所需结构的表。
 3. 创建一个 materialized view，将来自该引擎的数据转换后写入前面创建的表中。
 
 当 `MATERIALIZED VIEW` 关联到该引擎时，它就会开始在后台收集数据。
 
-该引擎的参数形式为 `AzureQueue(connection_string, container_name, blobpath, format[, compression])`。
-
 示例：
 
 ```sql
 CREATE TABLE azure_queue_engine_table (key UInt64, data String)
-  ENGINE=AzureQueue('DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite1:10000/devstoreaccount1/;', 'testcontainer', '*', 'CSV')
+  ENGINE=AzureQueue('<endpoint>', 'CSV', 'gzip')
   SETTINGS
       mode = 'unordered';
 
@@ -135,7 +133,7 @@ SELECT * FROM stats ORDER BY key;
 * `_path` — 文件路径。
 * `_file` — 文件名。
 
-有关虚拟列的更多信息，见[此处](/zh/reference/engines/table-engines/index#table_engines-virtual_columns)。
+有关虚拟列的更多信息，见[此处](/zh/reference/engines/table-engines#table_engines-virtual_columns)。
 
 <div id="introspection">
   ## 内部信息

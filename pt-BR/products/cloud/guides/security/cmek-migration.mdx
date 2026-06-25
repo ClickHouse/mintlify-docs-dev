@@ -1,0 +1,118 @@
+---
+sidebarTitle: 'Migração de CMEK legado'
+slug: /cloud/security/cmek-migration
+title: 'Migração do CMEK v1 para o v2'
+description: 'Instruções de migração para passar do CMEK legado para a versão 2'
+doc_type: 'guide'
+keywords: ['ClickHouse Cloud', 'encryption', 'CMEK']
+---
+
+Estamos aprimorando a segurança dos serviços com chaves de criptografia gerenciadas pelo cliente (CMEK). Agora, todos os serviços são configurados com uma AWS Role exclusiva por serviço para autorizar o uso de chaves do cliente na criptografia e descriptografia dos serviços. Essa nova função é exibida apenas na tela de configuração do serviço.
+
+OpenAPI e Terraform são compatíveis com esse novo processo. Para mais informações, consulte nossa documentação ([Criptografia aprimorada](/pt-BR/products/cloud/guides/security/cmek), [API da Cloud](/pt-BR/products/cloud/features/admin-features/api/api-overview), [Provider oficial do Terraform](https://registry.terraform.io/providers/ClickHouse/clickhouse/latest/docs)).
+
+<Warning>
+  Clientes que utilizam CMEK v1 devem migrar os serviços até, no máximo, 1º de junho de 2026. Após essa data, as chaves gerenciadas pelo cliente serão rotacionadas por padrão para chaves gerenciadas pela ClickHouse. Os clientes poderão voltar a usar chaves gerenciadas pelo cliente após a migração padrão.
+</Warning>
+
+<div id="manual-migration">
+  ## Migração manual
+</div>
+
+Conclua as etapas a seguir para migrar para o novo processo:
+
+1. Faça login em https://console.clickhouse.cloud
+2. Clique no serviço criptografado
+3. Clique em Service Settings, à esquerda
+4. Role até o fim da tela e expanda View service details
+5. Copie o ID da função de criptografia (IAM)
+6. Acesse sua chave do KMS na AWS e atualize a Key Policy para adicionar o seguinte:
+
+```json
+{
+   "Sid": "Allow ClickHouse Access",
+   "Effect": "Allow",
+   "Principal": {
+       "AWS": ["Encryption role ID (ARN)"]
+   },
+   "Action": [
+       "kms:Encrypt",
+       "kms:Decrypt",
+       "kms:ReEncrypt*",
+       "kms:DescribeKey"
+   ],
+   "Resource": "*"
+}
+```
+
+7. No ClickHouse Cloud, abra um chamado de suporte para nos informar que podemos habilitar o novo método. Essa alteração exige a reinicialização do serviço; informe-nos se há algum dia/horário mais adequado para reiniciá-lo.
+8. Depois que reiniciarmos o serviço, acesse sua chave do KMS na AWS e remova o seguinte da Key Policy:
+
+```json
+{
+   "Sid": "Allow ClickHouse Access",
+       "Effect": "Allow",
+       "Principal": {
+           "AWS": "arn:aws:iam::576599896960:role/prod-kms-request-role"
+       },
+       "Action": ["kms:GetPublicKey",
+       "kms:Decrypt",
+       "kms:GenerateDataKeyPair",
+       "kms:Encrypt",
+       "kms:GetKeyRotationStatus",
+       "kms:GenerateDataKey",
+       "kms:DescribeKey"],
+       "Resource": "*"
+}
+```
+
+9. A atualização foi concluída!
+
+<div id="terraform-migration">
+  ## Migração do Terraform
+</div>
+
+1. Atualize para a [versão 3.5.0 ou superior do Terraform](https://registry.terraform.io/providers/ClickHouse/clickhouse/latest/docs)
+2. Aplique o Terraform sem alterações. Um novo campo para transparent&#95;data&#95;encryption aparecerá no state do Terraform. Anote o role&#95;id.
+3. Acesse sua chave KMS na AWS e atualize a Key Policy para adicionar o seguinte:
+
+```json
+{
+   "Sid": "Allow ClickHouse Access",
+   "Effect": "Allow",
+   "Principal": {
+       "AWS": ["Encryption role ID (ARN)"]
+   },
+   "Action": [
+       "kms:Encrypt",
+       "kms:Decrypt",
+       "kms:ReEncrypt*",
+       "kms:DescribeKey"
+   ],
+   "Resource": "*"
+}
+```
+
+4. No ClickHouse Cloud, abra um chamado de suporte com o nome do serviço para nos informar que podemos habilitar o novo método. Essa alteração exige a reinicialização do serviço; informe-nos se há algum dia/horário mais adequado para reiniciá-lo.
+5. Depois que reiniciarmos o serviço, você poderá atualizar a configuração transparent&#95;data&#95;encryption.enabled para ‘True’, remover a configuração tier no Terraform e aplicar. Isso não resultará em nenhuma alteração.
+6. Acesse sua chave KMS na AWS e remova o seguinte da Key Policy:
+
+```json
+{
+   "Sid": "Allow ClickHouse Access",
+       "Effect": "Allow",
+       "Principal": {
+           "AWS": "arn:aws:iam::576599896960:role/prod-kms-request-role"
+       },
+       "Action": ["kms:GetPublicKey",
+       "kms:Decrypt",
+       "kms:GenerateDataKeyPair",
+       "kms:Encrypt",
+       "kms:GetKeyRotationStatus",
+       "kms:GenerateDataKey",
+       "kms:DescribeKey"],
+       "Resource": "*"
+}
+```
+
+7. A atualização foi concluída!

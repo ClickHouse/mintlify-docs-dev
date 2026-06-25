@@ -146,7 +146,7 @@ ClickHouse client の出力結果から、ClickHouse がテーブル全体をス
 
 従来のリレーショナルデータベース管理システムでは、プライマリインデックスにはテーブルの各行ごとに 1 つのエントリが含まれます。この場合、このデータセットではプライマリインデックスに 887 万件のエントリが含まれることになります。このような索引により特定の行を高速に見つけられるため、ルックアップクエリやポイント更新を効率よく実行できます。`B(+)-Tree` データ構造でエントリを検索する平均時間計算量は `O(log n)` です。より正確には、`b` を `B(+)-Tree` の分岐係数、`n` を索引対象の行数とすると、`log_b n = log_2 n / log_2 b` です。`b` は通常、数百から数千の範囲にあるため、`B(+)-Trees` は非常に浅い構造で、レコードの特定に必要なディスク seek もごく少なくて済みます。887 万行で分岐係数が 1000 の場合、必要なディスク seek は平均 2.3 回です。ただし、この性能には代償があります。追加のディスクおよびメモリのオーバーヘッド、テーブルへの新規行追加や索引へのエントリ追加に伴う挿入コストの増加、さらに場合によっては B-Tree の再平衡化も必要になります。
 
-B-Tree 索引に伴うこうした課題を踏まえ、ClickHouse のテーブルエンジンでは別のアプローチを採用しています。ClickHouse の [MergeTree Engine Family](/ja/reference/engines/table-engines/mergetree-family/index) は、膨大なデータ量を扱えるように設計・最適化されています。これらのテーブルは、毎秒数百万行の挿入を受け付け、非常に大規模な (数百 PB 規模の) データを保存できるよう設計されています。データは [パーツごとに](/ja/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage) テーブルへすばやく書き込まれ、バックグラウンドでそれらのパーツをマージするルールが適用されます。ClickHouse では各パーツがそれぞれ独自のプライマリインデックスを持ちます。パーツがマージされると、マージ後のパーツのプライマリインデックスもマージされます。ClickHouse が対象とするこのような大規模環境では、ディスクとメモリの効率が極めて重要です。そのため、各行に索引を付けるのではなく、パーツのプライマリインデックスは行のグループ (「granule」と呼ばれます) ごとに 1 つの索引エントリ (「mark」と呼ばれます) を持ちます。この手法は **スパースインデックス** と呼ばれます。
+B-Tree 索引に伴うこうした課題を踏まえ、ClickHouse のテーブルエンジンでは別のアプローチを採用しています。ClickHouse の [MergeTree Engine Family](/ja/reference/engines/table-engines/mergetree-family) は、膨大なデータ量を扱えるように設計・最適化されています。これらのテーブルは、毎秒数百万行の挿入を受け付け、非常に大規模な (数百 PB 規模の) データを保存できるよう設計されています。データは [パーツごとに](/ja/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage) テーブルへすばやく書き込まれ、バックグラウンドでそれらのパーツをマージするルールが適用されます。ClickHouse では各パーツがそれぞれ独自のプライマリインデックスを持ちます。パーツがマージされると、マージ後のパーツのプライマリインデックスもマージされます。ClickHouse が対象とするこのような大規模環境では、ディスクとメモリの効率が極めて重要です。そのため、各行に索引を付けるのではなく、パーツのプライマリインデックスは行のグループ (「granule」と呼ばれます) ごとに 1 つの索引エントリ (「mark」と呼ばれます) を持ちます。この手法は **スパースインデックス** と呼ばれます。
 
 このようなスパースインデックスが可能なのは、ClickHouse がパーツ内の行を主キーカラム順に並べてディスクに保存しているためです。スパースプライマリインデックスは、単一の行を直接特定するのではなく (B-Tree ベースの索引のように) 、索引エントリに対する二分探索によって、クエリに一致する可能性のある行グループをすばやく絞り込めます。こうして特定された一致候補の行グループ (granules) は、その後 ClickHouse engine に並列にストリーミングされ、一致する行が見つけられます。この索引設計により、プライマリインデックスを小さく保つことができ (完全に main memory に収まる必要があり、実際に収まります) 、それでもクエリ実行時間を大幅に短縮できます。特に、データ分析のユースケースで一般的な範囲クエリで効果を発揮します。
 
@@ -394,7 +394,7 @@ ClickHouse は<a href="/ja/get-started/about/distinctive-features#true-column-or
   <p>
     セルフマネージドのClickHouseクラスターでは、サンプルテーブルのプライマリインデックスの内容を調べるために、<a href="/ja/reference/functions/table-functions/file" target="_blank">file table function</a>を使用できます。
 
-    そのためには、まず実行中のクラスター内のノードの<a href="/ja/reference/settings/server-settings/settings#user_files_path" target="_blank">user&#95;files&#95;path</a>にプライマリインデックスファイルをコピーする必要があります:
+    そのためには、まず実行中のクラスター内のノードの<a href="/ja/reference/settings/server-settings/settings#server_configuration_parameters-user_files_path" target="_blank">user&#95;files&#95;path</a>にプライマリインデックスファイルをコピーする必要があります:
 
     <ul>
       <li>ステップ 1: プライマリインデックスファイルを含むパーツのパスを取得する</li>
@@ -430,7 +430,7 @@ ClickHouse は<a href="/ja/get-started/about/distinctive-features#true-column-or
       結果は次のとおりです。
 
       `240923, http://showtopics.html%3...<br/>
-                  4073710, http://mk.ru&pos=3_0`
+            4073710, http://mk.ru&pos=3_0`
 
       <li>最後のインデックスマークを取得する</li>
       `SELECT UserID, URL FROM file('primary-hits_UserID_URL.idx', 'RowBinary', 'UserID UInt32, URL String')<br/>LIMIT 1082, 1;`
@@ -444,7 +444,7 @@ ClickHouse は<a href="/ja/get-started/about/distinctive-features#true-column-or
   </p>
 </Accordion>
 
-主キーのエントリは インデックスマーク と呼ばれます。各 索引エントリ は特定のデータ範囲の開始位置を示すためです。サンプルテーブルでは、具体的には次のようになります:
+主キーのエントリは インデックスマーク と呼ばれます。各 index entry は特定のデータ範囲の開始位置を示すためです。サンプルテーブルでは、具体的には次のようになります:
 
 * UserID インデックスマーク:
 
@@ -500,7 +500,7 @@ Processed 8.19 thousand rows,
 
 ClickHouse client の出力では、フルテーブルスキャンを実行する代わりに、わずか 8,190 行だけが ClickHouse にストリーミングされたことが示されるようになりました。
 
-<a href="/ja/reference/settings/server-settings/settings#logger" target="_blank">トレースログ</a>が有効になっている場合、ClickHouse のサーバーログファイルには、`749927693` の UserID カラム値を持つ行を含む可能性があるグラニュールを特定するために、1083 個の UserID インデックスマーク に対して ClickHouse が<a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1452" target="_blank">二分探索</a>を実行していたことが表示されます。これには、平均時間計算量 `O(log2 n)` で 19 ステップが必要です:
+<a href="/ja/reference/settings/server-settings/settings#server_configuration_parameters-logger" target="_blank">トレースログ</a>が有効になっている場合、ClickHouse のサーバーログファイルには、`749927693` の UserID カラム値を持つ行を含む可能性があるグラニュールを特定するために、1083 個の UserID インデックスマーク に対して ClickHouse が<a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1452" target="_blank">二分探索</a>を実行していたことが表示されます。これには、平均時間計算量 `O(log2 n)` で 19 ステップが必要です:
 
 ```response highlight={2,7}
 ...Executor): Key condition: (column 0 in [749927693, 749927693])

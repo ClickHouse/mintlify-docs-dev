@@ -115,47 +115,24 @@ Aqui estão as quantidades que podem ser restringidas:
 
 Se o limite for excedido em pelo menos um intervalo de tempo, uma exceção será lançada com um texto informando qual restrição foi excedida, para qual intervalo e quando o novo intervalo começa (ou seja, quando as consultas podem ser enviadas novamente).
 
-As QUOTAs podem usar o recurso &quot;QUOTA key&quot; para contabilizar recursos de várias chaves de forma independente. Veja um exemplo:
+As cotas podem usar o recurso &quot;QUOTA key&quot; para contabilizar recursos de várias chaves de forma independente. Veja um exemplo:
 
 ```xml
-<!-- For the global reports designer. -->
+<!-- Para o designer de relatórios globais. -->
 <web_global>
-    <!-- keyed – The quota_key "key" is passed in the query parameter,
-            and the quota is tracked separately for each key value.
-        For example, you can pass a username as the key,
-            so the quota will be counted separately for each username.
-        Using keys makes sense only if quota_key is transmitted by the program, not by a user.
+    <!-- keyed – O quota_key "key" é passado no parâmetro de consulta,
+            e a QUOTA é rastreada separadamente para cada valor de chave.
+        Por exemplo, você pode passar um nome de usuário como chave,
+            assim a QUOTA será contabilizada separadamente para cada nome de usuário.
+        O uso de chaves só faz sentido se quota_key for transmitido pelo programa, não pelo usuário.
 
-        You can also write <keyed_by_ip />, so the IP address is used as the quota key.
-        (But keep in mind that users can change the IPv6 address fairly easily.)
-
-        Instead of <keyed_by_ip /> you can use <keyed_by_forwarded_ip />, so the address
-        from the X-Forwarded-For header is used as the quota key.
-
-        For both <keyed_by_ip /> and <keyed_by_forwarded_ip /> you can additionally specify
-        <ipv4_prefix_bits> and <ipv6_prefix_bits> to group clients by subnet instead of by a
-        single address: the IP address is masked to the given prefix length before being used
-        as the quota key. For example, <ipv4_prefix_bits>24</ipv4_prefix_bits> shares one bucket
-        across a /24 IPv4 subnet, and <ipv6_prefix_bits>64</ipv6_prefix_bits> across a /64 IPv6
-        subnet. These elements can only be used together with <keyed_by_ip /> or
-        <keyed_by_forwarded_ip />.
+        Você também pode escrever <keyed_by_ip />, para que o endereço IP seja usado como chave de QUOTA.
+        (Mas tenha em mente que os usuários podem alterar o endereço IPv6 com bastante facilidade.)
     -->
     <keyed />
 ```
 
-Você também pode definir QUOTAs com base no hash normalizado da consulta, para que cada padrão de consulta distinto tenha seu próprio bucket de QUOTA independente. Na configuração XML, isso é escrito como `<keyed_by_normalized_query_hash />`:
-
-```xml
-<my_quota>
-    <keyed_by_normalized_query_hash />
-    <interval>
-        <duration>3600</duration>
-        <queries>100</queries>
-    </interval>
-</my_quota>
-```
-
-O mesmo pode ser expresso com a sintaxe DDL:
+Ao usar a sintaxe DDL, você também pode definir cotas com base no hash normalizado da consulta, para que cada padrão de consulta distinto tenha seu próprio bucket de QUOTA independente:
 
 ```sql
 CREATE QUOTA my_quota KEYED BY normalized_query_hash FOR INTERVAL 1 hour MAX queries = 100 TO my_user;
@@ -167,7 +144,7 @@ A QUOTA é atribuída aos usuários na seção &#39;users&#39; da configuração
 
 No processamento distribuído de consultas, os valores acumulados são armazenados no servidor que faz a solicitação. Portanto, se o usuário acessar outro servidor, a QUOTA nele vai &quot;recomeçar&quot;.
 
-Quando o servidor é reiniciado, as QUOTAs são redefinidas.
+Quando o servidor é reiniciado, as cotas são redefinidas.
 
 <div id="related-content">
   ## Conteúdo relacionado

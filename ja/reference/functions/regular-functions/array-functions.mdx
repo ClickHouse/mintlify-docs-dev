@@ -286,99 +286,6 @@ SELECT arrayAvg(x, y -> x*y, [2, 3], [2, 3]) AS res;
 6.5
 ```
 
-<div id="arrayBottomK">
-  ## arrayBottomK
-</div>
-
-導入バージョン: v26.6.0
-
-入力 Array 内の最小の K 個の要素を、昇順にソートした配列として返します。
-ラムダ関数 `f` を指定した場合、要素同士は各要素に `f` を適用した結果に基づいて比較されます。
-`f` が複数の引数を受け取る場合は、追加の配列が `arrayBottomK` に渡され、それらの要素が
-`f` の引数に対応します。
-
-`NULL` 値はスキップされ、結果には含まれません。結果のサイズは最大 `K` です。
-また、入力配列に含まれる非 NULL の要素数が `K` 未満の場合は、これより小さくなることがあります。
-結果の要素型は、入力要素型に対応する非 Nullable 型です。
-
-`arrayBottomK` は[高階関数](/ja/reference/functions/regular-functions/overview#higher-order-functions)です。
-
-関連項目:
-
-* 代わりに最大の K 個の要素を返す `arrayTopK`。
-* 同じ K 個の要素を位置 `[1..K]` に返しますが、
-  残りの要素も順序未指定のまま保持し、null をスキップしない `arrayPartialSort`。
-
-**構文**
-
-```sql
-arrayBottomK([f,] K, arr [, arr1, ... ,arrN])
-```
-
-**引数**
-
-* `f(arr[, arr1, ... ,arrN])` — 任意。各要素のソートキーを計算するためのラムダ関数。[`ラムダ関数`](/ja/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
-* `K` — 返される最小要素数。[`(U)Int8/16/32/64`](/ja/reference/data-types/int-uint)
-* `arr` — 配列。[`Array(T)`](/ja/reference/data-types/array)
-* `arr1, ... ,arrN` — `f` が複数の引数を受け取る場合に使う、追加の `N` 個の配列。[`Array(T)`](/ja/reference/data-types/array)
-
-**戻り値**
-
-`arr` のうち値が最も小さい要素 (またはラムダ関数の結果が最も小さい要素) を最大 `K` 個、昇順にソートして返します。
-NULL 値はスキップされます。入力の型が `Nullable(T)` の場合でも、返される配列の要素型は `T` です。
-
-**例**
-
-**simple&#95;int**
-
-```sql title=Query
-SELECT arrayBottomK(3, [1, 5, 2, 7, 3])
-```
-
-```response title=Response
-[1,2,3]
-```
-
-**skip&#95;nulls**
-
-```sql title=Query
-SELECT arrayBottomK(3, [1, NULL, 5, 2, NULL, 7])
-```
-
-```response title=Response
-[1,2,5]
-```
-
-**fewer&#95;than&#95;k**
-
-```sql title=Query
-SELECT arrayBottomK(5, [1, NULL, 2])
-```
-
-```response title=Response
-[1,2]
-```
-
-**lambda&#95;simple**
-
-```sql title=Query
-SELECT arrayBottomK((x) -> -x, 2, [5, 9, 1, 3])
-```
-
-```response title=Response
-[9,5]
-```
-
-**lambda&#95;multi**
-
-```sql title=Query
-SELECT arrayBottomK((x, y) -> y, 2, ['a', 'b', 'c'], [3, 1, 2])
-```
-
-```response title=Response
-['b','c']
-```
-
 <div id="arrayCompact">
   ## arrayCompact
 </div>
@@ -2324,15 +2231,15 @@ SELECT arrayNormalizedGini([0.9, 0.3, 0.8, 0.7],[6, 1, 0, 2]);
 **構文**
 
 ```sql
-arrayPartialReverseSort([f,] limit, arr [, arr1, ... ,arrN])
+arrayPartialReverseSort([f,] arr [, arr1, ... ,arrN], limit)
 ```
 
 **引数**
 
 * `f(arr[, arr1, ... ,arrN])` — 配列 `x` の要素に適用するラムダ関数。[`ラムダ関数`](/ja/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
-* `limit` — どこまでソートするかを示す索引値。[`(U)Int*`](/ja/reference/data-types/int-uint)
 * `arr` — ソート対象の配列。[`Array(T)`](/ja/reference/data-types/array)
 * `arr1, ... ,arrN` — `f` が複数の引数を受け取る場合に指定する、追加の N 個の配列。[`Array(T)`](/ja/reference/data-types/array)
+* `limit` — どこまでソートするかを示す索引値。[`(U)Int*`](/ja/reference/data-types/int-uint)
 
 **戻り値**
 
@@ -2501,15 +2408,15 @@ SELECT arrayPartialShuffle(materialize([1, 2, 3, 4]), 2, 42), arrayPartialShuffl
 **構文**
 
 ```sql
-arrayPartialSort([f,] limit, arr [, arr1, ... ,arrN])
+arrayPartialSort([f,] arr [, arr1, ... ,arrN], limit)
 ```
 
 **引数**
 
 * `f(arr[, arr1, ... ,arrN])` — 配列 `x` の要素に適用するラムダ関数です。[`ラムダ関数`](/ja/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
-* `limit` — ソートを行う範囲の終端を表す索引値です。[`(U)Int*`](/ja/reference/data-types/int-uint)
 * `arr` — ソートする Array です。[`Array(T)`](/ja/reference/data-types/array)
 * `arr1, ... ,arrN` — `f` が複数の引数を受け取る場合に使用する、追加の N 個の配列です。[`Array(T)`](/ja/reference/data-types/array)
+* `limit` — ソートを行う範囲の終端を表すインデックス値です。[`(U)Int*`](/ja/reference/data-types/int-uint)
 
 **戻り値**
 
@@ -2709,7 +2616,7 @@ arrayPushBack(arr, x)
   - 数値を追加する場合、ClickHouse は配列のデータ型に合わせて `x` の型を自動的に設定します。
   - `NULL` を指定できます。この関数は配列に `NULL` 要素を追加し、配列要素の型は `Nullable` に変換されます。
 
-  ClickHouse のデータ型について詳しくは、[Data types](/ja/reference/data-types/index) を参照してください。
+  ClickHouse のデータ型について詳しくは、[Data types](/ja/reference/data-types) を参照してください。
 </Note>
 
 **戻り値**
@@ -2752,7 +2659,7 @@ arrayPushFront(arr, x)
   - 数値を追加する場合、ClickHouse は配列のデータ型に合わせて `x` の型を自動的に設定します。
   - `NULL` も指定できます。この関数は配列に `NULL` 要素を追加し、配列要素の型は `Nullable` に変換されます。
 
-  ClickHouse のデータ型の詳細については、[Data types](/ja/reference/data-types/index) を参照してください。
+  ClickHouse のデータ型の詳細については、[Data types](/ja/reference/data-types) を参照してください。
 </Note>
 
 **戻り値**
@@ -3189,12 +3096,12 @@ SELECT arrayReverseFill(x, y, z -> x > y AND x < z, [5, 3, 6, 2], [4, 7, 1, 3], 
 **構文**
 
 ```sql
-arrayReverseSort([f,] arr [, arr1, ... ,arrN])
+arrayReverseSort([f,] arr [, arr1, ... ,arrN)
 ```
 
 **引数**
 
-* `f(y1[, y2 ... yN])` — 配列 `x` の要素に適用するラムダ関数。 - `arr` — ソートする配列。 [`Array(T)`](/ja/reference/data-types/array) - `arr1, ..., arrN` — 任意。`f` が複数の引数を受け取る場合に指定する、追加の N 個の配列。
+* `f(y1[, y2 ... yN])` — 配列 `x` の要素に適用するラムダ関数。 - `arr` — ソートする配列。 [`Array(T)`](/ja/reference/data-types/array) - `arr1, ..., yN` — 任意。`f` が複数の引数を受け取る場合に指定する、追加の N 個の配列。
 
 **戻り値**
 
@@ -3648,7 +3555,7 @@ arraySort([f,] arr [, arr1, ... ,arrN])
 
 **引数**
 
-* `f(y1[, y2 ... yN])` — 配列 `x` の要素に適用するラムダ関数。 - `arr` — ソートする配列。 [`Array(T)`](/ja/reference/data-types/array) - `arr1, ..., arrN` — 任意。`f` が複数の引数を受け取る場合に指定する、追加の N 個の配列。
+* `f(y1[, y2 ... yN])` — 配列 `x` の要素に適用するラムダ関数。 - `arr` — ソートする配列。 [`Array(T)`](/ja/reference/data-types/array) - `arr1, ..., yN` — 任意。`f` が複数の引数を受け取る場合に指定する、追加の N 個の配列。
 
 **戻り値**
 
@@ -3811,95 +3718,6 @@ arraySymmetricDifference([1, 2], [1, 2], [1, 3]) AS non_empty_symmetric_differen
 ┌─empty_symmetric_difference─┬─non_empty_symmetric_difference─┐
 │ []                         │ [3,2]                          │
 └────────────────────────────┴────────────────────────────────┘
-```
-
-<div id="arrayTopK">
-  ## arrayTopK
-</div>
-
-導入バージョン: v26.6.0
-
-入力配列から大きい要素を上位 K 個取り出し、降順にソートされた配列を返します。
-ラムダ関数 `f` が指定されている場合、各要素に `f` を適用した結果に基づいて要素が比較されます。
-`f` が複数の引数を受け取る場合は、追加の配列が `arrayTopK` に渡され、それらの要素が
-`f` の引数に対応します。
-
-`NULL` 値はスキップされ、結果には含まれません。結果のサイズは最大 `K` で、
-入力配列に `K` 個未満の非 NULL 要素しか含まれていない場合は、それより小さくなることがあります。
-結果の要素型は、入力要素型に対応する非 Nullable 型です。
-
-`arrayTopK` は [高階関数](/ja/reference/functions/regular-functions/overview#higher-order-functions) です。
-
-代わりに、最も小さい要素を下位 K 個返す `arrayBottomK` も参照してください。
-
-**構文**
-
-```sql
-arrayTopK([f,] K, arr [, arr1, ... ,arrN])
-```
-
-**引数**
-
-* `f(arr[, arr1, ... ,arrN])` — 省略可能。各要素のソートキーを計算するためのラムダ関数。[`ラムダ関数`](/ja/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
-* `K` — 返す最大要素数。[`(U)Int8/16/32/64`](/ja/reference/data-types/int-uint)
-* `arr` — 配列。[`Array(T)`](/ja/reference/data-types/array)
-* `arr1, ... ,arrN` — `f` が複数の引数を受け取る場合の、追加の `N` 個の配列。[`Array(T)`](/ja/reference/data-types/array)
-
-**戻り値**
-
-`arr` のうち値が大きい要素 (またはラムダ関数の結果が大きい要素) を最大 `K` 個まで、降順にソートして返します。
-`NULL` はスキップされます。返される配列の要素型は、入力が `Nullable(T)` 型の場合でも `T` です。
-
-**例**
-
-**simple&#95;int**
-
-```sql title=Query
-SELECT arrayTopK(3, [1, 5, 2, 7, 3])
-```
-
-```response title=Response
-[7,5,3]
-```
-
-**skip&#95;nulls**
-
-```sql title=Query
-SELECT arrayTopK(3, [1, NULL, 5, 2, NULL, 7])
-```
-
-```response title=Response
-[7,5,2]
-```
-
-**fewer&#95;than&#95;k**
-
-```sql title=Query
-SELECT arrayTopK(5, [1, NULL, 2])
-```
-
-```response title=Response
-[2,1]
-```
-
-**lambda&#95;simple**
-
-```sql title=Query
-SELECT arrayTopK((x) -> -x, 2, [5, 9, 1, 3])
-```
-
-```response title=Response
-[1,3]
-```
-
-**lambda&#95;multi**
-
-```sql title=Query
-SELECT arrayTopK((x, y) -> y, 2, ['a', 'b', 'c'], [3, 1, 2])
-```
-
-```response title=Response
-['a','c']
 ```
 
 <div id="arrayTranspose">
@@ -5272,7 +5090,7 @@ Unicode の &quot;grapheme clusters&quot; の数
 length(x)
 ```
 
-**別名**: `CARDINALITY`, `OCTET_LENGTH`
+**別名**: `OCTET_LENGTH`
 
 **引数**
 
@@ -5452,7 +5270,7 @@ replicate(x, arr)
 
 **引数**
 
-* `x` — 結果の配列を値 `x` で埋めるための値。[`Any`](/ja/reference/data-types/index)
+* `x` — 結果の配列を値 `x` で埋めるための値。[`Any`](/ja/reference/data-types)
 * `arr` — 配列。[`Array(T)`](/ja/reference/data-types/array)
 
 **戻り値**

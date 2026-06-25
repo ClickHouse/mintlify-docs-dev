@@ -112,11 +112,11 @@ use_query_cache = true`) が、その場合はすべての `SELECT` クエリが
 ```xml
 <profiles>
     <default>
-        <!-- The maximum cache size in bytes for user/profile 'default' -->
+        <!-- ユーザー/プロファイル 'default' の最大キャッシュサイズ（バイト単位） -->
         <query_cache_max_size_in_bytes>10000</query_cache_max_size_in_bytes>
-        <!-- The maximum number of SELECT query results stored in the cache for user/profile 'default' -->
+        <!-- ユーザー/プロファイル 'default' のキャッシュに保存される SELECT クエリ結果の最大数 -->
         <query_cache_max_entries>100</query_cache_max_entries>
-        <!-- Make both settings read-only so the user cannot change them -->
+        <!-- 両方の設定を読み取り専用にして、ユーザーが変更できないようにする -->
         <constraints>
             <query_cache_max_size_in_bytes>
                 <readonly/>
@@ -159,52 +159,18 @@ SETTINGS use_query_cache = true, query_cache_min_query_duration = 5000;
 同じクエリに対して 3 つの異なるクエリキャッシュエントリを作成する例:
 
 ```sql
-SELECT 1 SETTINGS use_query_cache = true; -- query_cache_tag is implicitly '' (empty string)
+SELECT 1 SETTINGS use_query_cache = true; -- query_cache_tag は暗黙的に '' (空文字列) になる
 SELECT 1 SETTINGS use_query_cache = true, query_cache_tag = 'tag 1';
 SELECT 1 SETTINGS use_query_cache = true, query_cache_tag = 'tag 2';
 ```
 
 クエリキャッシュからタグ `tag` の付いたエントリのみを削除するには、ステートメント `SYSTEM CLEAR QUERY CACHE TAG 'tag'` を使用します。
 
-<div id="subquery-caching">
-  ## サブクエリのキャッシュ
-</div>
-
-デフォルトでは、外側のクエリで `use_query_cache` を有効にしても、その設定はサブクエリには伝播しません。つまり、各サブクエリで明示的にキャッシュを有効にする必要があります:
-
-```sql
-SELECT *
-FROM (SELECT number FROM system.numbers LIMIT 1000 SETTINGS use_query_cache = true)
-WHERE number > 500;
-```
-
-この例では、キャッシュされるのは内側のサブクエリの結果だけです。外側のクエリはキャッシュされません。
-
-すべてのサブクエリに対するキャッシュを一括で有効にするには、設定 `query_cache_for_subqueries` を使用します。
-
-```sql
-SELECT *
-FROM (SELECT number FROM system.numbers LIMIT 1000)
-WHERE number > 500
-SETTINGS use_query_cache = true, query_cache_for_subqueries = true;
-```
-
-バルク伝播が有効な状態で特定のサブクエリのキャッシュを明示的に無効にするには、そのサブクエリで `use_query_cache = false` を設定します。
-
-```sql
-SELECT *
-FROM (SELECT number FROM system.numbers LIMIT 1000 SETTINGS use_query_cache = false)
-WHERE number > 500
-SETTINGS use_query_cache = true, query_cache_for_subqueries = true;
-```
-
-サブクエリの cache エントリは、[system.query&#95;cache](/ja/reference/system-tables/query_cache) で `is_subquery = 1` のエントリとして確認できます。`query_cache_ttl` 設定はサブクエリの cache エントリにも適用され、サブクエリごとに設定できます。
-
 ClickHouse は、テーブルデータを [max&#95;block&#95;size](/ja/reference/settings/session-settings#max_block_size) 行ごとのブロックで読み取ります。フィルタリングや集約、
 その他の処理の影響により、結果ブロックは通常 &#39;max&#95;block&#95;size&#39; よりかなり小さくなりますが、これよりずっと大きくなる場合もあります。設定
 [query&#95;cache&#95;squash&#95;partial&#95;results](/ja/reference/settings/session-settings#query_cache_squash_partial_results) (デフォルトで有効) は、結果ブロックを
 クエリ結果キャッシュに挿入する前に、 (非常に小さい場合は) まとめるか、 (大きい場合は) &#39;max&#95;block&#95;size&#39; サイズのブロックに分割するかを制御します。
-これによりクエリキャッシュへの書き込み性能は低下しますが、cache エントリの圧縮率が向上し、後でクエリ結果がクエリキャッシュから返される際の
+これによりクエリキャッシュへの書き込み性能は低下しますが、キャッシュエントリの圧縮率が向上し、後でクエリ結果がクエリキャッシュから返される際の
 ブロック粒度がより自然になります。
 
 その結果、クエリキャッシュには各クエリごとに複数の (部分的な)
@@ -237,10 +203,10 @@ ClickHouse は、テーブルデータを [max&#95;block&#95;size](/ja/reference
 [information&#95;schema.tables](/ja/reference/system-tables/information_schema)) の結果は、デフォルトではキャッシュされません。システムテーブルを含むクエリの結果を
 それでも強制的にキャッシュするには、設定 [query&#95;cache&#95;system&#95;table&#95;handling](/ja/reference/settings/session-settings#query_cache_system_table_handling) を使用します。
 
-最後に、クエリキャッシュ内の cache エントリは、セキュリティ上の理由からユーザー間で共有されません。たとえば、ユーザー A が、同じクエリを実行することで、
+最後に、クエリキャッシュ内のエントリは、セキュリティ上の理由からユーザー間で共有されません。たとえば、ユーザー A が、同じクエリを実行することで、
 そのようなポリシーが存在しない別のユーザー B の結果を利用し、テーブル上の ROW POLICY を回避できてはなりません。ただし、必要に応じて、
 設定
-[query&#95;cache&#95;share&#95;between&#95;users](/ja/reference/settings/session-settings#query_cache_share_between_users) を指定することで、cache エントリを他のユーザーから
+[query&#95;cache&#95;share&#95;between&#95;users](/ja/reference/settings/session-settings#query_cache_share_between_users) を指定することで、キャッシュエントリを他のユーザーから
 アクセス可能 (つまり共有) としてマークできます。
 
 <div id="related-content">

@@ -32,28 +32,6 @@ integration:
 
 初期ロードの開始時に、開始位置となる binlog オフセットを記録します。CDC (変更データキャプチャ) を進めるには、初期ロードの完了時点でもこのオフセットが有効である必要があります。大量のデータを取り込む場合は、適切な binlog の保持期間を必ず設定してください。テーブルのセットアップ中は、高度な設定で大きなテーブルに対して *Use a custom partitioning key for initial load* を設定すると、1 つのテーブルを並列にロードできるため、初期ロードを高速化できます。
 
-<div id="binlog-event-exceeded-max-allowed-packet">
-  ### パイプが `max_allowed_packet` の binlog エラーで失敗するのはなぜですか？
-</div>
-
-パイプが次のようなエラーで失敗する場合:
-
-```text
-MySQL execute error: ERROR 1236 (HY000): log event entry exceeded max_allowed_packet;
-Increase max_allowed_packet on source
-```
-
-これは、単一のbinlogイベント (1件の行変更に対応) が、MySQL serverの[`max_allowed_packet`](https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_max_allowed_packet)設定よりも大きいことを意味します。serverはこの上限を超えるイベントを送信できないため、binlogストリームの読み取りが中断され、CDC (変更データキャプチャ) が先に進めなくなります。
-
-これは多くの場合、大きな`BLOB`、`TEXT`、または`JSON`の値を含む行が原因です。解決するには、次の対応を行ってください。
-
-* **ログソース側で`max_allowed_packet`を増やします。** 最大の行変更サイズを上回る値に引き上げてください。通常は最大値の`1G`に設定して問題ありません。
-  ```sql
-  SET GLOBAL max_allowed_packet = 1073741824; -- 1 GiB
-  ```
-  再起動後も設定が保持されるように、server configuration (例: `my.cnf` または DB パラメータグループ) にも設定してください。
-* **単一の行が1Gを超える場合:** パイプを再同期します。
-
 <div id="tls-certificate-validation-error">
   ### MySQL への接続時に TLS 証明書の検証エラーが発生するのはなぜですか？
 </div>

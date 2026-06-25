@@ -183,7 +183,7 @@ cpu_mode=host-passthrough
   ## ClickHouse Keeper и ZooKeeper
 </div>
 
-Для кластеров ClickHouse рекомендуется использовать ClickHouse Keeper вместо ZooKeeper. См. документацию по [ClickHouse Keeper](/ru/guides/oss/deployment-and-scaling/keeper/index)
+Для кластеров ClickHouse рекомендуется использовать ClickHouse Keeper вместо ZooKeeper. См. документацию по [ClickHouse Keeper](/ru/guides/oss/deployment-and-scaling/keeper)
 
 Если вы хотите продолжать использовать ZooKeeper, лучше взять свежую версию ZooKeeper — 3.4.9 или новее. Версия в стабильных дистрибутивах Linux может быть устаревшей.
 
@@ -211,56 +211,55 @@ zoo.cfg:
 ```bash
 # http://hadoop.apache.org/zookeeper/docs/current/zookeeperAdmin.html
 
-# The number of milliseconds of each tick
+# Количество миллисекунд в каждом тике
 tickTime=2000
-# The number of ticks that the initial
-# synchronization phase can take
-# This value is not quite motivated
+# Количество тиков, которое может занять
+# начальная фаза синхронизации.
+# Это значение не имеет строгого обоснования
 initLimit=300
-# The number of ticks that can pass between
-# sending a request and getting an acknowledgement
+# Количество тиков, которое может пройти между
+# отправкой запроса и получением подтверждения
 syncLimit=10
 
 maxClientCnxns=2000
 
-# It is the maximum value that client may request and the server will accept.
-# It is Ok to have high maxSessionTimeout on server to allow clients to work with high session timeout if they want.
-# But we request session timeout of 30 seconds by default (you can change it with session_timeout_ms in ClickHouse config).
+# Это максимальное значение, которое клиент может запросить, а сервер — принять.
+# Допустимо устанавливать высокое значение maxSessionTimeout на сервере, чтобы клиенты могли работать
+# с большим тайм-аутом сеанса при необходимости.
+# По умолчанию запрашивается тайм-аут сеанса 30 секунд (можно изменить через session_timeout_ms в конфигурации ClickHouse).
 maxSessionTimeout=60000000
-# the directory where the snapshot is stored.
+# каталог, в котором хранится снимок.
 dataDir=/opt/zookeeper/{{ '{{' }} cluster['name'] {{ '}}' }}/data
-# Place the dataLogDir to a separate physical disc for better performance
+# Разместите dataLogDir на отдельном физическом диске для повышения производительности
 dataLogDir=/opt/zookeeper/{{ '{{' }} cluster['name'] {{ '}}' }}/logs
 
 autopurge.snapRetainCount=10
 autopurge.purgeInterval=1
 
-# To avoid seeks ZooKeeper allocates space in the transaction log file in
-# blocks of preAllocSize kilobytes. The default block size is 64M. One reason
-# for changing the size of the blocks is to reduce the block size if snapshots
-# are taken more often. (Also, see snapCount).
+# Чтобы избежать операций seek, ZooKeeper выделяет пространство в файле журнала транзакций
+# блоками по preAllocSize килобайт. Размер блока по умолчанию — 64 МБ. Одна из причин
+# изменения размера блоков — уменьшить его, если снимки создаются чаще. (См. также snapCount).
 preAllocSize=131072
 
-# Clients can submit requests faster than ZooKeeper can process them,
-# especially if there are a lot of clients. To prevent ZooKeeper from running
-# out of memory due to queued requests, ZooKeeper will throttle clients so that
-# there is no more than globalOutstandingLimit outstanding requests in the
-# system. The default limit is 1000.
+# Клиенты могут отправлять запросы быстрее, чем ZooKeeper успевает их обрабатывать,
+# особенно при большом количестве клиентов. Чтобы предотвратить нехватку памяти
+# из-за очереди запросов, ZooKeeper ограничивает клиентов так, чтобы в системе
+# было не более globalOutstandingLimit необработанных запросов. Лимит по умолчанию — 1000.
 # globalOutstandingLimit=1000
 
-# ZooKeeper logs transactions to a transaction log. After snapCount transactions
-# are written to a log file a snapshot is started and a new transaction log file
-# is started. The default snapCount is 100000.
+# ZooKeeper записывает транзакции в журнал транзакций. После того как в файл журнала
+# записано snapCount транзакций, создаётся снимок и открывается новый файл журнала транзакций.
+# Значение snapCount по умолчанию — 100000.
 snapCount=3000000
 
-# If this option is defined, requests will be will logged to a trace file named
-# traceFile.year.month.day.
+# Если этот параметр задан, запросы будут записываться в файл трассировки с именем
+# traceFile.год.месяц.день.
 #traceFile=
 
-# Leader accepts client connections. Default value is "yes". The leader machine
-# coordinates updates. For higher update throughput at thes slight expense of
-# read throughput the leader can be configured to not accept clients and focus
-# on coordination.
+# Лидер принимает клиентские подключения. Значение по умолчанию — "yes". Машина-лидер
+# координирует обновления. Для повышения пропускной способности записи за счёт незначительного
+# снижения пропускной способности чтения лидер можно настроить так, чтобы он не принимал
+# клиентов и сосредоточился на координации.
 leaderServes=yes
 
 standaloneEnabled=false

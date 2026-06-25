@@ -24,7 +24,7 @@ CREATE TABLE s3_queue_engine_table (name String, value UInt32)
     [mode = '',]
     [after_processing = 'keep',]
     [keeper_path = '',]
-    [loading_retries = 10,]
+    [loading_retries = 0,]
     [processing_threads_num = 16,]
     [parallel_inserts = false,]
     [enable_logging_to_queue_log = true,]
@@ -32,10 +32,10 @@ CREATE TABLE s3_queue_engine_table (name String, value UInt32)
     [tracked_files_limit = 1000,]
     [tracked_file_ttl_sec = 0,]
     [polling_min_timeout_ms = 1000,]
-    [polling_max_timeout_ms = 600000,]
-    [polling_backoff_ms = 30000,]
-    [cleanup_interval_min_ms = 60000,]
-    [cleanup_interval_max_ms = 60000,]
+    [polling_max_timeout_ms = 10000,]
+    [polling_backoff_ms = 0,]
+    [cleanup_interval_min_ms = 10000,]
+    [cleanup_interval_max_ms = 30000,]
     [buckets = 0,]
     [list_objects_batch_size = 1000,]
     [enable_hash_ring_filtering = 0,]
@@ -68,8 +68,8 @@ SETTINGS
 <clickhouse>
     <named_collections>
         <s3queue_conf>
-            <url>https://clickhouse-public-datasets.s3.amazonaws.com/my-test-bucket-768/*</url>
-            <access_key_id>test</access_key_id>
+            <url>'https://clickhouse-public-datasets.s3.amazonaws.com/my-test-bucket-768/*</url>
+            <access_key_id>test<access_key_id>
             <secret_access_key>test</secret_access_key>
         </s3queue_conf>
     </named_collections>
@@ -185,18 +185,6 @@ SETTINGS
 
 기본값: 빈 문자열.
 
-<div id="after_processing_move_preserve_path">
-  ### `after_processing_move_preserve_path`
-</div>
-
-`true`이면 성공적으로 처리된 파일을 이동할 때 전체 원본 객체 경로가 `after_processing_move_prefix`에 추가되므로, 버킷 아래의 원본 디렉터리 구조가 대상에도 그대로 유지됩니다. `false`이면 파일 이름만 사용되며 원본 디렉터리 구조는 평탄화됩니다.
-
-가능한 값:
-
-* `true` / `false`.
-
-기본값: `false`.
-
 <div id="after_processing_move_secret_access_key">
   ### `after_processing_move_secret_access_key`
 </div>
@@ -263,12 +251,12 @@ ZooKeeper의 큐 메타데이터 경로입니다. 명시적으로 지정하지 �
   ### `loading_retries`
 </div>
 
-파일 로딩을 지정된 횟수까지 다시 시도합니다.
+파일 로딩을 지정된 횟수까지 다시 시도합니다. 기본적으로는 재시도하지 않습니다.
 가능한 값:
 
-* 0 이상의 정수.
+* 양의 정수.
 
-기본값: `10`.
+기본값: `0`.
 
 <div id="processing_threads_num">
   ### `processing_threads_num`
@@ -291,13 +279,13 @@ ZooKeeper의 큐 메타데이터 경로입니다. 명시적으로 지정하지 �
 
 기본값: `false`.
 
-<div id="enable_logging_to_queue_log">
-  ### `enable_logging_to_queue_log`
+<div id="enable_logging_to_s3queue_log">
+  ### `enable_logging_to_s3queue_log`
 </div>
 
 `system.s3queue_log`에 로깅을 기록하도록 설정합니다.
 
-기본값: `1`.
+기본값: `0`.
 
 <div id="polling_min_timeout_ms">
   ### `polling_min_timeout_ms`
@@ -321,7 +309,7 @@ ClickHouse가 다음 폴링 시도를 시작하기 전까지 대기하는 최대
 
 * 양의 정수.
 
-기본값: `600000`.
+기본값: `10000`.
 
 <div id="polling_backoff_ms">
   ### `polling_backoff_ms`
@@ -333,7 +321,7 @@ ClickHouse가 다음 폴링 시도를 시작하기 전까지 대기하는 최대
 
 * 양의 정수.
 
-기본값: `30000`.
+기본값: `0`.
 
 <div id="tracked_files_limit">
   ### `tracked_files_limit`
@@ -367,7 +355,7 @@ Default value: `0`.
 
 &#39;Ordered&#39; 모드에서 사용합니다. 추적된 파일의 TTL 및 최대 추적 파일 집합을 유지 관리하는 백그라운드 작업의 재예약 인터벌에 대한 최소 한계를 정의합니다.
 
-기본값: `60000`.
+기본값: `10000`.
 
 <div id="cleanup_interval_max_ms">
   ### `cleanup_interval_max_ms`
@@ -375,7 +363,7 @@ Default value: `0`.
 
 &#39;Ordered&#39; 모드에서 사용합니다. 추적된 파일 TTL과 최대 추적 파일 집합을 유지 관리하는 백그라운드 작업의 재예약 인터벌 상한을 정의합니다.
 
-기본값: `60000`.
+기본값: `30000`.
 
 <div id="buckets">
   ### `buckets`
@@ -389,13 +377,13 @@ Default value: `0`.
 
 기본적으로 S3Queue 테이블은 항상 임시 processing 노드를 사용해 왔습니다. 이 때문에 S3Queue가 처리된 파일을 ZooKeeper에 commit하기 전에 ZooKeeper 세션이 만료되고, 이미 처리는 시작된 상태라면 데이터가 중복될 수 있습니다. 이 설정은 Keeper 세션이 만료되는 경우 서버가 중복 발생 가능성을 없애도록 합니다.
 
-<div id="persistent_processing_node_ttl_seconds">
-  ### `persistent_processing_node_ttl_seconds`
+<div id="persistent_processing_nodes_ttl_seconds">
+  ### `persistent_processing_nodes_ttl_seconds`
 </div>
 
-서버가 정상적으로 종료되지 않은 경우, `use_persistent_processing_nodes`가 활성화되어 있으면 제거되지 않은 processing 노드가 남아 있을 수 있습니다. 이 설정은 이러한 processing 노드를 안전하게 정리할 수 있는 시간 주기를 정의합니다. 동일한 TTL은 `Ordered` 모드의 버킷 잠금에도 사용되며, 이 잠금은 단일 processing 노드보다 더 오래 유지될 수 있으므로 이 점도 값을 정할 때 고려해야 합니다.
+서버가 정상적으로 종료되지 않은 경우, `use_persistent_processing_nodes`가 활성화되어 있으면 제거되지 않은 processing 노드가 남아 있을 수 있습니다. 이 설정은 이러한 processing 노드를 안전하게 정리할 수 있는 시간 주기를 정의합니다.
 
-기본값: `21600` (6시간)입니다.
+기본값: `3600` (1시간)입니다.
 
 <div id="s3-settings">
   ## S3 관련 설정
@@ -488,7 +476,7 @@ S3Queue 엔진에는 SELECT 쿼리용 특수 설정인 `commit_on_select`가 있
 * `_size` — 파일 크기입니다.
 * `_time` — 파일 생성 시간입니다.
 
-가상 컬럼에 대한 자세한 내용은 [여기](/ko/reference/engines/table-engines/index#table_engines-virtual_columns)를 참조하십시오.
+가상 컬럼에 대한 자세한 내용은 [여기](/ko/reference/engines/table-engines#table_engines-virtual_columns)를 참조하십시오.
 
 <div id="wildcards-in-path">
   ## 경로 내 와일드카드

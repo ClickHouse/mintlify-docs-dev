@@ -46,7 +46,7 @@ Os detalhes de cada cláusula opcional são abordados em seções separadas, lis
 * [cláusula JOIN](/pt-BR/reference/statements/select/join)
 * [cláusula PREWHERE](/pt-BR/reference/statements/select/prewhere)
 * [cláusula WHERE](/pt-BR/reference/statements/select/where)
-* [cláusula WINDOW](/pt-BR/reference/functions/window-functions/index)
+* [cláusula WINDOW](/pt-BR/reference/functions/window-functions)
 * [cláusula GROUP BY](/pt-BR/reference/statements/select/group-by)
 * [cláusula LIMIT BY](/pt-BR/reference/statements/select/limit-by)
 * [cláusula HAVING](/pt-BR/reference/statements/select/having)
@@ -128,42 +128,6 @@ Neste exemplo, `COLUMNS('a')` retorna duas colunas: `aa` e `ab`. `COLUMNS('c')` 
 
 As colunas que correspondem à expressão `COLUMNS` podem ter tipos de dados diferentes. Se `COLUMNS` não corresponder a nenhuma coluna e for a única expressão em `SELECT`, o ClickHouse lança uma exceção.
 
-<div id="select-columns-with-like-or-ilike">
-  #### Selecione colunas com `LIKE` ou `ILIKE`
-</div>
-
-Você também pode selecionar colunas fazendo a correspondência dos nomes delas com um padrão após `*`, usando `LIKE` com diferenciação entre maiúsculas e minúsculas ou `ILIKE` sem diferenciação entre maiúsculas e minúsculas:
-
-```sql
-SELECT * ILIKE 'a%' FROM col_names
-```
-
-```text
-┌─aa─┬─ab─┐
-│  1 │  1 │
-└────┴────┘
-```
-
-Os padrões `LIKE` e `ILIKE` seguem a semântica de `LIKE`, e não a de expressão regular. O caractere `%` corresponde a qualquer sequência de caracteres, o caractere `_` corresponde a qualquer caractere único, e `\` escapa `%`, `_` e `\`. A única diferença entre os dois é que `LIKE` corresponde aos nomes de colunas com diferenciação entre maiúsculas e minúsculas, enquanto `ILIKE` não diferencia maiúsculas de minúsculas. Por exemplo:
-
-```sql
-SELECT * ILIKE 'a_' FROM col_names
-```
-
-A consulta seleciona colunas com nomes de dois caracteres que começam com `a`, como `aa` e `ab`.
-
-`* LIKE` e `* ILIKE` também suportam asteriscos qualificados e transformadores de colunas:
-
-```sql
-SELECT t.* ILIKE 'a%' EXCEPT (ab) FROM col_names AS t
-```
-
-```text
-┌─aa─┐
-│  1 │
-└────┘
-```
-
 <div id="asterisk">
   ### Asterisco
 </div>
@@ -184,11 +148,11 @@ Em todos os outros casos, não recomendamos usar o asterisco, pois ele só traz 
 
 Além dos resultados, você também pode obter os valores mínimo e máximo das colunas de resultado. Para isso, defina a configuração **extremes** como 1. Os valores mínimos e máximos são calculados para tipos numéricos, datas e data/hora. Para as demais colunas, são exibidos os valores padrão.
 
-Duas linhas extras são calculadas — os mínimos e os máximos, respectivamente. Essas duas linhas extras são exibidas nos [formatos](/pt-BR/reference/formats/index) `XML`, `JSON*`, `TabSeparated*`, `CSV*`, `Vertical`, `Template` e `Pretty*`, separadamente das demais linhas. Elas não são exibidas em outros formatos.
+Duas linhas extras são calculadas — os mínimos e os máximos, respectivamente. Essas duas linhas extras são exibidas nos [formatos](/pt-BR/reference/formats) `XML`, `JSON*`, `TabSeparated*`, `CSV*`, `Vertical`, `Template` e `Pretty*`, separadamente das demais linhas. Elas não são exibidas em outros formatos.
 
 Nos formatos `JSON*` e `XML`, os valores extremos são exibidos em um campo separado chamado &#39;extremes&#39;. Nos formatos `TabSeparated*`, `CSV*` e `Vertical`, a linha aparece após o resultado principal e, se houver, após &#39;totals&#39;. Ela é precedida por uma linha vazia (depois dos demais dados). Nos formatos `Pretty*`, a linha é exibida como uma tabela separada após o resultado principal e, se houver, após `totals`. No formato `Template`, os valores extremos são exibidos de acordo com o template especificado.
 
-Os valores extremos são calculados para as linhas antes de `LIMIT`, mas depois de `LIMIT BY`. No entanto, ao usar `LIMIT offset, size`, as linhas antes de `offset` são incluídas em `extremes`. Em requisições de fluxo, o resultado também pode incluir um pequeno número de linhas que passaram por `LIMIT`.
+Os valores extremos são calculados para as linhas antes de `LIMIT`, mas depois de `LIMIT BY`. No entanto, ao usar `LIMIT offset, size`, as linhas antes de `offset` são incluídas em `extremes`. Em requisições de stream, o resultado também pode incluir um pequeno número de linhas que passaram por `LIMIT`.
 
 <div id="notes">
   ### Observações

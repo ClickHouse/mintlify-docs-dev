@@ -42,28 +42,28 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
     [nats_password = 'password',]
     [nats_token = 'clickhouse',]
     [nats_credential_file = '/var/nats_credentials',]
-    [nats_startup_connect_tries = 5,]
+    [nats_startup_connect_tries = '5']
     [nats_max_rows_per_message = 1,]
     [nats_handle_error_mode = 'default']
 ```
 
 Обязательные параметры:
 
-* `nats_url` – host:port (например, `localhost:4222`)..
+* `nats_url` – host:port (например, `localhost:5672`)..
 * `nats_subjects` – Список `subject` для таблицы NATS, на которые нужно подписываться или в которые нужно публиковать сообщения. Поддерживаются `subject` с подстановочными символами, например `foo.*.bar` или `baz.>`
-* `nats_format` – Формат сообщений. Используется та же нотация, что и в SQL-функции `FORMAT`, например `JSONEachRow`. Подробнее см. в разделе [Форматы](/ru/reference/formats/index).
+* `nats_format` – Формат сообщений. Используется та же нотация, что и в SQL-функции `FORMAT`, например `JSONEachRow`. Подробнее см. в разделе [Форматы](/ru/reference/formats).
 
 Необязательные параметры:
 
 * `nats_schema` – Параметр, который необходимо использовать, если формат требует определения схемы. Например, [Cap&#39;n Proto](https://capnproto.org/) требует путь к файлу схемы и имя корневого объекта `schema.capnp:Message`.
 * `nats_stream` – Имя существующего stream в NATS JetStream.
-* `nats_consumer_name` – Имя существующего durable pull consumer в NATS JetStream.
+* `nats_consumer` – Имя существующего durable pull consumer в NATS JetStream.
 * `nats_num_consumers` – Количество consumers на таблицу. По умолчанию: `1`. Укажите больше consumers, если пропускной способности одного consumer недостаточно; применяется только к NATS core.
 * `nats_queue_group` – Имя queue group для подписчиков NATS. По умолчанию используется имя таблицы.
 * `nats_max_reconnect` – Устарел и не имеет эффекта; переподключение выполняется постоянно с тайм-аутом `nats_reconnect_wait`.
-* `nats_reconnect_wait` – Время ожидания в миллисекундах между попытками переподключения. По умолчанию: `2000`.
+* `nats_reconnect_wait` – Время ожидания в миллисекундах между попытками переподключения. По умолчанию: `5000`.
 * `nats_server_list` - Список серверов для подключения. Можно указать для подключения к кластеру NATS.
-* `nats_skip_broken_messages` - Допустимое число несовместимых со схемой сообщений для parser сообщений NATS на блок. По умолчанию: `0`. Если `nats_skip_broken_messages = N`, то движок пропускает *N* сообщений NATS, которые не удаётся разобрать (одно сообщение соответствует одной строке данных).
+* `nats_skip_broken_messages` - Допустимое число несовместимых со схемой сообщений для parser сообщений NATS на block. По умолчанию: `0`. Если `nats_skip_broken_messages = N`, то движок пропускает *N* сообщений NATS, которые не удаётся разобрать (одно сообщение соответствует одной строке данных).
 * `nats_max_block_size` - Число строк, собираемых с помощью poll(s) для сброса данных из NATS. По умолчанию: [max&#95;insert&#95;block&#95;size](/ru/reference/settings/session-settings#max_insert_block_size).
 * `nats_flush_interval_ms` - Тайм-аут для сброса данных, прочитанных из NATS. По умолчанию: [stream&#95;flush&#95;interval&#95;ms](/ru/reference/settings/session-settings#stream_flush_interval_ms).
 * `nats_username` - Имя пользователя NATS.
@@ -188,7 +188,7 @@ SSL-подключение:
   ## Поддержка форматов данных
 </div>
 
-Движок NATS поддерживает все [форматы](/ru/reference/formats/index), доступные в ClickHouse.
+Движок NATS поддерживает все [форматы](/ru/reference/formats), доступные в ClickHouse.
 Количество строк в одном сообщении NATS зависит от того, является ли формат построчным или блочным:
 
 * Для построчных форматов количеством строк в одном сообщении NATS можно управлять с помощью настройки `nats_max_rows_per_message`.

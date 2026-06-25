@@ -19,8 +19,8 @@ Estructura de datos preparada opcional para su uso en operaciones [JOIN](/es/ref
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 (
-    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1],
-    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2],
+    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1] [TTL expr1],
+    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2] [TTL expr2],
 ) ENGINE = Join(join_strictness, join_type, k1[, k2, ...])
 ```
 
@@ -77,7 +77,7 @@ Los principales casos de uso de las tablas con motor `Join` son los siguientes:
   ### Eliminación de datos
 </div>
 
-Las consultas `ALTER DELETE` para tablas con motor `Join` se implementan como [mutaciones](/es/reference/statements/alter/index#mutations). La mutación `DELETE` lee los datos filtrados y sobrescribe los datos en memoria y en disco.
+Las consultas `ALTER DELETE` para tablas con motor `Join` se implementan como [mutaciones](/es/reference/statements/alter#mutations). La mutación `DELETE` lee los datos filtrados y sobrescribe los datos en memoria y en disco.
 
 <div id="join-limitations-and-settings">
   ### Limitaciones y ajustes
@@ -136,7 +136,7 @@ Valor predeterminado: `1`.
 
 Las tablas del motor `Join` no pueden usarse en operaciones `GLOBAL JOIN`.
 
-El motor `Join` permite especificar la configuración [join&#95;use&#95;nulls](/es/reference/settings/session-settings#join_use_nulls) en la sentencia `CREATE TABLE`. La consulta [SELECT](/es/reference/statements/select/index) debe tener el mismo valor de `join_use_nulls`.
+El motor `Join` permite especificar la configuración [join&#95;use&#95;nulls](/es/reference/settings/session-settings#join_use_nulls) en la sentencia `CREATE TABLE`. La consulta [SELECT](/es/reference/statements/select) debe tener el mismo valor de `join_use_nulls`.
 
 <div id="example">
   ## Ejemplos de uso
@@ -149,7 +149,7 @@ CREATE TABLE id_val(`id` UInt32, `val` UInt32) ENGINE = TinyLog;
 ```
 
 ```sql
-INSERT INTO id_val VALUES (1,11), (2,12), (3,13);
+INSERT INTO id_val VALUES (1,11)(2,12)(3,13);
 ```
 
 Creación de la tabla `Join` del lado derecho:
@@ -159,7 +159,7 @@ CREATE TABLE id_val_join(`id` UInt32, `val` UInt8) ENGINE = Join(ANY, LEFT, id);
 ```
 
 ```sql
-INSERT INTO id_val_join VALUES (1,21), (1,22), (3,23);
+INSERT INTO id_val_join VALUES (1,21)(1,22)(3,23);
 ```
 
 Uniendo las tablas:
