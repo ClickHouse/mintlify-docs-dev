@@ -66,14 +66,12 @@
 
   function init() {
     apply();
-    var rafId = null;
-    new MutationObserver(function () {
-      if (rafId) return;
-      rafId = requestAnimationFrame(function () {
-        rafId = null;
-        apply();
-      });
-    }).observe(document.documentElement, { childList: true, subtree: true });
+    // Re-apply across SPA navigations / React re-renders. apply() is
+    // idempotent, so observer feedback loops settle immediately.
+    new MutationObserver(apply).observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   if (document.readyState === 'loading') {

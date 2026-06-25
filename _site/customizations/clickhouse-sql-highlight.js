@@ -232,6 +232,36 @@
 
   // ---- DOM integration ------------------------------------------------------
 
+  var STYLE_ID = 'ch-sql-highlight-styles';
+
+  // The exact light + dark palette from play.html / clickhouse-client, adapted
+  // to Mintlify's dark-mode carrier (`<html class="dark">`). Scoped to
+  // `.ch-sql-hl` so only blocks we rebuilt are affected. `!important` is
+  // required because Mintlify forces `html.dark .shiki span { color:
+  // var(--shiki-dark) !important }` on every token; our higher-specificity
+  // `.dark .ch-sql-hl .q-*` rules only win when they are also `!important`.
+  function injectStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    var css =
+      '.ch-sql-hl .q-kw{font-weight:bold !important}' +
+      '.ch-sql-hl .q-com{font-style:italic !important;color:#757575 !important}' +
+      '.ch-sql-hl .q-id{color:#00838f !important}' +
+      '.ch-sql-hl .q-fn{color:#875f00 !important}' +
+      '.ch-sql-hl .q-num{color:#008700 !important}' +
+      '.ch-sql-hl .q-str{color:#006400 !important}' +
+      '.ch-sql-hl .q-qid{color:#008b8b !important}' +
+      '.dark .ch-sql-hl .q-id{color:#00cdcd !important}' +
+      '.dark .ch-sql-hl .q-fn{color:#cdcd00 !important}' +
+      '.dark .ch-sql-hl .q-num{color:#00d700 !important}' +
+      '.dark .ch-sql-hl .q-str{color:#00cd00 !important}' +
+      '.dark .ch-sql-hl .q-qid{color:#00d7d7 !important}' +
+      '.dark .ch-sql-hl .q-com{color:#9e9e9e !important}';
+    var style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
   // Replace a line element's Shiki token spans with our class-based segments.
   // Uses textContent (not innerHTML) so SQL characters like `<` and `&` are
   // never interpreted as markup.
@@ -272,6 +302,7 @@
         code.dataset.chSqlState = 'skipped';
         return;
       }
+      injectStyles();
       for (var i = 0; i < lineEls.length; i++) renderLine(lineEls[i], lines[i]);
       code.classList.add('ch-sql-hl');
       code.dataset.chSqlState = 'done';
