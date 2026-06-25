@@ -2,7 +2,7 @@
 title: 'レプリカ対応ルーティング'
 slug: /manage/replica-aware-routing
 description: 'レプリカ対応ルーティングで cache の再利用率を高める方法'
-keywords: ['クラウド', 'スティッキーエンドポイント', 'スティッキー', 'エンドポイント', 'スティッキールーティング', 'ルーティング', 'レプリカ対応ルーティング']
+keywords: ['クラウド', 'スティッキーエンドポイント', 'スティッキー', 'エンドポイント', 'スティッキールーティング', 'ルーティング', 'レプリカ対応ルーティング', 'session_id']
 doc_type: 'guide'
 noindex: true
 ---
@@ -11,19 +11,39 @@ import PrivatePreviewBadge from "/snippets/components/PrivatePreviewBadge/Privat
 
 <PrivatePreviewBadge />
 
-レプリカ対応ルーティング (sticky sessions、sticky routing、または session affinity とも呼ばれます) では、[Envoy proxy の ring hash ロードバランシング](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#ring-hash)を使用します。レプリカ対応ルーティングの主な目的は、cache を再利用できる可能性を高めることです。分離を保証するものではありません。
+レプリカ対応ルーティング (sticky sessions、sticky routing、または session affinity とも呼ばれます) は、関連するリクエストを一貫して同じ ClickHouse レプリカにルーティングすることで、cache を再利用できる可能性を高めます。これはベストエフォートであり、分離を保証するものではありません。
 
-サービスでレプリカ対応ルーティングを有効にすると、サービスのホスト名の前にワイルドカードサブドメインを許可します。ホスト名が `abcxyz123.us-west-2.aws.clickhouse.cloud` のサービスでは、`*.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` に一致する任意のホスト名を使ってサービスにアクセスできます。
+<Warning>
+  **プロトコルのサポート — HTTP/HTTPS のみ**
 
-| 例のホスト名                                                                   |
-| ------------------------------------------------------------------------ |
-| `aaa.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
-| `000.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
-| `clickhouse-is-the-best.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` |
+  レプリカ対応ルーティングは、**HTTP/HTTPS インターフェイス** 上のプロキシ レイヤーで適用され、`session_id` クエリパラメータを使用します (以下を参照)。これは**ネイティブプロトコルでは利用できません** (ネイティブポート。たとえば、デフォルトのネイティブモードで使用する `clickhouse-go` ドライバー)。ネイティブプロトコルの client からスティッキールーティングが必要な場合は、代わりにそのワークロード を HTTP インターフェイス 経由で接続してください — `clickhouse-go` (v2) では、接続で `Protocol: clickhouse.HTTP` を設定します。
+</Warning>
 
-Envoy がこのようなパターンに一致するホスト名を受信すると、そのホスト名に基づいてルーティング hash を計算し、計算された hash に基づいてハッシュリング上の対応する ClickHouse server を見つけます。サービスに変更が発生していない (たとえば、server の再起動やスケールアウト/スケールインが行われていない) と仮定すると、Envoy は常に同じ ClickHouse server を選択して接続します。
+<div id="http-based-routing">
+  ## HTTP ベースのルーティング (`session_id`)
+</div>
 
-なお、元のホスト名では引き続き `LEAST_CONNECTION` ロードバランシングが使用されます。これはデフォルトのルーティングアルゴリズムです。
+ワークロードを特定のレプリカに固定するには、HTTPS インターフェイスで `session_id` クエリパラメータを設定します。プロキシはリクエストをパースし、`session_id` に対してコンシステントハッシュを使用してレプリカを選択するため、同じ `session_id` を持つすべてのリクエストは、クラスターのトポロジが変わるまで同じサーバーにルーティングされます。
+
+```bash
+echo 'SELECT hostName()' | curl \
+  -H 'X-ClickHouse-User: default' -H 'X-ClickHouse-Key: <password>' \
+  'https://<host>:8443/?session_id=my-workload-1' -d @-
+```
+
+`session_id=my-workload-1` を含むすべてのリクエストは、同じレプリカに振り分けられます。異なる `session_id` の値はそれぞれ独立してハッシュ化され、同じレプリカに振り分けられることもあれば、別のレプリカに振り分けられることもあります。マッピング自体には一貫性がありますが、特定の値がどのレプリカにマッピングされるかを選ぶことはできません。
+
+<div id="subdomain-based-routing-deprecated">
+  ## サブドメインベースのルーティング (非推奨)
+</div>
+
+<Danger>
+  **非推奨**
+
+  以下のサブドメインベースの仕組みは**非推奨**であり、新しいサービスでは現在有効になっていません。スケーラビリティに欠けるためです (sticky エンドポイントごとに専用の TLS 証明書が必要になります) 。代わりに [HTTP ベースの `session_id` メソッド](#http-based-routing) を使用してください。
+</Danger>
+
+以前は、レプリカ対応ルーティングを有効にすると、サービスのホスト名に対してワイルドカードサブドメインを利用できました。ホスト名が `abcxyz123.us-west-2.aws.clickhouse.cloud` のサービスでは、`*.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` に一致する任意のホスト名 (例: `aaa.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`) は、Envoy によって特定のレプリカに一貫してハッシュされました。元のホスト名では引き続き、デフォルトのルーティングアルゴリズムである `LEAST_CONNECTION` による負荷分散が使用されました。
 
 <div id="limitations-of-replica-aware-routing">
   ## レプリカ対応ルーティングの制約事項
@@ -33,13 +53,19 @@ Envoy がこのようなパターンに一致するホスト名を受信する�
   ### レプリカ対応ルーティングは分離を保証しません
 </div>
 
-サービスに何らかの変化が生じると、たとえばサーバーポッドの再起動 (バージョンアップ、クラッシュ、垂直スケーリングによるスケールアップなどが原因) や、サーバーのスケールアウト／スケールインによって、ルーティングのハッシュリングが乱れます。その結果、同じホスト名の接続が別のサーバーポッドに振り分けられることがあります。
+サービスに何らかの変化が生じると、たとえばサーバーポッドの再起動 (バージョンアップ、クラッシュ、垂直スケーリング) や、サーバーのスケールアウト／スケールインによって、ルーティングのハッシュリングが乱れます。その結果、同じ `session_id` を共有するリクエストが別のサーバーポッドに振り分けられることがあります。
 
 <div id="replica-aware-routing-does-not-work-out-of-the-box-with-private-link">
   ### プライベートリンクでは、レプリカ対応ルーティングはそのままでは機能しません
 </div>
 
-新しいホスト名パターンで名前解決を機能させるには、お客様が DNS エントリを手動で追加する必要があります。設定を誤ると、サーバー負荷の偏りが生じる可能性があります。
+非推奨のサブドメイン方式を使用する場合、新しいホスト名パターンで名前解決を機能させるには、お客様が DNS エントリを手動で追加する必要があります。設定を誤ると、サーバー負荷の偏りが生じる可能性があります。
+
+<div id="replica-aware-routing-requires-http">
+  ### レプリカ対応ルーティングには HTTP プロトコルが必要です
+</div>
+
+スティッキールーティングは `session_id` クエリパラメータをキーにしていますが、これは HTTP/HTTPS インターフェイスにしか存在しません。ネイティブバイナリプロトコルには、プロキシがハッシュのキーとして使えるこの種のパラメータがないため、ネイティブプロトコルではレプリカ対応ルーティングを利用できません。この機能を使うには、ネイティブプロトコルを使うクライアントは該当するワークロードを HTTP インターフェイスに移す必要があります。
 
 <div id="configuring-replica-aware-routing">
   ## レプリカ対応ルーティングの設定
