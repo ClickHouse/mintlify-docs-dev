@@ -53,7 +53,7 @@
       labelDiv.style.cursor = 'pointer';
       labelDiv.addEventListener('click', function (e) {
         e.stopPropagation();
-        history.pushState(null, '', localizeUrl(url));
+        window.location.href = localizeUrl(url);
       });
     });
   }
