@@ -77,17 +77,17 @@ CREATE TABLE table
 (
     key UInt64,
     str String,
-    INDEX text_idx(str) TYPE text(
-                                -- Обязательные параметры:
+    INDEX text_idx str TYPE text(
+                                -- Mandatory parameters:
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
                                             | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
-                                -- Необязательные параметры:
+                                -- Optional parameters:
                                 [, preprocessor = expression(str)]
-                                -- Необязательные расширенные параметры:
+                                -- Optional advanced parameters:
                                 [, dictionary_block_size = D]
                                 [, dictionary_block_frontcoding_compression = B]
                                 [, posting_list_block_size = C]
@@ -111,17 +111,17 @@ ORDER BY key
 
 ```sql title="Query"
 ALTER TABLE table
-    ADD INDEX text_idx(str) TYPE text(
-                                -- Обязательные параметры:
+    ADD INDEX text_idx str TYPE text(
+                                -- Mandatory parameters:
                                 tokenizer = splitByNonAlpha
                                             | splitByString[(S)]
                                             | asciiCJK
                                             | ngrams[(N)]
                                             | sparseGrams[(min_length[, max_length[, min_cutoff_length]])]
                                             | array
-                                -- Необязательные параметры:
+                                -- Optional parameters:
                                 [, preprocessor = expression(str)]
-                                -- Необязательные расширенные параметры:
+                                -- Optional advanced parameters:
                                 [, dictionary_block_size = D]
                                 [, dictionary_block_frontcoding_compression = B]
                                 [, posting_list_block_size = C]
@@ -201,22 +201,31 @@ SELECT tokens('abc def', 'ngrams', 3);
 
 Примеры:
 
-* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))`
-* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = substringIndex(col, '\n', 1))`
-* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(extractTextFromHTML(col)))`
-* `INDEX idx(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = removeDiacriticsUTF8(caseFoldUTF8(col)))`
+* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))`
+* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = substringIndex(col, '\n', 1))`
+* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(extractTextFromHTML(col)))`
+* `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = removeDiacriticsUTF8(caseFoldUTF8(col)))`
 
 Кроме того, выражение препроцессора должно ссылаться только на тот столбец или то выражение, на основе которого определён текстовый индекс.
 
 Примеры:
 
-* `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = upper(lower(col)))`
-* `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(lower(col), lower(col)))`
-* Не допускается: `INDEX idx(lower(col)) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(col, col))`
+* `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = upper(lower(col)))`
+* `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(lower(col), lower(col)))`
+* Не допускается: `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = concat(col, col))`
 
 Использование недетерминированных функций не допускается.
 
-Функции [hasToken](/ru/reference/functions/regular-functions/string-search-functions#hasToken), [hasAllTokens](/ru/reference/functions/regular-functions/string-search-functions#hasAllTokens) и [hasAnyTokens](/ru/reference/functions/regular-functions/string-search-functions#hasAnyTokens) используют препроцессор, чтобы сначала преобразовать поисковый запрос перед его токенизацией.
+<Note>
+  Препроцессоры, по сути, эквивалентны оборачиванию индексируемого столбца или выражения выражением препроцессора.
+  Например, препроцессор `lower` в `INDEX idx col TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(col))` можно эмулировать с помощью `INDEX idx lower(col) TYPE text(tokenizer = 'splitByNonAlpha')`.
+  Недостаток второй формы в том, что эмулированный препроцессор применяется только в том случае, если он соответствует условию фильтрации в предложении WHERE.
+  Например, `WHERE hasAllTokens(lower(col), [...])` соответствует, а `WHERE hasAllTokens(col, [...])` — нет.
+  Поэтому для оптимального пользовательского опыта мы рекомендуем использовать выражения препроцессора.
+</Note>
+
+Функции [hasToken](/ru/reference/functions/regular-functions/string-search-functions#hasToken), [hasAllTokens](/ru/reference/functions/regular-functions/string-search-functions#hasAllTokens), [hasAnyTokens](/ru/reference/functions/regular-functions/string-search-functions#hasAnyTokens) и [hasPhrase](/ru/reference/functions/regular-functions/string-search-functions#hasPhrase) используют препроцессор, чтобы сначала преобразовать поисковый запрос перед его токенизацией.
+Обратите внимание, что, поскольку препроцессор применяется только по пути текстового индекса, результаты этих функций могут различаться между запросами, использующими текстовый индекс, и запросами, которые его не используют (например, `SETTINGS use_skip_indexes = 0`).
 
 Например,
 
@@ -224,7 +233,7 @@ SELECT tokens('abc def', 'ngrams', 3);
 CREATE TABLE table
 (
     str String,
-    INDEX idx(str) TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(str))
+    INDEX idx str TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(str))
 )
 ENGINE = MergeTree
 ORDER BY tuple();
@@ -238,7 +247,7 @@ SELECT count() FROM table WHERE hasToken(str, 'Foo');
 CREATE TABLE table
 (
     str String,
-    INDEX idx(lower(str)) TYPE text(tokenizer = 'splitByNonAlpha')
+    INDEX idx lower(str) TYPE text(tokenizer = 'splitByNonAlpha')
 )
 ENGINE = MergeTree
 ORDER BY tuple();
@@ -256,7 +265,7 @@ CREATE TABLE table
     arr Array(String),
     INDEX idx arr TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = lower(arr))
 
-    -- Это недопустимо:
+    -- This is not legal:
     INDEX idx_illegal arr TYPE text(tokenizer = 'splitByNonAlpha', preprocessor = arraySort(arr))
 )
 ENGINE = MergeTree
@@ -265,8 +274,8 @@ ORDER BY tuple();
 SELECT count() FROM tab WHERE hasAllTokens(arr, 'foo');
 ```
 
-Чтобы определить препроцессор в текстовом индексе, построенном на столбцах типа [Map](/ru/reference/data-types/map), пользователям нужно решить, будет ли индекс строиться
-по ключам Map или по её значениям.
+Чтобы определить препроцессор в текстовом индексе, создаваемом для столбцов типа [Map](/ru/reference/data-types/map), пользователям нужно решить, строится ли индекс
+по ключам или по значениям map.
 
 Пример:
 
@@ -300,6 +309,26 @@ SELECT count() FROM tab WHERE hasAllTokens(mapKeys(map), 'foo');
 
   * `none` — списки вхождений хранятся без дополнительного сжатия.
   * `bitpacking` — применяет [дифференциальное (delta) кодирование](https://en.wikipedia.org/wiki/Delta_encoding), а затем [упаковку битов](https://dev.to/madhav_baby_giraffe/bit-packing-the-secret-to-optimizing-data-storage-and-transmission-m70) (в обоих случаях в блоках фиксированного размера). Замедляет запросы SELECT, поэтому сейчас не рекомендуется.
+
+  Указанные выше расширенные параметры также можно задавать на уровне таблицы с помощью соответствующих настроек MergeTree: [`text_index_dictionary_block_size`](/ru/reference/settings/merge-tree-settings#text_index_dictionary_block_size), [`text_index_dictionary_block_frontcoding_compression`](/ru/reference/settings/merge-tree-settings#text_index_dictionary_block_frontcoding_compression), [`text_index_posting_list_block_size`](/ru/reference/settings/merge-tree-settings#text_index_posting_list_block_size) и [`text_index_posting_list_codec`](/ru/reference/settings/merge-tree-settings#text_index_posting_list_codec).
+  Они применяются ко всем текстовым индексам таблицы, в которых параметр не задан явно.
+
+  Основной сценарий использования настроек уровня таблицы — изменение параметров индекса в существующей таблице без удаления и повторного создания текстового индекса для всех частей таблицы.
+  Изменение настройки уровня таблицы применяет новые параметры только к текстовым индексам, создаваемым для новых частей; существующие части сохраняют свою текущую структуру.
+
+  Аргумент, указанный в определении индекса, имеет приоритет над настройкой таблицы, например:
+
+  ```sql
+  CREATE TABLE table(
+      s String,
+      -- Этот индекс использует 'bitpacking', переопределяя заданное ниже значение по умолчанию на уровне таблицы:
+      INDEX idx_a s TYPE text(tokenizer = 'splitByNonAlpha', posting_list_codec = 'bitpacking'),
+      -- Этот индекс наследует 'none' из настройки таблицы:
+      INDEX idx_b lower(s) TYPE text(tokenizer = 'splitByNonAlpha'))
+  ENGINE = MergeTree()
+  ORDER BY tuple()
+  SETTINGS text_index_posting_list_codec = 'none';
+  ```
 </details>
 
 *Гранулярность индекса.*
@@ -313,7 +342,7 @@ SELECT count() FROM tab WHERE hasAllTokens(mapKeys(map), 'foo');
 CREATE TABLE table(
     k UInt64,
     s String,
-    INDEX idx(s) TYPE text(tokenizer = ngrams(2)))
+    INDEX idx s TYPE text(tokenizer = ngrams(2)))
 ENGINE = MergeTree()
 ORDER BY k;
 
@@ -425,6 +454,36 @@ SELECT count() FROM table WHERE comment LIKE ' support %'; -- или `% support 
 К счастью, есть особый случай, когда ClickHouse может использовать инвертированный индекс, чтобы значительно ускорить LIKE-запросы.
 
 Подробнее см. в разделе [Настройка производительности для LIKE/ILIKE](#like-ilike-queries-perf).
+
+<div id="functions-example-multisearchany-multimatchany">
+  #### `multiSearchAny` and `multiMatchAny`
+</div>
+
+[multiSearchAny](/ru/reference/functions/regular-functions/string-search-functions#multiSearchAny) и его вариант для UTF-8 [multiSearchAnyUTF8](/ru/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8) проверяют, встречается ли в строке хотя бы одна из нескольких буквальных подстрок, а [multiMatchAny](/ru/reference/functions/regular-functions/string-search-functions#multiMatchAny) проверяет, соответствует ли строка хотя бы одному из нескольких регулярных выражений.
+Эти функции используют текстовый индекс при тех же условиях, что и `LIKE` и `match` (см. выше): ClickHouse должен иметь возможность извлечь полные токены из каждой искомой подстроки, а список искомых подстрок должен быть константным.
+Гранула считывается, если в ней может присутствовать хотя бы одна искомая подстрока.
+
+Для `multiMatchAny`, если отдельный шаблон нельзя свести к требованию наличия токена (например, `.*`, который соответствует любому документу), текстовый индекс использовать нельзя, и запрос переходит к полному сканированию.
+
+Как и в случае с `LIKE` и `match`, поиск по подстрокам и регулярным выражениям лучше всего работает с токенизаторами `ngrams` и `sparseGrams`.
+Эти токенизаторы индексируют перекрывающиеся символьные n-граммы, поэтому искомая подстрока раскладывается на n-граммы, которые присутствуют в индексе везде, где она встречается как подстрока, независимо от того, начинается она или заканчивается в середине слова.
+Поэтому искомую подстроку можно использовать как есть, если её длина не меньше размера n-граммы.
+
+Пример текстового индекса с токенизатором `ngrams`:
+
+```sql
+SELECT count() FROM table WHERE multiSearchAny(comment, ['clickhouse', 'support']);
+```
+
+Токенизатор `splitByNonAlpha`, напротив, индексирует только полные токены (целые слова).
+Поскольку искомая подстрока может начинаться или заканчиваться в середине слова, ClickHouse отбрасывает первый и последний токены каждой искомой подстроки, поэтому индекс может отсеивать гранулы, используя только полные токены.
+Чтобы при поиске по подстроке и регулярному выражению использовался индекс с `splitByNonAlpha`, окружайте каждую искомую подстроку символами-разделителями (например, пробелами), чтобы она образовывала один или несколько полных токенов.
+
+Пример текстового индекса с токенизатором `splitByNonAlpha`:
+
+```sql
+SELECT count() FROM table WHERE multiSearchAny(comment, [' clickhouse ', ' support ']);
+```
 
 <div id="functions-example-startswith-endswith">
   #### `startsWith` и `endsWith`
@@ -586,7 +645,7 @@ SELECT count() FROM table WHERE mapContainsValueLike(map, '% clickhouse %');
   #### `operator[]`
 </div>
 
-Оператор доступа [operator[]](/ru/reference/operators#access-operators) можно использовать с текстовым индексом для фильтрации по ключам и значениям. Текстовый индекс используется только в том случае, если он создан для выражений `mapKeys(map)` или `mapValues(map)`, либо для обоих.
+Оператор доступа [operator[]](/ru/reference/operators/index#access-operators) можно использовать с текстовым индексом для фильтрации по ключам и значениям. Текстовый индекс используется только в том случае, если он создан для выражений `mapKeys(map)` или `mapValues(map)`, либо для обоих.
 
 Пример:
 
@@ -933,7 +992,7 @@ SELECT * FROM events WHERE data.level IN ('error', 'critical');
 CREATE TABLE tab (
     id UInt32,
     text String,
-    INDEX idx(text) TYPE text(tokenizer = splitByNonAlpha)
+    INDEX idx text TYPE text(tokenizer = splitByNonAlpha)
 )
 ENGINE = MergeTree
 ORDER BY id;
@@ -1304,10 +1363,10 @@ INSERT INTO hackernews
 Мы воспользуемся `ALTER TABLE`, добавим текстовый индекс для столбца comment, а затем материализуем его:
 
 ```sql
--- Добавить индекс
-ALTER TABLE hackernews ADD INDEX comment_idx(comment) TYPE text(tokenizer = splitByNonAlpha);
+-- Add the index
+ALTER TABLE hackernews ADD INDEX comment_idx comment TYPE text(tokenizer = splitByNonAlpha);
 
--- Материализовать индекс для существующих данных
+-- Materialize the index for existing data
 ALTER TABLE hackernews MATERIALIZE INDEX comment_idx SETTINGS mutations_sync = 2;
 ```
 
@@ -1482,8 +1541,12 @@ SETTINGS query_plan_direct_read_from_text_index = 1;
   ## Связанные материалы
 </div>
 
-* Презентация: https://github.com/ClickHouse/clickhouse-presentations/blob/master/2025-tumuchdata-munich/ClickHouse&#95;%20full-text%20search%20-%2011.11.2025%20Munich%20Database%20Meetup.pdf
-* Презентация: https://presentations.clickhouse.com/2026-fosdem-inverted-index/Inverted&#95;indexes&#95;the&#95;what&#95;the&#95;why&#95;the&#95;how.pdf
+* Блог: [Объявляем о выходе полнотекстового поиска ClickHouse в General Availability](https://clickhouse.com/blog/full-text-search-ga-release)
+* Блог: [Создание высокопроизводительного полнотекстового поиска для Объектного хранилища](https://clickhouse.com/blog/clickhouse-full-text-search-object-storage)
+* Видео: [Введение в полнотекстовый поиск в ClickHouse](https://www.youtube.com/watch?v=9zPmf1a_heU)
+* Видео: [Что внутри: полнотекстовый поиск в ClickHouse при его масштабе и скорости](https://www.youtube.com/watch?v=8JbqE_ubfkU)
+* Презентация: [Полнотекстовый поиск в ClickHouse изнутри: быстрый, нативный и столбцовый](https://github.com/ClickHouse/clickhouse-presentations/blob/master/2025-tumuchdata-munich/ClickHouse_%20full-text%20search%20-%2011.11.2025%20Munich%20Database%20Meetup.pdf)
+* Презентация: [Инвертированные индексы баз данных: зачем, что и как, FOSDEM 2026](https://presentations.clickhouse.com/2026-fosdem-inverted-index/Inverted_indexes_the_what_the_why_the_how.pdf)
 
 **Устаревшие материалы**
 

@@ -144,6 +144,8 @@ CREATE SERVER taxi_srv FOREIGN DATA WRAPPER clickhouse_fdw
 
 * `driver`: 사용할 ClickHouse 연결 드라이버입니다. `binary` 또는
   `http`여야 합니다. **필수입니다.**
+* `compression`: `binary driver`용 네이티브 프로토콜 Compression 설정입니다. 값으로는
+  `none`, `lz4`, 또는 `zstd` 중 하나를 사용할 수 있습니다. 기본값은 `lz4`입니다. `http driver`에서는 무시됩니다.
 * `dbname`: 연결 시 사용할 ClickHouse 데이터베이스입니다. 기본값은
   `default`입니다.
 * `fetch_size`: HTTP streaming에 사용할 대략적인 바이트 단위 배치 크기입니다. 배치는
@@ -157,6 +159,16 @@ CREATE SERVER taxi_srv FOREIGN DATA WRAPPER clickhouse_fdw
   * `driver`가 `binary`이고 `host`가 ClickHouse Cloud 호스트가 아닌 경우 9004
   * `driver`가 `http`이고 `host`가 ClickHouse Cloud 호스트인 경우 8443
   * `driver`가 `http`이고 `host`가 ClickHouse Cloud 호스트가 아닌 경우 8123
+* `min_tls_version`: TLS를 사용하는 연결에서 협상할 최소 TLS 프로토콜 버전입니다.
+  값으로는 `TLSv1`, `TLSv1.1`, `TLSv1.2`, 또는 `TLSv1.3` 중 하나를 사용할 수 있습니다. 기본값은
+  TLS 라이브러리 자체의 최소 버전입니다. 두 드라이버 모두에 적용됩니다.
+* `secure`: 연결에 사용할 TLS를 제어합니다. 값은 다음 중 하나입니다:
+  * `auto` (기본값): `host`가 ClickHouse Cloud 호스트이거나
+    `port`가 보안 포트이면 TLS를 사용하고, 그렇지 않으면 plaintext를 사용합니다.
+  * `on` (또는 `true`/`yes`/`1`): 항상 TLS를 사용합니다. 기본 `port`는 8443
+    (`http`) 또는 9440(`binary`)입니다.
+  * `off` (또는 `false`/`no`/`0`): TLS를 사용하지 않습니다. 기본 `port`는 8123
+    (`http`) 또는 9000(`binary`)입니다.
 
 <div id="alter-server">
   ### ALTER SERVER
@@ -1125,6 +1137,10 @@ SELECT clickhouse_raw_query(
 * `reverse(bytea)`: [reverse](/ko/reference/functions/regular-functions/string-functions#reverse)
 * `strpos`: [positionUTF8](/ko/reference/functions/regular-functions/string-search-functions#positionutf8)
 * `regexp_like`: [match](/ko/reference/functions/regular-functions/string-search-functions#match)
+* `regexp_match`: 정규식에 괄호로 묶인 서브표현식이 포함되어 있으면 [extractGroups](/ko/reference/functions/regular-functions/string-search-functions#extractGroups),
+  그렇지 않으면
+  [extractAll](/ko/reference/functions/regular-functions/string-search-functions#extractAll)을
+  [arraySlice](/ko/reference/functions/regular-functions/array-functions#arraySlice)로 슬라이스합니다.
 * `regexp_replace`: [replaceRegexpOne](/ko/reference/functions/regular-functions/string-replace-functions#replaceRegexpOne) 또는 `g` 플래그가 있으면 [replaceRegexpOne](/ko/reference/functions/regular-functions/string-replace-functions#replaceRegexpAll)
 * `regexp_split_to_array`: [splitByRegexp](/ko/reference/functions/regular-functions/splitting-merging-functions#splitByRegexp)
 * `md5`: [MD5](/ko/reference/functions/regular-functions/hash-functions#MD5)
@@ -1309,17 +1325,17 @@ SELECT quantile(0.25)(a) FROM t1;
 다음 PostgreSQL [윈도우 함수]는 `OVER
 (PARTITION BY ... ORDER BY ...)` 절과 함께 ClickHouse로 푸시다운되며, 해당하는 경우 프레임 사양도 함께 푸시다운됩니다.
 
-* [row&#95;number](/ko/reference/functions/window-functions#row_number)
-* [rank](/ko/reference/functions/window-functions#rank)
-* [dense&#95;rank](/ko/reference/functions/window-functions#dense_rank)
-* [ntile](/ko/reference/functions/window-functions#ntile)
-* [cume&#95;dist](/ko/reference/functions/window-functions#cume_dist)
-* [percent&#95;rank](/ko/reference/functions/window-functions#percent_rank)
-* [lead](/ko/reference/functions/window-functions#lead)
-* [lag](/ko/reference/functions/window-functions#lag)
-* [first&#95;value](/ko/reference/functions/window-functions#first_value)
-* [last&#95;value](/ko/reference/functions/window-functions#last_value)
-* [nth&#95;value](/ko/reference/functions/window-functions#nth_value)
+* [row&#95;number](/ko/reference/functions/window-functions/index#row_number)
+* [rank](/ko/reference/functions/window-functions/index#rank)
+* [dense&#95;rank](/ko/reference/functions/window-functions/index#dense_rank)
+* [ntile](/ko/reference/functions/window-functions/index#ntile)
+* [cume&#95;dist](/ko/reference/functions/window-functions/index#cume_dist)
+* [percent&#95;rank](/ko/reference/functions/window-functions/index#percent_rank)
+* [lead](/ko/reference/functions/window-functions/index#lead)
+* [lag](/ko/reference/functions/window-functions/index#lag)
+* [first&#95;value](/ko/reference/functions/window-functions/index#first_value)
+* [last&#95;value](/ko/reference/functions/window-functions/index#last_value)
+* [nth&#95;value](/ko/reference/functions/window-functions/index#nth_value)
 * `min` / `max` (`OVER` 절 사용)
 
 순위 함수(`row_number`, `rank`, `dense_rank`, `ntile`, `cume_dist`,
@@ -1336,41 +1352,80 @@ SELECT quantile(0.25)(a) FROM t1;
 
 [pg&#95;clickhouse.pushdown&#95;regex](#pg_clickhousepushdown_regex)가 true일 때(기본값) pg&#95;clickhouse는 정규식을 ClickHouse의 대응 표현식으로 푸시다운하며, 기본적인 수준의 호환성을 보장하기 위해 노력합니다. 다만 두 시스템 간 차이점과 pg&#95;clickhouse가 이를 어떻게 처리하는지는 숙지해야 합니다.
 
-* PostgreSQL은 [POSIX 정규식]을 지원하고 ClickHouse는
-  [RE2 정규식][RE2]을 지원합니다. 동작 차이에 유의하십시오. 정규식이
-  ClickHouse에서 평가되는 경우(예: `WHERE` 절)에는 RE2로 작성하고, Postgres에서 평가되는 경우(예: `SELECT` 절)에는 POSIX로 작성하십시오.
+* PostgreSQL은 [POSIX Regular Expressions]를 지원하고 ClickHouse는
+  [RE2 Regular Expressions][RE2]를 지원합니다. 동작 방식의 차이에 유의하십시오. 정규식이 ClickHouse에서 평가되는 경우(예: `WHERE` 절)에는 RE2를 사용하고, Postgres에서 평가되는 경우(예: `SELECT` 절)에는 POSIX를 사용하십시오.
 
-* pg&#95;clickhouse는 Postgres의 [정규식 플래그]를 ClickHouse 정규식 앞에 `(?)` 형식으로 붙여 푸시다운합니다. 예를 들어 다음과 같습니다.
+* pg&#95;clickhouse는 [Postgres 플래그]를 `(?)` 안의
+  ClickHouse 정규식 앞에 붙여 전달합니다. 예시는 다음과 같습니다:
 
   ```sql
   regexp_like(val, '^VAL\d', 'i')
   ```
 
-  다음과 같이 변환됩니다.
+  다음과 같이 바뀝니다
 
   ```sql
-  match(val, concat('(?i-s)', '^VAL\\d'))
+  match(val, concat('(?i)', '^VAL\\d'))
   ```
 
-  여기에는 `-s`가 포함됩니다. 이는 ClickHouse에서 기본적으로 활성화되는 `s`를 비활성화하여 Postgres 정규식의 동작과 맞추기 위한 것입니다.
-  Postgres 함수 호출의 플래그에 `s`가 포함되어 있으면 pg&#95;clickhouse는 `-s`를 추가하지 않습니다. 안타깝게도 이 동작은 Postgres 24 이하에서 일부 정규식의 호환성을 깨뜨립니다.
+* 둘 다 지원하므로 ClickHouse에서 평가할 때 사용할 수 있는 플래그는
+  다음뿐입니다:
 
-* 두 시스템이 모두 지원하므로 ClickHouse에서 평가될 때 사용할 수 있는 플래그는 다음뿐입니다.
+  | 플래그 | As    | 참고 사항                                     |
+  | --- | ----- | ----------------------------------------- |
+  | `i` | `i`   | 대소문자를 구분하지 않는 매칭                          |
+  | `m` | `m-s` | `^` 및 `$`는 텍스트의 시작/끝뿐 아니라 줄의 시작/끝에도 매칭됩니다 |
+  | `n` | `m-s` | `m`의 Postgres 별칭                          |
+  | `p` | `-s`  | `.` 및 `[^x]`가 `\n`과 매칭되지 않도록 합니다          |
+  | `s` | `s`   | `.` 및 `[^x]`가 `\n`과 매칭되도록 합니다             |
+  | `t` |       | 엄격한 구문이며, 무시됩니다                           |
+  | `w` | `m`   | 역방향 부분 줄바꿈 민감 매칭                          |
 
-  * `i`: 대소문자 구분 없음
-  * `m`: 멀티라인 모드:
-  * `s`: `.`이 `\n`과 일치하도록 함
-  * `p`: 부분 줄바꿈 민감 일치(`s`와 동일하게 처리됨)
-  * `t`: 엄격한 구문(기본값이며, pg&#95;clickhouse가 제거함)
+  RE2에서는 이러한 플래그만 지원하므로 다른 [Postgres 플래그]는 사용하지 마십시오.
 
-  RE2는 이 플래그들만 지원하므로 다른 [Postgres 플래그]는 사용하지 마십시오.
+* 이 표는 새 줄 문자와 줄 끝을 매칭할 때 다양한 플래그(및 `s`와 동일한, 플래그를 지정하지 않은 경우)의 영향을 요약합니다. Postgres에서는 `m`과 `p`가 부정 문자 클래스(`[^xyz]`)가 새 줄 문자와 매칭되는 것을 막지만, ClickHouse의 해당 플래그는 그렇지 않다는 점에 유의하십시오. 그 외의 동작은 ClickHouse와 Postgres에서 동일합니다:
 
-* 정규식 함수에 이외의 플래그가 전달되면 해당 함수는 푸시다운되지 않습니다.
+  | `a\nb`에 적용한 패턴 | Postgres | ClickHouse | 동일 여부 |
+  | -------------- | :------: | :--------: | :---: |
+  | `a.b`          |   true   |    true    |   ✔︎  |
+  | `a[^x]b`       |   true   |    true    |   ✔︎  |
+  | `a$`           |   false  |    false   |   ✔︎  |
+  | **`s` 플래그**    |          |            |       |
+  | `(?s)a.b`      |   true   |    true    |   ✔︎  |
+  | `(?s)a[^x]b`   |   true   |    true    |   ✔︎  |
+  | `(?s)a$`       |   false  |    false   |   ✔︎  |
+  | **`m` 플래그**    |          |            |       |
+  | `(?m)a.b`      |   false  |    false   |   ✔︎  |
+  | `(?m)a[^x]b`   |   true   |    false   |   ✘   |
+  | `(?m)a$`       |   true   |    true    |   ✔︎  |
+  | **`p` 플래그**    |          |            |       |
+  | `(?p)a.b`      |   false  |    false   |   ✔︎  |
+  | `(?p)a[^x]b`   |   true   |    false   |   ✘   |
+  | `(?p)a$`       |   false  |    false   |   ✔︎  |
+  | **`w` 플래그**    |          |            |       |
+  | `(?w)a.b`      |   true   |    true    |   ✔   |
+  | `(?w)a[^x]b`   |   true   |    true    |   ✔   |
+  | `(?w)a$`       |   true   |    true    |   ✔   |
 
-* 예외는 `regexp_replace()`이며, 이 함수는 `g` 플래그도 지원합니다. `g`가 설정되면 pg&#95;clickhouse는
-  `replaceRegexpOne()` 대신 `replaceRegexpAll()`을 사용하고, 다른 플래그를 앞에 붙이기 전에 `g` 플래그를 제거합니다.
+* 정규식 함수에 전달된 다른 플래그가 있으면 함수는
+  푸시다운되지 않습니다.
 
-* Postgres `regexp_replace()`의 replacement 인수는 전체 일치를 가리키는 데 `\&`를 지원하지만, ClickHouse에서는 전체 일치에 `\0`를 사용합니다. 함수가 ClickHouse로 푸시다운될 때는 반드시 `\0`를 사용하십시오.
+* 예외는 `regexp_replace()`로, `g` 플래그도 지원합니다. `g`가
+  설정되면 pg&#95;clickhouse는 `replaceRegexpOne()` 대신 `replaceRegexpAll()`을 사용하고,
+  다른 플래그를 앞에 추가하기 전에 `g` 플래그를 제거합니다.
+
+* Postgres `regexp_replace()`의 대체 인수는 전체 일치를 가리킬 때 `\&`를
+  지원하지만, ClickHouse에서는 전체 일치에 `\0`를 사용합니다. 함수가 ClickHouse로 푸시다운되는 경우
+  반드시 `\0`를 사용하십시오.
+
+* 일치하는 항목이 없으면 Postgres `regexp_match`는 `NULL`을 반환하지만,
+  푸시다운되는 표현식은 빈 배열을 반환합니다. 반환 값을 호환되게
+  비교하려면 `COALESCE()`를 사용해 `NULL` 대신 빈 배열을 반환하게
+  하십시오. 예시는 다음과 같습니다:
+
+  ```sql
+  SELECT * FROM events WHERE COALESCE(regexp_match(msg, '^ERR'), '{}');
+  ```
 
 모호함을 완전히 피하려면
 [pg&#95;clickhouse.pushdown&#95;regex](#pg_clickhousepushdown_regex)를 설정하여
@@ -1469,7 +1524,7 @@ ClickHouse의 지정자 접두사(prefix)를 이스케이프하기 위해 `%%`�
 
 [CREATE FOREIGN TABLE]: https://www.postgresql.org/docs/current/sql-createforeigntable.html "PostgreSQL 문서: CREATE FOREIGN TABLE"
 
-[table engine]: /reference/engines/table-engines "ClickHouse 문서: 테이블 엔진"
+[table engine]: /reference/engines/table-engines/index "ClickHouse 문서: 테이블 엔진"
 
 [AggregateFunction Type]: /reference/data-types/aggregatefunction "ClickHouse 문서: AggregateFunction 타입"
 
@@ -1531,9 +1586,9 @@ ClickHouse의 지정자 접두사(prefix)를 이스케이프하기 위해 `%%`�
 
 [window functions]: https://www.postgresql.org/docs/current/functions-window.html "PostgreSQL Docs: 윈도우 함수"
 
-[POSIX Regular Expressions]: https://www.postgresql.org/docs/18/functions-matching.html#FUNCTIONS-POSIX-REGEXP "PostgreSQL Docs: POSIX 정규식"
+[POSIX Regular Expressions]: https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-POSIX-REGEXP "PostgreSQL Docs: POSIX 정규식"
 
-[Postgres flags]: https://www.postgresql.org/docs/18/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "PostgreSQL Docs: ARE 내장 옵션 문자"
+[Postgres flags]: https://www.postgresql.org/docs/current/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "PostgreSQL Docs: ARE 내장 옵션 문자"
 
 [RE2]: https://github.com/google/re2/wiki/Syntax "RE2 구문"
 

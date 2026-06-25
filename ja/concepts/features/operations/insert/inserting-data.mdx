@@ -107,13 +107,13 @@ ClickHouseには、主要なプログラミング言語向けのクライアン�
   ### Native フォーマットを優先する
 </div>
 
-ClickHouse は、インサート時 (およびクエリ時) に多数の[入力フォーマット](/ja/reference/formats)をサポートしています。
-これは OLTP データベースとの大きな違いであり、特に[テーブル関数](/ja/reference/functions/table-functions)やディスク上のファイルからデータを読み込む機能と組み合わせることで、外部ソースからのデータ読み込みが大幅に容易になります。
+ClickHouse は、インサート時 (およびクエリ時) に多数の[入力フォーマット](/ja/reference/formats/index)をサポートしています。
+これは OLTP データベースとの大きな違いであり、特に[テーブル関数](/ja/reference/functions/table-functions/index)やディスク上のファイルからデータを読み込む機能と組み合わせることで、外部ソースからのデータ読み込みが大幅に容易になります。
 これらのフォーマットは、アドホックなデータの読み込みやデータエンジニアリングのタスクに最適です。
 
-アプリケーションで最適なインサート性能を実現したい場合は、[Native](/ja/reference/formats/Native) フォーマットでインサートすることを推奨します。
+アプリケーションで最適な挿入性能を実現したい場合は、[Native](/ja/reference/formats/Native) フォーマットで挿入することを推奨します。
 これはほとんどのクライアント (Go や Python など) でサポートされており、このフォーマットはすでにカラム指向であるため、サーバー側の処理を最小限に抑えられます。
-これにより、データをカラム指向フォーマットに変換する責任はクライアント側に移ります。これはインサートを効率よくスケールさせるうえで重要です。
+これにより、データをカラム指向フォーマットに変換する責任はクライアント側に移ります。これは挿入を効率よくスケールさせるうえで重要です。
 
 また、行フォーマットのほうが望ましい場合は、[RowBinary フォーマット](/ja/reference/formats/RowBinary/RowBinary) (Java クライアントで使用) も利用できます。通常、これは Native フォーマットより記述しやすいです。
 これは、[JSON](/ja/reference/formats/JSON/JSON) のような他の行フォーマットと比べて、圧縮、ネットワークオーバーヘッド、サーバー側での処理の点でより効率的です。
@@ -169,7 +169,7 @@ user_id message                                             timestamp           
 Postgres からデータを読み込むには、次の方法があります。
 
 * `ClickPipes`。PostgreSQL データベースのレプリケーション向けに特化して設計された ETL ツールです。以下の両方で利用できます。
-  * ClickHouse Cloud - ClickPipes の[マネージドインジェストサービス](/ja/integrations/clickpipes/postgres)から利用できます。
+  * ClickHouse Cloud - ClickPipes の[マネージドインジェストサービス](/ja/integrations/clickpipes/postgres/index)から利用できます。
   * セルフマネージド - [PeerDB オープンソースプロジェクト](https://github.com/PeerDB-io/peerdb)経由で利用できます。
 * 前の例で示したように、[PostgreSQL table engine](/ja/integrations/connectors/data-sources/postgres#using-the-postgresql-table-engine)を使用してデータを直接読み取る方法。通常は、既知の watermark (たとえば timestamp) に基づくバッチレプリケーションで十分な場合や、一度限りの移行の場合に適しています。このアプローチは数千万行規模までスケールします。さらに大きなデータセットを移行する場合は、それぞれでデータの chunk を処理する複数のリクエストを検討してください。各 chunk については、パーティションを最終テーブルに移動する前にステージングテーブルを使用できます。これにより、失敗したリクエストを再試行できます。この一括ロード戦略の詳細については、こちらを参照してください。
 * PostgreSQL からデータを CSV形式でエクスポートできます。その後、テーブル関数 を使用して、ローカルファイルまたは object storage 経由で ClickHouse に挿入できます。

@@ -168,6 +168,16 @@ datetime64 値の末尾のゼロを動的に削除し、出力の scale を [0, 
 
 AvroConfluent フォーマット用の設定です。Confluent スキーマレジストリ HTTP クライアントの接続タイムアウトを秒単位で指定します。スキーマの取得とスキーマ登録の両方で使用されます。0 より大きく、600 (10 分) 未満である必要があります。
 
+<div id="format_avro_schema_registry_max_retries">
+  ## format_avro_schema_registry_max_retries
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="5" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "5"},{"label": "Confluent スキーマレジストリとの通信時に発生する一時的な障害（トランスポートタイムアウト、接続拒否、DNS エラー、HTTP 5xx/408/429）に対する最大再試行回数を制御する新しい設定です。再試行を無効にするには 0 に設定します。従来の動作（再試行なし）は `compatibility = '26.5'` で維持されます。"}]}]} />
+
+AvroConfluent フォーマットの場合: Confluent スキーマレジストリとの通信時に発生する一時的な障害 (トランスポートタイムアウト、接続拒否、DNS エラー、HTTP 5xx/408/429) に対する最大再試行回数です。再試行を無効にするには 0 に設定します。設定できる最大値は 20 です。スキーマ検証エラー (HTTP 409、不正な Avro JSON) では再試行されません。
+
 <div id="format_avro_schema_registry_receive_timeout">
   ## format_avro_schema_registry_receive_timeout
 </div>
@@ -177,6 +187,16 @@ AvroConfluent フォーマット用の設定です。Confluent スキーマレ�
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "AvroConfluent フォーマットで使用される Confluent スキーマレジストリ HTTP クライアントの受信タイムアウト（秒単位）を制御する新しい設定です。"}]}]} />
 
 AvroConfluent フォーマットで使用される Confluent スキーマレジストリ HTTP クライアントの受信タイムアウト (秒単位) です。スキーマの取得と登録の両方で使用されます。0 より大きく、600 (10 分) 未満である必要があります。
+
+<div id="format_avro_schema_registry_retry_initial_backoff_ms">
+  ## format_avro_schema_registry_retry_initial_backoff_ms
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="100" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "100"},{"label": "失敗した Confluent スキーマレジストリへのリクエストを再試行する前の初期バックオフ（ミリ秒単位）を制御する新しい設定。バックオフは再試行のたびに 2 倍になり、上限は 10 秒です。`format_avro_schema_registry_max_retries = 0` の場合は効果がありません（`compatibility = '26.5'` によって復元される 26.6 より前の動作）。"}]}]} />
+
+AvroConfluent フォーマットの場合: 失敗した Confluent スキーマレジストリへのリクエストを再試行する前の初期バックオフ (ミリ秒単位) 。バックオフは以降の再試行ごとに 2 倍になり、上限は 10 秒です。0 より大きく、60000 以下である必要があります。
 
 <div id="format_avro_schema_registry_send_timeout">
   ## format_avro_schema_registry_send_timeout
@@ -826,6 +846,23 @@ CustomSeparated フォーマットで末尾の空行をスキップする
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.5"},{"label": "0"},{"label": "必要に応じて、省略されたフィールドに対する型のデフォルト値を無効化する"}]}]} />
 
 省略されたフィールドを NULL 値で強制的に初期化します
+
+<div id="input_format_geojson_unsupported_geometry_handling">
+  ## input_format_geojson_unsupported_geometry_handling
+</div>
+
+<SettingsInfoBlock type="GeoJSONUnsupportedGeometryHandling" default_value="throw" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "throw"},{"label": "Geometry 型で表現できない GeoJSON ジオメトリ型（GeometryCollection、MultiPoint）の処理を制御する新しい設定"}]}]} />
+
+`GeoJSON` 入力の読み込み時に、ClickHouse の `Geometry` 型では表現できない有効な `GeoJSON` ジオメトリ型 (`GeometryCollection` や `MultiPoint` など) を `geometry` カラムに格納する必要がある場合の動作を制御します。
+
+設定可能な値:
+
+* `'throw'` (デフォルト) — 例外をスローします。
+* `'null'` — `geometry` カラムに `NULL` 値を挿入し、パースを続行します。
+
+これは、`geometry` カラムがマテリアライズされる場合にのみ適用されます。要求された出力カラムでない場合、そのようなジオメトリは形式の妥当性のみが検証され、この処理はトリガーされません。
 
 <div id="input_format_hive_text_allow_variable_number_of_columns">
   ## input_format_hive_text_allow_variable_number_of_columns
@@ -1936,6 +1973,18 @@ INTO OUTFILE の使用時に親ディレクトリがまだ存在しない場合�
 JSONカラムのパース時に、各カラムで作成可能な動的サブカラムの最大数です。
 これにより、データ型で指定された動的パラメータにかかわらず、パース中の動的サブカラム数を制御できます。
 
+<div id="output_format_always_write_decimal_point_in_float_and_decimal">
+  ## output_format_always_write_decimal_point_in_float_and_decimal
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "値が整数であっても、テキストフォーマットで浮動小数点数および Decimal 型の数値に常に小数点を出力するための新しい設定。"}]}]} />
+
+値が整数であっても、テキストフォーマットでは浮動小数点数および Decimal 型の数値に常に小数点を出力します。たとえば、`1` ではなく `1.` を出力します。
+
+デフォルトでは無効です。
+
 <div id="output_format_arrow_compression_method">
   ## output_format_arrow_compression_method
 </div>
@@ -2131,6 +2180,63 @@ true に設定すると、CSVフォーマットのタプルは個別のカラム
 Decimal 値を出力する際に、末尾のゼロも出力します。例: `1.23` ではなく `1.230000`。
 
 デフォルトでは無効です。
+
+<div id="output_format_float_precision">
+  ## output_format_float_precision
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "float 出力の小数点以下の桁数を制御する新しい設定"}]}]} />
+
+0 以外の場合、浮動小数点の出力 (`Float32`、`Float64`、`BFloat16`) は、小数点以下の桁数がこの値以下になるようにフォーマットされます (末尾のゼロは削除されます) 。
+0 の場合 (デフォルト) は、最短の往復変換表現が使用されます。
+
+固定小数点表記で表すには大きすぎる値と、値の絶対値が非常に小さく、指定した精度に丸めると有効桁がすべて失われてしまう値 (仮数が `±0` になる場合) は、代わりに科学的記数法で出力されます。こうしたフォールバック時には、仮数の小数点以下の桁数が指定した桁数を超えることがあります。
+
+有効範囲: 0 ～ 100。
+
+<div id="output_format_image_height">
+  ## output_format_image_height
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "PNG などの画像出力フォーマットの出力画像の高さを制御する新しい設定。"}]}]} />
+
+`PNG` などの画像出力フォーマットにおける出力画像の高さ (ピクセル単位) 。
+
+デフォルト値: 1024。
+
+<div id="output_format_image_terminal_mode">
+  ## output_format_image_terminal_mode
+</div>
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": ""},{"label": "PNG などの画像出力フォーマットを、生の画像バイトを書き込む代わりに、インライン画像プロトコルを使って端末に直接描画するかどうかを制御する新しい設定。"}]}]} />
+
+`PNG` などの画像出力フォーマットでは、生の画像バイトを書き込む代わりに、インライン画像プロトコルを使って画像を端末に直接出力します。
+
+設定可能な値:
+
+* &#96;&#96; (空) — 生の画像バイトを書き込みます (デフォルト) 。
+* `iterm` — iTerm2 のインライン画像プロトコルを使用します。
+* `kitty` — Kitty グラフィックスプロトコルを使用します。
+* `sixel` — Sixel プロトコルを使用します。
+* `auto` — 出力先が端末の場合は、その機能を検出して `iterm`、`kitty`、または `sixel` を使用します (この順序) 。それ以外の場合は、生の画像バイトを書き込みます。
+
+デフォルト値: &#96;&#96; (空)。
+
+<div id="output_format_image_width">
+  ## output_format_image_width
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "PNG などの画像出力フォーマットの出力画像の幅を制御する新しい設定。"}]}]} />
+
+`PNG` などの画像出力フォーマットにおける出力画像の幅 (ピクセル単位) 。
+
+デフォルト値: 1024。
 
 <div id="output_format_json_array_of_rows">
   ## output_format_json_array_of_rows
@@ -2845,6 +2951,8 @@ Prettyフォーマットで表示されるデータが複数のchunkに分かれ
 
 グリッドの枠線を出力する文字セット。使用できる文字セット: ASCII、UTF-8 (デフォルト) 。
 
+対話型モードでは、この設定が明示的に指定されていない限り、端末が UTF-8 をサポートしていない場合 (`LC_ALL`、`LC_CTYPE`、`LANG` 環境変数に基づいて判定) 、`clickhouse-client` は自動的に `ASCII` に切り替わります。
+
 <div id="output_format_pretty_highlight_digit_groups">
   ## output_format_pretty_highlight_digit_groups
 </div>
@@ -2985,6 +3093,18 @@ Pretty 出力フォーマットで各行の前に行番号を追加します
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.1"},{"label": "1000"},{"label": "新しい設定を追加"}]}]} />
 
 前回の出力から指定したミリ秒数以上が経過した場合、Pretty フォーマットで保留中のブロックを出力します。
+
+<div id="output_format_pretty_use_nbsp_for_padding">
+  ## output_format_pretty_use_nbsp_for_padding
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新しい設定。有効にすると、`Pretty` 出力のパディングは `U+00A0` でレンダリングされるため、通常のスペースの連続を圧縮するツールを介したコピー＆ペーストでも保持されます。"}]}]} />
+
+有効にすると、`Pretty` 出力フォーマットのパディングは ASCII スペースではなく `U+00A0` でレンダリングされます。
+出力は等幅フォントでは見た目が変わりませんが、通常のスペースの連続を圧縮したり削除したりするツールを通しても、パディングは保持されます。
+`output_format_pretty_grid_charset` が `UTF-8` の場合にのみ有効です。
 
 <div id="output_format_protobuf_nullables_with_google_wrappers">
   ## output_format_protobuf_nullables_with_google_wrappers

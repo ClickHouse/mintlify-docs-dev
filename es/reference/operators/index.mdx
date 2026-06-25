@@ -257,6 +257,55 @@ SELECT number AS a FROM numbers(10) WHERE a > ANY (SELECT number FROM numbers(3,
 └───┘
 ```
 
+<div id="some-all-on-arrays">
+  ### `SOME` / `ALL` en arrays
+</div>
+
+Además de la forma de subconsulta descrita anteriormente, el lado derecho de `SOME` / `ALL` puede ser una expresión de array (un literal de array, una columna de tipo array o cualquier expresión que devuelva un array). Esta es la sintaxis de cuantificador de array al estilo de PostgreSQL. Se reconoce durante el análisis y se reescribe como funciones de array, por lo que no hace falta ninguna reescritura manual:
+
+| Sintaxis                                                     | Reescrito como                     |
+| ------------------------------------------------------------ | ---------------------------------- |
+| `expr = SOME(arr)`                                           | `has(arr, expr)`                   |
+| `expr <> ALL(arr)`                                           | `NOT has(arr, expr)`               |
+| `expr OP SOME(arr)` (cualquier otro operador de comparación) | `arrayExists(x -> expr OP x, arr)` |
+| `expr OP ALL(arr)` (cualquier otro operador de comparación)  | `arrayAll(x -> expr OP x, arr)`    |
+
+`SOME` es el cuantificador existencial (el sinónimo de SQL de `ANY`). `=` y `<>` se tratan de forma especial como `has` / `NOT has` porque tienen una implementación optimizada; en la forma general se usan las funciones de orden superior `arrayExists` / `arrayAll`.
+
+La forma de array se reconoce solo para los operadores de comparación `=`, `==`, `!=`, `<>`, `<=>`, `<`, `<=`, `>`, y `>=`. Otros operadores que aceptan un array a la derecha —por ejemplo, `LIKE`, `ILIKE`, `NOT LIKE`, `REGEXP` e `IN`— **no** se reescriben como cuantificadores de array y conservan su significado habitual. Por ejemplo, `'abc' LIKE SOME(['a%', 'b%'])` no es la sintaxis del cuantificador de array; use `arrayExists` / `arrayAll` directamente en esos casos.
+
+<Info>
+  **`ANY` no es compatible con la forma de array**
+
+  Solo `SOME` y `ALL` aceptan un array en el lado derecho. `ANY` se excluye porque `any` también es una función de agregación, por lo que una expresión con la forma `expr = any(x)` conserva el significado de una llamada de función. Use `SOME` para el cuantificador de array.
+</Info>
+
+```sql title="Query"
+SELECT
+    3 = SOME([1, 2, 3, 4]) AS in_array,
+    5 < SOME([1, 2, 6])    AS less_than_some,
+    5 > ALL([1, 2, 3])     AS greater_than_all;
+```
+
+```text title="Response"
+┌─in_array─┬─less_than_some─┬─greater_than_all─┐
+│        1 │              1 │                1 │
+└──────────┴────────────────┴──────────────────┘
+```
+
+<Info>
+  **El manejo de `NULL` difiere de la forma con subconsulta**
+
+  Como la forma de array se reescribe en el analizador sintáctico (donde la configuración de la consulta, como `transform_null_in`, no está disponible, y una columna array por fila no puede usar la ruta `IN` null-safe del analyzer), utiliza la semántica de dos valores de `has` (para `=` / `<>`) y `arrayExists` / `arrayAll` (que reducen a `0` un resultado desconocido en una comparación con `NULL`). Esto puede diferir de la forma con subconsulta, cuyo manejo de `NULL` se implementa mediante `IN` / `NOT IN` y depende de `transform_null_in`:
+
+  ```sql
+  SELECT NULL = SOME([NULL]);   -- has([NULL], NULL)                  -> 1
+  SELECT NULL <> ALL([NULL]);   -- NOT has([NULL], NULL)              -> 0
+  SELECT NULL < SOME([1]);      -- arrayExists(x -> NULL < x, [1])    -> 0
+  SELECT NULL > ALL([1]);       -- arrayAll(x -> NULL > x, [1])       -> 0
+  ```
+</Info>
+
 <div id="operators-for-working-with-dates-and-times">
   ## Operadores para trabajar con fechas y horas
 </div>
@@ -273,6 +322,9 @@ Extrae componentes de una fecha determinada. Por ejemplo, puedes obtener el mes 
 
 El parámetro `part` especifica qué componente de la fecha se debe obtener. Se admiten los siguientes valores:
 
+* `NANOSECOND` — El nanosegundo. Posibles valores: 0–999999999.
+* `MICROSECOND` — El microsegundo. Posibles valores: 0–999999.
+* `MILLISECOND` — El milisegundo. Posibles valores: 0–999.
 * `SECOND` — El segundo. Posibles valores: 0–59.
 * `MINUTE` — El minuto. Posibles valores: 0–59.
 * `HOUR` — La hora. Posibles valores: 0–23.
@@ -289,10 +341,12 @@ El parámetro `part` especifica qué componente de la fecha se debe obtener. Se 
 * `CENTURY` — El siglo. Por ejemplo, el año 2024 está en el siglo XXI.
 * `DECADE` — La década (año dividido entre 10). Por ejemplo, el año 2024 corresponde a la década 202.
 * `MILLENNIUM` — El milenio. Por ejemplo, el año 2024 está en el 3.er milenio.
+* `TIMEZONE_HOUR` — La parte horaria con signo del desplazamiento UTC de la zona horaria del operando. Por ejemplo, `+5:30` devuelve `5`, `-3:30` devuelve `-3`.
+* `TIMEZONE_MINUTE` — La parte en minutos con signo del desplazamiento UTC de la zona horaria del operando. Por ejemplo, `+5:30` devuelve `30`, `-3:30` devuelve `-30`.
 
 El parámetro `part` no distingue entre mayúsculas y minúsculas.
 
-El parámetro `date` especifica la fecha o la hora que se debe procesar. Se admiten los tipos [Date](/es/reference/data-types/date), [Date32](/es/reference/data-types/date32), [DateTime](/es/reference/data-types/datetime) y [DateTime64](/es/reference/data-types/datetime64).
+El parámetro `date` especifica el valor que se debe procesar. Se admiten los tipos [Date](/es/reference/data-types/date), [Date32](/es/reference/data-types/date32), [DateTime](/es/reference/data-types/datetime), [DateTime64](/es/reference/data-types/datetime64) e [Interval](/es/reference/data-types/special-data-types/interval). Cuando `date` es un `Interval`, el `part` solicitado debe coincidir con el tipo almacenado del intervalo (por ejemplo, se permite `EXTRACT(DAY FROM INTERVAL 5 DAY)`; `EXTRACT(HOUR FROM INTERVAL 5 DAY)` se rechaza, porque los intervalos de ClickHouse son de un solo tipo). El resultado para un operando `Interval` es `Int64`.
 
 Ejemplos:
 
@@ -303,6 +357,10 @@ SELECT EXTRACT(YEAR FROM toDate('2017-06-15'));
 SELECT EXTRACT(EPOCH FROM toDateTime('2024-01-15 12:30:45', 'UTC'));
 SELECT EXTRACT(DOW FROM toDate('2024-01-15'));
 SELECT EXTRACT(CENTURY FROM toDate('2024-01-01'));
+SELECT EXTRACT(TIMEZONE_HOUR   FROM toDateTime('2024-01-15 12:00:00', 'Asia/Kolkata'));    -- 5
+SELECT EXTRACT(TIMEZONE_MINUTE FROM toDateTime('2024-01-15 12:00:00', 'Asia/Kolkata'));    -- 30
+SELECT EXTRACT(DAY   FROM INTERVAL 40 DAY);                                                -- 40
+SELECT EXTRACT(MONTH FROM INTERVAL 7 MONTH);                                               -- 7
 ```
 
 En el siguiente ejemplo creamos una tabla e insertamos en ella un valor de tipo `DateTime`.
@@ -600,3 +658,36 @@ SELECT * FROM t_null WHERE y IS NOT NULL
 ```
 
 Se puede optimizar habilitando el ajuste [optimize&#95;functions&#95;to&#95;subcolumns](/es/reference/settings/session-settings#optimize_functions_to_subcolumns). Con `optimize_functions_to_subcolumns = 1`, la función lee solo la subcolumna [null](/es/reference/data-types/nullable#finding-null) en lugar de leer y procesar los datos de toda la columna. La consulta `SELECT n IS NOT NULL FROM table` se convierte en `SELECT NOT n.null FROM TABLE`.
+
+<div id="checking-boolean-values">
+  ## Verificación de valores booleanos
+</div>
+
+ClickHouse admite los operadores `IS TRUE`, `IS FALSE`, `IS UNKNOWN`, `IS NOT TRUE`, `IS NOT FALSE` e `IS NOT UNKNOWN`.
+Se utilizan con expresiones [Bool](/es/reference/data-types/boolean) y `Nullable(Bool)`.
+
+* `expr IS TRUE` devuelve `1` solo si `expr` es `true`.
+* `expr IS FALSE` devuelve `1` solo si `expr` es `false`.
+* `expr IS UNKNOWN` devuelve `1` solo si `expr` es `NULL`.
+* `expr IS NOT TRUE` devuelve `1` si `expr` es `false` o `NULL`.
+* `expr IS NOT FALSE` devuelve `1` si `expr` es `true` o `NULL`.
+* `expr IS NOT UNKNOWN` devuelve `1` si `expr` no es `NULL`.
+
+En las expresiones booleanas, `IS UNKNOWN` equivale a `IS NULL`, e `IS NOT UNKNOWN` equivale a `IS NOT NULL`.
+
+{/* */}
+
+```sql
+CREATE TABLE t_bool (x Nullable(Bool)) ENGINE = Memory;
+INSERT INTO t_bool VALUES (true), (false), (NULL);
+
+SELECT
+    x,
+    x IS TRUE,
+    x IS FALSE,
+    x IS UNKNOWN,
+    x IS NOT TRUE,
+    x IS NOT FALSE,
+    x IS NOT UNKNOWN
+FROM t_bool;
+```

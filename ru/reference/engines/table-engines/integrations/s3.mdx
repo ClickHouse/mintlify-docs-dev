@@ -47,10 +47,10 @@ CREATE TABLE s3_engine_table (name String, value UInt32)
 
 * `path` — URL бакета с путём к файлу. В режиме `readonly` поддерживаются следующие подстановочные шаблоны: `*`, `**`, `?`, `{abc,def}` и `{N..M}`, где `N`, `M` — числа, а `'abc'`, `'def'` — строки. Подробнее см. [ниже](#wildcards-in-path).
 * `NOSIGN` - Если это ключевое слово указано вместо учётных данных, запросы не будут подписываться.
-* `format` — [Формат](/ru/reference/formats#formats-overview) файла.
+* `format` — [Формат](/ru/reference/formats/index#formats-overview) файла.
 * `aws_access_key_id`, `aws_secret_access_key` - Долговременные учётные данные пользователя аккаунта [AWS](https://aws.amazon.com/). Их можно использовать для аутентификации запросов. Параметр необязателен. Если учётные данные не указаны, они берутся из файла конфигурации. Подробнее см. [Использование S3 для хранения данных](/ru/reference/engines/table-engines/mergetree-family/mergetree#table_engine-mergetree-s3).
 * `compression` — Тип сжатия. Поддерживаемые значения: `none`, `gzip/gz`, `brotli/br`, `xz/LZMA`, `zstd/zst`. Параметр необязателен. По умолчанию тип сжатия определяется автоматически по расширению файла.
-* `partition_strategy` – Варианты: `WILDCARD` или `HIVE`. Для `WILDCARD` в пути должен присутствовать `{_partition_id}`, который заменяется ключом партиционирования. `HIVE` не поддерживает подстановочные шаблоны, предполагает, что путь указывает на корень таблицы, и генерирует каталоги партиций в стиле Hive, где в качестве имён файлов используются Snowflake ID, а расширением служит формат файла. По умолчанию используется `WILDCARD`
+* `partition_strategy` – Варианты: `WILDCARD` или `HIVE`. Для `WILDCARD` в пути должен присутствовать `{_partition_id}`, который заменяется ключом партиционирования. `HIVE` не поддерживает подстановочные шаблоны, предполагает, что путь указывает на корень таблицы, и генерирует каталоги партиций в стиле Hive, где в качестве имён файлов используются Snowflake ID, а расширением служит формат файла. По умолчанию используется настройка `file_like_engine_default_partition_strategy` (`WILDCARD` при настройках `compatibility` старше `26.6`, в противном случае `HIVE`).
 * `partition_columns_in_data_file` - Используется только со стратегией партиционирования `HIVE`. Указывает, должен ли ClickHouse ожидать, что столбцы партиции будут записаны в файл данных. По умолчанию — `false`.
 * `storage_class_name` - Варианты: `STANDARD` или `INTELLIGENT_TIERING`; позволяет указать [AWS S3 Intelligent Tiering](https://aws.amazon.com/s3/storage-classes/intelligent-tiering/).
 * `extra_credentials` - Необязательный параметр. Используется для передачи `role_arn` для ролевого доступа в ClickHouse Cloud. Инструкции по настройке см. в [Secure S3](/ru/products/cloud/guides/data-sources/accessing-s3-data-securely).
@@ -100,7 +100,7 @@ SETTINGS filesystem_cache_name = 'cache_for_s3', enable_filesystem_cache = 1;
   #### Стратегия партиционирования
 </div>
 
-`WILDCARD` (по умолчанию): заменяет подстановочный символ `{_partition_id}` в пути к файлу на фактический ключ партиционирования. Чтение не поддерживается.
+`WILDCARD`: заменяет подстановочный символ `{_partition_id}` в пути к файлу на фактический ключ партиционирования. Чтение не поддерживается. По умолчанию выбирается только при значении настройки `compatibility` ниже `26.6`; в противном случае по умолчанию используется `HIVE` (см. настройку `file_like_engine_default_partition_strategy`).
 
 `HIVE` реализует секционирование в стиле Hive для чтения и записи. Для чтения используется рекурсивный glob-шаблон; это эквивалентно `SELECT * FROM s3('table_root/**.parquet')`.
 При записи файлы создаются в следующем формате: `<prefix>/<key1=val1/key2=val2...>/<snowflakeid>.<toLower(file_format)>`.
@@ -273,7 +273,7 @@ Code: 48. DB::Exception: Received from localhost:9000. DB::Exception: Reading fr
 * `_etag` — ETag файла. Тип: `LowCardinality(String)`. Если ETag неизвестен, значение равно `NULL`.
 * `_tags` — Метки файла. Тип: `Map(String, String)`. Если меток нет, значение — пустой `Map` `{}`.
 
-Подробнее о виртуальных столбцах см. [здесь](/ru/reference/engines/table-engines#table_engines-virtual_columns).
+Подробнее о виртуальных столбцах см. [здесь](/ru/reference/engines/table-engines/index#table_engines-virtual_columns).
 
 <div id="implementation-details">
   ## Подробности реализации
@@ -472,16 +472,23 @@ CREATE TABLE big_table (name String, value UInt32)
 Подробнее об оптимизации производительности функции s3 см. в [нашем подробном руководстве](/ru/integrations/connectors/data-ingestion/AWS/performance).
 
 <div id="role-based-access">
-  ## Доступ на основе ролей
+  ## Ролевой доступ
 </div>
 
-В ClickHouse Cloud для аутентификации в S3 можно использовать доступ на основе ролей вместо ключей доступа. Шаги по настройке см. в разделе [Secure S3](/ru/products/cloud/guides/data-sources/accessing-s3-data-securely).
+В ClickHouse Cloud для аутентификации в S3 можно использовать ролевой доступ вместо ключей доступа. Шаги по настройке см. в разделе [Secure S3](/ru/products/cloud/guides/data-sources/accessing-s3-data-securely).
 
 После настройки `roleARN` можно передать через параметр `extra_credentials`:
 
 ```sql
 CREATE TABLE my_s3_table(name String, value UInt32)
 ENGINE = S3('https://my-bucket.s3.amazonaws.com/data/*.csv', extra_credentials(role_arn = 'arn:aws:iam::111111111111:role/ClickHouseAccessRole-001'), 'CSV')
+```
+
+Необязательный `external_id` также можно передать вместе с `role_arn`. Он передаётся как параметр `ExternalId` в вызове AWS STS `AssumeRole`, что позволяет политике доверия роли требовать общий секрет, чтобы снизить риск [проблемы confused deputy](https://docs.aws.amazon.com/IAM/latest/UserGuide/confused-deputy.html):
+
+```sql
+CREATE TABLE my_s3_table(name String, value UInt32)
+ENGINE = S3('https://my-bucket.s3.amazonaws.com/data/*.csv', extra_credentials(role_arn = 'arn:aws:iam::111111111111:role/ClickHouseAccessRole-001', external_id = 'my-external-id'), 'CSV')
 ```
 
 <div id="see-also">

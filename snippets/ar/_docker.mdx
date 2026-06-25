@@ -1,0 +1,240 @@
+---
+title: Docker
+---
+
+<div id="install-clickhouse-using-docker">
+  # تثبيت ClickHouse باستخدام Docker
+</div>
+
+أُعيد أدناه عرض الدليل الموجود على [Docker Hub](https://hub.docker.com/r/clickhouse/clickhouse-server/)
+لتسهيل الرجوع إليه. تستخدم صور Docker المتاحة
+حِزم deb الرسمية لـ ClickHouse.
+
+أمر `docker pull`:
+
+```bash
+docker pull clickhouse/clickhouse-server
+```
+
+<div id="versions">
+  ## الإصدارات
+</div>
+
+* تشير العلامة `latest` إلى أحدث إصدار من أحدث فرع مستقر.
+* تشير علامات الفروع مثل `22.2` إلى أحدث إصدار من الفرع المقابل.
+* تشير علامات الإصدار الكاملة مثل `22.2.3` و`22.2.3.5` إلى الإصدار المقابل.
+* تُبنى العلامة `head` استنادًا إلى أحدث commit على الفرع الافتراضي.
+* تحمل كل علامة لاحقة اختيارية `-alpine` للإشارة إلى أنها مبنية على `alpine`.
+
+<div id="compatibility">
+  ### التوافق
+</div>
+
+* تتطلب صورة amd64 دعم [تعليمات SSE3](https://en.wikipedia.org/wiki/SSE3).
+  فجميع وحدات CPU تقريبًا ذات المعمارية x86 بعد عام 2005 تدعم SSE3.
+* تتطلب صورة arm64 دعم [معمارية ARMv8.2-A](https://en.wikipedia.org/wiki/AArch64#ARMv8.2-A)،
+  بالإضافة إلى سجل Load-Acquire RCpc. هذا السجل اختياري في الإصدار ARMv8.2-A وإلزامي في
+  [ARMv8.3-A](https://en.wikipedia.org/wiki/AArch64#ARMv8.3-A). وهو مدعوم في مثيلات Graviton &gt;=2 وAzure وGCP.
+  ومن أمثلة الأجهزة غير المدعومة Raspberry Pi 4 ‏(ARMv8.0-A) وJetson AGX Xavier/Orin ‏(ARMv8.2-A).
+* منذ ClickHouse 24.11، بدأت صور Ubuntu باستخدام `ubuntu:22.04` بوصفها الصورة الأساسية. ويتطلب ذلك إصدار Docker &gt;= `20.10.10`
+  يتضمن [الرقعة](https://github.com/moby/moby/commit/977283509f75303bc6612665a04abf76ff1d2468). وكحل بديل، يمكنك
+  استخدام `docker run --security-opt seccomp=unconfined`، لكن لذلك تبعات أمنية.
+
+<div id="how-to-use-image">
+  ## طريقة استخدام هذه الصورة
+</div>
+
+<div id="start-server-instance">
+  ### ابدأ تشغيل مثيل الخادم
+</div>
+
+```bash
+docker run -d --name some-clickhouse-server --ulimit nofile=262144:262144 clickhouse/clickhouse-server
+```
+
+افتراضيًا، لن يكون الوصول إلى ClickHouse متاحًا إلا عبر شبكة Docker. راجع قسم الشبكات أدناه.
+
+افتراضيًا، سيعمل مثيل الخادم المذكور أعلاه بالمستخدم `default` ومن دون كلمة مرور.
+
+<div id="connect-to-it-from-native-client">
+  ### الاتصال به باستخدام العميل الأصلي
+</div>
+
+```bash
+docker run -it --rm --network=container:some-clickhouse-server --entrypoint clickhouse-client clickhouse/clickhouse-server
+# OR
+docker exec -it some-clickhouse-server clickhouse-client
+```
+
+راجع [ClickHouse client](/ar/concepts/features/interfaces/cli) للحصول على مزيد من المعلومات حول عميل ClickHouse.
+
+<div id="connect-to-it-using-curl">
+  ### اتصل به باستخدام curl
+</div>
+
+```bash
+echo "SELECT 'Hello, ClickHouse!'" | docker run -i --rm --network=container:some-clickhouse-server buildpack-deps:curl curl 'http://localhost:8123/?query=' -s --data-binary @-
+```
+
+راجع [ClickHouse HTTP Interface](/ar/concepts/features/interfaces/http) للحصول على مزيد من المعلومات حول واجهة HTTP.
+
+<div id="stopping-removing-container">
+  ### إيقاف الحاوية أو إزالتها
+</div>
+
+```bash
+docker stop some-clickhouse-server
+docker rm some-clickhouse-server
+```
+
+<div id="networking">
+  ### الشبكات
+</div>
+
+<Note>
+  المستخدم `default` المعرّف مسبقًا لا يملك صلاحية الوصول عبر الشبكة ما لم تُعيَّن له كلمة مرور،
+  راجع &quot;كيفية إنشاء قاعدة البيانات والمستخدم `default` عند بدء التشغيل&quot; و&quot;إدارة المستخدم `default`&quot; أدناه
+</Note>
+
+يمكنك إتاحة ClickHouse المشغَّل في Docker عبر [ربط منفذ معيّن](https://docs.docker.com/config/containers/container-networking/)
+من داخل الحاوية بأحد منافذ المضيف:
+
+```bash
+docker run -d -p 18123:8123 -p19000:9000 -e CLICKHOUSE_PASSWORD=changeme --name some-clickhouse-server --ulimit nofile=262144:262144 clickhouse/clickhouse-server
+echo 'SELECT version()' | curl 'http://localhost:18123/?password=changeme' --data-binary @-
+```
+
+أو عبر السماح للحاوية باستخدام [منافذ المضيف مباشرةً](https://docs.docker.com/network/host/) باستخدام `--network=host`
+(ويتيح هذا أيضًا تحقيق أداء أفضل للشبكة):
+
+```bash
+docker run -d --network=host --name some-clickhouse-server --ulimit nofile=262144:262144 clickhouse/clickhouse-server
+echo 'SELECT version()' | curl 'http://localhost:8123/' --data-binary @-
+```
+
+<Note>
+  المستخدم default في المثال أعلاه متاح فقط للطلبات القادمة من localhost
+</Note>
+
+<div id="volumes">
+  ### وحدات التخزين
+</div>
+
+عادةً، قد ترغب في ربط المجلدات التالية داخل الحاوية لضمان استمرارية التخزين:
+
+* `/var/lib/clickhouse/` - المجلد الرئيسي الذي يخزّن فيه ClickHouse البيانات
+* `/var/log/clickhouse-server/` - السجلات
+
+```bash
+docker run -d \
+    -v "$PWD/ch_data:/var/lib/clickhouse/" \
+    -v "$PWD/ch_logs:/var/log/clickhouse-server/" \
+    --name some-clickhouse-server --ulimit nofile=262144:262144 clickhouse/clickhouse-server
+```
+
+قد ترغب أيضًا في ربط ما يلي:
+
+* `/etc/clickhouse-server/config.d/*.xml` - ملفات تتضمن تعديلات على تهيئة الخادم
+* `/etc/clickhouse-server/users.d/*.xml` - ملفات تتضمن تعديلات على إعدادات المستخدم
+* `/docker-entrypoint-initdb.d/` - مجلد يحتوي على برامج نصية لتهيئة قاعدة البيانات (انظر أدناه).
+
+<div id="linear-capabilities">
+  ## قدرات Linux
+</div>
+
+يوفّر ClickHouse بعض الوظائف المتقدمة التي تتطلب تفعيل عدة [قدرات Linux](https://man7.org/linux/man-pages/man7/capabilities.7.html)
+
+وهي اختيارية، ويمكن تفعيلها باستخدام [وسيطات سطر أوامر Docker](https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities) التالية:
+
+```bash
+docker run -d \
+    --cap-add=SYS_NICE --cap-add=NET_ADMIN --cap-add=IPC_LOCK \
+    --name some-clickhouse-server --ulimit nofile=262144:262144 clickhouse/clickhouse-server
+```
+
+لمزيد من المعلومات، راجع [&quot;إعداد إمكانات CAP&#95;IPC&#95;LOCK وCAP&#95;SYS&#95;NICE في Docker&quot;](/ar/resources/support-center/knowledge-base/troubleshooting/configure-cap-ipc-lock-and-cap-sys-nice-in-docker)
+
+<div id="configuration">
+  ## التهيئة
+</div>
+
+تُوفّر الحاوية المنفذ 8123 لـ[واجهة HTTP](/ar/concepts/features/interfaces/http) والمنفذ 9000 لـ[العميل الأصلي](/ar/concepts/features/interfaces/tcp).
+
+تُمثَّل تهيئة ClickHouse بملف &quot;config.xml&quot; ([الوثائق](/ar/concepts/features/configuration/server-config/configuration-files))
+
+<div id="start-server-instance-with-custom-config">
+  ### شغّل مثيل الخادم بتهيئة مخصصة
+</div>
+
+```bash
+docker run -d --name some-clickhouse-server --ulimit nofile=262144:262144 -v /path/to/your/config.xml:/etc/clickhouse-server/config.xml clickhouse/clickhouse-server
+```
+
+<div id="start-server-custom-user">
+  ### بدء تشغيل الخادم باستخدام مستخدم مخصص
+</div>
+
+```bash
+# $PWD/data/clickhouse should exist and be owned by current user
+docker run --rm --user "${UID}:${GID}" --name some-clickhouse-server --ulimit nofile=262144:262144 -v "$PWD/logs/clickhouse:/var/log/clickhouse-server" -v "$PWD/data/clickhouse:/var/lib/clickhouse" clickhouse/clickhouse-server
+```
+
+عند استخدام الصورة مع ربط أدلة محلية، فغالبًا ستحتاج إلى تحديد المستخدم للحفاظ على ملكية الملفات بشكل صحيح. استخدم الوسيط `--user` واربط `/var/lib/clickhouse` و`/var/log/clickhouse-server` داخل الحاوية. وإلا فستعترض الصورة ولن تبدأ.
+
+<div id="start-server-from-root">
+  ### بدء تشغيل الخادم من root
+</div>
+
+يُعدّ بدء تشغيل الخادم من root مفيدًا عندما يكون نطاق أسماء المستخدم مفعّلًا.
+للقيام بذلك، شغّل:
+
+```bash
+docker run --rm -e CLICKHOUSE_RUN_AS_ROOT=1 --name clickhouse-server-userns -v "$PWD/logs/clickhouse:/var/log/clickhouse-server" -v "$PWD/data/clickhouse:/var/lib/clickhouse" clickhouse/clickhouse-server
+```
+
+<div id="how-to-create-default-db-and-user">
+  ### كيفية إنشاء قاعدة بيانات ومستخدم افتراضيين عند بدء التشغيل
+</div>
+
+قد تحتاج أحيانًا إلى إنشاء مستخدم (يُستخدم المستخدم المسمّى `default` افتراضيًا) وقاعدة بيانات عند بدء تشغيل الحاوية. يمكنك القيام بذلك باستخدام متغيرات البيئة `CLICKHOUSE_DB` و`CLICKHOUSE_USER` و`CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT` و`CLICKHOUSE_PASSWORD`:
+
+```bash
+docker run --rm -e CLICKHOUSE_DB=my_database -e CLICKHOUSE_USER=username -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 -e CLICKHOUSE_PASSWORD=password -p 9000:9000/tcp clickhouse/clickhouse-server
+```
+
+<div id="managing-default-user">
+  #### إدارة المستخدم `default`
+</div>
+
+يكون وصول المستخدم `default` عبر الشبكة معطّلًا افتراضيًا إذا لم يتم تعيين أي من `CLICKHOUSE_USER` أو `CLICKHOUSE_PASSWORD` أو `CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT`.
+
+توجد طريقة لإتاحة المستخدم `default` بشكل غير آمن، وذلك بتعيين متغير البيئة `CLICKHOUSE_SKIP_USER_SETUP` إلى 1:
+
+```bash
+docker run --rm -e CLICKHOUSE_SKIP_USER_SETUP=1 -p 9000:9000/tcp clickhouse/clickhouse-server
+```
+
+<div id="how-to-extend-image">
+  ## كيفية توسيع هذه الصورة
+</div>
+
+لإجراء تهيئة إضافية في صورة مبنية على هذه الصورة، أضِف نصًا برمجيًا واحدًا أو أكثر من نوع `*.sql` أو `*.sql.gz` أو `*.sh` ضمن `/docker-entrypoint-initdb.d`. بعد أن تستدعي نقطة الإدخال `initdb`، ستشغّل أي ملفات `*.sql`، وتنفّذ أي نصوص `*.sh` قابلة للتنفيذ، وتعمل source لأي نصوص `*.sh` غير قابلة للتنفيذ موجودة في ذلك الدليل لإجراء تهيئة إضافية قبل بدء الخدمة.
+
+<Note>
+  تُنفَّذ النصوص البرمجية الموجودة ضمن `/docker-entrypoint-initdb.d` **حسب الترتيب الأبجدي** لأسماء الملفات. إذا كانت نصوصك البرمجية تعتمد على بعضها البعض (على سبيل المثال، يجب أن يعمل نص برمجي ينشئ views بعد النص البرمجي الذي ينشئ الجداول المشار إليها)، فتأكد من أن أسماء الملفات مرتبة بالترتيب الصحيح.
+</Note>
+
+يمكنك أيضًا توفير متغيرَي البيئة `CLICKHOUSE_USER` و `CLICKHOUSE_PASSWORD` اللذين سيُستخدمان مع clickhouse-client أثناء التهيئة.
+
+على سبيل المثال، لإضافة مستخدم آخر وقاعدة بيانات أخرى، أضِف ما يلي إلى `/docker-entrypoint-initdb.d/init-db.sh`:
+
+```bash
+#!/bin/bash
+set -e
+
+clickhouse client -n <<-EOSQL
+    CREATE DATABASE docker;
+    CREATE TABLE docker.docker (x Int32) ENGINE = MergeTree
+    ORDER BY ();
+EOSQL
+```

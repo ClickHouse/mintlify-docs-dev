@@ -118,28 +118,50 @@ QUOTA はユーザー設定で構成し、通常は &#39;users.xml&#39; に設�
 QUOTA では、複数のキーのリソース使用状況をそれぞれ独立して報告するために &quot;quota key&quot; 機能を使用できます。以下に例を示します。
 
 ```xml
-<!-- グローバルレポートデザイナー用。 -->
+<!-- For the global reports designer. -->
 <web_global>
-    <!-- keyed – quota_key の「key」はクエリパラメータとして渡され、
-            クォータはキーの値ごとに個別に追跡されます。
-        たとえば、ユーザー名をキーとして渡すことで、
-            ユーザー名ごとにクォータが個別にカウントされます。
-        キーを使用する意味があるのは、quota_key がユーザーではなく
-            プログラムによって送信される場合のみです。
+    <!-- keyed – The quota_key "key" is passed in the query parameter,
+            and the quota is tracked separately for each key value.
+        For example, you can pass a username as the key,
+            so the quota will be counted separately for each username.
+        Using keys makes sense only if quota_key is transmitted by the program, not by a user.
 
-        <keyed_by_ip /> と記述することもでき、その場合は IP アドレスがクォータキーとして使用されます。
-        （ただし、ユーザーは IPv6 アドレスを比較的容易に変更できる点に注意してください。）
+        You can also write <keyed_by_ip />, so the IP address is used as the quota key.
+        (But keep in mind that users can change the IPv6 address fairly easily.)
+
+        Instead of <keyed_by_ip /> you can use <keyed_by_forwarded_ip />, so the address
+        from the X-Forwarded-For header is used as the quota key.
+
+        For both <keyed_by_ip /> and <keyed_by_forwarded_ip /> you can additionally specify
+        <ipv4_prefix_bits> and <ipv6_prefix_bits> to group clients by subnet instead of by a
+        single address: the IP address is masked to the given prefix length before being used
+        as the quota key. For example, <ipv4_prefix_bits>24</ipv4_prefix_bits> shares one bucket
+        across a /24 IPv4 subnet, and <ipv6_prefix_bits>64</ipv6_prefix_bits> across a /64 IPv6
+        subnet. These elements can only be used together with <keyed_by_ip /> or
+        <keyed_by_forwarded_ip />.
     -->
     <keyed />
 ```
 
-DDL構文を使用する場合は、正規化されたクエリハッシュをキーとしてQUOTAを設定することもできます。これにより、異なる各クエリパターンごとに独立したQUOTAバケットが割り当てられます。
+正規化クエリハッシュをキーとしてQUOTAを設定することもできます。これにより、異なる各クエリパターンごとに独立したQUOTAバケットが割り当てられます。XML設定では、`<keyed_by_normalized_query_hash />` と記述します:
+
+```xml
+<my_quota>
+    <keyed_by_normalized_query_hash />
+    <interval>
+        <duration>3600</duration>
+        <queries>100</queries>
+    </interval>
+</my_quota>
+```
+
+同じことはDDL構文でも記述できます。
 
 ```sql
 CREATE QUOTA my_quota KEYED BY normalized_query_hash FOR INTERVAL 1 hour MAX queries = 100 TO my_user;
 ```
 
-この例では、ユーザーは1時間あたり、個々の正規化済みクエリごとに最大100回まで実行できます。`SELECT number FROM numbers(1)` と `SELECT number FROM numbers(2)` は同じバケットを共有します (正規化形式が同じであるため) が、`SELECT number, number FROM numbers(1)` は別のバケットを使用します。
+この例では、ユーザーは1時間あたり、個々の正規化クエリごとに最大100回まで実行できます。`SELECT number FROM numbers(1)` と `SELECT number FROM numbers(2)` は同じバケットを共有します (正規化形式が同じであるため) が、`SELECT number, number FROM numbers(1)` は別のバケットを使用します。
 
 QUOTA は、config の &#39;users&#39; セクションでユーザーに割り当てられます。&quot;アクセス権&quot; のセクションを参照してください。
 

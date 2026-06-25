@@ -34,7 +34,6 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
     [rabbitmq_num_consumers = N,]
     [rabbitmq_num_queues = N,]
     [rabbitmq_queue_base = 'queue',]
-    [rabbitmq_deadletter_exchange = 'dl-exchange',]
     [rabbitmq_persistent = 0,]
     [rabbitmq_skip_broken_messages = N,]
     [rabbitmq_max_block_size = N,]
@@ -54,11 +53,11 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 
 * `rabbitmq_host_port` – ホスト:ポート (例: `localhost:5672`) 。
 * `rabbitmq_exchange_name` – RabbitMQ exchange名。
-* `rabbitmq_format` – メッセージのフォーマット。`JSONEachRow` など、SQL `FORMAT` 関数と同じ記法を使用します。詳細は、[フォーマット](/ja/reference/formats) セクションを参照してください。
+* `rabbitmq_format` – メッセージのフォーマット。`JSONEachRow` など、SQL `FORMAT` 関数と同じ記法を使用します。詳細は、[フォーマット](/ja/reference/formats/index) セクションを参照してください。
 
 パラメータ:
 
-* `rabbitmq_exchange_type` – RabbitMQ exchange のタイプ: `direct`, `fanout`, `topic`, `headers`, `consistent_hash`。デフォルト: `fanout`。
+* `rabbitmq_exchange_type` – RabbitMQ Exchange type: `direct`, `fanout`, `topic`, `headers`, `consistent_hash`。デフォルト: `fanout`。
 * `rabbitmq_routing_key_list` – ルーティングキーのカンマ区切りリスト。
 * `rabbitmq_schema` – フォーマットでスキーマ定義が必要な場合に使用する必要があるパラメーターです。たとえば [Cap&#39;n Proto](https://capnproto.org/) では、スキーマファイルへのパスと、ルート `schema.capnp:Message` オブジェクト名が必要です。
 * `rabbitmq_num_consumers` – テーブルごとのコンシューマー数。1 つのコンシューマーのスループットが不十分な場合は、より多くのコンシューマーを指定してください。デフォルト: `1`
@@ -70,8 +69,8 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 * `rabbitmq_flush_interval_ms` - RabbitMQ からデータをフラッシュするまでのタイムアウト。デフォルト: [stream&#95;flush&#95;interval&#95;ms](/ja/reference/settings/session-settings#stream_flush_interval_ms)。
 * `rabbitmq_queue_settings_list` - キューの作成時に RabbitMQ の設定を指定できます。使用可能な設定: `x-max-length`, `x-max-length-bytes`, `x-message-ttl`, `x-expires`, `x-priority`, `x-max-priority`, `x-overflow`, `x-dead-letter-exchange`, `x-queue-type`。`durable` 設定はキューに対して自動的に有効になります。
 * `rabbitmq_address` - 接続先アドレス。この設定または `rabbitmq_host_port` のいずれかを使用してください。
-* `rabbitmq_vhost` - RabbitMQ vhost。デフォルト: `'\'`。
-* `rabbitmq_queue_consume` - ユーザー定義キューを使用し、exchange、queue、binding の宣言を含む RabbitMQ のセットアップは行いません。デフォルト: `false`。
+* `rabbitmq_vhost` - RabbitMQ vhost。デフォルト: `'/'`。
+* `rabbitmq_queue_consume` - ユーザー定義キューを使用し、exchange、キュー、binding の宣言を含む RabbitMQ のセットアップは行いません。デフォルト: `false`。
 * `rabbitmq_username` - RabbitMQ のユーザー名。
 * `rabbitmq_password` - RabbitMQ のパスワード。
 * `reject_unhandled_messages` - エラー時にメッセージを拒否します (RabbitMQ に negative acknowledgement を送信します) 。この設定は、`rabbitmq_queue_settings_list` に `x-dead-letter-exchange` が定義されている場合、自動的に有効になります。
@@ -215,7 +214,7 @@ INSERT と materialized view に同じテーブルを使用しないでくださ
   ## データフォーマットのサポート
 </div>
 
-RabbitMQエンジンは、ClickHouseでサポートされているすべての[フォーマット](/ja/reference/formats)に対応しています。
+RabbitMQエンジンは、ClickHouseでサポートされているすべての[フォーマット](/ja/reference/formats/index)に対応しています。
 1 つの RabbitMQ メッセージに含められる行数は、フォーマットが行ベースかブロックベースかによって異なります。
 
 * 行ベースのフォーマットでは、1 つの RabbitMQ メッセージに含める行数は、`rabbitmq_max_rows_per_message` の設定で制御できます。

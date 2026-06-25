@@ -6,27 +6,25 @@ title: 'Web 终端'
 doc_type: 'reference'
 ---
 
-Web 终端是一个实验性的浏览器内界面，可通过 WebSocket 提供交互式 `clickhouse-client` 会话。它通过任意 ClickHouse HTTP 端口上的 `/webterminal` 路径提供。
+Web 终端是一个浏览器内界面，可通过 WebSocket 提供交互式 `clickhouse-client` 会话。它通过任意 ClickHouse HTTP 端口上的 `/webterminal` 路径提供。
 
-<Note>
-  Web 终端是一项实验性功能，默认禁用；请参阅下方的[启用该功能](#enabling-the-feature)。
-</Note>
+访问任意 ClickHouse HTTP 端口上的 `/webterminal` (例如，`http://localhost:8123/webterminal`) 即可打开终端。
 
 <div id="enabling-the-feature">
-  ## 启用此功能
+  ## 启用和禁用此功能
 </div>
 
-`/webterminal` 端点由 `allow_experimental_webterminal` 服务器设置控制。当该设置为 `false` (默认值) 时，对 `/webterminal` 的请求会返回 HTTP 状态码 `403 Forbidden`。
-
-要启用此功能，请将以下内容添加到您的服务器配置中：
+`/webterminal` 端点默认启用，由 `enable_webterminal` 服务器设置控制。要禁用它，请将该设置设为 `false`；之后，对 `/webterminal` 的请求将返回 HTTP 状态码 `403 Forbidden`。
 
 ```xml
 <clickhouse>
-    <allow_experimental_webterminal>true</allow_experimental_webterminal>
+    <enable_webterminal>false</enable_webterminal>
 </clickhouse>
 ```
 
-启用后，访问任意 ClickHouse HTTP 端口上的 `/webterminal` (例如 `http://localhost:8123/webterminal`) 即可打开终端。
+<Note>
+  `enable_webterminal` 已取代原先的 `allow_experimental_webterminal` 设置。如果未设置 `enable_webterminal`，为保持向后兼容，仍会识别旧名称。
+</Note>
 
 <div id="authentication">
   ## 身份验证
@@ -59,7 +57,7 @@ Web 终端会依据与 HTTP 协议相同的 `Session` 和访问控制机制对�
   ## 与 `/play` 集成
 </div>
 
-[`/play`](/zh/concepts/features/interfaces/http) Web SQL UI 将 Web 终端嵌入为可停靠面板。你可以通过侧边栏中的终端图标切换它，或者在查询编辑器为空时按 `~` 键。`/play` 页面会在加载时检测 `/webterminal` 是否可用，并在端点不可用时隐藏终端控件 (例如，未启用 Experimental 设置时) 。
+[`/play`](/zh/concepts/features/interfaces/http) Web SQL UI 将 Web 终端嵌入为可停靠面板。你可以通过侧边栏中的终端图标切换它，或者在查询编辑器为空时按 `~` 键。`/play` 页面会在加载时检测 `/webterminal` 是否可用，并在端点不可用时隐藏终端控件 (例如，当 `enable_webterminal` 设置为 `false` 时) 。
 
 <div id="security">
   ## 安全注意事项
@@ -78,4 +76,4 @@ Web 终端会向任何能够通过 ClickHouse HTTP 端点完成身份验证的�
   ## 平台可用性
 </div>
 
-该 handler 可在 ClickHouse 支持的所有平台上编译。嵌入式 `clickhouse-client` 运行器使用的伪终端 layer 基于可移植的 POSIX 基本类型 (`posix_openpt`/`grantpt`/`unlockpt`) 实现；同时还提供了一个 Linux 特定的 path，使用线程安全的 `ptsname_r`。当端点不可用时 (例如，未启用 `allow_experimental_webterminal`) ，ClickHouse 起始页和 `/play` 中指向 `/webterminal` 的链接会自动隐藏。
+该 handler 可在 ClickHouse 支持的所有平台上编译。嵌入式 `clickhouse-client` 运行器使用的伪终端 layer 基于可移植的 POSIX 基本类型 (`posix_openpt`/`grantpt`/`unlockpt`) 实现；同时还提供了一个 Linux 特定的 path，使用线程安全的 `ptsname_r`。当端点不可用时 (例如，`enable_webterminal` 设置为 `false`) ，ClickHouse 起始页和 `/play` 中指向 `/webterminal` 的链接会自动隐藏。

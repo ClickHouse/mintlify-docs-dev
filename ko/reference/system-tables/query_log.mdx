@@ -55,9 +55,9 @@ ClickHouse는 테이블의 데이터를 자동으로 삭제하지 않습니다. 
 * `query_duration_ms` ([UInt64](/ko/reference/data-types/int-uint)) — 밀리초 단위의 쿼리 실행 소요 시간.
 * `read_rows` ([UInt64](/ko/reference/data-types/int-uint)) — 쿼리에 사용된 모든 테이블과 테이블 함수에서 읽은 총 행 수입니다. 여기에는 일반 서브쿼리와 IN 및 JOIN용 서브쿼리가 포함됩니다. 분산 쿼리의 경우, read&#95;rows에는 모든 레플리카에서 읽은 총 행 수가 포함됩니다. 각 레플리카는 자체 read&#95;rows 값을 전송하며, 쿼리를 시작한 서버는 수신한 모든 값과 로컬 값을 합산합니다. 캐시 볼륨은 이 값에 영향을 주지 않습니다.
 * `read_bytes` ([UInt64](/ko/reference/data-types/int-uint)) — 쿼리에 참여한 모든 테이블과 테이블 함수에서 읽은 총 바이트 수입니다. 일반적인 서브쿼리와 IN 및 JOIN용 서브쿼리도 포함됩니다. 분산 쿼리에서는 read&#95;bytes에 모든 레플리카에서 읽은 총 행 수가 포함됩니다. 각 레플리카는 자신의 read&#95;bytes 값을 전송하며, 쿼리의 시작 서버(initiator)는 수신한 모든 값과 로컬 값을 합산합니다. 캐시 용량은 이 값에 영향을 주지 않습니다.
-* `written_rows` ([UInt64](/ko/reference/data-types/int-uint)) — INSERT 쿼리의 경우 저장된 행 수입니다. 다른 쿼리의 경우 컬럼 값은 0입니다.
-* `written_bytes` ([UInt64](/ko/reference/data-types/int-uint)) — INSERT 쿼리의 경우 기록된 바이트 수(비압축)입니다. 다른 쿼리에서는 컬럼 값이 0입니다.
-* `result_rows` ([UInt64](/ko/reference/data-types/int-uint)) — SELECT 쿼리 결과의 행 수 또는 INSERT 쿼리의 행 수입니다.
+* `written_rows` ([UInt64](/ko/reference/data-types/int-uint)) — attached 상태인 materialized view 등 파이프라인에 의해 트리거된 다운스트림 삽입에서 기록된 행을 포함한, 쿼리가 기록한 행 수입니다. synchronous insert의 경우 이러한 다운스트림 행은 `query_kind` = `Insert` 항목에 기록됩니다. asynchronous insert의 경우 이러한 행은 `query_kind` = `AsyncInsertFlush` 항목에 기록되며, 클라이언트 대상 `Insert` 항목에는 클라이언트에서 수락된 행만 기록됩니다. 행을 기록하지 않는 쿼리의 경우 값은 0입니다.
+* `written_bytes` ([UInt64](/ko/reference/data-types/int-uint)) — attached 상태인 materialized view 등 파이프라인에 의해 트리거된 다운스트림 삽입에서 기록된 바이트를 포함한, 쿼리가 기록한 바이트 수(비압축)입니다. synchronous insert의 경우 이러한 다운스트림 바이트는 `query_kind` = `Insert` 항목에 기록됩니다. asynchronous insert의 경우 이러한 바이트는 `query_kind` = `AsyncInsertFlush` 항목에 기록되며, 클라이언트 대상 `Insert` 항목에는 클라이언트에서 수락된 바이트만 기록됩니다. 데이터를 기록하지 않는 쿼리의 경우 값은 0입니다.
+* `result_rows` ([UInt64](/ko/reference/data-types/int-uint)) — SELECT 쿼리 결과의 행 수 또는 삽입으로 기록된 행 수입니다. synchronous insert의 경우 `query_kind` = `Insert` 항목에서 파이프라인에 의해 트리거된 다운스트림 삽입(예: attached 상태인 materialized view)으로 기록된 행도 여기에 포함됩니다. asynchronous insert의 경우 이러한 다운스트림 행은 `query_kind` = `AsyncInsertFlush` 항목에 기록되며, 클라이언트 대상 `Insert` 항목에는 클라이언트에서 수락된 행만 기록됩니다.
 * `result_bytes` ([UInt64](/ko/reference/data-types/int-uint)) — 쿼리 결과를 저장하는 데 사용되는 RAM 용량(바이트)입니다.
 * `memory_usage` ([UInt64](/ko/reference/data-types/int-uint)) — 쿼리의 메모리 사용량입니다.
 * `current_database` ([LowCardinality(String)](/ko/reference/data-types/lowcardinality)) — 현재 데이터베이스 이름입니다.
@@ -93,6 +93,7 @@ ClickHouse는 테이블의 데이터를 자동으로 삭제하지 않습니다. 
 * `os_user` ([LowCardinality(String)](/ko/reference/data-types/lowcardinality)) — clickhouse-client를 실행하는 운영체제 사용자 이름입니다.
 * `client_hostname` ([LowCardinality(String)](/ko/reference/data-types/lowcardinality)) — clickhouse-client 또는 다른 TCP 클라이언트가 실행 중인 클라이언트 머신의 호스트명입니다.
 * `client_name` ([LowCardinality(String)](/ko/reference/data-types/lowcardinality)) — clickhouse-client 또는 기타 TCP 클라이언트 이름입니다.
+* `client_agent` ([LowCardinality(String)](/ko/reference/data-types/lowcardinality)) — 클라이언트를 호출한 AI 코딩 에이전트입니다(예: `claude-code` 또는 `cursor`). 환경 변수에서 감지되며, 에이전트가 감지되지 않으면 빈 문자열입니다.
 * `client_revision` ([UInt32](/ko/reference/data-types/int-uint)) — clickhouse-client 또는 다른 TCP 클라이언트의 버전입니다.
 * `client_version_major` ([UInt32](/ko/reference/data-types/int-uint)) — clickhouse-client 또는 다른 TCP 클라이언트의 주 버전입니다.
 * `client_version_minor` ([UInt32](/ko/reference/data-types/int-uint)) — clickhouse-client 또는 다른 TCP 클라이언트의 마이너 버전입니다.
@@ -106,7 +107,7 @@ ClickHouse는 테이블의 데이터를 자동으로 삭제하지 않습니다. 
 * `quota_key` ([String](/ko/reference/data-types/string)) — 쿼터 설정에서 지정된 quota 키입니다(keyed 참조).
 * `distributed_depth` ([UInt64](/ko/reference/data-types/int-uint)) — 쿼리가 서버 사이에서 몇 번 전달되었는지.
 * `revision` ([UInt32](/ko/reference/data-types/int-uint)) — ClickHouse 리비전.
-* `log_comment` ([String](/ko/reference/data-types/string)) — 로그 설명입니다. `max_query_size`를 초과하지 않는 임의의 문자열로 설정할 수 있습니다. 정의되지 않은 경우 빈 문자열입니다.
+* `log_comment` ([String](/ko/reference/data-types/string)) — 로그 설명입니다. `max&#95;query&#95;size`를 초과하지 않는 임의의 문자열로 설정할 수 있습니다. 정의되지 않은 경우 빈 문자열입니다.
 * `thread_ids` ([Array(UInt64)](/ko/reference/data-types/array)) — 쿼리 실행에 참여하는 스레드 ID입니다. 이러한 스레드가 동시에 실행된 것은 아닐 수 있습니다.
 * `peak_threads_usage` ([UInt64](/ko/reference/data-types/int-uint)) — 쿼리를 실행하는 데 동시에 사용된 스레드 수의 최댓값입니다.
 * `ProfileEvents` ([Map(LowCardinality(String), UInt64)](/ko/reference/data-types/map)) — 여러 메트릭을 측정하는 ProfileEvents입니다. 이에 대한 설명은 system.events 테이블에서 확인할 수 있습니다.

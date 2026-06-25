@@ -1,0 +1,48 @@
+---
+title: 'Routage tenant compte des réplicas'
+slug: /manage/replica-aware-routing
+description: 'Comment utiliser le routage tenant compte des réplicas pour accroître la réutilisation du cache'
+keywords: ['cloud', 'endpoints avec affinité', 'affinité', 'endpoints', 'routage avec affinité', 'routage', 'routage tenant compte des réplicas']
+doc_type: 'guide'
+noindex: true
+---
+
+import PrivatePreviewBadge from "/snippets/components/PrivatePreviewBadge/PrivatePreviewBadge.jsx";
+
+<PrivatePreviewBadge />
+
+Le routage tenant compte des réplicas (également appelé sessions persistantes, routage persistant ou affinité de session) utilise [l’équilibrage de charge ring hash du proxy Envoy](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#ring-hash). Son objectif principal est d’augmenter les chances de réutilisation du cache. Il ne garantit pas l’isolation.
+
+Lorsque vous activez le routage tenant compte des réplicas pour un service, nous autorisons un sous-domaine générique devant le nom d’hôte du service. Pour un service dont le nom d’hôte est `abcxyz123.us-west-2.aws.clickhouse.cloud`, vous pouvez utiliser n’importe quel nom d’hôte correspondant à `*.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` pour accéder au service :
+
+| Exemples de noms d’hôte                                                  |
+| ------------------------------------------------------------------------ |
+| `aaa.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
+| `000.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud`                    |
+| `clickhouse-is-the-best.sticky.abcxyz123.us-west-2.aws.clickhouse.cloud` |
+
+Lorsqu’Envoy reçoit un nom d’hôte correspondant à ce modèle, il calcule le hash de routage à partir de ce nom d’hôte, puis trouve le serveur ClickHouse correspondant sur l’anneau de hachage en fonction du hash obtenu. Tant qu’aucune modification du service n’est en cours (par exemple un redémarrage de serveur ou une mise à l’échelle horizontale), Envoy choisira toujours le même serveur ClickHouse pour établir la connexion.
+
+Notez que le nom d’hôte d’origine continuera d’utiliser l’équilibrage de charge `LEAST_CONNECTION`, qui est l’algorithme de routage par défaut.
+
+<div id="limitations-of-replica-aware-routing">
+  ## Limites du routage tenant compte des réplicas
+</div>
+
+<div id="replica-aware-routing-does-not-guarantee-isolation">
+  ### routage tenant compte des réplicas ne garantit pas l&#39;isolation
+</div>
+
+Toute perturbation du service, par exemple le redémarrage de pods serveur (pour quelque raison que ce soit, comme une mise à niveau de version, un crash, un redimensionnement vertical à la hausse, etc.) ou une mise à l&#39;échelle horizontale du serveur (augmentation ou réduction), perturbera l&#39;anneau de hachage de routage. Les connexions ayant le même nom d&#39;hôte pourront alors aboutir à un autre pod serveur.
+
+<div id="replica-aware-routing-does-not-work-out-of-the-box-with-private-link">
+  ### Le routage tenant compte des réplicas ne fonctionne pas d’emblée avec Private Link
+</div>
+
+Les clients doivent ajouter manuellement une entrée DNS pour que la résolution de noms fonctionne avec le nouveau format de nom d’hôte. Une mauvaise utilisation peut entraîner un déséquilibre de charge entre les serveurs.
+
+<div id="configuring-replica-aware-routing">
+  ## Configuration du routage tenant compte des réplicas
+</div>
+
+Pour activer le routage tenant compte des réplicas, veuillez contacter [notre équipe d’assistance](https://clickhouse.com/support/program).

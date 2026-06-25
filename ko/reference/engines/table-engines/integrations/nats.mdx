@@ -42,26 +42,26 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
     [nats_password = 'password',]
     [nats_token = 'clickhouse',]
     [nats_credential_file = '/var/nats_credentials',]
-    [nats_startup_connect_tries = '5']
+    [nats_startup_connect_tries = 5,]
     [nats_max_rows_per_message = 1,]
     [nats_handle_error_mode = 'default']
 ```
 
 필수 매개변수:
 
-* `nats_url` – host:port(예: `localhost:5672`)..
+* `nats_url` – host:port(예: `localhost:4222`)..
 * `nats_subjects` – NATS 테이블이 구독하거나 게시할 subject 목록입니다. `foo.*.bar` 또는 `baz.>` 같은 와일드카드 subject를 지원합니다.
-* `nats_format` – 메시지 포맷입니다. `JSONEachRow`와 같이 SQL `FORMAT` 함수와 동일한 표기법을 사용합니다. 자세한 내용은 [포맷](/ko/reference/formats) 섹션을 참조하십시오.
+* `nats_format` – 메시지 포맷입니다. `JSONEachRow`와 같이 SQL `FORMAT` 함수와 동일한 표기법을 사용합니다. 자세한 내용은 [포맷](/ko/reference/formats/index) 섹션을 참조하십시오.
 
 선택적 매개변수:
 
 * `nats_schema` – 포맷에 스키마 정의가 필요한 경우 반드시 사용해야 하는 매개변수입니다. 예를 들어 [Cap&#39;n Proto](https://capnproto.org/)는 스키마 파일의 경로와 루트 `schema.capnp:Message` 객체 이름이 필요합니다.
 * `nats_stream` – NATS JetStream에 있는 기존 스트림의 이름입니다.
-* `nats_consumer` – NATS JetStream에 있는 기존 durable pull consumer의 이름입니다.
+* `nats_consumer_name` – NATS JetStream에 있는 기존 durable pull consumer의 이름입니다.
 * `nats_num_consumers` – 테이블당 consumer 수입니다. 기본값: `1`. NATS core에서만, 단일 consumer의 처리량이 부족한 경우 consumer를 더 지정하십시오.
 * `nats_queue_group` – NATS subscriber의 큐 그룹 이름입니다. 기본값은 테이블 이름입니다.
-* `nats_max_reconnect` – 더 이상 권장되지 않으며 아무런 효과가 없습니다. 재연결은 `nats_reconnect_wait` 타임아웃에 따라 계속 수행됩니다.
-* `nats_reconnect_wait` – 각 재연결 시도 사이에 대기할 시간(밀리초)입니다. 기본값: `5000`.
+* `nats_max_reconnect` – 더 이상 권장되지 않으며 아무런 효과가 없습니다. 재연결은 `nats&#95;reconnect&#95;wait` 타임아웃에 따라 계속 수행됩니다.
+* `nats_reconnect_wait` – 각 재연결 시도 사이에 대기할 시간(밀리초)입니다. 기본값: `2000`.
 * `nats_server_list` - 연결을 위한 서버 목록입니다. NATS 클러스터에 연결할 때 지정할 수 있습니다.
 * `nats_skip_broken_messages` - 블록당 스키마와 호환되지 않는 메시지에 대한 NATS 메시지 파서 허용치입니다. 기본값: `0`. `nats_skip_broken_messages = N`이면 엔진은 파싱할 수 없는 NATS 메시지 *N*개를 건너뜁니다(메시지 하나는 데이터 한 행과 같습니다).
 * `nats_max_block_size` - NATS에서 데이터를 플러시하기 위해 폴링으로 수집하는 행 수입니다. 기본값: [max&#95;insert&#95;block&#95;size](/ko/reference/settings/session-settings#max_insert_block_size).
@@ -188,7 +188,7 @@ ClickHouse 구성 파일을 사용해 NATS 서버 구성을 추가할 수 있습
   ## 데이터 포맷 지원
 </div>
 
-NATS 엔진은 ClickHouse에서 지원하는 모든 [포맷](/ko/reference/formats)을 지원합니다.
+NATS 엔진은 ClickHouse에서 지원하는 모든 [포맷](/ko/reference/formats/index)을 지원합니다.
 하나의 NATS 메시지에 포함되는 행 수는 해당 포맷이 행 기반인지 블록 기반인지에 따라 달라집니다.
 
 * 행 기반 포맷에서는 하나의 NATS 메시지에 포함되는 행 수를 `nats_max_rows_per_message` 설정으로 제어할 수 있습니다.

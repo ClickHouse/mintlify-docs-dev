@@ -7,7 +7,7 @@ title: 'Движок таблицы SummingMergeTree'
 doc_type: 'reference'
 ---
 
-Движок наследуется от [MergeTree](/ru/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree). Отличие состоит в том, что при слиянии частей данных в таблицах `SummingMergeTree` ClickHouse заменяет все строки с одинаковым первичным ключом (или, точнее, с одинаковым [ключом сортировки](/ru/reference/engines/table-engines/mergetree-family/mergetree)) одной строкой, содержащей суммарные значения в столбцах с числовым типом данных. Если ключ сортировки устроен так, что одному значению ключа соответствует большое количество строк, это значительно уменьшает объем хранимых данных и ускоряет выборку.
+Движок наследуется от [MergeTree](/ru/reference/engines/table-engines/mergetree-family/mergetree). Отличие состоит в том, что при слиянии частей данных в таблицах `SummingMergeTree` ClickHouse заменяет все строки с одинаковым первичным ключом (или, точнее, с одинаковым [ключом сортировки](/ru/reference/engines/table-engines/mergetree-family/mergetree)) одной строкой, содержащей суммарные значения в столбцах с числовым типом данных. Если ключ сортировки устроен так, что одному значению ключа соответствует большое количество строк, это значительно уменьшает объем хранимых данных и ускоряет выборку.
 
 Мы рекомендуем использовать этот движок вместе с `MergeTree`. Храните полные данные в таблице `MergeTree`, а `SummingMergeTree` используйте для хранения агрегированных данных, например при подготовке отчетов. Такой подход поможет избежать потери ценных данных из-за неправильно составленного первичного ключа.
 
@@ -203,6 +203,52 @@ ARRAY JOIN
 При запросе данных используйте функцию [sumMap(key, value)](/ru/reference/functions/aggregate-functions/sumMap) для агрегации `Map`.
 
 Для вложенной структуры данных не нужно указывать её столбцы в кортеже столбцов, используемом для суммирования.
+
+<div id="tuple-element-aggregation">
+  ### Агрегация элементов Tuple
+</div>
+
+Когда настройка `allow_tuple_element_aggregation` включена, столбцы `Tuple` рекурсивно разворачиваются, так что каждый конечный элемент независимо участвует в суммировании. Это позволяет хранить несколько метрик в одном столбце `Tuple`, а при слиянии они будут суммироваться поэлементно.
+
+К развёрнутым подстолбцам применяются те же правила, что и к обычным столбцам:
+
+* Суммируются только числовые подстолбцы.
+* Подстолбцы, входящие в `Tuple` в ключе сортировки или ключе партиционирования, исключаются из суммирования.
+* Если указан `columns`, суммируются только подстолбцы перечисленных столбцов `Tuple`.
+* Если после суммирования все числовые подстолбцы строки равны нулю, строка удаляется.
+
+<Note>
+  Эта настройка неизменяема и должна быть указана при создании таблицы.
+</Note>
+
+```sql
+CREATE TABLE summing_tuples
+(
+    key UInt32,
+    metrics Tuple(
+        impressions UInt64,
+        clicks UInt64,
+        nested Tuple(
+            conversions UInt64
+        )
+    )
+) ENGINE = SummingMergeTree()
+ORDER BY key
+SETTINGS allow_tuple_element_aggregation = 1;
+
+INSERT INTO summing_tuples VALUES (1, (100, 10, (1)));
+INSERT INTO summing_tuples VALUES (1, (200, 20, (3)));
+
+OPTIMIZE TABLE summing_tuples FINAL;
+
+SELECT key, metrics.impressions, metrics.clicks, metrics.nested.conversions FROM summing_tuples;
+```
+
+```text
+┌─key─┬─metrics.impressions─┬─metrics.clicks─┬─metrics.nested.conversions─┐
+│   1 │                 300 │             30 │                          4 │
+└─────┴─────────────────────┴────────────────┴────────────────────────────┘
+```
 
 <div id="related-content">
   ## См. также
