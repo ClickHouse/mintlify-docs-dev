@@ -265,6 +265,10 @@
       q.forEach(function (fn) { fn(); });
     };
     s.onerror = function () {
+      // Reset so a later signup can retry loading the script instead of
+      // enqueuing callbacks that would never run.
+      mktoScriptLoading = false;
+      if (s.parentNode) s.parentNode.removeChild(s);
       var q = mktoReadyQueue.slice();
       mktoReadyQueue = [];
       q.forEach(function (fn) { fn(new Error('script load failed')); });
@@ -320,20 +324,36 @@
       btn.disabled = true;
       btn.textContent = 'Signing up…';
 
-      submitToMarketo(email, function () {
+      // Guard so success/error/timeout only resolve once. Marketo's loadForm
+      // or onSuccess can silently never fire (network/server stall), so a
+      // timeout fallback keeps the button from getting stuck on "Signing up…".
+      var settled = false;
+      var timeoutId = setTimeout(function () { handleError(); }, 10000);
+
+      function handleSuccess() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
         form.style.display = 'none';
         var ok = document.createElement('p');
         ok.className = 'ch-signup-msg ch-signup-success';
         ok.textContent = 'Thanks for subscribing!';
         form.parentNode.insertBefore(ok, form.nextSibling);
-      }, function () {
+      }
+
+      function handleError() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
         btn.disabled = false;
         btn.textContent = 'Sign up';
         var errMsg = document.createElement('p');
         errMsg.className = 'ch-signup-msg ch-signup-error';
         errMsg.textContent = 'Something went wrong. Please try again.';
         form.parentNode.insertBefore(errMsg, form.nextSibling);
-      });
+      }
+
+      submitToMarketo(email, handleSuccess, handleError);
     });
   }
 
