@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """Populate redirect files from slug-map.csv.
 
-Outputs:
+Source files (edit these):
   _site/redirects-en.json    — English redirects
   _site/redirects-ru.json    — Russian locale
   _site/redirects-jp.json    — Japanese locale (jp -> ja code rename)
   _site/redirects-ko.json    — Korean locale
   _site/redirects-zh.json    — Chinese locale
 
-docs.json references each file directly as $ref array elements.
-Edit locale source files directly and re-run to regenerate.
+Deployable output (generated, do not edit directly):
+  _site/redirects.json       — merged from all locale source files
+
+docs.json points to redirects.json via $ref. Mintlify cannot compose
+arrays across multiple $ref files, so locale files are merged into one.
 
 Run from repo root or _migration/:
     python _migration/add_slug_redirects.py
@@ -22,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SLUG_MAP = REPO_ROOT / "_migration/slug-map.csv"
 SITE = REPO_ROOT / "_site"
 REDIRECTS_EN = SITE / "redirects-en.json"
+REDIRECTS_OUT = SITE / "redirects.json"
 MINTLIFY_DOMAIN = "https://private-7c7dfe99.mintlify.app"
 
 # (docusaurus_locale_code, mintlify_locale_code)
@@ -108,6 +112,12 @@ def main() -> None:
         locale_files.append((old_code, path, entries))
         write_json(path, entries)
 
+    # --- Merge all locale files into single deployable output ---
+    all_entries = all_en + [e for _, _, entries in locale_files for e in entries]
+    all_entries.sort(key=lambda r: r["source"])
+    all_entries = [{"source": r["source"], "destination": r["destination"]} for r in all_entries]
+    write_json(REDIRECTS_OUT, all_entries)
+
     # --- Report ---
     print()
     print(f"English added:  {len(new_en)}")
@@ -115,6 +125,7 @@ def main() -> None:
     for old_code, path, entries in locale_files:
         new_code = next(n for o, n in LOCALES if o == old_code)
         print(f"/{old_code}/ -> /{new_code}/: {len(entries)}  ({path.name})")
+    print(f"Merged total:   {len(all_entries)}  (redirects.json)")
     print()
     if conflicts:
         print(f"Conflicts (existing kept — review manually): {len(conflicts)}")
