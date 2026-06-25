@@ -8,60 +8,27 @@ keywords: ['ClickStack', '生存时间 (TTL)', '数据保留', '生命周期', '
 ---
 
 import { Image } from "/snippets/components/Image.jsx";
+import OtelLogsSchema from '/snippets/zh/clickstack/_schema_otel_logs.mdx';
 
 <div id="ttl-clickstack">
-  ## ClickStack 中的生存时间 (TTL)
+  ## ClickStack 中的 TTL
 </div>
 
-生存时间 (TTL) 是 ClickStack 中一项关键功能，可用于高效地保留和管理数据，尤其适用于持续产生海量数据的场景。生存时间 (TTL) 可以让较旧的数据自动过期并删除，从而确保存储资源得到最佳利用，并在无需人工干预的情况下保持系统性能。这项能力对于精简数据库、降低存储成本，以及通过聚焦最新且最相关的数据来保证查询始终快速高效都至关重要。此外，它还可通过系统化地管理数据生命周期，帮助满足数据保留策略的合规要求，从而提升整个可观测性解决方案的可持续性和可扩展性。
+生存时间 (TTL) 是 ClickStack 中一项至关重要的功能，可用于高效的数据保留和管理，尤其是在系统持续生成海量数据的情况下。TTL 允许较旧的数据自动过期并删除，从而确保存储得到最佳利用，并在无需人工干预的情况下维持性能。这项能力对于保持数据库精简、降低存储成本，以及通过聚焦最相关、最新的数据来确保查询持续快速高效至关重要。此外，它还能通过系统化管理数据生命周期，帮助满足数据保留策略方面的合规要求，从而提升整个可观测性解决方案的可持续性和可扩展性。
 
-**默认情况下，ClickStack 会将数据保留 3 天。要修改此设置，请参见[&quot;修改生存时间 (TTL)&quot;](#modifying-ttl)。**
+**默认情况下，ClickStack 会保留 3 天的数据。要修改此设置，请参阅[“修改生存时间 (TTL)”](#modifying-ttl)。**
 
-在 ClickHouse 中，生存时间 (TTL) 按表级别控制。例如，日志的 schema 如下所示：
+在 ClickHouse 中，TTL 在表级别控制。例如，下面显示的是日志的默认 schema；当 collector 创建该表时，`${TABLES_TTL}` 会被替换为已配置的数据保留期 (若未更改则为 3 天)：
 
-```sql
-CREATE TABLE default.otel_logs
-(
-    `Timestamp` DateTime64(9) CODEC(Delta(8), ZSTD(1)),
-    `TimestampTime` DateTime DEFAULT toDateTime(Timestamp),
-    `TraceId` String CODEC(ZSTD(1)),
-    `SpanId` String CODEC(ZSTD(1)),
-    `TraceFlags` UInt8,
-    `SeverityText` LowCardinality(String) CODEC(ZSTD(1)),
-    `SeverityNumber` UInt8,
-    `ServiceName` LowCardinality(String) CODEC(ZSTD(1)),
-    `Body` String CODEC(ZSTD(1)),
-    `ResourceSchemaUrl` LowCardinality(String) CODEC(ZSTD(1)),
-    `ResourceAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `ScopeSchemaUrl` LowCardinality(String) CODEC(ZSTD(1)),
-    `ScopeName` String CODEC(ZSTD(1)),
-    `ScopeVersion` LowCardinality(String) CODEC(ZSTD(1)),
-    `ScopeAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `LogAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    INDEX idx_trace_id TraceId TYPE bloom_filter(0.001) GRANULARITY 1,
-    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_scope_attr_key mapKeys(ScopeAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_scope_attr_value mapValues(ScopeAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_log_attr_key mapKeys(LogAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_log_attr_value mapValues(LogAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_body Body TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 8
-)
-ENGINE = MergeTree
-PARTITION BY toDate(TimestampTime)
-PRIMARY KEY (ServiceName, TimestampTime)
-ORDER BY (ServiceName, TimestampTime, Timestamp)
-TTL TimestampTime + toIntervalDay(3)
-SETTINGS ttl_only_drop_parts = 1
-```
+<OtelLogsSchema />
 
-ClickHouse 中的分区可根据某个列或 SQL 表达式，在磁盘上对数据进行逻辑划分。通过这种逻辑分离方式，每个分区都可以独立操作，例如在根据生存时间 (TTL) 策略到期时将其删除。
+ClickHouse 中的分区允许根据某个列或 SQL 表达式，在磁盘上对数据进行逻辑划分。通过这种逻辑划分，可以独立操作每个分区，例如在其根据 TTL 策略到期后将其删除。
 
-如上例所示，分区是在表初次定义时通过 `PARTITION BY` 子句指定的。该子句可以包含基于任意列的 SQL 表达式，其结果将决定某一行会被写入哪个分区。这样一来，磁盘上的数据就会通过共同的文件夹名称前缀与各个分区建立逻辑关联，从而可以单独查询某个分区。以上述示例为例，默认的 `otel_logs` schema 使用表达式 `toDate(Timestamp).` 按天分区。当行被插入 ClickHouse 时，系统会针对每一行计算该表达式，并将其路由到相应的分区；如果该分区尚不存在 (即这是某一天的第一行数据) ，则会创建该分区。有关分区及其其他用途的更多信息，请参阅[&quot;表分区&quot;](/zh/concepts/core-concepts/partitions)。
+如上例所示，分区是在表初始定义时通过 `PARTITION BY` 子句指定的。该子句可包含基于任意列的 SQL 表达式，其结果决定某一行会被写入哪个分区。这会使数据在逻辑上与磁盘上的各个分区相关联 (通过共同的文件夹名称前缀)，从而可以单独查询这些分区。对于上面的示例，默认的 `otel_logs` schema 使用表达式 `toDate(Timestamp)` 按天分区。当行被插入到 ClickHouse 时，系统会针对每一行计算该表达式，并将其路由到对应的分区 (如果该分区存在；如果该行是某一天的第一行，则会创建该分区)。有关分区及其其他用途的更多详细信息，请参阅[“表分区”](/zh/concepts/core-concepts/partitions)。
 
 <Image img="/images/use-cases/observability/observability-14.png" alt="分区" size="lg" />
 
-表的 schema 还包含 `TTL TimestampTime + toIntervalDay(3)` 以及设置 `ttl_only_drop_parts = 1`。前一个子句可确保数据在超过 3 天后被删除。设置 `ttl_only_drop_parts = 1` 会强制仅在整个数据分区片段中的数据都已过期时才删除该数据分区片段 (而不是尝试部分删除行) 。由于分区可确保不同日期的数据永远不会被“merged”，因此可以高效地删除数据。
+表的 schema 还包含 `TTL toDateTime(Timestamp) + ${TABLES_TTL}` 以及设置 `ttl_only_drop_parts = 1`。前一个子句可确保数据在超过已配置的生存时间 (TTL) 后被删除 (默认 3 天)。设置 `ttl_only_drop_parts = 1` 会强制仅在整个数据分区片段中的数据都已过期时才删除该数据分区片段 (而不是尝试部分删除行) 。由于分区可确保不同日期的数据永远不会被“merged”，因此可以高效地删除数据。
 
 <Warning>
   **`ttl_only_drop_parts`**

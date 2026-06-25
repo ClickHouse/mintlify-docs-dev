@@ -116,6 +116,49 @@ SELECT 0 / 0
 
 Consulte as regras de ordenação de `NaN` na seção [cláusula ORDER BY](/pt-BR/reference/statements/select/order-by).
 
+<div id="nan-values-in-set-semantics">
+  ## Valores `NaN` na semântica de conjunto
+</div>
+
+O padrão IEEE 754 define `NaN` de modo que a comparação escalar `NaN = NaN` retorne `false`.
+O ClickHouse segue essa regra para o operador `=`.
+
+No entanto, `NaN` não é um único valor; ele pode ser qualquer padrão de bits em que o expoente é composto apenas por uns e a
+mantissa é diferente de zero. Operações diferentes e arquiteturas de CPU diferentes podem produzir valores `NaN`
+com bits de sinal diferentes ou payloads de mantissa diferentes. Por exemplo:
+
+* `0./0.` produz um `NaN` cujo bit de sinal é 1 na maioria das plataformas x86.
+* O literal `nan` produz um `NaN` cujo bit de sinal é 0.
+* Após o [PR #98230](https://github.com/ClickHouse/ClickHouse/pull/98230), o caminho NEON em AArch64 de
+  `log` retorna um `NaN` cujo bit de sinal difere do `log` escalar da glibc para entradas negativas.
+
+As tabelas hash no ClickHouse comparam chaves byte a byte, portanto padrões de bits `NaN` diferentes caem em
+buckets diferentes e são tratados como valores distintos por operações com semântica de conjunto, incluindo
+`DISTINCT`, `GROUP BY`, `uniqExact`, `countDistinct` e equi-`JOIN` em uma chave `Float`:
+
+```sql
+SELECT countDistinct(arrayJoin([0./0., nan, log(-1.)]));
+-- May return 2 or 3 depending on architecture and build, even though all three inputs are NaN.
+```
+
+Isso está de acordo com a IEEE 754 (todo `NaN` é diferente de qualquer outro valor, inclusive de si mesmo)
+mas pode causar estranheza. Se você precisar que operações com semântica de conjunto tratem todos os valores `NaN` como iguais,
+normalize-os na consulta:
+
+```sql
+-- Replace every NaN with a single canonical NaN value
+SELECT countDistinct(if(isNaN(x), CAST('nan' AS Float64), x))
+FROM (SELECT arrayJoin([0./0., nan, log(-1.)]) AS x);
+-- Returns 1.
+
+-- Or exclude NaN values from the set entirely
+SELECT countDistinct(if(isNaN(x), NULL, x))
+FROM (SELECT arrayJoin([0./0., nan, log(-1.)]) AS x);
+-- Returns 0.
+```
+
+A mesma abordagem funciona para as chaves de `DISTINCT`, `GROUP BY` e `JOIN`.
+
 <div id="bfloat16">
   ## BFloat16
 </div>

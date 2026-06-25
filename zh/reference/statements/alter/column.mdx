@@ -28,6 +28,7 @@ ALTER [TEMPORARY] TABLE [db].name [ON CLUSTER cluster] ADD|DROP|RENAME|CLEAR|COM
 * [MODIFY COLUMN REMOVE](#modify-column-remove) — 移除列属性之一。
 * [MODIFY COLUMN MODIFY SETTING](#modify-column-modify-setting) - 更改列设置。
 * [MODIFY COLUMN RESET SETTING](#modify-column-reset-setting) - 重置列设置。
+* [MODIFY COLUMN ADD ENUM VALUES](#modify-column-add-enum-values) - 向枚举中添加新值。
 * [MATERIALIZE COLUMN](#materialize-column) — 在缺少该列的 parts 中将该列物化。
   下文将详细介绍这些操作。
 
@@ -152,8 +153,12 @@ ALTER TABLE visits COMMENT COLUMN browser 'This column shows the browser used fo
 </div>
 
 ```sql
-MODIFY COLUMN [IF EXISTS] name [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
-ALTER COLUMN [IF EXISTS] name TYPE [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
+MODIFY COLUMN [IF EXISTS] name
+    [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
+    | ADD ENUM VALUES ( 'name' [= number] [, ...] )
+ALTER COLUMN [IF EXISTS] name
+    TYPE [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
+    | ADD ENUM VALUES ( 'name' [= number] [, ...] )
 ```
 
 此查询会更改 `name` 列的以下属性：
@@ -167,6 +172,8 @@ ALTER COLUMN [IF EXISTS] name TYPE [type] [default_expr] [codec] [TTL] [settings
 * 生存时间 (TTL)
 
 * 列级设置
+
+* Enum/Enum8/Enum16 类型的枚举值
 
 有关修改列压缩编解码器的示例，请参见 [列压缩编解码器](/zh/reference/statements/create/table#column_compression_codec)。
 
@@ -292,12 +299,32 @@ ALTER TABLE table_name MODIFY COLUMN column_name RESET SETTING name,...;
 ALTER TABLE table_name MODIFY COLUMN column_name RESET SETTING max_compress_block_size;
 ```
 
+<div id="modify-column-add-enum-values">
+  ## MODIFY COLUMN ADD ENUM VALUES
+</div>
+
+为类型为 `Enum`、`Enum8`、`Enum16`、`Nullable(Enum)`、`Nullable(Enum8)` 或 `Nullable(Enum16)` 的列添加新值
+
+语法：
+
+```sql
+ALTER TABLE table_name MODIFY COLUMN enum_column_name ADD ENUM VALUES ('EnumName' [= number], ...);
+```
+
+**示例**
+
+向 `enum_column_name` 列中添加两个值：
+
+```sql
+ALTER TABLE table_name MODIFY COLUMN enum_column_name ADD ENUM VALUES ('Hundred' = 100, 'HundredOne');
+```
+
 <div id="materialize-column">
   ## MATERIALIZE COLUMN
 </div>
 
 将具有 `DEFAULT` 或 `MATERIALIZED` 值表达式的列物化。使用 `ALTER TABLE table_name ADD COLUMN column_name MATERIALIZED` 添加物化列时，现有行中缺失的物化值不会自动补齐。添加或更新 `DEFAULT` 或 `MATERIALIZED` 表达式后，`MATERIALIZE COLUMN` 语句可用于重写现有列数据 (因为这类操作只会更新元数据，不会更改现有数据) 。请注意，对排序键中的列执行物化是无效操作，因为这可能会破坏排序顺序。
-其实现方式为 [变更](/zh/reference/statements/alter#mutations)。
+其实现方式为 [变更](/zh/reference/statements/alter/index#mutations)。
 
 对于具有新的或已更新 `MATERIALIZED` 值表达式的列，所有现有行都会被重写。
 
@@ -360,7 +387,7 @@ SELECT groupArray(x), groupArray(s) FROM tmp;
 
 `ALTER` 查询允许在嵌套数据结构中创建和删除单个元素 (列) ，但不支持创建或删除整个嵌套数据结构。要添加嵌套数据结构，可以添加名称类似 `name.nested_name`、类型为 `Array(T)` 的列。嵌套数据结构等价于多个数组列，这些列的名称在点号前具有相同的前缀。
 
-对名称中带点的列进行重命名仅部分受支持。点号保留用于访问 [Nested](/zh/reference/data-types/nested-data-structures) 子列，因此前缀 (父级名称) 必须保持不变。只有后缀 (子列名称) 可以更改。例如，`a.b` 可以重命名为 `a.c`，但不允许将 `a.b` 重命名为 `b.d`，因为这会更改 Nested 父级前缀。
+对名称中带点的列进行重命名仅部分受支持。点号保留用于访问 [Nested](/zh/reference/data-types/nested-data-structures/index) 子列，因此前缀 (父级名称) 必须保持不变。只有后缀 (子列名称) 可以更改。例如，`a.b` 可以重命名为 `a.c`，但不允许将 `a.b` 重命名为 `b.d`，因为这会更改 Nested 父级前缀。
 
 不支持删除主键或采样键中的列 (即在 `ENGINE` 表达式中使用的列) 。只有在不会导致数据发生修改的情况下，才可以更改包含在主键中的列的类型 (例如，可以向 Enum 添加值，或将类型从 `DateTime` 更改为 `UInt32`) 。
 
@@ -368,4 +395,4 @@ SELECT groupArray(x), groupArray(s) FROM tmp;
 
 `ALTER` 查询会阻塞该表上的所有读写。换句话说，如果在执行 `ALTER` 查询时有一个长时间运行的 `SELECT` 查询，`ALTER` 查询会等待其完成。同时，在此次 `ALTER` 执行期间，对同一张表发起的所有新查询也都会等待。
 
-对于不自行存储数据的表 (例如 [Merge](/zh/reference/statements/alter) 和 [Distributed](/zh/reference/statements/alter)) ，`ALTER` 只会更改表结构，而不会更改下级表的结构。例如，对 `Distributed` 表执行 ALTER 时，还需要对所有远程服务器上的表执行 `ALTER`。
+对于不自行存储数据的表 (例如 [Merge](/zh/reference/statements/alter/index) 和 [Distributed](/zh/reference/statements/alter/index)) ，`ALTER` 只会更改表结构，而不会更改下级表的结构。例如，对 `Distributed` 表执行 ALTER 时，还需要对所有远程服务器上的表执行 `ALTER`。

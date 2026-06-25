@@ -178,6 +178,36 @@ sudo ./install.sh
   * убеждаться, что другие тесты не проверяют то же самое (то есть сначала выполните grep).
 </Note>
 
+<div id="templated-tests-with-jinja">
+  ### Шаблонизированные тесты с Jinja
+</div>
+
+Тест `.sql` можно написать в виде шаблона [Jinja2](https://jinja.palletsprojects.com/), добавив к имени файла суффикс `.j2`, так что `foo.sql` превратится в `foo.sql.j2`. Перед запуском теста `clickhouse-test` рендерит шаблон в обычный скрипт `.sql` и выполняет получившийся результат.
+
+Это полезно, когда в тесте один и тот же запрос повторяется с небольшими вариациями: цикл генерирует запросы из компактного шаблона, вместо того чтобы прописывать каждый вручную. Чаще всего используются следующие конструкции:
+
+* `{% for ... %} ... {% endfor %}` — для повторения блока,
+* `{{ expression }}` — для подстановки значения в вывод,
+* `-%}` и `{%-` — для удаления соседних пробельных символов, чтобы сгенерированный скрипт оставался аккуратным.
+
+Например, этот шаблон:
+
+```sql
+{% for type in ['UInt8', 'UInt16', 'UInt32'] -%}
+SELECT toTypeName(0::{{ type }});
+{% endfor -%}
+```
+
+получается:
+
+```sql
+SELECT toTypeName(0::UInt8);
+SELECT toTypeName(0::UInt16);
+SELECT toTypeName(0::UInt32);
+```
+
+Ожидаемый вывод можно задать либо как обычный файл `<name>.reference`, содержащий полностью развёрнутые результаты, либо как шаблон `<name>.reference.j2`, который `clickhouse-test` перед сравнением обрабатывает аналогичным образом. Используйте шаблонный вариант, если ожидаемый вывод тоже имеет повторяющуюся структуру. Больше примеров см. в существующих файлах `*.sql.j2` в `tests/queries/0_stateless/`.
+
 <div id="restricting-test-runs">
   ### Ограничение запуска тестов
 </div>
@@ -188,8 +218,8 @@ sudo ./install.sh
 
 ```sql
 -- Tags: no-fasttest, no-replicated-database
--- no-fasttest: <укажите_причину_для_тега_здесь>
--- no-replicated-database: <укажите_причину_здесь>
+-- no-fasttest: <provide_a_reason_for_the_tag_here>
+-- no-replicated-database: <provide_a_reason_here>
 
 SELECT 1
 ```
@@ -199,8 +229,8 @@ SELECT 1
 ```bash
 #!/usr/bin/env bash
 # Tags: no-fasttest, no-replicated-database
-# - no-fasttest: <укажите_причину_здесь>
-# - no-replicated-database: <укажите_причину_здесь>
+# - no-fasttest: <provide_a_reason_for_the_tag_here>
+# - no-replicated-database: <provide_a_reason_here>
 ```
 
 Список доступных тегов:
@@ -227,7 +257,7 @@ SELECT 1
 | `no-release`                   | Отключает тесты в Release-сборках                                                   |                                                                                                                |
 | `no-darwin`                    | Отключает тест в macOS (Darwin)                                                     | Тест зависит от специфичных для Linux возможностей, таких как распределенные запросы, `procfs` или HTTP-сервер |
 
-Также поддерживаются следующие параметры: `no-stress`, `no-polymorphic-parts`, `no-random-settings`, `no-random-merge-tree-settings`, `no-backward-compatibility-check`, `no-cpu-x86_64`, `no-cpu-aarch64`, `no-cpu-ppc64le`, `no-s3-storage`.
+Также поддерживаются следующие параметры: `no-polymorphic-parts`, `no-random-settings`, `no-random-merge-tree-settings`, `no-backward-compatibility-check`, `no-cpu-x86_64`, `no-cpu-aarch64`, `no-cpu-ppc64le`, `no-s3-storage`.
 
 Помимо перечисленных выше настроек, вы можете использовать флаги `USE_*` из `system.build_options`, чтобы указывать использование конкретных возможностей ClickHouse.
 Например, если ваш тест использует таблицу MySQL, следует добавить тег `use-mysql`.
@@ -636,9 +666,6 @@ ClickHouse предоставляет средства диагностики, �
 Он протестирован меньше, чем `clang-format`.
 
 У `CLion` есть собственный форматтер кода, который нужно настроить под наш стиль кода.
-
-Мы также используем `codespell` для поиска опечаток в коде.
-Это тоже делается автоматически.
 
 <div id="test-coverage">
   ## Покрытие тестов

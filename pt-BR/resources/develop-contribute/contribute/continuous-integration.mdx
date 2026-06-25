@@ -74,28 +74,61 @@ Depois que todas as verificações forem iniciadas, o status muda para &#39;succ
   ## Style verificação
 </div>
 
-Executa várias verificações de estilo na base de código.
-
-Verificações básicas no job Style Verificação:
+Executa várias verificações de estilo na base de código. Cada subverificação abaixo corresponde a um `testname` em [`ci/jobs/check_style.py`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/check_style.py) e pode ser executada individualmente com `--test <name>` (veja abaixo).
 
 <div id="cpp">
   ##### cpp
 </div>
 
-Executa verificações simples de estilo de código com base em regex usando o script [`ci/jobs/scripts/check_style/check_cpp.sh`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/scripts/check_style/check_cpp.sh) (que também pode ser executado localmente).
-Se falhar, corrija os problemas de estilo de acordo com o [guia de estilo de código](/pt-BR/resources/develop-contribute/contribute/style).
+Verificações de estilo de C++ baseadas em regex via [`check_cpp.sh`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/scripts/check_style/check_cpp.sh). Se falhar, corrija os problemas de acordo com o [guia de estilo de código](/pt-BR/resources/develop-contribute/contribute/style).
 
-<div id="codespell">
-  ##### codespell, aspell
+<div id="whitespace-check">
+  ##### whitespace_check
 </div>
 
-Verifique se há erros de gramática e de digitação.
+Sinaliza espaços duplos após vírgulas em C++ que não fazem parte do alinhamento de colunas.
 
-<div id="mypy">
-  ##### mypy
+<div id="catch-all">
+  ##### catch_all
 </div>
 
-Realiza a verificação estática de tipos em código Python.
+Proíbe `catch (...)` fora de destrutores, de `main` e de pontos de entrada de fuzzer, em contextos nos quais ignorar uma exceção desconhecida não é seguro.
+
+<div id="yamllint">
+  ##### yamllint
+</div>
+
+Valida os arquivos de workflow em YAML em `.github/` usando `.yamllint`.
+
+<div id="xmllint">
+  ##### xmllint
+</div>
+
+Valida arquivos XML nos diretórios `tests/` e `programs/`.
+
+<div id="functional-tests-check">
+  ##### functional_tests_check
+</div>
+
+Verifica testes sem estado: consultas com filtro em `event_date` devem usar `>= yesterday()` em vez de `today()` (para evitar instabilidade perto da meia-noite), e os nomes dos arquivos de teste não devem conter `fail`.
+
+<div id="test-numbers-check">
+  ##### test_numbers_check
+</div>
+
+Sinaliza lacunas grandes na numeração de testes sem estado (`tests/queries/0_stateless/<NNNNN>_*`).
+
+<div id="symlinks">
+  ##### links simbólicos
+</div>
+
+Detecta links simbólicos inválidos no repositório.
+
+<div id="various">
+  ##### diversos
+</div>
+
+Verificações diversas do repositório via [`various_checks.sh`](https://github.com/ClickHouse/ClickHouse/blob/master/ci/jobs/scripts/check_style/various_checks.sh): consultas em `system.query_log` / `system.parts` / etc. devem filtrar por `currentDatabase`, os caminhos do ZooKeeper de `Replicated*MergeTree` devem incluir um prefixo específico por teste, os diretórios de testes de integração devem ter `__init__.py`, não pode haver BOMs UTF, nem bits de execução em arquivos de origem/dados, nem tags `:latest` em imagens de terceiros no docker-compose, entre outras verificações.
 
 <div id="running-style-check-locally">
   ### Executando localmente o job *Style Verificação*

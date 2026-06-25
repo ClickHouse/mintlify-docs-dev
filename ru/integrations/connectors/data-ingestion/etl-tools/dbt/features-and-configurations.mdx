@@ -26,36 +26,37 @@ your_profile_name:
     dev:
       type: clickhouse
 
-      # Необязательно
-      schema: [default] # База данных ClickHouse для моделей dbt
-      driver: [http] # http или native. Если не задано, определяется автоматически на основе настройки порта
+      # Optional
+      schema: [default] # ClickHouse database for dbt models
+      driver: [http] # http or native.  If not set this will be autodetermined based on port setting
       host: [localhost] 
-      port: [8123]  # Если не задано, по умолчанию используется 8123, 8443, 9000 или 9440 в зависимости от настроек secure и driver 
-      user: [default] # Пользователь для всех операций с базой данных
-      password: [<empty string>] # Пароль пользователя
-      cluster: [<empty string>] # Если задано, определённые DDL-операции и операции с таблицами будут выполняться с предложением ON CLUSTER для указанного кластера. Для работы распределённой материализации эта настройка обязательна. Подробнее см. раздел кластера ClickHouse ниже.
-      verify: [True] # Проверять TLS-сертификат при использовании TLS/SSL
-      secure: [False] # Использовать TLS (собственный протокол) или HTTPS (HTTP-протокол)
-      client_cert: [null] # Путь к TLS-сертификату клиента в формате .pem
-      client_cert_key: [null] # Путь к закрытому ключу TLS-сертификата клиента
-      retries: [1] # Количество повторных попыток при «повторяемом» исключении базы данных (например, ошибка 503 'Service Unavailable')
-      compression: [<empty string>] # Использовать сжатие gzip, если значение истинно (http), или тип сжатия для нативного соединения
-      connect_timeout: [10] # Тайм-аут в секундах для установки соединения с ClickHouse
-      send_receive_timeout: [300] # Тайм-аут в секундах для получения данных от сервера ClickHouse
-      cluster_mode: [False] # Использовать специальные настройки для улучшения работы с Replicated-базами данных (рекомендуется для ClickHouse Cloud)
-      use_lw_deletes: [False] # Использовать стратегию `delete+insert` в качестве стратегии incremental по умолчанию.
-      check_exchange: [True] # Проверить, поддерживает ли ClickHouse атомарную команду EXCHANGE TABLES. (Не требуется для большинства версий ClickHouse)
-      local_suffix: [_local] # Суффикс имени локальных таблиц на сегментах при распределённой материализации.
-      local_db_prefix: [<empty string>] # Префикс базы данных для локальных таблиц на сегментах при распределённой материализации. Если не задано, используется та же база данных, что и у distributed таблицы.
-      allow_automatic_deduplication: [False] # Включить автоматическую дедупликацию ClickHouse для Replicated-таблиц
-      tcp_keepalive: [False] # Только для нативного клиента: задать конфигурацию TCP keepalive. Пользовательские параметры keepalive указываются в формате [idle_time_sec, interval_sec, probes].
-      custom_settings: [{}] # Словарь/отображение пользовательских настроек ClickHouse для соединения — по умолчанию пусто.
-      database_engine: '' # Движок базы данных, используемый при создании новых схем ClickHouse (баз данных). Если не задано (по умолчанию), новые базы данных будут использовать движок ClickHouse по умолчанию (обычно Atomic).
-      threads: [1] # Количество потоков для выполнения запросов. Перед установкой значения больше 1 обязательно ознакомьтесь с разделом [согласованность чтения после записи](#read-after-write-consistency).
+      port: [8123]  # If not set, defaults to 8123, 8443, 9000, 9440 depending on the secure and driver settings 
+      user: [default] # User for all database operations
+      password: [<empty string>] # Password for the user
+      cluster: [<empty string>] # If set, certain DDL/table operations will be executed with the `ON CLUSTER` clause using this cluster. Distributed materializations require this setting to work. See the following ClickHouse Cluster section for more details.
+      verify: [True] # Validate TLS certificate if using TLS/SSL
+      secure: [False] # Use TLS (native protocol) or HTTPS (http protocol)
+      client_cert: [null] # Path to a TLS client certificate in .pem format
+      client_cert_key: [null] # Path to the private key for the TLS client certificate
+      retries: [1] # Number of times to retry a "retriable" database exception (such as a 503 'Service Unavailable' error)
+      compression: [<empty string>] # Use gzip compression if truthy (http), or compression type for a native connection
+      connect_timeout: [10] # Timeout in seconds to establish a connection to ClickHouse
+      send_receive_timeout: [300] # Timeout in seconds to receive data from the ClickHouse server
+      cluster_mode: [False] # Use specific settings designed to improve operation on Replicated databases (recommended for ClickHouse Cloud)
+      use_lw_deletes: [False] # Use the strategy `delete+insert` as the default incremental strategy.
+      check_exchange: [True] # Validate that clickhouse support the atomic EXCHANGE TABLES command.  (Not needed for most ClickHouse versions)
+      local_suffix: [_local] # Table suffix of local tables on shards for distributed materializations.
+      local_db_prefix: [<empty string>] # Database prefix of local tables on shards for distributed materializations. If empty, it uses the same database as the distributed table.
+      allow_automatic_deduplication: [False] # Enable ClickHouse automatic deduplication for Replicated tables
+      tcp_keepalive: [False] # Native client only, specify TCP keepalive configuration. Specify custom keepalive settings as [idle_time_sec, interval_sec, probes].
+      reuse_connections: [True] # Re-use the same connection across models. Set to `False` to close the connection at the end of each model — useful on multi-replica ClickHouse Cloud services where the load balancer routes by TCP connection.
+      custom_settings: [{}] # A dictionary/mapping of custom ClickHouse settings for the connection - default is empty.
+      database_engine: '' # Database engine to use when creating new ClickHouse schemas (databases).  If not set (the default), new databases will use the default ClickHouse database engine (usually Atomic).
+      threads: [1] # Number of threads to use when running queries. Before setting it to a number higher than 1, make sure to read the [read-after-write consistency](#read-after-write-consistency) section.
       
-      # Настройки нативного соединения (clickhouse-driver)
-      sync_request_timeout: [5] # Тайм-аут для Ping сервера
-      compress_block_size: [1048576] # Размер блока сжатия, если сжатие включено
+      # Native (clickhouse-driver) connection settings
+      sync_request_timeout: [5] # Timeout for server ping
+      compress_block_size: [1048576] # Compression block size if compression is enabled
 ```
 
 <div id="schema-vs-database">

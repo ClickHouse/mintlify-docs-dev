@@ -286,6 +286,99 @@ SELECT arrayAvg(x, y -> x*y, [2, 3], [2, 3]) AS res;
 6.5
 ```
 
+<div id="arrayBottomK">
+  ## arrayBottomK
+</div>
+
+Introduzido em: v26.6.0
+
+Retorna um array com os K menores elementos do array de entrada, ordenados em ordem crescente.
+Se uma função lambda `f` for especificada, os elementos serão comparados com base no resultado de `f` aplicado a cada elemento.
+Se `f` aceitar vários argumentos, arrays adicionais serão passados para `arrayBottomK`, e seus elementos
+corresponderão aos argumentos de `f`.
+
+Os valores `NULL` são ignorados e não aparecem no resultado. O tamanho do resultado é, no máximo, `K`
+e pode ser menor quando o array de entrada contiver menos de `K` elementos não nulos.
+O tipo de elemento do resultado é a versão não `Nullable` do tipo de elemento de entrada.
+
+`arrayBottomK` é uma [função de ordem superior](/pt-BR/reference/functions/regular-functions/overview#higher-order-functions).
+
+Veja também:
+
+* `arrayTopK`, que retorna os K maiores elementos.
+* `arrayPartialSort`, que produz os mesmos K elementos nas posições `[1..K]`, mas
+  também mantém os elementos restantes em ordem não especificada e não ignora valores nulos.
+
+**Sintaxe**
+
+```sql
+arrayBottomK([f,] K, arr [, arr1, ... ,arrN])
+```
+
+**Argumentos**
+
+* `f(arr[, arr1, ... ,arrN])` — Opcional. Uma função lambda para calcular a chave de ordenação de cada elemento. [`Função lambda`](/pt-BR/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
+* `K` — O número de menores elementos a serem retornados. [`(U)Int8/16/32/64`](/pt-BR/reference/data-types/int-uint)
+* `arr` — Um array. [`Array(T)`](/pt-BR/reference/data-types/array)
+* `arr1, ... ,arrN` — N arrays adicionais, caso `f` aceite vários argumentos. [`Array(T)`](/pt-BR/reference/data-types/array)
+
+**Valor retornado**
+
+Retorna até `K` elementos de `arr` com os menores valores (ou os menores resultados da função lambda), ordenados em ordem crescente.
+Valores NULL são ignorados. O array retornado tem tipo de elemento `T` mesmo quando a entrada tem tipo `Nullable(T)`.
+
+**Exemplos**
+
+**simple&#95;int**
+
+```sql title=Query
+SELECT arrayBottomK(3, [1, 5, 2, 7, 3])
+```
+
+```response title=Response
+[1,2,3]
+```
+
+**skip&#95;nulls**
+
+```sql title=Query
+SELECT arrayBottomK(3, [1, NULL, 5, 2, NULL, 7])
+```
+
+```response title=Response
+[1,2,5]
+```
+
+**fewer&#95;than&#95;k**
+
+```sql title=Query
+SELECT arrayBottomK(5, [1, NULL, 2])
+```
+
+```response title=Response
+[1,2]
+```
+
+**lambda&#95;simple**
+
+```sql title=Query
+SELECT arrayBottomK((x) -> -x, 2, [5, 9, 1, 3])
+```
+
+```response title=Response
+[9,5]
+```
+
+**lambda&#95;multi**
+
+```sql title=Query
+SELECT arrayBottomK((x, y) -> y, 2, ['a', 'b', 'c'], [3, 1, 2])
+```
+
+```response title=Response
+['b','c']
+```
+
 <div id="arrayCompact">
   ## arrayCompact
 </div>
@@ -2232,15 +2325,15 @@ Esta função é igual a `arrayReverseSort`, mas com o argumento adicional `limi
 **Sintaxe**
 
 ```sql
-arrayPartialReverseSort([f,] arr [, arr1, ... ,arrN], limit)
+arrayPartialReverseSort([f,] limit, arr [, arr1, ... ,arrN])
 ```
 
 **Argumentos**
 
 * `f(arr[, arr1, ... ,arrN])` — A função lambda a ser aplicada aos elementos do array `x`. [`Função lambda`](/pt-BR/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
+* `limit` — Valor do índice até o qual a ordenação ocorrerá. [`(U)Int*`](/pt-BR/reference/data-types/int-uint)
 * `arr` — Array a ser ordenado. [`Array(T)`](/pt-BR/reference/data-types/array)
 * `arr1, ... ,arrN` — N arrays adicionais, caso `f` aceite vários argumentos. [`Array(T)`](/pt-BR/reference/data-types/array)
-* `limit` — Valor do índice até o qual a ordenação ocorrerá. [`(U)Int*`](/pt-BR/reference/data-types/int-uint)
 
 **Valor retornado**
 
@@ -2403,21 +2496,21 @@ Introduzido em: v23.2.0
 Esta função é igual a `arraySort`, mas com um argumento adicional, `limit`, que permite ordenação parcial.
 
 <Tip>
-  Para manter apenas os elementos classificados, use `arrayResize`.
+  Para manter apenas os elementos ordenados, use `arrayResize`.
 </Tip>
 
 **Sintaxe**
 
 ```sql
-arrayPartialSort([f,] arr [, arr1, ... ,arrN], limit)
+arrayPartialSort([f,] limit, arr [, arr1, ... ,arrN])
 ```
 
 **Argumentos**
 
 * `f(arr[, arr1, ... ,arrN])` — A função lambda a ser aplicada aos elementos do array `x`. [`Função lambda`](/pt-BR/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
+* `limit` — Valor do índice até o qual a ordenação ocorrerá. [`(U)Int*`](/pt-BR/reference/data-types/int-uint)
 * `arr` — Array a ser ordenado. [`Array(T)`](/pt-BR/reference/data-types/array)
 * `arr1, ... ,arrN` — N arrays adicionais, quando `f` aceita vários argumentos. [`Array(T)`](/pt-BR/reference/data-types/array)
-* `limit` — Valor do índice até o qual a ordenação ocorrerá. [`(U)Int*`](/pt-BR/reference/data-types/int-uint)
 
 **Valor retornado**
 
@@ -2446,7 +2539,7 @@ SELECT arrayPartialSort(2, ['expenses', 'lasso', 'embolism', 'gladly'])
 ['embolism', 'expenses', 'gladly', 'lasso']
 ```
 
-**retain&#95;sorted**
+**retain&#95;ordenado**
 
 ```sql title=Query
 SELECT arrayResize(arrayPartialSort(2, [5, 9, 1, 3]), 2)
@@ -2617,7 +2710,7 @@ arrayPushBack(arr, x)
   - Ao adicionar números, o ClickHouse define automaticamente o tipo de `x` de acordo com o tipo de dado do array.
   - Pode ser `NULL`. A função adiciona um elemento `NULL` a um array, e o tipo dos elementos do array é convertido em `Nullable`.
 
-  Para mais informações sobre os tipos de dados no ClickHouse, consulte [Tipos de dados](/pt-BR/reference/data-types).
+  Para mais informações sobre os tipos de dados no ClickHouse, consulte [Tipos de dados](/pt-BR/reference/data-types/index).
 </Note>
 
 **Valor retornado**
@@ -2660,7 +2753,7 @@ arrayPushFront(arr, x)
   - Ao adicionar números, o ClickHouse define automaticamente o tipo de `x` de acordo com o tipo de dado do array.
   - Pode ser `NULL`. A função adiciona um elemento `NULL` ao array, e o tipo dos elementos do array é convertido para `Nullable`.
 
-  Para mais informações sobre os tipos de dados no ClickHouse, consulte [Tipos de dados](/pt-BR/reference/data-types).
+  Para mais informações sobre os tipos de dados no ClickHouse, consulte [Tipos de dados](/pt-BR/reference/data-types/index).
 </Note>
 
 **Valor retornado**
@@ -3100,12 +3193,12 @@ Se o array a ser ordenado contiver `-Inf`, `NULL`, `NaN` ou `Inf`, eles serão o
 **Sintaxe**
 
 ```sql
-arrayReverseSort([f,] arr [, arr1, ... ,arrN)
+arrayReverseSort([f,] arr [, arr1, ... ,arrN])
 ```
 
 **Argumentos**
 
-* `f(y1[, y2 ... yN])` — A função lambda a ser aplicada aos elementos do array `x`. - `arr` — Um array a ser classificado. [`Array(T)`](/pt-BR/reference/data-types/array) - `arr1, ..., yN` — Opcional. N arrays adicionais, caso `f` aceite vários argumentos.
+* `f(y1[, y2 ... yN])` — A função lambda a ser aplicada aos elementos do array `x`. - `arr` — Um array a ser classificado. [`Array(T)`](/pt-BR/reference/data-types/array) - `arr1, ..., arrN` — Opcional. N arrays adicionais, caso `f` aceite vários argumentos.
 
 **Valor retornado**
 
@@ -3559,7 +3652,7 @@ arraySort([f,] arr [, arr1, ... ,arrN])
 
 **Argumentos**
 
-* `f(y1[, y2 ... yN])` — A função lambda a ser aplicada aos elementos do array `x`. - `arr` — Um array a ser ordenado. [`Array(T)`](/pt-BR/reference/data-types/array) - `arr1, ..., yN` — Opcional. N arrays adicionais, caso `f` aceite vários argumentos.
+* `f(y1[, y2 ... yN])` — A função lambda a ser aplicada aos elementos do array `x`. - `arr` — Um array a ser ordenado. [`Array(T)`](/pt-BR/reference/data-types/array) - `arr1, ..., arrN` — Opcional. N arrays adicionais, caso `f` aceite vários argumentos.
 
 **Valor retornado**
 
@@ -3722,6 +3815,95 @@ arraySymmetricDifference([1, 2], [1, 2], [1, 3]) AS non_empty_symmetric_differen
 ┌─empty_symmetric_difference─┬─non_empty_symmetric_difference─┐
 │ []                         │ [3,2]                          │
 └────────────────────────────┴────────────────────────────────┘
+```
+
+<div id="arrayTopK">
+  ## arrayTopK
+</div>
+
+Introduzido em: v26.6.0
+
+Retorna um array com os K maiores elementos do array de entrada, em ordem decrescente.
+Se uma `função lambda` `f` for especificada, os elementos serão comparados com base no resultado de `f` aplicada a cada elemento.
+Se `f` aceitar vários argumentos, arrays adicionais serão passados para `arrayTopK`, e seus elementos
+corresponderão aos argumentos de `f`.
+
+Os valores `NULL` são ignorados e não aparecem no resultado. O tamanho do resultado é, no máximo, `K`
+e pode ser menor quando o array de entrada contém menos elementos não nulos do que `K`.
+O tipo de elemento do resultado é a versão não `Nullable` do tipo de elemento de entrada.
+
+`arrayTopK` é uma [função de ordem superior](/pt-BR/reference/functions/regular-functions/overview#higher-order-functions).
+
+Veja também `arrayBottomK`, que retorna os K menores elementos.
+
+**Sintaxe**
+
+```sql
+arrayTopK([f,] K, arr [, arr1, ... ,arrN])
+```
+
+**Argumentos**
+
+* `f(arr[, arr1, ... ,arrN])` — Opcional. Uma função lambda para calcular a chave de ordenação de cada elemento. [`Função lambda`](/pt-BR/reference/functions/regular-functions/overview#arrow-operator-and-lambda)
+* `K` — O número de maiores elementos a retornar. [`(U)Int8/16/32/64`](/pt-BR/reference/data-types/int-uint)
+* `arr` — Um array. [`Array(T)`](/pt-BR/reference/data-types/array)
+* `arr1, ... ,arrN` — N arrays adicionais, caso `f` aceite vários argumentos. [`Array(T)`](/pt-BR/reference/data-types/array)
+
+**Valor retornado**
+
+Retorna até `K` elementos de `arr` com os maiores valores (ou os maiores resultados da função lambda), em ordem decrescente.
+Nulls são ignorados. O array retornado tem tipo de elemento `T` mesmo quando a entrada é do tipo `Nullable(T)`.
+
+**Exemplos**
+
+**simple&#95;int**
+
+```sql title=Query
+SELECT arrayTopK(3, [1, 5, 2, 7, 3])
+```
+
+```response title=Response
+[7,5,3]
+```
+
+**skip&#95;nulls**
+
+```sql title=Query
+SELECT arrayTopK(3, [1, NULL, 5, 2, NULL, 7])
+```
+
+```response title=Response
+[7,5,2]
+```
+
+**fewer&#95;than&#95;k**
+
+```sql title=Query
+SELECT arrayTopK(5, [1, NULL, 2])
+```
+
+```response title=Response
+[2,1]
+```
+
+**lambda&#95;simple**
+
+```sql title=Query
+SELECT arrayTopK((x) -> -x, 2, [5, 9, 1, 3])
+```
+
+```response title=Response
+[1,3]
+```
+
+**lambda&#95;multi**
+
+```sql title=Query
+SELECT arrayTopK((x, y) -> y, 2, ['a', 'b', 'c'], [3, 1, 2])
+```
+
+```response title=Response
+['a','c']
 ```
 
 <div id="arrayTranspose">
@@ -5095,7 +5277,7 @@ Não há problema em haver bytes NULL ASCII em strings, e eles também serão co
 length(x)
 ```
 
-**Aliases**: `OCTET_LENGTH`
+**Aliases**: `CARDINALITY`, `OCTET_LENGTH`
 
 **Argumentos**
 
@@ -5275,7 +5457,7 @@ replicate(x, arr)
 
 **Argumentos**
 
-* `x` — O valor usado para preencher o array de resultado. [`Any`](/pt-BR/reference/data-types)
+* `x` — O valor usado para preencher o array de resultado. [`Any`](/pt-BR/reference/data-types/index)
 * `arr` — Um array. [`Array(T)`](/pt-BR/reference/data-types/array)
 
 **Valor retornado**

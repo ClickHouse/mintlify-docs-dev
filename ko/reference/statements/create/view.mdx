@@ -112,23 +112,23 @@ AS SELECT ...
 **예시:**
 
 ```sql
--- 내부 테이블을 사용하여 materialized view 생성
+-- Create a materialized view with an inner table
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, sum(y) AS total FROM src GROUP BY x;
 
--- 새 정의로 교체 (기존 내부 테이블 데이터는 손실됨)
+-- Replace with a new definition (old inner table data is lost)
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, count() AS cnt FROM src GROUP BY x;
 
--- POPULATE을 사용하여 기존 소스 데이터로 백필(backfill)
+-- Replace with POPULATE to backfill from existing source data
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     POPULATE
     AS SELECT x FROM src;
 
--- 내부 테이블 MV를 TO 테이블 MV로 교체 (대상 테이블 데이터는 유지됨)
+-- Replace an inner-table MV with a TO-table MV (target data is preserved)
 CREATE OR REPLACE MATERIALIZED VIEW mv TO target
     AS SELECT x FROM src;
 ```
@@ -137,7 +137,7 @@ CREATE OR REPLACE MATERIALIZED VIEW mv TO target
   [Materialized views](/ko/concepts/features/materialized-views/cascading-materialized-views)를 사용하는 단계별 가이드는 여기에서 확인할 수 있습니다.
 </Tip>
 
-materialized view는 해당 [SELECT](/ko/reference/statements/select) 쿼리로 변환된 데이터를 저장합니다.
+materialized view는 해당 [SELECT](/ko/reference/statements/select/index) 쿼리로 변환된 데이터를 저장합니다.
 
 `TO [db].[table]` 없이 materialized view를 생성할 때는 데이터를 저장할 테이블 엔진인 `ENGINE`을 지정해야 합니다.
 
@@ -146,18 +146,20 @@ materialized view는 해당 [SELECT](/ko/reference/statements/select) 쿼리로 
 materialized view는 다음과 같이 동작합니다. `SELECT`에 지정된 테이블에 데이터를 삽입하면, 삽입된 데이터의 일부가 이 `SELECT` 쿼리로 변환되고 그 결과가 뷰에 삽입됩니다.
 
 <Note>
-  ClickHouse의 materialized view는 대상 테이블에 삽입할 때 컬럼 순서가 아니라 **column names**를 사용합니다. `SELECT` 쿼리 결과에 일부 컬럼 이름이 없으면, 해당 컬럼이 [널 허용](/ko/reference/data-types/nullable)이 아니더라도 ClickHouse는 기본값을 사용합니다. materialized view를 사용할 때는 모든 컬럼에 alias를 추가하는 것이 안전합니다.
+  ClickHouse의 materialized view는 대상 테이블에 삽입할 때 컬럼 순서가 아니라 **컬럼 이름**을 사용합니다. 일부 컬럼 이름이 `SELECT` 쿼리 결과에 없으면, 해당 컬럼이 [널 허용](/ko/reference/data-types/nullable)이 아니더라도 ClickHouse는 기본값을 사용합니다. materialized view를 사용할 때는 모든 컬럼에 별칭을 추가하는 것이 안전합니다.
 
-  ClickHouse의 materialized view는 삽입 트리거에 더 가깝게 구현되어 있습니다. 뷰 쿼리에 집계가 포함된 경우, 이는 새로 삽입된 데이터의 batch에만 적용됩니다. source 테이블의 기존 데이터가 변경되어도(update, delete, drop partition 등) materialized view에는 반영되지 않습니다.
+  ClickHouse의 materialized view는 삽입 트리거에 더 가깝게 구현됩니다. 뷰 쿼리에 집계가 포함된 경우, 집계는 새로 삽입된 데이터 배치에만 적용됩니다. 원본 테이블의 기존 데이터에 대한 변경(예: 업데이트, 삭제, 파티션 삭제 등)은 materialized view에 반영되지 않습니다.
 
-  ClickHouse의 materialized view는 오류 발생 시 deterministic한 동작을 보장하지 않습니다. 즉, 이미 기록된 block은 대상 테이블에 유지되지만, 오류 발생 이후의 모든 block은 기록되지 않습니다.
+  ClickHouse의 materialized view는 오류 발생 시 결정적 동작을 보장하지 않습니다. 즉, 이미 기록된 블록은 대상 테이블에 유지되지만, 오류 이후의 모든 블록은 유지되지 않습니다.
 
-  기본적으로 여러 뷰 중 하나로 push하는 데 실패하면 `INSERT` 쿼리도 함께 실패하며, 일부 block은 대상 테이블에 기록되지 않을 수 있습니다. 이 동작은 `materialized_views_ignore_errors` 설정으로 변경할 수 있습니다(`INSERT` 쿼리에 설정해야 합니다). `materialized_views_ignore_errors=true`로 설정하면 뷰로 push하는 동안 발생하는 모든 오류가 무시되고, 모든 block이 대상 테이블에 기록됩니다.
+  기본적으로 뷰 중 하나에 푸시하는 과정에서 예외가 발생하면 `INSERT` 쿼리가 실패합니다. 그 시점까지 블록이 이미 원본 테이블에 도달했는지는 보장되지 않습니다. 이는 뷰 오류가 아니라 삽입 파이프라인의 타이밍에 따라 달라집니다. 원본 테이블과 모든 종속 뷰에 대해 exactly-once 전달을 보장하려면, 삽입 중복 제거(`insert_deduplicate`, `deduplicate_blocks_in_dependent_materialized_views`)를 사용하여 실패한 `INSERT`을 다시 시도하십시오.
 
-  또한 `system.*_log` 테이블에서는 기본적으로 `materialized_views_ignore_errors`가 `true`로 설정되어 있다는 점도 유의하십시오.
+  `INSERT` 쿼리에서 `materialized_views_ignore_errors=true`를 설정하면 오류 보고 방식만 바뀝니다. 각 뷰 오류는 경고로 기록되고 `INSERT` 쿼리는 성공합니다. 오류가 발생한 뷰의 대상에 대한 전달은 부분적으로만 이루어집니다. 예외가 발생하기 전에 처리된 블록은 유지되고, 오류가 발생한 블록과 그 이후의 모든 블록은 해당 뷰에서 삭제됩니다. 해당 대상의 다운스트림 뷰는 실제로 도착한 블록만 보게 되므로, 이들에 대한 전달도 부분적으로만 이루어집니다. 오류를 발생시키지 않은 형제 뷰(및 그 다운스트림 체인)에는 전체가 기록되며, 원본 테이블도 평소처럼 기록됩니다. `INSERT`가 성공으로 보고되므로 클라이언트는 실패 신호를 받지 못하고 자동 재시도도 트리거되지 않습니다. 따라서 이 설정은 원본 테이블 쓰기가 뷰 측 문제로 차단되면 안 되는 경우(예: `system.*_log` 테이블)에만 사용하십시오.
+
+  `materialized_views_ignore_errors`는 `system.*_log` 테이블에서 기본적으로 `true`입니다.
 </Note>
 
-`POPULATE`를 지정하면, 기존 테이블 데이터가 `CREATE TABLE ... AS SELECT ...`를 수행한 것처럼 생성 시 뷰에 삽입됩니다. 그렇지 않으면 쿼리에는 뷰를 생성한 후 테이블에 삽입된 데이터만 포함됩니다. 뷰를 생성하는 동안 테이블에 삽입된 데이터는 뷰에 삽입되지 않으므로, `POPULATE` 사용은 **권장하지 않습니다**.
+`POPULATE`를 지정하면, 뷰를 생성할 때 기존 테이블 데이터가 마치 `CREATE TABLE ... AS SELECT ...`를 수행하는 것처럼 뷰에 삽입됩니다. 그렇지 않으면 쿼리에는 뷰를 생성한 이후 테이블에 삽입된 데이터만 포함됩니다. 뷰 생성 중에 테이블에 삽입된 데이터는 뷰에 삽입되지 않으므로 `POPULATE` 사용은 **권장하지 않습니다**.
 
 <Note>
   `POPULATE`는 `CREATE TABLE ... AS SELECT ...`처럼 동작하므로 다음과 같은 제한이 있습니다.
@@ -239,12 +241,12 @@ AS SELECT ...
 편의를 위해 이전 문서는 [여기](https://pastila.nl/?00f32652/fdf07272a7b54bda7e13b919264e449f.md)에서 확인하실 수 있습니다.
 
 <div id="refreshable-materialized-view">
-  ## 갱신 가능 materialized view
+  ## 갱신 가능 구체화 뷰
 </div>
 
 ```sql
 CREATE MATERIALIZED VIEW [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
-REFRESH EVERY|AFTER interval [OFFSET interval]
+REFRESH [EVERY|AFTER interval [OFFSET interval]]
 [RANDOMIZE FOR interval]
 [DEPENDS ON [db.]name [, [db.]name [, ...]]]
 [SETTINGS name = value [, name = value [, ...]]]
@@ -262,6 +264,8 @@ AS SELECT ...
 number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 ```
 
+`REFRESH` 절에는 `EVERY`, `AFTER`, `DEPENDS ON` 중 적어도 하나를 지정해야 합니다. 이들 없이 단독으로 사용하는 `REFRESH`는 허용되지 않습니다. `EVERY`/`AFTER` 없이 사용하는 `REFRESH DEPENDS ON ...`는 `REFRESH AFTER 0 SECOND DEPENDS ON ...`의 축약형입니다. 자세한 내용은 아래의 [갱신 의존성](#refresh-dependencies)을 참조하십시오.
+
 해당 쿼리를 주기적으로 실행하고 결과를 테이블에 저장합니다.
 
 * `APPEND`를 지정하면 각 갱신 시 기존 행을 삭제하지 않고 테이블에 행을 삽입합니다. 이 삽입은 일반적인 `INSERT INTO ... SELECT` 쿼리와 마찬가지로 원자적이지 않습니다.
@@ -269,7 +273,7 @@ number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 
 일반적인 비갱신형 materialized view와의 차이점:
 
-* 삽입 트리거가 없습니다. `SELECT`에 지정된 테이블에 새 데이터가 삽입되어도 갱신 가능 materialized view로 자동 반영되지 *않습니다*. 대신 데이터 삽입은 주기적 또는 수동 갱신 실행 중에만 이루어집니다.
+* 삽입 트리거가 없습니다. `SELECT`에 지정된 테이블에 새 데이터가 삽입되어도 갱신 가능 구체화 뷰로 자동 반영되지 *않습니다*. 대신 데이터 삽입은 주기적 또는 수동 갱신 실행 중에만 이루어집니다.
 * `SELECT` 쿼리에는 제한이 없습니다. 테이블 함수(예: `url()`), 뷰, UNION, JOIN을 모두 사용할 수 있습니다.
 
 <Note>
@@ -283,28 +287,28 @@ number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 예시 갱신 일정:
 
 ```sql
-REFRESH EVERY 1 DAY -- 매일 자정(UTC)
-REFRESH EVERY 1 MONTH -- 매월 1일 자정
-REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- 매월 6일 오전 2:00
-REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- 격주 토요일 오후 3:10
-REFRESH EVERY 30 MINUTE -- 00:00, 00:30, 01:00, 01:30 등
-REFRESH AFTER 30 MINUTE -- 이전 갱신 완료 후 30분, 시각 기준 정렬 없음
--- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- 구문 오류, AFTER에는 OFFSET 사용 불가
-REFRESH EVERY 1 WEEK 2 DAYS -- 9일마다, 특정 요일이나 날짜에 고정되지 않음;
-                            -- 구체적으로, 1969-12-29 이후 경과 일수가 9로 나누어 떨어질 때
-REFRESH EVERY 5 MONTHS -- 5개월마다, 매년 다른 월에 실행됨(12는 5로 나누어 떨어지지 않으므로);
-                       -- 구체적으로, 1970-01 이후 경과 월 번호가 5로 나누어 떨어질 때
+REFRESH EVERY 1 DAY -- every day, at midnight (UTC)
+REFRESH EVERY 1 MONTH -- on 1st day of every month, at midnight
+REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- on 6th day of every month, at 2:00 am
+REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- every other Saturday, at 3:10 pm
+REFRESH EVERY 30 MINUTE -- at 00:00, 00:30, 01:00, 01:30, etc
+REFRESH AFTER 30 MINUTE -- 30 minutes after the previous refresh completes, no alignment with time of day
+-- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- syntax error, OFFSET is not allowed with AFTER
+REFRESH EVERY 1 WEEK 2 DAYS -- every 9 days, not on any particular day of the week or month;
+                            -- specifically, when day number (since 1969-12-29) is divisible by 9
+REFRESH EVERY 5 MONTHS -- every 5 months, different months each year (as 12 is not divisible by 5);
+                       -- specifically, when month number (since 1970-01) is divisible by 5
 ```
 
 `RANDOMIZE FOR`는 각 갱신 시각을 무작위로 조정합니다. 예:
 
 ```sql
-REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- 매일 01:30에서 02:30 사이의 임의 시간에 실행
+REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- every day at random time between 01:30 and 02:30
 ```
 
 지정된 뷰에서는 한 번에 최대 하나의 갱신만 실행될 수 있습니다. 예를 들어 `REFRESH EVERY 1 MINUTE`가 설정된 뷰의 갱신에 2분이 걸리면, 실제로는 2분마다 갱신됩니다. 이후 속도가 빨라져 10초 만에 갱신을 마치게 되면, 다시 1분마다 갱신됩니다. (즉, 누락된 갱신을 따라잡기 위해 10초마다 갱신되지는 않습니다. 그런 식의 밀린 갱신은 존재하지 않습니다.)
 
-또한 `CREATE` 쿼리에서 `EMPTY`를 지정하지 않는 한, materialized view가 생성된 직후 즉시 갱신이 시작됩니다. `EMPTY`를 지정하면 첫 번째 갱신은 일정에 따라 수행됩니다.
+일반적으로 첫 번째 갱신은 materialized view가 생성된 직후 즉시 시작됩니다. 마지막 갱신 이후 경과 시간은 무한대이므로, 어떤 일정이든 지금 갱신할 시점으로 간주됩니다. `EMPTY`를 지정하면 이 초기 갱신은 건너뛰고, 첫 번째 갱신은 다음 예약된 시각에 수행됩니다. 예를 들어 `EVERY 1 HOUR`의 경우 첫 번째 갱신은 현재 시간의 끝에 수행됩니다.
 
 <div id="in-replicated-db">
   ### 복제된 DB에서
@@ -319,50 +323,106 @@ REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- 매일 01:30에서 02:
 coordination은 Keeper를 통해 수행됩니다. znode 경로는 [default&#95;replica&#95;path](/ko/reference/settings/server-settings/settings#default_replica_path) 서버 설정으로 결정됩니다.
 
 <div id="refresh-dependencies">
-  ### 갱신 종속성
+  ### 갱신 의존성
 </div>
 
-`DEPENDS ON`은 서로 다른 테이블의 갱신을 동기화합니다. 예를 들어, 2개의 갱신 가능 materialized view로 이루어진 체인이 있다고 가정하겠습니다.
+`DEPENDS ON`은 서로 다른 테이블의 갱신 시점을 동기화합니다:
 
 ```sql
-CREATE MATERIALIZED VIEW source REFRESH EVERY 1 DAY AS SELECT * FROM url(...)
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH EVERY 1 HOUR DEPENDS ON dependency [...]
 ```
 
-`DEPENDS ON`이 없으면 두 뷰 모두 자정에 갱신을 시작하므로, 일반적으로 `destination`에서는 `source`에 있는 전날 데이터가 표시됩니다. 종속성을 추가하면:
+종속 뷰의 갱신은 모든 의존 뷰의 갱신이 완료된 후에야 시작됩니다.
+
+다른 뷰가 갱신된 직후 바로 갱신하려면:
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH AFTER 0 SECOND DEPENDS ON dependency [...]
 ```
 
-그러면 해당 날짜에는 `source`의 갱신이 완료된 후에만 `destination`의 갱신이 시작되므로, `destination`은 최신 데이터를 기반으로 하게 됩니다.
-
-또는 다음과 같이 동일한 결과를 얻을 수 있습니다:
+또는 같은 의미로:
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH DEPENDS ON dependency [...]
 ```
-
-여기서 `1 HOUR`는 `source`의 갱신 주기보다 짧은 임의의 기간일 수 있습니다. 종속 테이블은 의존하는 어떤 항목보다도 더 자주 갱신되지 않습니다. 이는 실제 갱신 주기를 여러 번 지정하지 않고 갱신 가능 뷰의 연쇄를 구성하는 올바른 방법입니다.
-
-추가 예시는 다음과 같습니다:
-
-* `REFRESH EVERY 1 DAY OFFSET 10 MINUTE` (`destination`)는 `REFRESH EVERY 1 DAY` (`source`)에 종속됩니다.<br />
-  `source`의 갱신에 10분 이상 걸리면 `destination`은 이를 기다립니다.
-* `REFRESH EVERY 1 DAY OFFSET 1 HOUR`는 `REFRESH EVERY 1 DAY OFFSET 23 HOUR`에 종속됩니다.<br />
-  해당 갱신이 서로 다른 날짜에 발생하더라도 위와 비슷합니다.
-  `X+1`일의 `destination` 갱신은 `X`일의 `source` 갱신을 기다립니다(2시간 이상 걸리는 경우).
-* `REFRESH EVERY 2 HOUR`는 `REFRESH EVERY 1 HOUR`에 종속됩니다.<br />
-  `2 HOUR` 갱신은 한 시간 걸러 한 번씩 `1 HOUR` 갱신 후에 수행됩니다. 예를 들어 자정
-  갱신 후, 그다음에는 오전 2시 갱신 후에 수행됩니다.
-* `REFRESH EVERY 1 MINUTE`는 `REFRESH EVERY 2 HOUR`에 종속됩니다.<br />
-  `destination`은 `source`가 갱신될 때마다 한 번, 즉 2시간마다 갱신됩니다. 따라서 `1 MINUTE`는 사실상 무시됩니다.
-* `REFRESH AFTER 1 HOUR`는 `REFRESH AFTER 1 HOUR`에 종속됩니다.<br />
-  현재로서는 권장되지 않습니다.
 
 <Note>
-  `DEPENDS ON`은 갱신 가능 materialized view 사이에서만 작동합니다. 일반 테이블을 `DEPENDS ON` 목록에 포함하면 해당 뷰는 더 이상 갱신되지 않습니다(종속 항목은 `ALTER`로 제거할 수 있으며, [갱신 매개변수 변경](#changing-refresh-parameters)을 참조하십시오).
+  `DEPENDS ON`은 갱신 가능 구체화 뷰(Refreshable Materialized View) 사이에서만 작동합니다. 특히 의존성 뷰에서 `TO <table>`을 사용하는 경우에는 테이블 이름이 아니라 뷰 이름을 사용해야 합니다. `DEPENDS ON` 목록에 일반 테이블, 갱신 가능하지 않은 뷰가 포함되어 있거나 오타가 있으면 해당 뷰는 갱신되지 않으며, `system.view_refreshes`에 상태가 `MissingDependencies`로 표시됩니다. 의존성은 `ALTER`를 사용해 변경하거나 제거할 수 있습니다. 자세한 내용은 [갱신 매개변수 변경](#changing-refresh-parameters)을 참조하십시오.
 </Note>
+
+<div id="using-depends-on-for-consistent-propagation-latency">
+  #### 일관된 전파 지연 시간을 위해 DEPENDS ON 사용
+</div>
+
+두 뷰가 모두 같은 주기의 `REFRESH EVERY`를 사용하면 의존성은 각 타임슬롯마다 적용됩니다.
+
+예를 들어 뷰 X와 Y가 모두 `REFRESH EVERY 1 HOUR`를 사용하고, Y가 X의 출력 테이블을 읽는다고 가정하겠습니다. 의존성이 없으면 Y는 일반적으로 X의 이전 시간 갱신 데이터만 보게 됩니다. `DEPENDS ON X`를 사용하면 Y의 11:00 갱신은 X의 11:00 갱신이 완료된 후에만 시작됩니다.
+
+```text
+           10:00            11:00            12:00
+           │                │                │
+  X:        [run]┐           [run]┐           [run]┐
+                 │                │                │
+  Y:             └►[run]          └►[run]          └►[run]
+```
+
+의존 항목과 종속 항목은 갱신이 갱신 주기보다 오래 걸리면 각각 독립적으로 timeslot을 건너뛸 수 있습니다. 종속 항목이 의존 항목의 각 갱신마다 정확히 한 번씩 갱신된다는 보장은 없습니다.
+
+```text
+           10:00          11:00          12:00          13:00
+           │              │              │              |
+  X:        [run]┐         [run]┐         [run]┐         [run]┐
+                 │              └────┐    (Y skips 12:00)     └───┐
+  Y:             └►[10:00 ru------un]└►[11:00 ru---------------un]└►[13:00 run]
+```
+
+<div id="using-depends-on-for-batched-stream-processing">
+  #### 배치 스트림 처리에 DEPENDS ON 사용하기
+</div>
+
+`REFRESH EVERY`를 사용하지 않으면, 의존하는 뷰 X는 X가 마지막으로 갱신된 이후 모든 의존성이 각각 최소 한 번씩 갱신되었을 때 갱신됩니다. `REFRESH AFTER T`는 지연 시간을 추가합니다. 즉, 의존성이 갱신을 완료한 후 T 시간이 지나면 의존하는 뷰의 갱신이 시작됩니다.
+
+순환 의존성은 허용되며 유용하게 활용할 수 있습니다. 다음 갱신 가능 구체화 뷰 그래프를 살펴보십시오:
+
+1. X는 어떤 스트림에서 행 배치를 가져와 테이블(table)에 저장합니다.
+2. 그런 다음 Y와 Z는 모두 해당 테이블을 읽고, 서로 다른 집계를 수행한 후 결과를 다른 테이블에 추가합니다.
+3. 배치가 완전히 처리되면 X는 다음 배치를 가져오고, 이 사이클이 반복됩니다.
+
+```text
+            source
+               │
+               ▼
+          ┌─────────┐
+     ┌───►│    X    │◄───┐
+     │    └──┬───┬──┘    │
+  DEPENDS    │   │    DEPENDS
+    ON       ▼   ▼      ON
+     │      ┌─┐ ┌─┐      │
+     └──────┤Y│ │Z├──────┘
+            └─┘ └─┘
+```
+
+전체 예시:
+
+```sql
+CREATE TABLE current_batch (t UInt64, v Int64) ENGINE ReplicatedMergeTree ORDER BY t;
+CREATE TABLE batch_log (max_t UInt64, n Int64, v_sum Int64, processed_at DateTime64) ENGINE ReplicatedMergeTree ORDER BY max_t;
+CREATE TABLE stats (h UInt64, n UInt64) ENGINE ReplicatedSummingMergeTree ORDER BY h;
+
+-- (system.numbers stands in for a data source with monotonically increasing timestamps or sequence numbers)
+CREATE MATERIALIZED VIEW current_batch_v REFRESH EVERY 10 SECOND DEPENDS ON batch_log_v, stats_v TO current_batch AS SELECT number as t, number * 10 as v FROM system.numbers WHERE number > (SELECT max(max_t) FROM batch_log) LIMIT 100;
+
+CREATE MATERIALIZED VIEW batch_log_v REFRESH DEPENDS ON current_batch_v APPEND TO batch_log AS SELECT max(t) as max_t, count() as n, sum(v) as v_sum, now64() as processed_at FROM current_batch;
+
+CREATE MATERIALIZED VIEW stats_v REFRESH DEPENDS ON current_batch_v APPEND TO stats AS SELECT cityHash64(v) % 20 as h, count() as n FROM current_batch GROUP BY h;
+
+-- Must trigger initial refresh manually.
+SYSTEM REFRESH VIEW current_batch_v;
+```
+
+더 긴 체인도 잘 작동합니다.
+
+이 기능은 갱신 조정 기능이 활성화된 경우, 즉 뷰가 Replicated 또는 Shared 데이터베이스에 있을 때에만 제대로 작동합니다. 조정 기능이 없으면 서버를 재시작할 때 사이클이 끊어지므로, 뷰를 생성한 후 한 번만이 아니라 재시작할 때마다 수동으로 `SYSTEM REFRESH VIEW`를 실행해야 합니다.
 
 <div id="refresh-settings">
   ### 갱신 설정
@@ -374,8 +434,6 @@ CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS S
 * `refresh_retry_initial_backoff_ms` - `refresh_retries`가 0이 아닐 때 첫 번째 재시도 전까지의 지연 시간입니다. 이후 각 재시도마다 지연 시간이 두 배로 증가하며, 최대 `refresh_retry_max_backoff_ms`까지 늘어납니다. 기본값: 100 ms.
 * `refresh_retry_max_backoff_ms` - 갱신 시도 사이의 지연 시간이 지수적으로 증가할 때의 상한입니다. 기본값: 60000 ms(1분).
 * `all_replicas` - `APPEND`를 사용하는 [복제된 데이터베이스](/ko/reference/engines/database-engines/replicated)에서 모든 레플리카가 각각 독립적으로 갱신할지, 아니면 예약된 각 시각마다 하나의 레플리카만 갱신할지를 제어합니다. 이 설정은 뷰를 생성한 후에는 변경할 수 없습니다. 기본값: `false`.
-* `prefer_dependency_replica` - 뷰에 `DEPENDS ON`이 있으면 상위 갱신을 실행한 레플리카가 종속 갱신 실행에서 우선권을 가지며, 다른 레플리카는 `prefer_dependency_replica_delay_ms`만큼 시도를 지연합니다. `SharedMergeTree`와 함께 사용하면 복제 지연으로 인해 종속 갱신 체인에서 데이터가 누락되는 문제를 방지하는 데 유용합니다. 기본값: `false`.
-* `prefer_dependency_replica_delay_ms` - `prefer_dependency_replica`가 활성화된 경우, 우선순위가 없는 레플리카가 종속 갱신 실행을 시도하기 전에 대기하는 시간입니다. 기본값: 2000 ms.
 
 <div id="changing-refresh-parameters">
   ### 갱신 매개변수 변경

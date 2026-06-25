@@ -28,6 +28,7 @@ Se admiten las siguientes acciones:
 * [MODIFY COLUMN REMOVE](#modify-column-remove) — Elimina una de las propiedades de la columna.
 * [MODIFY COLUMN MODIFY SETTING](#modify-column-modify-setting) - Cambia la configuración de la columna.
 * [MODIFY COLUMN RESET SETTING](#modify-column-reset-setting) - Restablece la configuración de la columna.
+* [MODIFY COLUMN ADD ENUM VALUES](#modify-column-add-enum-values) - Agrega nuevos valores a Enum.
 * [MATERIALIZE COLUMN](#materialize-column) — Materializa la columna en las partes donde no existe.
   Estas acciones se describen en detalle a continuación.
 
@@ -152,8 +153,12 @@ ALTER TABLE visits COMMENT COLUMN browser 'This column shows the browser used fo
 </div>
 
 ```sql
-MODIFY COLUMN [IF EXISTS] name [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
-ALTER COLUMN [IF EXISTS] name TYPE [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
+MODIFY COLUMN [IF EXISTS] name
+    [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
+    | ADD ENUM VALUES ( 'name' [= number] [, ...] )
+ALTER COLUMN [IF EXISTS] name
+    TYPE [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
+    | ADD ENUM VALUES ( 'name' [= number] [, ...] )
 ```
 
 Esta consulta cambia las propiedades de la columna `name`:
@@ -167,6 +172,8 @@ Esta consulta cambia las propiedades de la columna `name`:
 * TTL
 
 * Configuración a nivel de columna
+
+* Valores de enum para los tipos Enum/Enum8/Enum16
 
 Para ver ejemplos de cómo modificar los CODECS de compresión de las columnas, consulte [Column Compression Codecs](/es/reference/statements/create/table#column_compression_codec).
 
@@ -292,12 +299,32 @@ Restablecer la configuración de la columna `max_compress_block_size` a su valor
 ALTER TABLE table_name MODIFY COLUMN column_name RESET SETTING max_compress_block_size;
 ```
 
+<div id="modify-column-add-enum-values">
+  ## MODIFY COLUMN ADD ENUM VALUES
+</div>
+
+Añade nuevos valores a una columna de tipo `Enum`, `Enum8`, `Enum16`, `Nullable(Enum)`, `Nullable(Enum8)` o `Nullable(Enum16)`
+
+Sintaxis:
+
+```sql
+ALTER TABLE table_name MODIFY COLUMN enum_column_name ADD ENUM VALUES ('EnumName' [= number], ...);
+```
+
+**Ejemplo**
+
+Agregue dos valores a la columna `enum_column_name`:
+
+```sql
+ALTER TABLE table_name MODIFY COLUMN enum_column_name ADD ENUM VALUES ('Hundred' = 100, 'HundredOne');
+```
+
 <div id="materialize-column">
   ## MATERIALIZE COLUMN
 </div>
 
 Materializa una columna con una expresión de valor `DEFAULT` o `MATERIALIZED`. Al añadir una columna materializada mediante `ALTER TABLE table_name ADD COLUMN column_name MATERIALIZED`, las filas existentes sin valores materializados no se rellenan automáticamente. La sentencia `MATERIALIZE COLUMN` puede usarse para reescribir los datos existentes de la columna después de añadir o actualizar una expresión `DEFAULT` o `MATERIALIZED` (lo que solo actualiza los metadatos, pero no modifica los datos existentes). Tenga en cuenta que materializar una columna en la clave de ordenación es una operación no válida porque podría alterar el orden de clasificación.
-Se implementa como una [mutación](/es/reference/statements/alter#mutations).
+Se implementa como una [mutación](/es/reference/statements/alter/index#mutations).
 
 En las columnas con una expresión de valor `MATERIALIZED` nueva o actualizada, se reescriben todas las filas existentes.
 
@@ -360,7 +387,7 @@ SELECT groupArray(x), groupArray(s) FROM tmp;
 
 La consulta `ALTER` permite crear y eliminar elementos individuales (columnas) en estructuras de datos anidadas, pero no estructuras de datos anidadas completas. Para añadir una estructura de datos anidada, puede añadir columnas con un nombre como `name.nested_name` y el tipo `Array(T)`. Una estructura de datos anidada equivale a varias columnas de array cuyo nombre comparte el mismo prefijo antes del punto.
 
-El cambio de nombre de columnas con puntos en sus nombres tiene compatibilidad parcial. Los puntos están reservados para el acceso a sub-columnas [Nested](/es/reference/data-types/nested-data-structures), por lo que el prefijo (nombre padre) debe permanecer igual. Solo se puede cambiar el sufijo (nombre de la sub-columna). Por ejemplo, `a.b` puede renombrarse a `a.c`, pero no se permite renombrar `a.b` a `b.d` porque cambia el prefijo padre de Nested.
+El cambio de nombre de columnas con puntos en sus nombres tiene compatibilidad parcial. Los puntos están reservados para el acceso a sub-columnas [Nested](/es/reference/data-types/nested-data-structures/index), por lo que el prefijo (nombre padre) debe permanecer igual. Solo se puede cambiar el sufijo (nombre de la sub-columna). Por ejemplo, `a.b` puede renombrarse a `a.c`, pero no se permite renombrar `a.b` a `b.d` porque cambia el prefijo padre de Nested.
 
 No se admite la eliminación de columnas de la clave primaria o de la clave de muestreo (columnas que se usan en la expresión `ENGINE`). Cambiar el tipo de las columnas incluidas en la clave primaria solo es posible si este cambio no modifica los datos (por ejemplo, se permite añadir valores a un Enum o cambiar un tipo de `DateTime` a `UInt32`).
 
@@ -368,4 +395,4 @@ Si la consulta `ALTER` no es suficiente para realizar los cambios de tabla que n
 
 La consulta `ALTER` bloquea todas las lecturas y escrituras de la tabla. En otras palabras, si se está ejecutando un `SELECT` largo en el momento de la consulta `ALTER`, la consulta `ALTER` esperará a que finalice. Al mismo tiempo, todas las consultas nuevas a la misma tabla quedarán en espera mientras este `ALTER` se esté ejecutando.
 
-En las tablas que no almacenan datos por sí mismas (como [Merge](/es/reference/statements/alter) y [Distributed](/es/reference/statements/alter)), `ALTER` solo cambia la estructura de la tabla y no la estructura de las tablas subordinadas. Por ejemplo, al ejecutar ALTER para una tabla `Distributed`, también tendrá que ejecutar `ALTER` para las tablas en todos los servidores remotos.
+En las tablas que no almacenan datos por sí mismas (como [Merge](/es/reference/statements/alter/index) y [Distributed](/es/reference/statements/alter/index)), `ALTER` solo cambia la estructura de la tabla y no la estructura de las tablas subordinadas. Por ejemplo, al ejecutar ALTER para una tabla `Distributed`, también tendrá que ejecutar `ALTER` para las tablas en todos los servidores remotos.

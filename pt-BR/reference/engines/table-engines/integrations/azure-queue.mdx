@@ -104,17 +104,19 @@ O motor AzureQueue tem uma configuração especial para consultas SELECT: `commi
 
 `SELECT` não é particularmente útil para importação em streaming (exceto para depuração), porque cada arquivo pode ser importado apenas uma vez. É mais prático criar fluxos em tempo real usando [visões materializadas](/pt-BR/reference/statements/create/view). Para fazer isso:
 
-1. Use o motor para criar uma tabela para consumir do caminho especificado no S3 e considere-a um fluxo de dados.
+1. Use o motor para criar uma tabela para consumir do caminho especificado no Azure Blob Storage e considere-a um fluxo de dados.
 2. Crie uma tabela com a estrutura desejada.
 3. Crie uma visão materializada que converta os dados do motor e os insira em uma tabela criada anteriormente.
 
 Quando a `MATERIALIZED VIEW` é vinculada ao motor, ela começa a coletar dados em segundo plano.
 
+Os argumentos do motor têm a forma `AzureQueue(connection_string, container_name, blobpath, format[, compression])`.
+
 Exemplo:
 
 ```sql
 CREATE TABLE azure_queue_engine_table (key UInt64, data String)
-  ENGINE=AzureQueue('<endpoint>', 'CSV', 'gzip')
+  ENGINE=AzureQueue('DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite1:10000/devstoreaccount1/;', 'testcontainer', '*', 'CSV')
   SETTINGS
       mode = 'unordered';
 
@@ -134,7 +136,7 @@ SELECT * FROM stats ORDER BY key;
 * `_path` — Caminho do arquivo.
 * `_file` — Nome do arquivo.
 
-Para mais informações sobre colunas virtuais, veja [aqui](/pt-BR/reference/engines/table-engines#table_engines-virtual_columns).
+Para mais informações sobre colunas virtuais, veja [aqui](/pt-BR/reference/engines/table-engines/index#table_engines-virtual_columns).
 
 <div id="introspection">
   ## Introspecção

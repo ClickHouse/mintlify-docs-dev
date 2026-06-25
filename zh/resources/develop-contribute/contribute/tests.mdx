@@ -178,6 +178,36 @@ sudo ./install.sh
   * 确保其他测试没有覆盖相同内容 (即先 `grep`) 。
 </Note>
 
+<div id="templated-tests-with-jinja">
+  ### 使用 Jinja 的模板测试
+</div>
+
+只需在文件名后加上 `.j2` 后缀，`.sql` 测试就可以写成 [Jinja2](https://jinja.palletsprojects.com/) 模板，因此 `foo.sql` 会变成 `foo.sql.j2`。在运行测试之前，`clickhouse-test` 会先将模板渲染成普通的 `.sql` 脚本，再执行生成的结果。
+
+当测试需要以细微变化重复同一查询时，这种方式非常有用：可以通过循环从一个简洁的模板生成这些查询，而不必手动逐条编写。最常用的构造包括：
+
+* `{% for ... %} ... {% endfor %}`：用于重复一个块，
+* `{{ expression }}`：用于将一个值插入输出中，
+* `-%}` 和 `{%-`：用于去掉相邻空白，使生成的脚本保持整洁。
+
+例如，下面这个模板：
+
+```sql
+{% for type in ['UInt8', 'UInt16', 'UInt32'] -%}
+SELECT toTypeName(0::{{ type }});
+{% endfor -%}
+```
+
+渲染结果为：
+
+```sql
+SELECT toTypeName(0::UInt8);
+SELECT toTypeName(0::UInt16);
+SELECT toTypeName(0::UInt32);
+```
+
+预期输出既可以是一个普通的 `<name>.reference` 文件，其中包含完全展开后的结果；也可以是一个 `<name>.reference.j2` 模板，`clickhouse-test` 会在比较前以相同方式先将其渲染出来。如果预期输出也呈现重复模式，请使用模板形式。更多示例请参见 `tests/queries/0_stateless/` 中现有的 `*.sql.j2` 文件。
+
 <div id="restricting-test-runs">
   ### 限制测试运行
 </div>
@@ -188,8 +218,8 @@ sudo ./install.sh
 
 ```sql
 -- Tags: no-fasttest, no-replicated-database
--- no-fasttest: <在此提供标签的原因>
--- no-replicated-database: <在此提供原因>
+-- no-fasttest: <provide_a_reason_for_the_tag_here>
+-- no-replicated-database: <provide_a_reason_here>
 
 SELECT 1
 ```
@@ -199,8 +229,8 @@ SELECT 1
 ```bash
 #!/usr/bin/env bash
 # Tags: no-fasttest, no-replicated-database
-# - no-fasttest: <在此提供该标签的原因>
-# - no-replicated-database: <在此提供原因>
+# - no-fasttest: <provide_a_reason_for_the_tag_here>
+# - no-replicated-database: <provide_a_reason_here>
 ```
 
 可用标签列表：
@@ -227,7 +257,7 @@ SELECT 1
 | `no-release`                   | 在 Release 构建中禁用该测试                                |                                                               |
 | `no-darwin`                    | 在 macOS (Darwin) 上禁用该测试                           | 测试依赖 Linux 特有功能，例如 distributed queries、`procfs` 或 HTTP server |
 
-还支持以下选项：`no-stress`、`no-polymorphic-parts`、`no-random-settings`、`no-random-merge-tree-settings`、`no-backward-compatibility-check`、`no-cpu-x86_64`、`no-cpu-aarch64`、`no-cpu-ppc64le`、`no-s3-storage`。
+还支持以下选项：`no-polymorphic-parts`、`no-random-settings`、`no-random-merge-tree-settings`、`no-backward-compatibility-check`、`no-cpu-x86_64`、`no-cpu-aarch64`、`no-cpu-ppc64le`、`no-s3-storage`。
 
 除上述设置外，你还可以使用 `system.build_options` 中的 `USE_*` 标志来标识是否使用特定的 ClickHouse feature。
 例如，如果测试使用了 MySQL 表，则应添加 `use-mysql` 标签。
@@ -636,9 +666,6 @@ ClickHouse 提供了诊断功能，可帮助运维工程师定位故障硬件。
 相比 `clang-format`，它的测试还不够充分。
 
 `CLion` 自带代码格式化工具，但需要调整为符合我们的代码风格。
-
-我们还使用 `codespell` 来查找代码中的拼写错误。
-这同样已实现自动化。
 
 <div id="test-coverage">
   ## 测试覆盖率

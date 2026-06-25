@@ -46,7 +46,7 @@ SELECT [DISTINCT [ON (column1, column2, ...)]] expr_list
 * [JOIN 句](/ja/reference/statements/select/join)
 * [PREWHERE 句](/ja/reference/statements/select/prewhere)
 * [WHERE 句](/ja/reference/statements/select/where)
-* [WINDOW 句](/ja/reference/functions/window-functions)
+* [WINDOW 句](/ja/reference/functions/window-functions/index)
 * [GROUP BY 句](/ja/reference/statements/select/group-by)
 * [LIMIT BY 句](/ja/reference/statements/select/limit-by)
 * [HAVING 句](/ja/reference/statements/select/having)
@@ -128,6 +128,42 @@ Code: 42. DB::Exception: Received from localhost:9000. DB::Exception: Number of 
 
 `COLUMNS` 式に一致したカラムは、データ型が異なる場合があります。`COLUMNS` がどのカラムにも一致せず、かつ `SELECT` 内の唯一の式である場合、ClickHouse は例外をスローします。
 
+<div id="select-columns-with-like-or-ilike">
+  #### `LIKE` または `ILIKE` を使ってカラムを選択する
+</div>
+
+`*` の後に、大文字と小文字を区別する `LIKE` または区別しない `ILIKE` を使って名前をパターンに一致させることで、カラムを選択することもできます。
+
+```sql
+SELECT * ILIKE 'a%' FROM col_names
+```
+
+```text
+┌─aa─┬─ab─┐
+│  1 │  1 │
+└────┴────┘
+```
+
+`LIKE` と `ILIKE` のパターンは、正規表現ではなく `LIKE` のセマンティクスに従います。`%` は任意の文字列に一致し、`_` は任意の 1 文字に一致し、`\` は `%`、`_`、`\` をエスケープします。両者の唯一の違いは、`LIKE` はカラム名を大文字と小文字を区別して照合するのに対し、`ILIKE` は大文字と小文字を区別しないことです。例:
+
+```sql
+SELECT * ILIKE 'a_' FROM col_names
+```
+
+このクエリは、`aa` や `ab` のような、`a` で始まる2文字の名前のカラムを選択します。
+
+`* LIKE` と `* ILIKE` は、修飾付きアスタリスクやカラム変換もサポートしています。
+
+```sql
+SELECT t.* ILIKE 'a%' EXCEPT (ab) FROM col_names AS t
+```
+
+```text
+┌─aa─┐
+│  1 │
+└────┘
+```
+
 <div id="asterisk">
   ### アスタリスク
 </div>
@@ -148,7 +184,7 @@ Code: 42. DB::Exception: Received from localhost:9000. DB::Exception: Number of 
 
 結果に加えて、結果カラムの最小値と最大値も取得できます。これを行うには、**extremes** 設定を 1 にします。最小値と最大値は、数値型、日付型、および時刻付き日付型に対して計算されます。その他のカラムについては、デフォルト値が出力されます。
 
-追加で 2 行、つまり最小値の行と最大値の行がそれぞれ計算されます。これら 2 行は、他の行とは別に、`XML`、`JSON*`、`TabSeparated*`、`CSV*`、`Vertical`、`Template`、`Pretty*` [フォーマット](/ja/reference/formats) で出力されます。その他のフォーマットでは出力されません。
+追加で 2 行、つまり最小値の行と最大値の行がそれぞれ計算されます。これら 2 行は、他の行とは別に、`XML`、`JSON*`、`TabSeparated*`、`CSV*`、`Vertical`、`Template`、`Pretty*` [フォーマット](/ja/reference/formats/index) で出力されます。その他のフォーマットでは出力されません。
 
 `JSON*` および `XML` フォーマットでは、極値は別個の `extremes` フィールドに出力されます。`TabSeparated*`、`CSV*`、`Vertical` フォーマットでは、その行はメインの結果の後に出力され、`totals` がある場合はその後に続きます。その前には空行が 1 行挿入されます (他のデータの後) 。`Pretty*` フォーマットでは、その行はメインの結果の後に、`totals` がある場合はその後に、別のテーブルとして出力されます。`Template` フォーマットでは、極値は指定したテンプレートに従って出力されます。
 

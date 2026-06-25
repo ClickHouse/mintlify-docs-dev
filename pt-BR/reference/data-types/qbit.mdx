@@ -38,6 +38,31 @@ SELECT vec FROM test ORDER BY id;
 └──────────────────────────┘
 ```
 
+<div id="converting-arrays-to-qbit">
+  ## Convertendo arrays em QBit
+</div>
+
+Arrays são convertidos em `QBit` quando o comprimento do array corresponde à dimensão do `QBit`. O tipo de elemento do array não precisa corresponder ao tipo de elemento do `QBit`. Qualquer tipo numérico de elemento é convertido automaticamente. Isso permite mover uma coluna existente de embeddings diretamente para uma coluna `QBit`:
+
+```sql
+CREATE TABLE embeddings (id UInt32, embedding Array(Float32)) ENGINE = Memory;
+INSERT INTO embeddings VALUES (1, [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]), (2, [0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]);
+
+CREATE TABLE vectors (id UInt32, vec QBit(Float32, 8)) ENGINE = Memory;
+INSERT INTO vectors SELECT id, embedding FROM embeddings;
+
+SELECT * FROM vectors ORDER BY id;
+```
+
+```text
+┌─id─┬─vec───────────────────────────────┐
+│  1 │ [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8] │
+│  2 │ [0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1] │
+└────┴───────────────────────────────────┘
+```
+
+A conversão também pode ser feita explicitamente com `CAST`, por exemplo `CAST(embedding AS QBit(Float32, 8))`.
+
 <div id="qbit-subcolumns">
   ## Subcolunas do QBit
 </div>

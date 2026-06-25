@@ -28,7 +28,13 @@ Este guia mostra como instalar o ClickHouse Operator usando kubectl e arquivos d
 Instale o operador e os CRDs da versão mais recente:
 
 ```bash
-kubectl apply -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator.yaml
+kubectl apply --server-side --force-conflicts -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator.yaml
+```
+
+A aplicação do lado do servidor é necessária porque os CRDs combinados excedem o limite de tamanho da aplicação do lado do cliente. Para ambientes que oferecem suporte apenas à aplicação do lado do cliente, use a variante de CRD sem descrições:
+
+```bash
+kubectl apply -f https://github.com/ClickHouse/clickhouse-operator/releases/latest/download/clickhouse-operator-stripped-crds.yaml
 ```
 
 Isso vai:
@@ -36,7 +42,7 @@ Isso vai:
 1. Criar o espaço de nomes `clickhouse-operator-system`
 2. Instalar CustomResourceDefinitions (CRDs) para ClickHouseCluster e KeeperCluster
 3. Criar os ServiceAccounts, Roles e RoleBindings necessários
-4. Implantar o controller manager do operator
+4. Implantar o controller manager do operador
 5. Registrar webhooks para validação de recursos e aplicação de valores padrão
 6. Configurar certificados SSL usando cert-manager
 7. Habilitar o endpoint de métricas
@@ -75,7 +81,7 @@ keeperclusters.clickhouse.com        2025-01-06T00:00:00Z
   ## Configurar opções personalizadas de implantação
 </div>
 
-Se quiser configurar as opções de implantação do operator, siga as etapas abaixo.
+Se quiser configurar as opções de implantação do operador, siga as etapas abaixo.
 
 <Steps>
   <Step>
@@ -95,17 +101,17 @@ Se quiser configurar as opções de implantação do operator, siga as etapas ab
     * Para desativar os webhooks, comente as seções `[WEBHOOK]` e `[CERTMANAGER]`.
     * Para ativar o endpoint seguro de métricas, comente as seções `[METRICS]` e descomente as seções `[METRICS SECURE]` e `[CERTMANAGER]`.
     * Para ativar o ServiceMonitor do Prometheus Operator, descomente a seção `[PROMETHEUS]`.
-    * Para ativar as políticas de rede do operator, descomente a seção `[NETWORK POLICY]`.
+    * Para ativar as políticas de rede do operador, descomente a seção `[NETWORK POLICY]`.
   </Step>
 
   <Step>
     ### Compilar e implantar
 
-    Compile os manifestos do operator e aplique-os:
+    Compile os manifestos do operador e aplique-os:
 
     ```bash
     make build-installer VERSION=<required operator version> [IMG=<custom registry path>]
-    kubectl apply -k dist/install.yaml
+    kubectl apply --server-side --force-conflicts -f dist/install.yaml
     ```
   </Step>
 </Steps>

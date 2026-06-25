@@ -21,7 +21,7 @@ A criação de tabelas `Paimon*` é condicionada por `allow_experimental_paimon_
 SET allow_experimental_paimon_storage_engine = 1;
 
 CREATE TABLE paimon_table_s3
-    ENGINE = PaimonS3(url,  [, access_key_id, secret_access_key] [,format] [,structure] [,compression])
+    ENGINE = PaimonS3(url,  [, access_key_id, secret_access_key] [,format] [,compression])
 
 CREATE TABLE paimon_table_azure
     ENGINE = PaimonAzure(connection_string|storage_account_url, container_name, blobpath, [,account_name], [,account_key] [,format] [,compression_method])
@@ -138,12 +138,12 @@ Você pode criar um pipeline de ponta a ponta que sincroniza continuamente dados
 
 **Etapa 1 — Crie a tabela de origem do Paimon com leitura incremental e atualização de metadados habilitadas.**
 
-O exemplo abaixo usa `PaimonLocal`. Substitua o motor por `PaimonS3`, `PaimonAzure`, `PaimonHDFS` ou pelo alias `Paimon`, conforme apropriado para seu backend de armazenamento:
+O exemplo abaixo usa `PaimonLocal`. Substitua o motor por `PaimonS3`, `PaimonAzure`, `PaimonHDFS` ou pelo motor `Paimon` com detecção automática, conforme apropriado para seu backend de armazenamento:
 
 ```sql
 SET allow_experimental_paimon_storage_engine = 1;
 
--- Armazenamento local
+-- Local storage
 CREATE TABLE paimon_mv_source
 ENGINE = PaimonLocal('/path/to/paimon/table')
 SETTINGS
@@ -152,7 +152,7 @@ SETTINGS
     paimon_replica_name = '{replica}',
     paimon_metadata_refresh_interval_sec = 1;
 
--- Armazenamento S3 (Paimon é um alias para PaimonS3)
+-- S3 storage (the `Paimon` engine defaults to the S3 implementation when no `disk` is specified)
 CREATE TABLE paimon_mv_source
 ENGINE = Paimon('http://minio:9000/bucket/path/to/table', 'access_key', 'secret_key')
 SETTINGS
@@ -212,7 +212,7 @@ DROP TABLE IF EXISTS paimon_mv_source SYNC;
   ## Aliases
 </div>
 
-O motor de tabela `Paimon` agora é um alias de `PaimonS3`.
+O `Paimon` motor de tabela detecta automaticamente o backend de armazenamento com base na configuração `disk` e direciona para `PaimonS3`, `PaimonAzure` ou `PaimonLocal`, conforme o caso. Quando nenhum `disk` é especificado, a implementação padrão é `PaimonS3`.
 
 <div id="virtual-columns">
   ## Colunas virtuais

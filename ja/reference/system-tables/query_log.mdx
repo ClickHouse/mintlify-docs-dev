@@ -56,9 +56,9 @@ ClickHouse はテーブルからデータを自動的に削除しません。詳
 * `query_duration_ms` ([UInt64](/ja/reference/data-types/int-uint)) — クエリの実行時間 (ミリ秒) 。
 * `read_rows` ([UInt64](/ja/reference/data-types/int-uint)) — クエリに関与したすべてのテーブルおよびテーブル関数から読み取られた行の総数です。通常のサブクエリに加え、IN および JOIN のサブクエリも含まれます。分散クエリでは、read&#95;rows にはすべてのレプリカで読み取られた行の総数が含まれます。各レプリカは自身の read&#95;rows の値を送信し、クエリのサーバー側のイニシエーターが、受信したすべての値とローカルの値を集計します。cache の容量はこの値には影響しません。
 * `read_bytes` ([UInt64](/ja/reference/data-types/int-uint)) — クエリで使用されたすべてのテーブルおよびテーブル関数から読み取られた合計バイト数です。通常のサブクエリに加え、IN および JOIN 用のサブクエリも含まれます。分散クエリでは、read&#95;bytes にはすべてのレプリカで読み取られた行数の合計が含まれます。各レプリカは自身の read&#95;bytes の値を送信し、クエリのイニシエーターであるサーバーが、受信したすべての値とローカルの値を集計します。cache のサイズはこの値に影響しません。
-* `written_rows` ([UInt64](/ja/reference/data-types/int-uint)) — INSERTクエリでは、書き込まれた行数を示します。その他のクエリでは、カラムの値は0です。
-* `written_bytes` ([UInt64](/ja/reference/data-types/int-uint)) — INSERTクエリでは、書き込まれたバイト数 (非圧縮) を示します。その他のクエリでは、このカラムの値は 0 です。
-* `result_rows` ([UInt64](/ja/reference/data-types/int-uint)) — SELECT クエリの結果の行数、または INSERT クエリの行数。
+* `written_rows` ([UInt64](/ja/reference/data-types/int-uint)) — パイプラインによってトリガーされた下流の insert (アタッチされた materialized view など) によって書き込まれた行も含めた、クエリによる書き込み行数。同期 insert の場合、これらの下流の行は `query_kind` = `Insert` のエントリに記録されます。非同期挿入の場合、それらは `query_kind` = `AsyncInsertFlush` のエントリに記録され、クライアント向けの `Insert` エントリにはクライアントから受け付けた行のみが記録されます。行を書き込まないクエリでは 0 です。
+* `written_bytes` ([UInt64](/ja/reference/data-types/int-uint)) — パイプラインによってトリガーされた下流の insert (アタッチされた materialized view など) によって書き込まれたバイトも含めた、クエリによる書き込みバイト数 (非圧縮)。同期 insert の場合、これらの下流のバイトは `query_kind` = `Insert` のエントリに記録されます。非同期挿入の場合、それらは `query_kind` = `AsyncInsertFlush` のエントリに記録され、クライアント向けの `Insert` エントリにはクライアントから受け付けたバイトのみが記録されます。データを書き込まないクエリでは 0 です。
+* `result_rows` ([UInt64](/ja/reference/data-types/int-uint)) — SELECT クエリの結果の行数、または insert によって書き込まれた行数。同期 insert の場合、これには `query_kind` = `Insert` のエントリに記録される、パイプラインによってトリガーされた下流の insert (アタッチされた materialized view など) によって書き込まれた行が含まれます。非同期挿入の場合、それらの下流の行は `query_kind` = `AsyncInsertFlush` のエントリに記録され、クライアント向けの `Insert` エントリにはクライアントから受け付けた行のみが記録されます。
 * `result_bytes` ([UInt64](/ja/reference/data-types/int-uint)) — クエリ結果の保存に使用されるRAMの量 (バイト単位) 。
 * `memory_usage` ([UInt64](/ja/reference/data-types/int-uint)) — クエリのメモリ使用量。
 * `current_database` ([LowCardinality(String)](/ja/reference/data-types/lowcardinality)) — 現在のデータベース名。
@@ -94,6 +94,7 @@ ClickHouse はテーブルからデータを自動的に削除しません。詳
 * `os_user` ([LowCardinality(String)](/ja/reference/data-types/lowcardinality)) — `clickhouse-client` を実行しているオペレーティングシステムのユーザー名。
 * `client_hostname` ([LowCardinality(String)](/ja/reference/data-types/lowcardinality)) — clickhouse-client または別の TCP クライアントが実行されているクライアントマシンのホスト名。
 * `client_name` ([LowCardinality(String)](/ja/reference/data-types/lowcardinality)) — clickhouse-client または他の TCP クライアントの名前。
+* `client_agent` ([LowCardinality(String)](/ja/reference/data-types/lowcardinality)) — クライアントを呼び出した AI コーディングエージェント (`claude-code` や `cursor` など)。環境変数から検出されます。エージェントが検出されなかった場合は空です。
 * `client_revision` ([UInt32](/ja/reference/data-types/int-uint)) — clickhouse-client または他の TCP クライアントのリビジョン。
 * `client_version_major` ([UInt32](/ja/reference/data-types/int-uint)) — clickhouse-client またはその他の TCP クライアントのメジャーバージョン。
 * `client_version_minor` ([UInt32](/ja/reference/data-types/int-uint)) — clickhouse-client またはその他の TCP クライアントのマイナーバージョン。

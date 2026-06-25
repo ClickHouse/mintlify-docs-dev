@@ -46,7 +46,7 @@ Los detalles de cada cláusula opcional se describen en secciones independientes
 * [cláusula JOIN](/es/reference/statements/select/join)
 * [cláusula PREWHERE](/es/reference/statements/select/prewhere)
 * [cláusula WHERE](/es/reference/statements/select/where)
-* [cláusula WINDOW](/es/reference/functions/window-functions)
+* [cláusula WINDOW](/es/reference/functions/window-functions/index)
 * [cláusula GROUP BY](/es/reference/statements/select/group-by)
 * [cláusula LIMIT BY](/es/reference/statements/select/limit-by)
 * [cláusula HAVING](/es/reference/statements/select/having)
@@ -128,6 +128,42 @@ En este ejemplo, `COLUMNS('a')` devuelve dos columnas: `aa` y `ab`. `COLUMNS('c'
 
 Las columnas que coinciden con la expresión `COLUMNS` pueden tener distintos tipos de datos. Si `COLUMNS` no coincide con ninguna columna y es la única expresión de `SELECT`, ClickHouse genera una excepción.
 
+<div id="select-columns-with-like-or-ilike">
+  #### Seleccionar columnas con `LIKE` o `ILIKE`
+</div>
+
+También puede seleccionar columnas haciendo que sus nombres coincidan con un patrón después de `*`, usando `LIKE`, sensible a mayúsculas y minúsculas, o `ILIKE`, que no distingue entre mayúsculas y minúsculas:
+
+```sql
+SELECT * ILIKE 'a%' FROM col_names
+```
+
+```text
+┌─aa─┬─ab─┐
+│  1 │  1 │
+└────┴────┘
+```
+
+Los patrones `LIKE` e `ILIKE` siguen la semántica de `LIKE`, no la de las expresiones regulares. El carácter `%` coincide con cualquier secuencia de caracteres, el carácter `_` coincide con cualquier carácter individual y `\` escapa `%`, `_` y `\`. La única diferencia entre ambos es que `LIKE` hace coincidir los nombres de columna de forma sensible a mayúsculas y minúsculas, mientras que `ILIKE` no distingue entre mayúsculas y minúsculas. Por ejemplo:
+
+```sql
+SELECT * ILIKE 'a_' FROM col_names
+```
+
+La consulta selecciona columnas con nombres de dos caracteres que empiezan por `a`, como `aa` y `ab`.
+
+`* LIKE` y `* ILIKE` también admiten asteriscos calificados y transformadores de columnas:
+
+```sql
+SELECT t.* ILIKE 'a%' EXCEPT (ab) FROM col_names AS t
+```
+
+```text
+┌─aa─┐
+│  1 │
+└────┘
+```
+
 <div id="asterisk">
   ### Asterisco
 </div>
@@ -148,7 +184,7 @@ En todos los demás casos, no recomendamos usar el asterisco, ya que solo aporta
 
 Además de los resultados, también puede obtener los valores mínimos y máximos de las columnas del resultado. Para ello, establezca la opción **extremes** en 1. Los valores mínimos y máximos se calculan para tipos numéricos, fechas y fechas con hora. Para las demás columnas, se muestran los valores predeterminados.
 
-Se calculan dos filas adicionales: una con los mínimos y otra con los máximos. Estas dos filas adicionales se muestran en los [formatos](/es/reference/formats) `XML`, `JSON*`, `TabSeparated*`, `CSV*`, `Vertical`, `Template` y `Pretty*`, por separado del resto de las filas. No se muestran en otros formatos.
+Se calculan dos filas adicionales: una con los mínimos y otra con los máximos. Estas dos filas adicionales se muestran en los [formatos](/es/reference/formats/index) `XML`, `JSON*`, `TabSeparated*`, `CSV*`, `Vertical`, `Template` y `Pretty*`, por separado del resto de las filas. No se muestran en otros formatos.
 
 En los formatos `JSON*` y `XML`, los valores extremos se muestran en un campo independiente llamado &#39;extremes&#39;. En los formatos `TabSeparated*`, `CSV*` y `Vertical`, la fila aparece después del resultado principal, y después de &#39;totals&#39; si está presente. Va precedida de una fila vacía (después de los demás datos). En los formatos `Pretty*`, la fila se muestra como una tabla independiente después del resultado principal, y después de `totals` si está presente. En el formato `Template`, los valores extremos se muestran según la plantilla especificada.
 

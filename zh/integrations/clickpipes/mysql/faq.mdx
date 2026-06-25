@@ -32,6 +32,28 @@ integration:
 
 在初始加载开始时，我们会记录起始 binlog 偏移量。要让 CDC (变更数据捕获) 继续推进，该偏移量在初始加载完成时必须仍然有效。如果你正在摄取大量数据，请务必配置合适的 binlog 保留期。设置表时，你可以在高级设置中为大表配置 *对初始加载使用自定义分区键*，这样我们就能并行加载单个表，从而加快初始加载速度。
 
+<div id="binlog-event-exceeded-max-allowed-packet">
+  ### 为什么我的管道会因 max_allowed_packet binlog 错误而失败？
+</div>
+
+如果你的管道报出了类似以下的错误：
+
+```text
+MySQL execute error: ERROR 1236 (HY000): log event entry exceeded max_allowed_packet;
+Increase max_allowed_packet on source
+```
+
+这意味着单个 binlog 事件 (对应一次行变更) 大于你的 MySQL 服务器 [`max_allowed_packet`](https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_max_allowed_packet) 的设置值。由于服务器无法发送超出此限制的事件，binlog 流读取会中止，CDC (变更数据捕获) 也无法继续。
+
+这通常是因为某些行包含较大的 `BLOB`、`TEXT` 或 `JSON` 值。要解决这个问题：
+
+* **增大源端的 `max_allowed_packet`。** 将其调高到超过最大单次行变更的大小——通常直接设为最大值 `1G` 是安全的：
+  ```sql
+  SET GLOBAL max_allowed_packet = 1073741824; -- 1 GiB
+  ```
+  还要在服务器配置 (例如 `my.cnf` 或 DB 参数组) 中一并设置，这样重启后也能保持生效。
+* **如果单行大小超过 1G：** 重新同步该管道。
+
 <div id="tls-certificate-validation-error">
   ### 连接到 MySQL 时，为什么会出现 TLS 证书验证错误？
 </div>
