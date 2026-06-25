@@ -68,14 +68,14 @@
   }
 
   function init() {
-    if (injectCta()) return;
+    injectCta();
 
     var rafId = null;
     var observer = new MutationObserver(function () {
       if (rafId) return;
       rafId = requestAnimationFrame(function () {
         rafId = null;
-        if (injectCta()) observer.disconnect();
+        injectCta();
       });
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });

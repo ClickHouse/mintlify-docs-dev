@@ -6,14 +6,19 @@
   // re-rendered segment, so the router considers the new page "already in
   // viewport" and leaves the scroll position where it was.
   //
-  // Patch history.pushState/replaceState at eval time (before Next.js hydration)
-  // to fire a synthetic 'ch:navigate' event on every SPA navigation. This replaces
-  // the rAF polling loop the original used — the loop ran 60fps for the entire page
-  // lifetime; the event fires only on actual navigations.
+  // Two-layer detection:
+  //  1. Patch history.pushState/replaceState at eval time — covers tab-nav.js's
+  //     own history.pushState() calls and any navigation before Next.js hydrates.
+  //  2. setInterval at 100ms — covers the case where Next.js hydrates before
+  //     this script runs and calls a cached reference to the original pushState,
+  //     bypassing our wrapper. 100ms fires ~10×/sec (vs the original rAF loop
+  //     at ~60×/sec) — same correctness guarantee with 6× less polling.
   //
-  // Back/forward (popstate) is left alone so the browser and router can restore
-  // the previous scroll position. Cross-page hash links (/page#anchor) scroll to
-  // the anchor once the new page has rendered it.
+  // Both paths are idempotent: check() compares lastPath before acting, so a
+  // rapid pushState patch + interval tick never double-scrolls.
+  //
+  // Back/forward (popstate) is deliberately left alone so the browser and
+  // router can restore the previous scroll position.
 
   (function patchHistory() {
     function wrap(orig) {
@@ -54,7 +59,7 @@
     }
   }
 
-  window.addEventListener('ch:navigate', function () {
+  function check() {
     var path = window.location.pathname;
     if (path === lastPath) return;
     lastPath = path;
@@ -65,5 +70,8 @@
     } else {
       window.scrollTo(0, 0);
     }
-  });
+  }
+
+  window.addEventListener('ch:navigate', check);
+  setInterval(check, 100);
 })();
