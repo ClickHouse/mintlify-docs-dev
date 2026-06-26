@@ -2,12 +2,16 @@
 description: 'WebAssembly 用户自定义函数文档'
 sidebarTitle: 'WebAssembly UDFs'
 slug: /sql-reference/functions/wasm_udf
-title: WebAssembly 用户自定义函数
+title: 'WebAssembly 用户自定义函数'
 doc_type: 'guide'
 ---
 
-import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import CloudNotSupportedBadge from "/snippets/zh/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
+import ExperimentalBadge from "/snippets/zh/components/ExperimentalBadge/ExperimentalBadge.jsx";
+
+<div id="webassembly-user-defined-functions">
+  # WebAssembly 用户自定义函数
+</div>
 
 ClickHouse 支持创建以 WebAssembly 编写的用户自定义函数 (UDF) 。这样，你就可以将 Rust、C、C++ 等语言编写的自定义逻辑编译为 WebAssembly 模块并执行。
 
@@ -141,6 +145,47 @@ SELECT 'my_module', base64Decode('...'), reinterpretAsUInt256(unhex('369f...c57d
 
 如果提供的哈希值与模块代码计算出的 SHA256 不一致，则插入会失败。在从 S3 或 HTTP 等外部来源加载模块时，这会很有用。
 
+<div id="distribute-a-module-across-a-cluster">
+  ### 在 cluster 中分发模块
+</div>
+
+`system.webassembly_modules` 是按实例划分的表——`INSERT` 只会写入处理该 connection 的副本。`INSERT` statement 没有 `ON CLUSTER` 这种形式，因此后续执行 `CREATE FUNCTION ... ON CLUSTER` 时，会在没有该模块的副本上失败：
+
+```text
+Code: 674. DB::Exception: WebAssembly module 'collatz' not found:
+while adding user defined function `collatz_steps`. (RESOURCE_NOT_FOUND)
+```
+
+要将 `insert` 操作发送到每个节点，请写入 `cluster` 表函数，而不是本地的 `system.webassembly_modules` 表：
+
+```bash
+cat collatz.wasm | clickhouse client -q "
+  INSERT INTO FUNCTION cluster('default', 'system', 'webassembly_modules') (name, code)
+  SELECT 'collatz', code FROM input('code String') FORMAT RawBlob"
+```
+
+<Note>
+  这种方式依赖底层分布式写入路径访问每个分片中的所有副本，而这只有在集群配置为 `internal_replication=false` 时才会发生。启用 `internal_replication=true` 时 (对于使用 `ReplicatedMergeTree` 自行完成复制的集群，这是默认设置) ，insert 只会发送到每个分片中一个健康的副本，而 `system.webassembly_modules` 不会通过这条路径进行复制，因此某些副本仍然会缺少该模块。在这种配置下，你需要分别向每个副本执行 insert，例如遍历 `system.clusters`，并通过每台主机的 `remote(...)` 写入，或者将二进制文件复制到每台主机上的 `user_scripts/wasm/` 目录中。
+
+  你可以通过 `SELECT cluster, shard_num, internal_replication FROM system.clusters` 查看集群的 `internal_replication`。
+</Note>
+
+在扇出式 insert 之后，该模块会出现在每个副本上，并且 `CREATE FUNCTION ... ON CLUSTER` 将成功执行：
+
+```sql
+CREATE FUNCTION collatz_steps ON CLUSTER 'default'
+LANGUAGE WASM FROM 'collatz' :: 'steps'
+ARGUMENTS (n UInt32) RETURNS UInt32;
+```
+
+你可以使用 `clusterAllReplicas` 验证该模块是否已在所有节点上加载：
+
+```sql
+SELECT hostName(), name FROM clusterAllReplicas('default', system.webassembly_modules) WHERE name = 'collatz';
+```
+
+向 `system.webassembly_modules` 执行插入时，对于相同的 `(name, hash)` 组合是幂等的，因此重新运行分发式插入是安全的，也是在某个副本被替换后修复状态的合理方式。请注意，新加入的服务器不会自动补收已有模块——你必须针对更新后的集群重新运行插入，或者将该 binary 放到新 host 上的 `user_scripts/wasm/` 目录中。
+
 <div id="list-modules">
   ### 列出模块
 </div>
@@ -181,7 +226,7 @@ LANGUAGE WASM
 FROM 'module_name' [:: 'source_function_name']
 ARGUMENTS ( [name type[, ...]] | [type[, ...]] )
 RETURNS return_type
-[ABI ROW_DIRECT | ABI BUFFERED_V1]
+[ABI ROW_DIRECT | ABI BUFFERED_V1 | ABI ASSEMBLYSCRIPT]
 [DETERMINISTIC]
 [SHA256_HASH 'hex']
 [SETTINGS key = value[, ...]];
@@ -195,10 +240,12 @@ RETURNS return_type
 * `ABI`：应用程序二进制接口版本
   * `ROW_DIRECT`：直接类型映射，按行处理
   * `BUFFERED_V1`：基于块的处理，带序列化
+  * `ASSEMBLYSCRIPT`：适用于由 [AssemblyScript](https://www.assemblyscript.org) 编译器生成的模块的按行处理。数值类型会映射到 AssemblyScript 基本类型；ClickHouse `String` 会映射到 AssemblyScript `string`。
 * `DETERMINISTIC`：将该函数声明为确定性的——对于相同输入始终返回相同输出。指定后，当所有参数都是常量时，ClickHouse 可能会对调用进行常量折叠：函数会在查询分析阶段求值一次，结果会复用于每一行。
 * `SHA256_HASH`：用于校验的预期模块哈希 (若省略则自动填充) ，可用于确保不同副本上加载的是正确的 WASM 模块。
 * `SETTINGS`：函数级设置
-  * `serialization_format` String —— ABI 所需的序列化格式。默认值：`MsgPack`。
+  * `serialization_format` String —— ABI 要求的序列化格式。支持的值：`MsgPack`、`JSONEachRow`、`CSV`、`TSV`、`TSVRaw`、`RowBinary` 和 `Buffers`。默认值：`MsgPack`。像 `Buffers` 这样基于块的格式必须返回单列，且该列的类型必须与声明的函数签名匹配。
+  * `webassembly_udf_enable_fuel` Bool —— 为该函数启用有限 fuel 预算。默认值：`true`。当为 `false` 时，查询级设置 `webassembly_udf_max_fuel` 会被该函数忽略。使用 `wasmtime` engine 时，禁用 fuel 限制可能会提升性能。但是，对于不受信任或有缺陷的 guest 代码，这可能会增加失控执行的风险。
 
 <div id="abis-versions">
   ## ABI 版本
@@ -208,6 +255,7 @@ RETURNS return_type
 
 * `ROW_DIRECT`：直接类型映射 (仅支持基本类型 `Int32`、`UInt32`、`Int64`、`UInt64`、`Float32`、`Float64`)
 * `BUFFERED_V1`：通过序列化处理复杂类型
+* `ASSEMBLYSCRIPT`：与 [AssemblyScript](https://www.assemblyscript.org) 模块按行互操作；支持数值类型和 `String`。
 
 <div id="abi-row_direct">
   ### ABI ROW_DIRECT
@@ -287,6 +335,57 @@ ClickhouseBuffer * user_defined_function1(ClickhouseBuffer * span, uint32_t n) {
 ClickhouseBuffer * user_defined_function2(ClickhouseBuffer * span, uint32_t n) { /* ... */ }
 ```
 
+<div id="abi-assemblyscript">
+  ### ABI ASSEMBLYSCRIPT
+</div>
+
+适用于由 [AssemblyScript](https://www.assemblyscript.org) 编译器生成的模块。每一行都会触发一次对导出函数的调用，将 ClickHouse 值映射为 AssemblyScript 基本类型和字符串对象。
+
+**支持的类型**：
+
+* 数值类型：`Int8`/`UInt8`、`Int16`/`UInt16` (在边界处扩展为 `i32`) 、`Int32`/`UInt32`、`Int64`/`UInt64`、`Float32`、`Float64`
+
+* `String` — 映射为 AssemblyScript `string` (WASM 内存中的 UTF-16) 。ClickHouse 会自动处理 UTF-8 ↔ UTF-16 的转换。
+
+* 不支持将自定义 AssemblyScript 类用作参数类型或返回类型——它们的运行时类 id 在不同编译结果之间并不稳定 (参见 [AssemblyScript#2982](https://github.com/AssemblyScript/assemblyscript/issues/2982)) 。
+
+**模块要求**：
+
+模块必须使用 AssemblyScript 托管运行时进行编译，以便导出 `__new`、`__pin` 和 `__unpin`。标准的输入/输出字符串处理依赖这些。推荐的调用方式：
+
+```bash
+asc src.ts --runtime incremental --exportRuntime -o src.wasm
+```
+
+AssemblyScript 还会导入 `env.abort`，用于处理运行时陷阱 (如内存不足、边界检查等) 。ClickHouse 会自动提供此导入：当触发 `abort` 时，当前查询会因 `WASM_ERROR` Exception 而失败，并包含已解码的 AssemblyScript 消息和源位置。
+
+**示例**:
+
+```typescript
+// src.ts
+export function add(a: u32, b: u32): u32 {
+  return a + b;
+}
+
+export function greet(name: string): string {
+  return "Hello, " + name + "!";
+}
+```
+
+使用 `asc` 编译并将生成的 `.wasm` 加载到 `system.webassembly_modules` 后，可按如下方式声明 UDF：
+
+```sql
+CREATE FUNCTION as_add
+    LANGUAGE WASM ABI ASSEMBLYSCRIPT
+    FROM 'as_example' :: 'add'
+    ARGUMENTS (a UInt32, b UInt32) RETURNS UInt32;
+
+CREATE FUNCTION as_greet
+    LANGUAGE WASM ABI ASSEMBLYSCRIPT
+    FROM 'as_example' :: 'greet'
+    ARGUMENTS (name String) RETURNS String;
+```
+
 <div id="note-for-developing-udfs-in-rust">
   ### 关于用 Rust 开发 UDF 的说明
 </div>
@@ -318,6 +417,7 @@ pub fn some_udf(data: String) -> HashMap<String, String> {
 * `clickhouse_throw(ptr: i32, size: i32)` — 使用给定的消息抛出错误。接受一个指向存放错误消息字符串的内存位置的指针，以及该字符串的大小。
 * `clickhouse_log(ptr: i32, size: i32)` — 将消息写入 ClickHouse server 的文本日志。
 * `clickhouse_random(ptr: i32, size: i32)` — 用随机字节填充内存。
+* `env.abort(message: i32, fileName: i32, line: i32, column: i32)` — 为与 AssemblyScript 兼容的模块提供。调用它 (或触发会调用它的 AssemblyScript 运行时陷阱) 会以包含已解码消息和源代码位置的 `WASM_ERROR` 异常终止 UDF。未导入 &#96;env.abort&#96;&#96; 的模块不受影响。
 
 <div id="settings">
   ## 设置
@@ -325,7 +425,7 @@ pub fn some_udf(data: String) -> HashMap<String, String> {
 
 以下查询级设置用于控制 WebAssembly UDF 的执行：
 
-* `webassembly_udf_max_fuel` — 每个 WebAssembly UDF 实例每次执行的 fuel 上限。每条 WebAssembly 指令都会消耗一定数量的 fuel。设为 0 表示不限制。
+* `webassembly_udf_max_fuel` — 每个 WebAssembly UDF 实例每次执行的 fuel 上限。每条 WebAssembly 指令都会消耗一定数量的 fuel。在传递给 runtime 之前，该值会先按 1024 进行缩放，因此 `webassembly_udf_max_fuel = 1` 对应大约 1024 个 fuel 单位。设为 0 表示没有有限上限。仅适用于每函数设置 `webassembly_udf_enable_fuel` 为 true 的函数，默认即为如此。
 
 * `webassembly_udf_max_memory` — 每个 WebAssembly UDF 实例的内存上限 (以字节为单位) 。
 

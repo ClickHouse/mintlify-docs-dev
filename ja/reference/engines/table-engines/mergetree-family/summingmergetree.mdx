@@ -7,7 +7,7 @@ title: 'SummingMergeTree テーブルエンジン'
 doc_type: 'reference'
 ---
 
-このエンジンは [MergeTree](/ja/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree) を継承しています。違いは、`SummingMergeTree` テーブルのデータパーツをマージする際、ClickHouse が同じ主キー (より正確には、同じ[ソートキー](/ja/reference/engines/table-engines/mergetree-family/mergetree)) を持つすべての行を、数値データ型のカラムの値を合計した 1 行に置き換える点です。ソートキーが、1 つのキー値に対して多数の行が対応するように構成されている場合、これによりストレージ容量が大幅に削減され、データの抽出も高速化されます。
+このエンジンは [MergeTree](/ja/reference/engines/table-engines/mergetree-family/mergetree) を継承しています。違いは、`SummingMergeTree` テーブルのデータパーツをマージする際、ClickHouse が同じ主キー (より正確には、同じ[ソートキー](/ja/reference/engines/table-engines/mergetree-family/mergetree)) を持つすべての行を、数値データ型のカラムの値を合計した 1 行に置き換える点です。ソートキーが、1 つのキー値に対して多数の行が対応するように構成されている場合、これによりストレージ容量が大幅に削減され、データの抽出も高速化されます。
 
 このエンジンは `MergeTree` と組み合わせて使用することを推奨します。完全なデータは `MergeTree` テーブルに保存し、`SummingMergeTree` は、たとえばレポート作成時の集計データの保存に使用します。このような構成にすることで、不適切に構成された主キーによって貴重なデータが失われるのを防げます。
 
@@ -203,6 +203,52 @@ ARRAY JOIN
 データを取得する際は、`Map` の集計に [sumMap(key, value)](/ja/reference/functions/aggregate-functions/sumMap) 関数を使用します。
 
 ネストされたデータ構造では、集計用のカラムタプルにそのカラムを指定する必要はありません。
+
+<div id="tuple-element-aggregation">
+  ### タプル 要素の集約
+</div>
+
+`allow_tuple_element_aggregation` 設定が有効な場合、`Tuple` カラムは再帰的にフラット化され、各末端要素が個別に合計対象となります。これにより、複数のメトリクスを 1 つの `Tuple` カラムに格納し、マージ時に要素ごとに合計できるようになります。
+
+フラット化されたサブカラムにも、通常のカラムと同じルールが適用されます。
+
+* 合計されるのは数値サブカラムのみです。
+* ソートキーまたはパーティションキー内の `Tuple` に属するサブカラムは、合計の対象から除外されます。
+* `columns` が指定されている場合、列挙された `Tuple` カラムのサブカラムのみが合計されます。
+* 合計後に行内のすべての数値サブカラムが 0 になった場合、その行は削除されます。
+
+<Note>
+  この設定は変更不可であり、テーブル作成時に指定する必要があります。
+</Note>
+
+```sql
+CREATE TABLE summing_tuples
+(
+    key UInt32,
+    metrics Tuple(
+        impressions UInt64,
+        clicks UInt64,
+        nested Tuple(
+            conversions UInt64
+        )
+    )
+) ENGINE = SummingMergeTree()
+ORDER BY key
+SETTINGS allow_tuple_element_aggregation = 1;
+
+INSERT INTO summing_tuples VALUES (1, (100, 10, (1)));
+INSERT INTO summing_tuples VALUES (1, (200, 20, (3)));
+
+OPTIMIZE TABLE summing_tuples FINAL;
+
+SELECT key, metrics.impressions, metrics.clicks, metrics.nested.conversions FROM summing_tuples;
+```
+
+```text
+┌─key─┬─metrics.impressions─┬─metrics.clicks─┬─metrics.nested.conversions─┐
+│   1 │                 300 │             30 │                          4 │
+└─────┴─────────────────────┴────────────────┴────────────────────────────┘
+```
 
 <div id="related-content">
   ## 関連コンテンツ

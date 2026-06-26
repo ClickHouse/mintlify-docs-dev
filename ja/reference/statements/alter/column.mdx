@@ -28,6 +28,7 @@ ALTER [TEMPORARY] TABLE [db].name [ON CLUSTER cluster] ADD|DROP|RENAME|CLEAR|COM
 * [MODIFY COLUMN REMOVE](#modify-column-remove) — カラムのプロパティの 1 つを削除します。
 * [MODIFY COLUMN MODIFY SETTING](#modify-column-modify-setting) - カラム設定を変更します。
 * [MODIFY COLUMN RESET SETTING](#modify-column-reset-setting) - カラム設定をリセットします。
+* [MODIFY COLUMN ADD ENUM VALUES](#modify-column-add-enum-values) - Enum に新しい値を追加します。
 * [MATERIALIZE COLUMN](#materialize-column) — カラムが存在しないパーツで、そのカラムを materialize します。
   これらのアクションについては、以下で詳しく説明します。
 
@@ -152,8 +153,12 @@ ALTER TABLE visits COMMENT COLUMN browser 'This column shows the browser used fo
 </div>
 
 ```sql
-MODIFY COLUMN [IF EXISTS] name [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
-ALTER COLUMN [IF EXISTS] name TYPE [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
+MODIFY COLUMN [IF EXISTS] name
+    [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
+    | ADD ENUM VALUES ( 'name' [= number] [, ...] )
+ALTER COLUMN [IF EXISTS] name
+    TYPE [type] [default_expr] [codec] [TTL] [settings] [AFTER name_after | FIRST]
+    | ADD ENUM VALUES ( 'name' [= number] [, ...] )
 ```
 
 このクエリは、`name` カラムの以下のプロパティを変更します。
@@ -167,6 +172,8 @@ ALTER COLUMN [IF EXISTS] name TYPE [type] [default_expr] [codec] [TTL] [settings
 * 有効期限 (TTL)
 
 * カラムレベル設定
+
+* Enum/Enum8/Enum16 型の Enum 値
 
 カラムの圧縮 CODEC の変更例については、[カラム圧縮コーデック](/ja/reference/statements/create/table#column_compression_codec) を参照してください。
 
@@ -292,12 +299,32 @@ ALTER TABLE table_name MODIFY COLUMN column_name RESET SETTING name,...;
 ALTER TABLE table_name MODIFY COLUMN column_name RESET SETTING max_compress_block_size;
 ```
 
+<div id="modify-column-add-enum-values">
+  ## MODIFY COLUMN ADD ENUM VALUES
+</div>
+
+`Enum`、`Enum8`、`Enum16`、`Nullable(Enum)`、`Nullable(Enum8)`、`Nullable(Enum16)` 型のカラムに新しい値を追加します。
+
+構文:
+
+```sql
+ALTER TABLE table_name MODIFY COLUMN enum_column_name ADD ENUM VALUES ('EnumName' [= number], ...);
+```
+
+**例**
+
+`enum_column_name` カラムに 2 つの値を追加します。
+
+```sql
+ALTER TABLE table_name MODIFY COLUMN enum_column_name ADD ENUM VALUES ('Hundred' = 100, 'HundredOne');
+```
+
 <div id="materialize-column">
   ## MATERIALIZE COLUMN
 </div>
 
 `DEFAULT` または `MATERIALIZED` の値式を持つカラムをマテリアライズします。`ALTER TABLE table_name ADD COLUMN column_name MATERIALIZED` を使用してマテリアライズドカラムを追加した場合、マテリアライズされた値を持たない既存の行は自動的には補完されません。`MATERIALIZE COLUMN` ステートメントは、`DEFAULT` または `MATERIALIZED` 式を追加または更新した後に、既存のカラムデータを書き換えるために使用できます (この操作で更新されるのはメタデータのみで、既存データ自体は変更されません) 。なお、ソートキーに含まれるカラムをマテリアライズすることは、ソート順序が壊れる可能性があるため無効な操作です。
-これは [mutation](/ja/reference/statements/alter#mutations) として実装されています。
+これは [mutation](/ja/reference/statements/alter/index#mutations) として実装されています。
 
 新規または更新された `MATERIALIZED` 値式を持つカラムでは、既存のすべての行が書き換えられます。
 
@@ -360,7 +387,7 @@ SELECT groupArray(x), groupArray(s) FROM tmp;
 
 `ALTER` クエリでは、ネストされたデータ構造内の個別の要素 (カラム) は作成および削除できますが、ネストされたデータ構造全体は作成または削除できません。ネストされたデータ構造を追加するには、`name.nested_name` のような名前と `Array(T)` 型を持つカラムを追加します。ネストされたデータ構造は、ドットの前に同じプレフィックスを持つ複数の配列カラムと等価です。
 
-名前にドットを含むカラムの名前変更は、部分的にサポートされています。ドットは [Nested](/ja/reference/data-types/nested-data-structures) のサブカラムアクセス用に予約されているため、プレフィックス (親名) は同じままでなければなりません。変更できるのは接尾辞 (サブカラム名) だけです。たとえば、`a.b` は `a.c` に名前変更できますが、`a.b` を `b.d` に名前変更することはできません。これは Nested の親プレフィックスが変わってしまうためです。
+名前にドットを含むカラムの名前変更は、部分的にサポートされています。ドットは [Nested](/ja/reference/data-types/nested-data-structures/index) のサブカラムアクセス用に予約されているため、プレフィックス (親名) は同じままでなければなりません。変更できるのは接尾辞 (サブカラム名) だけです。たとえば、`a.b` は `a.c` に名前変更できますが、`a.b` を `b.d` に名前変更することはできません。これは Nested の親プレフィックスが変わってしまうためです。
 
 主キーまたは sampling key (`ENGINE` 式で使用されるカラム) に含まれるカラムの削除はサポートされていません。主キーに含まれるカラムの型変更は、その変更によってデータの変更が発生しない場合にのみ可能です (たとえば、Enum に値を追加したり、型を `DateTime` から `UInt32` に変更したりすることは許可されています) 。
 
@@ -368,4 +395,4 @@ SELECT groupArray(x), groupArray(s) FROM tmp;
 
 `ALTER` クエリは、そのテーブルに対するすべての読み取りと書き込みをブロックします。つまり、`ALTER` クエリの実行時に長時間実行される `SELECT` がある場合、`ALTER` クエリはその完了を待機します。同時に、同じテーブルに対する新しいクエリも、この `ALTER` の実行中は待機します。
 
-データ自体を格納しないテーブル ([Merge](/ja/reference/statements/alter) や [Distributed](/ja/reference/statements/alter) など) の場合、`ALTER` はテーブル構造を変更するだけで、従属するテーブルの構造は変更しません。たとえば、`Distributed` テーブルに対して ALTER を実行する場合は、すべてのリモートサーバー上のテーブルに対しても `ALTER` を実行する必要があります。
+データ自体を格納しないテーブル ([Merge](/ja/reference/statements/alter/index) や [Distributed](/ja/reference/statements/alter/index) など) の場合、`ALTER` はテーブル構造を変更するだけで、従属するテーブルの構造は変更しません。たとえば、`Distributed` テーブルに対して ALTER を実行する場合は、すべてのリモートサーバー上のテーブルに対しても `ALTER` を実行する必要があります。

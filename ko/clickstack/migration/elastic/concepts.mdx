@@ -8,7 +8,7 @@ keywords: ['Elasticsearch']
 doc_type: 'reference'
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/ko/components/Image.jsx";
 
 <div id="elastic-vs-clickstack">
   ## Elastic Stack vs ClickStack
@@ -67,15 +67,15 @@ Elasticsearch는 [dynamic mappings](https://www.elastic.co/docs/manage-data/data
   ### 수집 및 변환
 </div>
 
-Elasticsearch는 인덱싱 전에 문서를 변환하기 위해 프로세서(`enrich`, `rename`, `grok` 등)를 사용하는 수집 파이프라인을 사용합니다. ClickHouse에서는 이와 유사한 기능을 [**증분형 materialized view**](/ko/concepts/features/materialized-views/incremental-materialized-view)로 구현할 수 있으며, 이를 통해 유입되는 데이터를 [필터링하거나 변환](/ko/concepts/features/materialized-views/incremental-materialized-view#filtering-and-transformation)하거나 [보강](/ko/concepts/features/materialized-views/incremental-materialized-view#lookup-table)한 뒤 결과를 대상 테이블에 삽입할 수 있습니다. materialized view의 출력만 저장하면 되는 경우에는 `Null` 테이블 엔진에 데이터를 삽입할 수도 있습니다. 즉, materialized view의 결과만 보존되고 원본 데이터는 폐기되므로 저장 공간을 절약할 수 있습니다.
+Elasticsearch는 인덱싱 전에 문서를 변환하기 위해 프로세서(`enrich`, `rename`, `grok` 등)를 사용하는 ingest pipeline을 사용합니다. ClickHouse에서는 이와 유사한 기능을 [**증분형 materialized view**](/ko/concepts/features/materialized-views/incremental-materialized-view)로 구현할 수 있으며, 이를 통해 유입되는 데이터를 [필터링하거나 변환](/ko/concepts/features/materialized-views/incremental-materialized-view#filtering-and-transformation)하거나 [보강](/ko/concepts/features/materialized-views/incremental-materialized-view#lookup-table)한 뒤 결과를 대상 테이블에 삽입할 수 있습니다. materialized view의 출력만 저장하면 되는 경우에는 `Null` 테이블 엔진에 데이터를 삽입할 수도 있습니다. 즉, materialized view의 결과만 보존되고 원본 데이터는 폐기되므로 저장 공간을 절약할 수 있습니다.
 
-보강 측면에서 Elasticsearch는 문서에 컨텍스트를 추가하기 위한 전용 [enrich processor](https://www.elastic.co/docs/reference/enrich-processor/enrich-processor)를 지원합니다. ClickHouse에서는 [**사전(Dictionaries)**](/ko/concepts/features/dictionaries)을 사용해 [쿼리 시점](/ko/concepts/features/dictionaries#query-time-enrichment)과 [수집 시점](/ko/concepts/features/dictionaries#index-time-enrichment) 모두에서 행을 보강할 수 있습니다. 예를 들어 [IP를 위치에 매핑](/ko/guides/use-cases/observability/build-your-own/schema-design#using-ip-dictionaries)하거나, 삽입 시 [user agent 조회](/ko/guides/use-cases/observability/build-your-own/schema-design#using-regex-dictionaries-user-agent-parsing)를 적용할 수 있습니다.
+보강 측면에서 Elasticsearch는 문서에 컨텍스트를 추가하기 위한 전용 [enrich processor](https://www.elastic.co/docs/reference/enrich-processor/enrich-processor)를 지원합니다. ClickHouse에서는 [**딕셔너리**](/ko/concepts/features/dictionaries/index)을 사용해 [쿼리 시점](/ko/concepts/features/dictionaries/index#query-time-enrichment)과 [수집 시점](/ko/concepts/features/dictionaries/index#index-time-enrichment) 모두에서 행을 보강할 수 있습니다. 예를 들어 [IP를 위치에 매핑](/ko/guides/use-cases/observability/build-your-own/schema-design#using-ip-dictionaries)하거나, 삽입 시 [user agent 조회](/ko/guides/use-cases/observability/build-your-own/schema-design#using-regex-dictionaries-user-agent-parsing)를 적용할 수 있습니다.
 
 <div id="query-languages">
   ### 쿼리 언어
 </div>
 
-Elasticsearch는 [DSL](https://www.elastic.co/docs/explore-analyze/query-filter/languages/querydsl), [ES|QL](https://www.elastic.co/docs/explore-analyze/query-filter/languages/esql), [EQL](https://www.elastic.co/docs/explore-analyze/query-filter/languages/eql), [KQL](https://www.elastic.co/docs/explore-analyze/query-filter/languages/kql)(Lucene 스타일) 쿼리를 포함한 [여러 쿼리 언어](https://www.elastic.co/docs/explore-analyze/query-filter/languages)를 지원하지만, 조인 지원은 제한적이며 [`ES|QL`](https://www.elastic.co/guide/en/elasticsearch/reference/8.x/esql-commands.html#esql-lookup-join)을 통해 **left outer joins**만 사용할 수 있습니다. ClickHouse는 [모든 조인 유형](/ko/reference/statements/select/join#supported-types-of-join), [윈도우 함수](/ko/reference/functions/window-functions), 서브쿼리(상관 서브쿼리 포함), CTE를 포함한 **전체 SQL 구문**을 지원합니다. 이는 관측성 신호를 비즈니스 데이터 또는 인프라 데이터와 연관시켜 분석해야 할 때 큰 장점입니다.
+Elasticsearch는 [DSL](https://www.elastic.co/docs/explore-analyze/query-filter/languages/querydsl), [ES|QL](https://www.elastic.co/docs/explore-analyze/query-filter/languages/esql), [EQL](https://www.elastic.co/docs/explore-analyze/query-filter/languages/eql), [KQL](https://www.elastic.co/docs/explore-analyze/query-filter/languages/kql)(Lucene 스타일) 쿼리를 포함한 [여러 쿼리 언어](https://www.elastic.co/docs/explore-analyze/query-filter/languages)를 지원하지만, 조인 지원은 제한적이며 [`ES|QL`](https://www.elastic.co/guide/en/elasticsearch/reference/8.x/esql-commands.html#esql-lookup-join)을 통해 **left outer joins**만 사용할 수 있습니다. ClickHouse는 [모든 조인 유형](/ko/reference/statements/select/join#supported-types-of-join), [윈도우 함수](/ko/reference/functions/window-functions/index), 서브쿼리(상관 서브쿼리 포함), CTE를 포함한 **전체 SQL 구문**을 지원합니다. 이는 관측성 신호를 비즈니스 데이터 또는 인프라 데이터와 연관시켜 분석해야 할 때 큰 장점입니다.
 
 ClickStack에서는 전환을 쉽게 할 수 있도록 [UI에서 Lucene 호환 검색 인터페이스를 제공](/ko/clickstack/features/search)하며, 동시에 ClickHouse 백엔드를 통한 전체 SQL 지원도 제공합니다. 이 구문은 [Elastic query string](https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-query-string-query#query-string-syntax) 구문과 유사합니다. 이 구문을 정확히 비교하려면 [&quot;ClickStack과 Elastic에서 검색하기&quot;](/ko/clickstack/migration/elastic/search)를 참조하십시오.
 
@@ -281,7 +281,7 @@ ClickHouse의 레이크하우스 기능은 단순히 데이터를 읽는 데 그
 
 * **Data Catalog 통합**: ClickHouse는 [AWS Glue](/ko/guides/use-cases/data-warehousing/glue-catalog) 같은 데이터 카탈로그와의 통합을 지원하므로 객체 스토리지에 있는 테이블을 자동으로 탐색하고 액세스할 수 있습니다.
 * **객체 스토리지 지원**: 데이터를 이동하지 않고도 [S3](/ko/reference/engines/table-engines/integrations/s3), [GCS](/ko/reference/functions/table-functions/gcs), [Azure Blob Storage](/ko/reference/engines/table-engines/integrations/azureBlobStorage)에 저장된 데이터를 쿼리할 수 있도록 네이티브 지원을 제공합니다.
-* **쿼리 페더레이션**: [외부 딕셔너리](/ko/concepts/features/dictionaries)와 [테이블 함수](/ko/reference/functions/table-functions)을 사용해 레이크하우스 테이블, 기존 데이터베이스, ClickHouse 테이블을 포함한 여러 소스의 데이터를 연관시킬 수 있습니다.
+* **쿼리 페더레이션**: [외부 딕셔너리](/ko/concepts/features/dictionaries/index)와 [테이블 함수](/ko/reference/functions/table-functions/index)을 사용해 레이크하우스 테이블, 기존 데이터베이스, ClickHouse 테이블을 포함한 여러 소스의 데이터를 연관시킬 수 있습니다.
 * **증분 로딩**: [S3Queue](/ko/reference/engines/table-engines/integrations/s3queue), [ClickPipes](/ko/integrations/clickpipes/home) 같은 기능을 사용해 레이크하우스 테이블의 데이터를 로컬 [MergeTree](/ko/reference/engines/table-engines/mergetree-family/mergetree) 테이블로 지속적으로 로드할 수 있습니다.
 * **성능 최적화**: [cluster functions](/ko/reference/functions/table-functions/cluster)을 사용해 레이크하우스 데이터에 대해 분산 쿼리 실행을 수행함으로써 성능을 높일 수 있습니다.
 

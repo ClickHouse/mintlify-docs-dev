@@ -1,13 +1,13 @@
 ---
 slug: /guides/replacing-merge-tree
-title: 'Trabalhando com o mecanismo ReplacingMergeTree'
-description: 'Guia sobre como usar o mecanismo ReplacingMergeTree no ClickHouse'
+title: 'Trabalhando com o motor ReplacingMergeTree'
+description: 'Guia sobre como usar o motor ReplacingMergeTree no ClickHouse'
 keywords: ['replacingmergetree', 'inserções', 'desduplicação']
 doc_type: 'guide'
-sidebarTitle: 'Trabalhando com o mecanismo ReplacingMergeTree'
+sidebarTitle: 'Trabalhando com o motor ReplacingMergeTree'
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/pt-BR/components/Image.jsx";
 
 Enquanto bancos de dados transacionais são otimizados para cargas de trabalho transacionais de atualização e exclusão, bancos de dados OLAP oferecem menos garantias para esse tipo de operação. Em vez disso, eles são otimizados para dados imutáveis inseridos em lotes, permitindo consultas analíticas significativamente mais rápidas. Embora o ClickHouse ofereça operações de atualização por meio de mutações, bem como uma forma leve de excluir linhas, sua estrutura orientada a colunas faz com que essas operações precisem ser agendadas com cuidado, conforme descrito acima. Essas operações são tratadas de forma assíncrona, processadas em uma única thread e exigem, no caso de atualizações, que os dados sejam regravados em disco. Portanto, não devem ser usadas para um grande número de pequenas alterações.
 Para processar um fluxo de linhas de atualização e exclusão, evitando os padrões de uso acima, podemos usar o motor de tabela ReplacingMergeTree do ClickHouse.
@@ -103,16 +103,22 @@ Usamos uma chave `ORDER BY` `(PostTypeId, toDate(CreationDate), CreationDate, Id
   ## Consultando ReplacingMergeTree
 </div>
 
-Durante a mesclagem, o ReplacingMergeTree identifica linhas duplicadas usando os valores das colunas `ORDER BY` como identificador único e mantém apenas a versão mais alta, ou remove todas as duplicatas se a versão mais recente indicar uma exclusão. No entanto, isso oferece apenas correção eventual — não garante que as linhas serão desduplicadas, e você não deve confiar nisso. Portanto, as consultas podem produzir respostas incorretas, já que linhas de atualização e exclusão podem ser consideradas nas consultas.
+Durante a mesclagem, o ReplacingMergeTree identifica linhas duplicadas usando os valores das colunas `ORDER BY` como identificador único e mantém apenas a versão mais alta, ou remove todas as duplicatas se a versão mais recente indicar uma exclusão. No entanto, isso oferece apenas correção eventual — não garante que as linhas serão desduplicadas, e você não deve confiar nisso.
 
-Para obter respostas corretas, você precisará complementar as mesclagens em segundo plano com desduplicação em tempo de consulta e remoção de exclusões. Isso pode ser feito usando o operador `FINAL`.
+<Info>
+  **Use FINAL para ler dados desduplicados**
 
-Considere a tabela Posts acima. Podemos usar o método normal de carregamento desse conjunto de dados, mas especificar as colunas deleted e version, além de valores 0. Para fins de exemplo, carregamos apenas 10000 linhas.
+  Como a desduplicação só acontece durante as mesclagens em segundo plano, um `SELECT` simples ainda pode retornar linhas duplicadas ou excluídas. Para ler resultados corretos em tempo de consulta, use o modificador `FINAL`, que conclui a desduplicação e a remoção de exclusões enquanto a consulta é executada.
+</Info>
+
+Considere a tabela posts acima. Podemos usar o método normal de carregamento desse conjunto de dados, mas especificar as colunas deleted e version, além de valores 0. Para fins de exemplo, carregamos apenas 10000 linhas.
 
 ```sql
 INSERT INTO stackoverflow.posts_updateable SELECT 0 AS Version, 0 AS Deleted, *
 FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/stackoverflow/parquet/posts/*.parquet') WHERE AnswerCount > 0 LIMIT 10000
+```
 
+```response
 0 rows in set. Elapsed: 1.980 sec. Processed 8.19 thousand rows, 3.52 MB (4.14 thousand rows/s., 1.78 MB/s.)
 ```
 
@@ -120,7 +126,9 @@ Vamos confirmar o número de linhas:
 
 ```sql
 SELECT count() FROM stackoverflow.posts_updateable
+```
 
+```response
 ┌─count()─┐
 │   10000 │
 └─────────┘
@@ -156,10 +164,12 @@ INSERT INTO posts_updateable SELECT
         ParentId,
         CommunityOwnedDate,
         ClosedDate
-FROM posts_updateable --selecionar 100 linhas aleatórias
+FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0
 LIMIT 5000
+```
 
+```response
 0 rows in set. Elapsed: 4.056 sec. Processed 1.42 million rows, 2.20 GB (349.63 thousand rows/s., 543.39 MB/s.)
 ```
 
@@ -191,32 +201,38 @@ INSERT INTO posts_updateable SELECT
         ParentId,
         CommunityOwnedDate,
         ClosedDate
-FROM posts_updateable --selecionar 100 linhas aleatórias
+FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0 AND AnswerCount > 0
 LIMIT 1000
+```
 
+```response
 0 rows in set. Elapsed: 0.166 sec. Processed 135.53 thousand rows, 212.65 MB (816.30 thousand rows/s., 1.28 GB/s.)
 ```
 
-O resultado das operações acima será de 16.000 linhas, ou seja, 10.000 + 5.000 + 1.000. O total correto aqui é que, na realidade, deveríamos ter apenas 1.000 linhas a menos do que o total original, ou seja, 10.000 - 1.000 = 9.000.
+O resultado das operações acima será de 16.000 linhas, ou seja, 10.000 + 5.000 + 1.000. Na realidade, deveríamos ter apenas 1.000 linhas a menos do que o total original, ou seja, 10.000 - 1.000 = 9.000.
 
 ```sql
 SELECT count()
 FROM posts_updateable
+```
 
+```response
 ┌─count()─┐
 │   10000 │
 └─────────┘
-1 linha no conjunto. Elapsed: 0.002 sec.
+1 row in set. Elapsed: 0.002 sec.
 ```
 
-Seus resultados vão variar aqui dependendo das mesclagens que já ocorreram. Podemos ver que o total aqui é diferente porque temos linhas duplicadas. Aplicar `FINAL` à tabela retorna o resultado correto.
+Seus resultados vão variar dependendo das mesclagens que já ocorreram. Podemos ver que o total é diferente por causa de linhas duplicadas. Aplicar `FINAL` à tabela retorna o resultado correto.
 
 ```sql
 SELECT count()
 FROM posts_updateable
 FINAL
+```
 
+```response
 ┌─count()─┐
 │    9000 │
 └─────────┘
@@ -245,7 +261,7 @@ A mesclagem de dados no ClickHouse ocorre no nível da partição. Ao usar Repla
 
 Partindo do princípio de que esse é o caso, você pode usar a configuração `do_not_merge_across_partitions_select_final=1` para melhorar o desempenho de consultas com `FINAL`. Essa configuração faz com que as partições sejam mescladas e processadas de forma independente ao usar FINAL.
 
-Considere a seguinte tabela de posts, na qual não usamos particionamento:
+Considere a seguinte tabela posts, na qual não usamos particionamento:
 
 ```sql
 CREATE TABLE stackoverflow.posts_no_part
@@ -260,7 +276,9 @@ ORDER BY (PostTypeId, toDate(CreationDate), CreationDate, Id)
 
 INSERT INTO stackoverflow.posts_no_part SELECT 0 AS Version, 0 AS Deleted, *
 FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/stackoverflow/parquet/posts/*.parquet')
+```
 
+```response
 0 rows in set. Elapsed: 182.895 sec. Processed 59.82 million rows, 38.07 GB (327.07 thousand rows/s., 208.17 MB/s.)
 ```
 
@@ -280,7 +298,9 @@ FROM posts_no_part
 FINAL
 GROUP BY year
 ORDER BY year ASC
+```
 
+```response
 ┌─year─┬─total_answers─┐
 │ 2008 │        371480 │
 ...
@@ -305,14 +325,16 @@ ENGINE = ReplacingMergeTree
 PARTITION BY toYear(CreationDate)
 ORDER BY (PostTypeId, toDate(CreationDate), CreationDate, Id)
 
-// população e atualização omitidas
+// populate & update omitted
 
 SELECT toYear(CreationDate) AS year, sum(AnswerCount) AS total_answers
 FROM posts_with_part
 FINAL
 GROUP BY year
 ORDER BY year ASC
+```
 
+```response
 ┌─year─┬─total_answers─┐
 │ 2008 │       387832  │
 │ 2009 │       1165506 │
@@ -359,11 +381,11 @@ Como discutido em Exploiting Partitions with ReplacingMergeTree, recomendamos o 
   ### Ajustando mesclagens para melhorar o desempenho das consultas
 </div>
 
-Por padrão, min&#95;age&#95;to&#95;force&#95;merge&#95;seconds e min&#95;age&#95;to&#95;force&#95;merge&#95;on&#95;partition&#95;only são definidos como 0 e false, respectivamente, o que desativa esses recursos. Nessa configuração, o ClickHouse aplicará o comportamento padrão de mesclagem, sem forçar mesclagens com base na idade da partição.
+Por padrão, `min_age_to_force_merge_seconds` e `min_age_to_force_merge_on_partition_only` são definidos como 0 e false, respectivamente, o que desativa esses recursos. Nessa configuração, o ClickHouse aplicará o comportamento padrão de mesclagem, sem forçar mesclagens com base na idade da partição.
 
-Se um valor for especificado para min&#95;age&#95;to&#95;force&#95;merge&#95;seconds, o ClickHouse ignorará as heurísticas normais de mesclagem para partes mais antigas do que o período especificado. Embora isso geralmente só seja eficaz quando o objetivo é minimizar o número total de partes, pode melhorar o desempenho das consultas no ReplacingMergeTree ao reduzir o número de partes que precisam ser mescladas no momento da consulta.
+Se um valor for especificado para `min_age_to_force_merge_seconds`, o ClickHouse ignorará as heurísticas normais de mesclagem para partes mais antigas do que o período especificado. Embora isso geralmente só seja eficaz quando o objetivo é minimizar o número total de partes, pode melhorar o desempenho das consultas no ReplacingMergeTree ao reduzir o número de partes que precisam ser mescladas no momento da consulta.
 
-Esse comportamento pode ser ajustado ainda mais definindo min&#95;age&#95;to&#95;force&#95;merge&#95;on&#95;partition&#95;only=true, o que exige que todas as partes da partição sejam mais antigas do que min&#95;age&#95;to&#95;force&#95;merge&#95;seconds para que ocorra uma mesclagem agressiva. Essa configuração permite que partições mais antigas sejam gradualmente mescladas até se tornarem uma única parte, o que consolida os dados e mantém o desempenho das consultas.
+Esse comportamento pode ser ajustado ainda mais definindo `min_age_to_force_merge_on_partition_only=true`, o que exige que todas as partes da partição sejam mais antigas do que `min_age_to_force_merge_seconds` para que ocorra uma mesclagem agressiva. Essa configuração permite que partições mais antigas sejam gradualmente mescladas até se tornarem uma única parte, o que consolida os dados e mantém o desempenho das consultas.
 
 <div id="recommended-settings">
   ### Configurações recomendadas
@@ -373,6 +395,6 @@ Esse comportamento pode ser ajustado ainda mais definindo min&#95;age&#95;to&#95
   Ajustar o comportamento de mesclagem é uma operação avançada. Recomendamos consultar o suporte do ClickHouse antes de ativar essas configurações em cargas de trabalho de produção.
 </Warning>
 
-Na maioria dos casos, é preferível definir min&#95;age&#95;to&#95;force&#95;merge&#95;seconds com um valor baixo — significativamente menor que o período da partição. Isso minimiza o número de partes e evita mesclagens desnecessárias no momento da consulta com o operador FINAL.
+Na maioria dos casos, é preferível definir `min_age_to_force_merge_seconds` com um valor baixo — significativamente menor que o período da partição. Isso minimiza o número de partes e evita mesclagens desnecessárias no momento da consulta com o operador `FINAL`.
 
-Por exemplo, considere uma partição mensal que já tenha sido mesclada em uma única parte. Se um insert pequeno e isolado criar uma nova parte nessa partição, o desempenho da consulta pode ser prejudicado, porque o ClickHouse precisará ler várias partes até que a mesclagem seja concluída. Definir min&#95;age&#95;to&#95;force&#95;merge&#95;seconds pode garantir que essas partes sejam mescladas de forma agressiva, evitando a degradação do desempenho da consulta.
+Por exemplo, considere uma partição mensal que já tenha sido mesclada em uma única parte. Se um `insert` pequeno e isolado criar uma nova parte nessa partição, o desempenho da consulta pode ser prejudicado, porque o ClickHouse precisará ler várias partes até que a mesclagem seja concluída. Definir `min_age_to_force_merge_seconds` pode garantir que essas partes sejam mescladas de forma agressiva, evitando a degradação do desempenho da consulta.

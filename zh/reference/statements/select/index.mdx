@@ -46,7 +46,7 @@ SELECT [DISTINCT [ON (column1, column2, ...)]] expr_list
 * [JOIN 子句](/zh/reference/statements/select/join)
 * [PREWHERE 子句](/zh/reference/statements/select/prewhere)
 * [WHERE 子句](/zh/reference/statements/select/where)
-* [WINDOW 子句](/zh/reference/functions/window-functions)
+* [WINDOW 子句](/zh/reference/functions/window-functions/index)
 * [GROUP BY 子句](/zh/reference/statements/select/group-by)
 * [LIMIT BY 子句](/zh/reference/statements/select/limit-by)
 * [HAVING 子句](/zh/reference/statements/select/having)
@@ -128,6 +128,42 @@ Code: 42. DB::Exception: Received from localhost:9000. DB::Exception: Number of 
 
 与 `COLUMNS` 表达式匹配的列可以具有不同的数据类型。如果 `COLUMNS` 没有匹配到任何列，且它是 `SELECT` 中唯一的表达式，则 ClickHouse 会抛出异常。
 
+<div id="select-columns-with-like-or-ilike">
+  #### 使用 `LIKE` 或 `ILIKE` 选择列
+</div>
+
+你也可以在 `*` 后使用区分大小写的 `LIKE` 或不区分大小写的 `ILIKE`，通过将列名与某个模式匹配来选择列：
+
+```sql
+SELECT * ILIKE 'a%' FROM col_names
+```
+
+```text
+┌─aa─┬─ab─┐
+│  1 │  1 │
+└────┴────┘
+```
+
+`LIKE` 和 `ILIKE` 模式遵循的是 `LIKE` 语义，而非正则表达式语义。`%` 字符可匹配任意字符序列，`_` 字符可匹配任意单个字符，`\` 用于转义 `%`、`_` 和 `\`。两者唯一的区别是：`LIKE` 按区分大小写的方式匹配列名，而 `ILIKE` 不区分大小写。例如：
+
+```sql
+SELECT * ILIKE 'a_' FROM col_names
+```
+
+该查询会选取名称为两个字符且以 `a` 开头的列，例如 `aa` 和 `ab`。
+
+`* LIKE` 和 `* ILIKE` 也支持限定星号和列转换器：
+
+```sql
+SELECT t.* ILIKE 'a%' EXCEPT (ab) FROM col_names AS t
+```
+
+```text
+┌─aa─┐
+│  1 │
+└────┘
+```
+
 <div id="asterisk">
   ### 星号
 </div>
@@ -148,7 +184,7 @@ Code: 42. DB::Exception: Received from localhost:9000. DB::Exception: Number of 
 
 除了查询结果外，您还可以获取结果列的最小值和最大值。为此，请将 **extremes** 设置为 1。系统会对数值类型、日期类型以及日期时间类型计算最小值和最大值。对于其他列，则输出默认值。
 
-系统会额外计算两行——分别表示最小值和最大值。这额外的两行会在 `XML`、`JSON*`、`TabSeparated*`、`CSV*`、`Vertical`、`Template` 和 `Pretty*` [格式](/zh/reference/formats)中与其他行分开输出。其他格式则不会输出。
+系统会额外计算两行——分别表示最小值和最大值。这额外的两行会在 `XML`、`JSON*`、`TabSeparated*`、`CSV*`、`Vertical`、`Template` 和 `Pretty*` [格式](/zh/reference/formats/index)中与其他行分开输出。其他格式则不会输出。
 
 在 `JSON*` 和 `XML` 格式中，极值会输出在单独的 `extremes` 字段中。在 `TabSeparated*`、`CSV*` 和 `Vertical` 格式中，这两行会出现在主结果之后；如果存在 `totals`，则也会位于其后。它们前面会有一个空行 (即在其他数据之后) 。在 `Pretty*` 格式中，这两行会作为单独的表输出在主结果之后；如果存在 `totals`，则也会位于其后。在 `Template` 格式中，极值会按照指定模板输出。
 

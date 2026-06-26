@@ -40,6 +40,72 @@ Este es el formato que se usa en `INSERT INTO t VALUES ...`, pero también puede
   ## Ejemplo de uso
 </div>
 
+<div id="inserting-data">
+  ### Inserción de datos
+</div>
+
+El formato `Values` es el que usa `INSERT`, por lo que cualquier sentencia `INSERT ... VALUES`
+ya lo utiliza. La cláusula `FORMAT Values` puede indicarse explícitamente, y las
+filas pueden suministrarse desde un flujo o un archivo. Cada fila es una tupla entre paréntesis,
+con sus elementos separados por comas, y las propias tuplas separadas también por comas:
+
+```sql title="Query"
+CREATE TABLE t (id UInt32, name String, values Array(UInt32)) ENGINE = Memory;
+
+INSERT INTO t FORMAT Values (1, 'a', [10, 20]), (2, 'b', [30]);
+
+SELECT * FROM t ORDER BY id;
+```
+
+```response title="Response"
+┌─id─┬─name─┬─values──┐
+│  1 │ a    │ [10,20] │
+│  2 │ b    │ [30]    │
+└────┴──────┴─────────┘
+```
+
+<div id="using-expressions">
+  ### Uso de expresiones en la entrada
+</div>
+
+A diferencia de la mayoría de los formatos de entrada, `Values` puede evaluar expresiones SQL en cada campo
+en lugar de aceptar únicamente literales. Esto se controla mediante
+[`input_format_values_interpret_expressions`](#format-settings) (habilitado de
+forma predeterminada): cuando un campo no puede ser leído por el analizador de streaming rápido, ClickHouse
+recurre al analizador de SQL e interpreta el campo como una expresión.
+
+```sql title="Query"
+CREATE TABLE prices (item String, total UInt32) ENGINE = Memory;
+
+INSERT INTO prices FORMAT Values ('apple', 3 * 4), ('pear', length('hello') + 10);
+
+SELECT * FROM prices ORDER BY total;
+```
+
+```response title="Response"
+┌─item──┬─total─┐
+│ apple │    12 │
+│ pear  │    15 │
+└───────┴───────┘
+```
+
+<div id="selecting-data">
+  ### Selección de datos
+</div>
+
+El formato `Values` también puede usarse para dar formato a los resultados de consulta. Los números se
+escriben sin comillas, los arrays entre `[]` y las cadenas y fechas entre comillas simples;
+las comillas simples y las barras invertidas dentro de las cadenas se escapan con una barra invertida, y
+[`NULL`](/es/reference/syntax) se escribe como `NULL`:
+
+```sql title="Query"
+SELECT 1 AS a, 'O''Reilly' AS b, NULL::Nullable(String) AS c FORMAT Values;
+```
+
+```response title="Response"
+(1,'O\'Reilly',NULL)
+```
+
 <div id="format-settings">
   ## Configuración del formato
 </div>

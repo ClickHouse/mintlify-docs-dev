@@ -269,7 +269,8 @@ function useCMSIntegrations() {
     };
     const fetchIntegrations = async () => {
       try {
-        const fallbackResponse = await fetch('/assets/integrations-fallback.json', {
+        const base = (typeof window !== 'undefined' && window.location.pathname.startsWith('/docs')) ? '/docs' : '';
+        const fallbackResponse = await fetch(base + '/assets/integrations-fallback.json', {
           cache: 'force-cache'
         });
 

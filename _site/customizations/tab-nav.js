@@ -13,15 +13,20 @@
   // /<locale> and mirrors the English paths beneath it.
   var LOCALES = ['es', 'ja', 'ko', 'pt-BR', 'ru', 'zh'];
 
+  // '' at root (.app, mint dev); '/docs' on the subpath deploy
+  var BASE = /^\/docs(\/|$)/.test(window.location.pathname) ? '/docs' : '';
+  function stripBase(p) { return (BASE && p.indexOf(BASE) === 0) ? (p.slice(BASE.length) || '/') : p; }
+
   function currentLocale() {
-    var seg = window.location.pathname.split('/')[1] || '';
+    var seg = stripBase(window.location.pathname).split('/')[1] || '';
     return LOCALES.indexOf(seg) !== -1 ? seg : '';
   }
 
-  // Keep navigation within the active locale: '/' -> '/es', '/x/y' -> '/es/x/y'.
+  // Keep navigation within the active locale and base path.
   function localizeUrl(url) {
     var locale = currentLocale();
-    return locale ? '/' + locale + (url === '/' ? '' : url) : url;
+    var localized = locale ? '/' + locale + (url === '/' ? '' : url) : url;
+    return BASE + localized;
   }
 
   function patchTabButtons() {
@@ -95,7 +100,7 @@
   // Each locale has its own homepage at /<locale> (e.g. /es, /ja); treat those
   // the same as the English homepage at /.
   function isHomePath() {
-    var path = window.location.pathname.replace(/\/+$/, '') || '/';
+    var path = stripBase(window.location.pathname).replace(/\/+$/, '') || '/';
     return path === '/' || LOCALES.indexOf(path.slice(1)) !== -1;
   }
 
@@ -154,9 +159,8 @@
       var logoLink = document.createElement('a');
       logoLink.id = LOGO_ID;
       logoLink.href = localizeUrl('/');
-      logoLink.style.cssText = 'display:flex;align-items:center;flex-shrink:0;text-decoration:none;';
-      logoLink.innerHTML = '<img src="/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs" style="height:2rem;">'
-        + '<img src="/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs" style="height:2rem;">';
+      logoLink.innerHTML = '<img src="' + BASE + '/_site/logo/light.svg" id="ch-hp-logo-light" alt="ClickHouse Docs">'
+        + '<img src="' + BASE + '/_site/logo/dark.svg" id="ch-hp-logo-dark" alt="ClickHouse Docs">';
       navbar.insertBefore(logoLink, navbar.firstChild);
       updateLogoTheme();
     }
@@ -182,19 +186,44 @@
     }
   }
 
+  // ── Navbar ready ──────────────────────────────────────────────────────────
+  // Reveal the navbar once both injections are complete: logo (homepage only)
+  // and CTA (all pages). Called via requestAnimationFrame so it runs after the
+  // current synchronous task — giving navbar-cta.js time to inject the CTA
+  // before we check. The MutationObserver re-fires on every DOM change
+  // (including when navbar-cta.js appends the CTA), so if the first RAF check
+  // fails because the CTA isn't there yet, a subsequent observer tick will retry.
+  function markNavbarReady() {
+    var navbar = document.getElementById('navbar-transition-maple');
+    if (!navbar) return;
+    if (!document.getElementById('ch-navbar-cta')) return;
+    if (isHomePath() && !document.getElementById(LOGO_ID)) return;
+    navbar.classList.add('ch-navbar-ready');
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
   function init() {
     applyHomepageClass();
     setupHomepageNavbar();
     patchTabButtons();
     styleDropdownHeaders();
+    markNavbarReady();
 
+    // Debounce the observer so rapid React re-renders don't thrash the main
+    // thread with repeated querySelectorAll calls — each flush still runs all
+    // work, but at most once per animation frame rather than once per DOM node.
+    var rafId = null;
     var observer = new MutationObserver(function () {
-      applyHomepageClass();
-      setupHomepageNavbar();
-      updateLogoTheme();
-      patchTabButtons();
-      styleDropdownHeaders();
+      if (rafId) return;
+      rafId = requestAnimationFrame(function () {
+        rafId = null;
+        applyHomepageClass();
+        setupHomepageNavbar();
+        updateLogoTheme();
+        patchTabButtons();
+        styleDropdownHeaders();
+        markNavbarReady();
+      });
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
@@ -204,6 +233,11 @@
       setupHomepageNavbar();
     });
   }
+
+  // Apply the homepage class immediately at script evaluation time — before the
+  // navbar is inserted by React hydration — so justify-content:flex-start and
+  // other ch-homepage navbar rules apply from the very first navbar paint.
+  applyHomepageClass();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

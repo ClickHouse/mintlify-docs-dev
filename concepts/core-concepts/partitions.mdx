@@ -12,7 +12,7 @@ import { RunnableCode } from "/snippets/components/RunnableCode/RunnableCode.jsx
 ## What are table partitions in ClickHouse? {#what-are-table-partitions-in-clickhouse}
 <br/>
 
-Partitions group the [data parts](/concepts/core-concepts/parts) of a table in the [MergeTree engine family](/reference/engines/table-engines/mergetree-family) into organized, logical units, which is a way of organizing data that is conceptually meaningful and aligned with specific criteria, such as time ranges, categories, or other key attributes. These logical units make data easier to manage, query, and optimize.
+Partitions group the [data parts](/concepts/core-concepts/parts) of a table in the [MergeTree engine family](/reference/engines/table-engines/mergetree-family/index) into organized, logical units, which is a way of organizing data that is conceptually meaningful and aligned with specific criteria, such as time ranges, categories, or other key attributes. These logical units make data easier to manage, query, and optimize.
 
 ### PARTITION BY {#partition-by}
 Partitioning can be enabled when a table is initially defined via the [PARTITION BY clause](/reference/engines/table-engines/mergetree-family/custom-partitioning-key). This clause can contain a SQL expression on any columns, the results of which will define which partition a row belongs to.
@@ -56,7 +56,7 @@ With partitioning enabled, ClickHouse only [merges](/concepts/core-concepts/merg
 As sketched in the diagram above, parts belonging to different partitions are never merged. If a partition key with high cardinality is chosen, then parts spread across thousands of partitions will never be merge candidates - exceeding preconfigured limits and causing the dreaded `Too many parts` error. Addressing this problem is simple: choose a sensible partition key with [cardinality under 1000..10000](https://github.com/ClickHouse/ClickHouse/blob/ffc5b2c56160b53cf9e5b16cfb73ba1d956f7ce4/src/Storages/MergeTree/MergeTreeDataWriter.cpp#L121).
 
 ## Monitoring partitions {#monitoring-partitions}
-You can [query](https://sql.clickhouse.com/?query=U0VMRUNUIERJU1RJTkNUIF9wYXJ0aXRpb25fdmFsdWUgQVMgcGFydGl0aW9uCkZST00gdWsudWtfcHJpY2VfcGFpZF9zaW1wbGVfcGFydGl0aW9uZWQKT1JERVIgQlkgcGFydGl0aW9uIEFTQw&run_query=true&tab=results) the list of all existing unique partitions of our example table by using the [virtual column](/reference/engines/table-engines#table_engines-virtual_columns) `_partition_value`:
+You can [query](https://sql.clickhouse.com/?query=U0VMRUNUIERJU1RJTkNUIF9wYXJ0aXRpb25fdmFsdWUgQVMgcGFydGl0aW9uCkZST00gdWsudWtfcHJpY2VfcGFpZF9zaW1wbGVfcGFydGl0aW9uZWQKT1JERVIgQlkgcGFydGl0aW9uIEFTQw&run_query=true&tab=results) the list of all existing unique partitions of our example table by using the [virtual column](/reference/engines/table-engines/index#table_engines-virtual_columns) `_partition_value`:
 
 <RunnableCode>
 ```sql
@@ -96,7 +96,7 @@ PARTITION BY toStartOfMonth(date)
 ORDER BY (town, street)
 TTL date + INTERVAL 12 MONTH DELETE;
 ```
-Since the table is partitioned by `toStartOfMonth(date)`, entire partitions (sets of [table parts](/concepts/core-concepts/parts)) that meet the TTL condition will be dropped, making the cleanup operation more efficient, [without having to rewrite parts](/reference/statements/alter#mutations).
+Since the table is partitioned by `toStartOfMonth(date)`, entire partitions (sets of [table parts](/concepts/core-concepts/parts)) that meet the TTL condition will be dropped, making the cleanup operation more efficient, [without having to rewrite parts](/reference/statements/alter/index#mutations).
 
 Similarly, instead of deleting old data, it can be automatically and efficiently moved to a more cost-effective [storage tier](/integrations/connectors/data-ingestion/AWS/integrating-s3-with-clickhouse#storage-tiers):
 

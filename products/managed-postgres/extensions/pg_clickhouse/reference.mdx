@@ -1281,17 +1281,17 @@ These PostgreSQL [window functions] push down to ClickHouse with `OVER
 (PARTITION BY ... ORDER BY ...)` clauses, including frame specifications where
 applicable.
 
-* [row_number](/reference/functions/window-functions#row_number)
-* [rank](/reference/functions/window-functions#rank)
-* [dense_rank](/reference/functions/window-functions#dense_rank)
-* [ntile](/reference/functions/window-functions#ntile)
-* [cume_dist](/reference/functions/window-functions#cume_dist)
-* [percent_rank](/reference/functions/window-functions#percent_rank)
-* [lead](/reference/functions/window-functions#lead)
-* [lag](/reference/functions/window-functions#lag)
-* [first_value](/reference/functions/window-functions#first_value)
-* [last_value](/reference/functions/window-functions#last_value)
-* [nth_value](/reference/functions/window-functions#nth_value)
+* [row_number](/reference/functions/window-functions/index#row_number)
+* [rank](/reference/functions/window-functions/index#rank)
+* [dense_rank](/reference/functions/window-functions/index#dense_rank)
+* [ntile](/reference/functions/window-functions/index#ntile)
+* [cume_dist](/reference/functions/window-functions/index#cume_dist)
+* [percent_rank](/reference/functions/window-functions/index#percent_rank)
+* [lead](/reference/functions/window-functions/index#lead)
+* [lag](/reference/functions/window-functions/index#lag)
+* [first_value](/reference/functions/window-functions/index#first_value)
+* [last_value](/reference/functions/window-functions/index#last_value)
+* [nth_value](/reference/functions/window-functions/index#nth_value)
 * `min` / `max` (with `OVER` clause)
 
 Ranking functions (`row_number`, `rank`, `dense_rank`, `ntile`, `cume_dist`,
@@ -1326,15 +1326,18 @@ aware of the differences between the two and how pg_clickhouse handles them.
     match(val, concat('(?i)', '^VAL\\d'))
     ```
 
-  | Flag | As  | Notes                                                          |
-  | ---- | ----- | -------------------------------------------------------------- |
-  | `i`  | `i`   | case-insensitive matching                                      |
-  | `m`  | `m-s` | `^` and `$` match begin/end line in addition to begin/end text |
-  | `n`  | `m-s` | Postgres alias for `m`                                         |
-  | `p`  | `-s`  | don't let `.` and `[^x]` match `\n`                            |
-  | `s`  | `s`   | let `.` and `[^x]` match `\n`                                  |
-  | `t`  |       | tight syntax, ignored                                          |
-  | `w`  | `m`   | inverse partial newline-sensitive matching                     |
+* The only flags both support, and therefore can be used when evaluated by
+  ClickHouse, are:
+
+    | Flag | As    | Notes                                                          |
+    | ---- | ----- | -------------------------------------------------------------- |
+    | `i`  | `i`   | case-insensitive matching                                      |
+    | `m`  | `m-s` | `^` and `$` match begin/end line in addition to begin/end text |
+    | `n`  | `m-s` | Postgres alias for `m`                                         |
+    | `p`  | `-s`  | don't let `.` and `[^x]` match `\n`                            |
+    | `s`  | `s`   | let `.` and `[^x]` match `\n`                                  |
+    | `t`  |       | tight syntax, ignored                                          |
+    | `w`  | `m`   | inverse partial newline-sensitive matching                     |
 
   RE2 supports only these flags; don't use any other [Postgres flags].
 
@@ -1344,27 +1347,27 @@ aware of the differences between the two and how pg_clickhouse handles them.
   matching a newline, while the ClickHouse equivalents do not. Otherwise,
   the behaviors are the same in ClickHouse as in Postgres:
 
-  | Pattern applied to `a\nb` | Postgres | ClickHouse | Same? |
-  | ------------------------- | :------: | :--------: | :---: |
-  | `a.b`                     | true     | true       | ✔︎     |
-  | `a[^x]b`                  | true     | true       | ✔︎     |
-  | `a$`                      | false    | false      | ✔︎     |
-  | **`s` Flag**              |          |            |       |
-  | `(?s)a.b`                 | true     | true       | ✔︎     |
-  | `(?s)a[^x]b`              | true     | true       | ✔︎     |
-  | `(?s)a$`                  | false    | false      | ✔︎     |
-  | **`m` Flag**              |          |            |       |
-  | `(?m)a.b`                 | false    | false      | ✔︎     |
-  | `(?m)a[^x]b`              | true     | false      | ✘     |
-  | `(?m)a$`                  | true     | true       | ✔︎     |
-  | **`p` Flag**              |          |            |       |
-  | `(?p)a.b`                 | false    | false      | ✔︎     |
-  | `(?p)a[^x]b`              | true     | false      | ✘     |
-  | `(?p)a$`                  | false    | false      | ✔︎     |
-  | **`w` Flag**              |          |            |       |
-  | `(?w)a.b`                 | true     | true       | ✔     |
-  | `(?w)a[^x]b`              | true     | true       | ✔     |
-  | `(?w)a$`                  | true     | true       | ✔     |
+    | Pattern applied to `a\nb` | Postgres | ClickHouse | Same? |
+    | ------------------------- | :------: | :--------: | :---: |
+    | `a.b`                     | true     | true       |   ✔︎   |
+    | `a[^x]b`                  | true     | true       |   ✔︎   |
+    | `a$`                      | false    | false      |   ✔︎   |
+    | **`s` Flag**              |          |            |       |
+    | `(?s)a.b`                 | true     | true       |   ✔︎   |
+    | `(?s)a[^x]b`              | true     | true       |   ✔︎   |
+    | `(?s)a$`                  | false    | false      |   ✔︎   |
+    | **`m` Flag**              |          |            |       |
+    | `(?m)a.b`                 | false    | false      |   ✔︎   |
+    | `(?m)a[^x]b`              | true     | false      |   ✘   |
+    | `(?m)a$`                  | true     | true       |   ✔︎   |
+    | **`p` Flag**              |          |            |       |
+    | `(?p)a.b`                 | false    | false      |   ✔︎   |
+    | `(?p)a[^x]b`              | true     | false      |   ✘   |
+    | `(?p)a$`                  | false    | false      |   ✔︎   |
+    | **`w` Flag**              |          |            |       |
+    | `(?w)a.b`                 | true     | true       |   ✔   |
+    | `(?w)a[^x]b`              | true     | true       |   ✔   |
+    | `(?w)a$`                  | true     | true       |   ✔   |
 
 * Any other flags passed to regular expression functions will prevent
   pushdown of the function.
@@ -1382,9 +1385,9 @@ aware of the differences between the two and how pg_clickhouse handles them.
   to return an empty array instead of `NULL` to compare return values
   compatibly. For example:
 
-  ```sql
-  SELECT * FROM events WHERE COALESCE(regexp_match(msg, '^ERR'), '{}');
-  ```
+    ```sql
+    SELECT * FROM events WHERE COALESCE(regexp_match(msg, '^ERR'), '{}');
+    ```
 
 To avoid all ambiguity, consider setting
 [pg_clickhouse.pushdown_regex](#pg_clickhousepushdown_regex) to prevent
@@ -1472,7 +1475,7 @@ Copyright (c) 2025-2026, ClickHouse
     "PostgreSQL Docs: IMPORT FOREIGN SCHEMA"
   [CREATE FOREIGN TABLE]: https://www.postgresql.org/docs/current/sql-createforeigntable.html
     "PostgreSQL Docs: CREATE FOREIGN TABLE"
-  [table engine]: /reference/engines/table-engines
+  [table engine]: /reference/engines/table-engines/index
     "ClickHouse Docs: Table engines"
   [AggregateFunction Type]: /reference/data-types/aggregatefunction
     "ClickHouse Docs: AggregateFunction Type"

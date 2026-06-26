@@ -41,26 +41,26 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
     [nats_password = 'password',]
     [nats_token = 'clickhouse',]
     [nats_credential_file = '/var/nats_credentials',]
-    [nats_startup_connect_tries = '5']
+    [nats_startup_connect_tries = 5,]
     [nats_max_rows_per_message = 1,]
     [nats_handle_error_mode = 'default']
 ```
 
 パラメータ:
 
-* `nats_url` – host:port (例: `localhost:5672`) ..
+* `nats_url` – host:port (例: `localhost:4222`) ..
 * `nats_subjects` – NATS テーブルが subscribe/publish する subject の一覧。`foo.*.bar` や `baz.>` のようなワイルドカード subject をサポートします
-* `nats_format` – メッセージのフォーマット。`JSONEachRow` など、SQL の `FORMAT` 関数と同じ記法を使用します。詳細は [フォーマット](/ja/reference/formats) セクションを参照してください。
+* `nats_format` – メッセージのフォーマット。`JSONEachRow` など、SQL の `FORMAT` 関数と同じ記法を使用します。詳細は [フォーマット](/ja/reference/formats/index) セクションを参照してください。
 
 パラメータ:
 
 * `nats_schema` – フォーマットでスキーマ定義が必要な場合に使用する必要があるパラメータです。たとえば、[Cap&#39;n Proto](https://capnproto.org/) では、スキーマファイルへのパスとルート `schema.capnp:Message` オブジェクト名が必要です。
 * `nats_stream` – NATS JetStream 内の既存の stream 名。
-* `nats_consumer` – NATS JetStream 内の既存の durable pull コンシューマー名。
+* `nats_consumer_name` – NATS JetStream 内の既存の durable pull コンシューマー名。
 * `nats_num_consumers` – テーブルごとのコンシューマー数。デフォルト: `1`。NATS core のみを使用していて、1 つのコンシューマーのスループットが不十分な場合は、より多くのコンシューマーを指定します。
 * `nats_queue_group` – NATS subscriber の queue group 名。デフォルトはテーブル名です。
-* `nats_max_reconnect` – 非推奨であり、効果はありません。再接続は `nats_reconnect_wait` タイムアウトで恒久的に実行されます。
-* `nats_reconnect_wait` – 再接続試行のたびに待機する時間 (ミリ秒単位) 。デフォルト: `5000`。
+* `nats_max_reconnect` – 非推奨であり、効果はありません。再接続は `nats&#95;reconnect&#95;wait` タイムアウトで恒久的に実行されます。
+* `nats_reconnect_wait` – 再接続試行のたびに待機する時間 (ミリ秒単位) 。デフォルト: `2000`。
 * `nats_server_list` - 接続先の server 一覧。NATS クラスターに接続するために指定できます。
 * `nats_skip_broken_messages` - ブロックごとに許容する、スキーマ非互換の NATS message の数。デフォルト: `0`。`nats_skip_broken_messages = N` の場合、このエンジンは解析できない *N* 件の NATS message をスキップします (1 message は 1 行のデータに相当します) 。
 * `nats_max_block_size` - NATS からデータを flush するために poll で収集する行数。デフォルト: [max&#95;insert&#95;block&#95;size](/ja/reference/settings/session-settings#max_insert_block_size)。
@@ -187,7 +187,7 @@ NATSサーバーの設定は、ClickHouseの設定ファイルを使用して追
   ## データフォーマットのサポート
 </div>
 
-NATS エンジンは、ClickHouse でサポートされているすべての[フォーマット](/ja/reference/formats)に対応しています。
+NATS エンジンは、ClickHouse でサポートされているすべての[フォーマット](/ja/reference/formats/index)に対応しています。
 1 つの NATS メッセージに含まれる行数は、そのフォーマットが行ベースかブロックベースかによって異なります。
 
 * 行ベースのフォーマットでは、1 つの NATS メッセージに含める行数を `nats_max_rows_per_message` の設定で制御できます。

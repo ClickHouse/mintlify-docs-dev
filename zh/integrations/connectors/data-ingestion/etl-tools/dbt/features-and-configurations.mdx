@@ -7,7 +7,7 @@ title: '功能与配置'
 doc_type: 'guide'
 ---
 
-import ClickHouseSupportedBadge from "/snippets/components/ClickHouseSupported/ClickHouseSupported.jsx";
+import ClickHouseSupportedBadge from "/snippets/zh/components/ClickHouseSupported/ClickHouseSupported.jsx";
 
 <ClickHouseSupportedBadge />
 
@@ -26,36 +26,37 @@ your_profile_name:
     dev:
       type: clickhouse
 
-      # 可选
-      schema: [default] # dbt 模型使用的 ClickHouse 数据库
-      driver: [http] # http 或 native。若未设置，将根据端口配置自动判断
+      # Optional
+      schema: [default] # ClickHouse database for dbt models
+      driver: [http] # http or native.  If not set this will be autodetermined based on port setting
       host: [localhost] 
-      port: [8123]  # 若未设置，根据 secure 和 driver 配置默认为 8123、8443、9000 或 9440 
-      user: [default] # 执行所有数据库操作的用户
-      password: [<empty string>] # 该用户的密码
-      cluster: [<empty string>] # 若设置，某些 DDL/表操作将使用该集群的 `ON CLUSTER` 子句执行。分布式物化类型需要此设置才能正常工作。详见后续 ClickHouse 集群 章节。
-      verify: [True] # 使用 TLS/SSL 时验证 TLS 证书
-      secure: [False] # 使用 TLS（native 协议）或 HTTPS（http 协议）
-      client_cert: [null] # TLS 客户端证书的路径（.pem 格式）
-      client_cert_key: [null] # TLS 客户端证书对应私钥的路径
-      retries: [1] # 对"可重试"数据库异常（如 503 'Service Unavailable' 错误）的重试次数
-      compression: [<empty string>] # 若为真值则启用 gzip 压缩（http），或指定 native 连接的压缩类型
-      connect_timeout: [10] # 建立 ClickHouse 连接的超时时间（秒）
-      send_receive_timeout: [300] # 从 ClickHouse 服务器接收数据的超时时间（秒）
-      cluster_mode: [False] # 使用专为改善 Replicated 数据库操作而设计的特定配置（推荐用于 ClickHouse Cloud）
-      use_lw_deletes: [False] # 将 `delete+insert` 策略作为默认增量策略。
-      check_exchange: [True] # 验证 ClickHouse 是否支持原子性 EXCHANGE TABLES 命令。（大多数 ClickHouse 版本无需此项）
-      local_suffix: [_local] # 分布式物化类型中各分片本地表的表名后缀。
-      local_db_prefix: [<empty string>] # 分布式物化类型中各分片本地表的数据库前缀。若为空，则使用与分布式表相同的数据库。
-      allow_automatic_deduplication: [False] # 为复制表启用 ClickHouse 自动去重
-      tcp_keepalive: [False] # 仅限 native 客户端，指定 TCP keepalive 配置。自定义 keepalive 设置格式为 [idle_time_sec, interval_sec, probes]。
-      custom_settings: [{}] # 连接使用的自定义 ClickHouse 配置字典/映射，默认为空。
-      database_engine: '' # 创建新 ClickHouse schema（数据库）时使用的数据库引擎。若未设置（默认），新数据库将使用 ClickHouse 默认数据库引擎（通常为 Atomic）。
-      threads: [1] # 执行查询时使用的线程数。将其设置为大于 1 之前，请务必阅读 [read-after-write consistency](#read-after-write-consistency) 章节。
+      port: [8123]  # If not set, defaults to 8123, 8443, 9000, 9440 depending on the secure and driver settings 
+      user: [default] # User for all database operations
+      password: [<empty string>] # Password for the user
+      cluster: [<empty string>] # If set, certain DDL/table operations will be executed with the `ON CLUSTER` clause using this cluster. Distributed materializations require this setting to work. See the following ClickHouse Cluster section for more details.
+      verify: [True] # Validate TLS certificate if using TLS/SSL
+      secure: [False] # Use TLS (native protocol) or HTTPS (http protocol)
+      client_cert: [null] # Path to a TLS client certificate in .pem format
+      client_cert_key: [null] # Path to the private key for the TLS client certificate
+      retries: [1] # Number of times to retry a "retriable" database exception (such as a 503 'Service Unavailable' error)
+      compression: [<empty string>] # Use gzip compression if truthy (http), or compression type for a native connection
+      connect_timeout: [10] # Timeout in seconds to establish a connection to ClickHouse
+      send_receive_timeout: [300] # Timeout in seconds to receive data from the ClickHouse server
+      cluster_mode: [False] # Use specific settings designed to improve operation on Replicated databases (recommended for ClickHouse Cloud)
+      use_lw_deletes: [False] # Use the strategy `delete+insert` as the default incremental strategy.
+      check_exchange: [True] # Validate that clickhouse support the atomic EXCHANGE TABLES command.  (Not needed for most ClickHouse versions)
+      local_suffix: [_local] # Table suffix of local tables on shards for distributed materializations.
+      local_db_prefix: [<empty string>] # Database prefix of local tables on shards for distributed materializations. If empty, it uses the same database as the distributed table.
+      allow_automatic_deduplication: [False] # Enable ClickHouse automatic deduplication for Replicated tables
+      tcp_keepalive: [False] # Native client only, specify TCP keepalive configuration. Specify custom keepalive settings as [idle_time_sec, interval_sec, probes].
+      reuse_connections: [True] # Re-use the same connection across models. Set to `False` to close the connection at the end of each model — useful on multi-replica ClickHouse Cloud services where the load balancer routes by TCP connection.
+      custom_settings: [{}] # A dictionary/mapping of custom ClickHouse settings for the connection - default is empty.
+      database_engine: '' # Database engine to use when creating new ClickHouse schemas (databases).  If not set (the default), new databases will use the default ClickHouse database engine (usually Atomic).
+      threads: [1] # Number of threads to use when running queries. Before setting it to a number higher than 1, make sure to read the [read-after-write consistency](#read-after-write-consistency) section.
       
-      # Native（clickhouse-driver）连接配置
-      sync_request_timeout: [5] # 服务器 ping 的超时时间
-      compress_block_size: [1048576] # 启用压缩时的压缩块大小
+      # Native (clickhouse-driver) connection settings
+      sync_request_timeout: [5] # Timeout for server ping
+      compress_block_size: [1048576] # Compression block size if compression is enabled
 ```
 
 <div id="schema-vs-database">

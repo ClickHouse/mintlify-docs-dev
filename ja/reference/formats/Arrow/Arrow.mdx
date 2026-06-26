@@ -17,14 +17,15 @@ doc_type: 'reference'
   ## 説明
 </div>
 
-[Apache Arrow](https://arrow.apache.org/) には、組み込みの列指向ストレージフォーマットが 2 種類あります。ClickHouse はこれらのフォーマットの読み書きをサポートしています。
-`Arrow` は Apache Arrow の「ファイルモード」フォーマットです。メモリ内でのランダムアクセス向けに設計されています。
+[Apache Arrow](https://arrow.apache.org/) には、組み込みの列指向ストレージフォーマットが 2 種類あります。
+ClickHouse はこれらのフォーマットの読み書きをサポートしています。
+`Arrow` は Apache Arrow の「ファイルモード」フォーマットで、メモリ内でのランダムアクセス向けに設計されています。
 
 <div id="data-types-matching">
   ## データ型の対応
 </div>
 
-以下の表は、サポートされているデータ型と、`INSERT` クエリおよび `SELECT` クエリでそれらが ClickHouse の [data types](/ja/reference/data-types) にどのように対応するかを示しています。
+以下の表は、サポートされているデータ型と、`INSERT` クエリおよび `SELECT` クエリでそれらが ClickHouse の [data types](/ja/reference/data-types/index) にどのように対応するかを示しています。
 
 | Arrow データ型 (`INSERT`)                   | ClickHouse データ型                                                                                           | Arrow データ型 (`SELECT`) |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------- |
@@ -72,24 +73,70 @@ ClickHouseテーブルのカラムのデータ型は、対応するArrowのデ�
   ## 使用例
 </div>
 
-<div id="inserting-data">
-  ### データの挿入
-</div>
-
-次のコマンドを使用して、ファイル内の Arrow データを ClickHouse テーブルに挿入できます。
-
-```bash
-$ cat filename.arrow | clickhouse-client --query="INSERT INTO some_table FORMAT Arrow"
-```
+以下の例では、[ClickHouse SQL playground](https://sql.clickhouse.com) で利用可能な `forex` データセットを使用します。
 
 <div id="selecting-data">
   ### データの選択
 </div>
 
-次のコマンドを使用すると、ClickHouseのテーブルからデータを選択し、Arrowフォーマットで任意のファイルに保存できます。
+Playground から `EUR/USD` の為替レートの 1 日分を取得し、
+ローカルの `forex_eurusd.arrow` ファイルに保存します。HTTP
+インターフェイス経由で Playground にクエリを送信します。ホストは
+`sql-clickhouse.clickhouse.com`、ユーザーは
+`demo` (パスワードなし) です:
 
 ```bash
-$ clickhouse-client --query="SELECT * FROM {some_table} FORMAT Arrow" > {filename.arrow}
+curl "https://sql-clickhouse.clickhouse.com:8443/?user=demo&database=forex" \
+    --data-binary "
+        SELECT
+            concat(base, '.', quote) AS base_quote,
+            datetime AS last_update,
+            CAST(bid, 'Float32') AS bid,
+            CAST(ask, 'Float32') AS ask,
+            ask - bid AS spread
+        FROM forex
+        WHERE base = 'EUR' AND quote = 'USD'
+            AND datetime >= '2020-01-01' AND datetime < '2020-01-02'
+        ORDER BY datetime ASC
+        FORMAT Arrow
+        SETTINGS output_format_arrow_compression_method='zstd'" > forex_eurusd.arrow
+```
+
+<div id="reading-data">
+  ### ファイルを読み戻す
+</div>
+
+これで、[`clickhouse-local`](/ja/concepts/features/tools-and-utilities/clickhouse-local) と
+[`file`](/ja/reference/functions/table-functions/file) テーブル関数を使って、ローカルの Arrow ファイルを読み戻せます。このファイルは
+自己記述型なので、`Arrow` フォーマットがスキーマを自動的に推論します。
+
+```bash
+clickhouse-local --query "
+    SELECT *
+    FROM file('forex_eurusd.arrow', Arrow)
+    ORDER BY last_update ASC
+    LIMIT 5
+    FORMAT PrettyCompact"
+```
+
+```response title="Response"
+   ┌─base_quote─┬─────────────last_update─┬─────bid─┬─────ask─┬────────────────spread─┐
+1. │ EUR.USD    │ 2020-01-01 17:00:00.065 │  1.1212 │ 1.12172 │ 0.0005199909210205078 │
+2. │ EUR.USD    │ 2020-01-01 17:00:10.447 │  1.1212 │ 1.12192 │ 0.0007200241088867188 │
+3. │ EUR.USD    │ 2020-01-01 17:00:10.498 │ 1.12117 │ 1.12161 │ 0.0004400014877319336 │
+4. │ EUR.USD    │ 2020-01-01 17:00:12.579 │  1.1212 │ 1.12161 │ 0.0004100799560546875 │
+5. │ EUR.USD    │ 2020-01-01 17:00:12.630 │  1.1212 │ 1.12172 │ 0.0005199909210205078 │
+   └────────────┴─────────────────────────┴─────────┴─────────┴───────────────────────┘
+```
+
+<div id="inserting-data">
+  ### データの挿入
+</div>
+
+Arrow ファイルを ClickHouse テーブルに読み込むには、`FORMAT Arrow` を指定して `clickhouse-client` にパイプして渡します:
+
+```bash
+cat forex_eurusd.arrow | clickhouse-client --query="INSERT INTO some_table FORMAT Arrow"
 ```
 
 <div id="format-settings">

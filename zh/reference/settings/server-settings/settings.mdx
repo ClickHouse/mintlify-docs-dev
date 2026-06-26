@@ -8,7 +8,7 @@ doc_type: 'reference'
 ---
 
 import SystemLogParameters from '/snippets/zh/_system-log-parameters.mdx';
-import SettingsInfoBlock from "/snippets/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
+import SettingsInfoBlock from "/snippets/zh/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
 
 本节包含服务器设置的说明。这些设置
 无法在会话或查询级别更改。
@@ -89,7 +89,7 @@ ClickHouse server 用于存储通过 SQL 命令创建的用户和角色配置的
   ## allow_experimental_webterminal
 </div>
 
-<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="否" />启用位于 `/webterminal` HTTP 端点的 Experimental Web 终端界面。它通过 WebSocket 在浏览器中提供交互式 `clickhouse-client` 会话。
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="否" />`enable_webterminal` 曾用的 (实验性) 名称。在未设置 `enable_webterminal` 时，为保持向后兼容，仍会识别该设置。该设置已弃用。
 
 <div id="allow_feature_tier">
   ## allow_feature_tier
@@ -310,7 +310,7 @@ ClickHouse server 用于存储通过 SQL 命令创建的用户和角色配置的
   ## background_common_pool_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="8" changeable_without_restart="No" />用于在后台对 [*MergeTree-engine](/zh/reference/engines/table-engines/mergetree-family) 表执行各种操作 (主要是垃圾回收) 的最大线程数。
+<SettingsInfoBlock type="UInt64" default_value="8" changeable_without_restart="No" />用于在后台对 [*MergeTree-engine](/zh/reference/engines/table-engines/mergetree-family/index) 表执行各种操作 (主要是垃圾回收) 的最大线程数。
 
 <div id="background_distributed_schedule_pool_size">
   ## background_distributed_schedule_pool_size
@@ -322,7 +322,7 @@ ClickHouse server 用于存储通过 SQL 命令创建的用户和角色配置的
   ## background_fetches_pool_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="16" changeable_without_restart="No" />用于在后台从另一副本拉取 [*MergeTree-engine](/zh/reference/engines/table-engines/mergetree-family) 表的数据分区片段的最大线程数。
+<SettingsInfoBlock type="UInt64" default_value="16" changeable_without_restart="No" />用于在后台从另一副本拉取 [*MergeTree-engine](/zh/reference/engines/table-engines/mergetree-family/index) 表的数据分区片段的最大线程数。
 
 <div id="background_merges_mutations_concurrency_ratio">
   ## background_merges_mutations_concurrency_ratio
@@ -383,9 +383,9 @@ ClickHouse server 用于存储通过 SQL 命令创建的用户和角色配置的
   * 通过调整此设置，您可以控制 CPU 和磁盘负载。
 </Note>
 
-<Warning>
+<Danger>
   较小的线程池会占用更少的 CPU 和磁盘资源，但后台进程推进得更慢，最终可能会影响查询性能。
-</Warning>
+</Danger>
 
 在修改此设置之前，也请查看相关的 MergeTree settings，例如：
 
@@ -1376,6 +1376,12 @@ ZooKeeper 中该表的路径。
 
 <SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />启用 Azure SDK 的日志记录
 
+<div id="enable_webterminal">
+  ## enable_webterminal
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="否" />启用位于 `/webterminal` HTTP 端点的 Web 终端界面。它通过 WebSocket 在浏览器中提供交互式 `clickhouse-client` 会话。当为 `false` 时，对 `/webterminal` 的请求将返回 HTTP 状态码 `403 Forbidden`。
+
 <div id="encryption">
   ## encryption
 </div>
@@ -1708,16 +1714,28 @@ HSTS 的过期时间 (以秒为单位) 。
 要添加新的 http 处理程序，只需新增一条 `<rule>`。
 规则会按照定义顺序自上而下进行检查，
 第一个匹配的规则将运行相应的处理程序。
+没有匹配条件的规则 (仅包含 `handler`) 会匹配每个请求；由于规则会按顺序进行检查，
+因此，这类规则只有作为放在最后的回退规则时才有用。
 
-以下设置可通过子标签进行配置：
+以下设置可通过子标签进行配置 (除 `handler` 外，所有这些子标签都是可选的) ：
 
-| Sub-tags             | Definition                                                             |
-| -------------------- | ---------------------------------------------------------------------- |
-| `url`                | 用于匹配请求 URL；如需使用正则匹配，可使用 &#39;regex:&#39; 前缀 (可选)                       |
-| `methods`            | 用于匹配请求方法；可使用逗号分隔多个方法 (可选)                                              |
-| `headers`            | 用于匹配请求头；会匹配每个子元素 (子元素名称即请求头名称) ，如需使用正则匹配，可使用 &#39;regex:&#39; 前缀 (可选)  |
-| `handler`            | 请求处理程序                                                                 |
-| `empty_query_string` | 检查 URL 中是否不包含查询字符串                                                     |
+| Sub-tags             | Definition                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`                | 用于匹配请求 URL 路径。匹配时会忽略查询字符串                                                                                                             |
+| `url_prefix`         | 用于将请求 URL 路径与基础路径进行匹配：路径本身或其下方按路径段边界划分的任何内容 (例如，&#39;/api/v1&#39; 可匹配 /api/v1、/api/v1/ 和 /api/v1/write，但不匹配 /api/v1beta) 。匹配时会忽略查询字符串 |
+| `url_regexp`         | 用于将请求 URL 路径与正则表达式进行匹配。匹配时会忽略查询字符串                                                                                                    |
+| `full_url`           | 用于匹配完整的请求 URL `scheme://host:port/path`。匹配时会忽略查询字符串，且 host 是连接 IP 地址 (而不是 `Host` 请求头)                                                 |
+| `full_url_prefix`    | 用于将完整的请求 URL `scheme://host:port/path` 与基础 URL `scheme://host:port/base_path` 在路径段边界上进行匹配 (见 `url_prefix`) 。匹配时会忽略查询字符串               |
+| `full_url_regexp`    | 用于将完整的请求 URL `scheme://host:port/path` 与正则表达式进行匹配。匹配时会忽略查询字符串                                                                         |
+| `methods`            | 用于匹配请求方法；可使用逗号分隔多个方法                                                                                                                  |
+| `headers`            | 用于匹配请求头；会匹配每个子元素 (子元素名称即请求头名称)                                                                                                        |
+| `headers_regexp`     | 与 `headers` 类似，但每个子元素的值都会与正则表达式进行匹配                                                                                                   |
+| `empty_query_string` | 检查 URL 中是否不包含查询字符串                                                                                                                    |
+| `handler`            | 请求处理程序 (必需)                                                                                                                           |
+
+<Note>
+  除了 `url_regexp`、`full_url_regexp` 和 `headers_regexp` 之外，也可以在 `url`、`full_url` 或 `headers` 中使用 `regex:` 前缀来编写正则表达式 (例如 `<url>regex:/api/.*</url>`) 。出于向后兼容性考虑，这种写法仍然受支持，但已过时：建议优先使用专用的 `url_regexp`、`full_url_regexp` 和 `headers_regexp` 子标签。
+</Note>
 
 `handler` 包含以下设置，这些设置可通过子标签进行配置：
 
@@ -1862,7 +1880,7 @@ HSTS 的过期时间 (以秒为单位) 。
   ## iceberg_metadata_files_cache_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="1073741824" changeable_without_restart="Yes" />Iceberg 元数据缓存的最大大小 (以字节为单位) 。0 表示禁用。
+<SettingsInfoBlock type="UInt64" default_value="134217728" changeable_without_restart="Yes" />Iceberg 元数据缓存的最大大小 (以字节为单位) 。0 表示禁用。
 
 <div id="iceberg_metadata_files_cache_size_ratio">
   ## iceberg_metadata_files_cache_size_ratio
@@ -2705,7 +2723,7 @@ ClickHouse Enterprise 版的许可证文件内容
 
 <SettingsInfoBlock type="UInt64" default_value="5368709120" changeable_without_restart="Yes" />
 
-标记 ([`MergeTree`](/zh/reference/engines/table-engines/mergetree-family) 家族表的索引) 的缓存最大大小。
+标记缓存 ([`MergeTree`](/zh/reference/engines/table-engines/mergetree-family/index) 家族表的索引) 的最大大小。
 
 <Note>
   此设置可在运行时修改，并会立即生效。
@@ -3244,6 +3262,13 @@ ClickHouse 使用 prefixes deserialization 线程池中的线程，并行读取 
 可用于在内存较小的系统上降低内存使用量。
 在 RAM 和交换空间都较小的主机上，你可能需要将设置 [`max_server_memory_usage_to_ram_ratio`](#max_server_memory_usage_to_ram_ratio) 设为大于 1。
 
+此比例会通过两种方式生效：
+
+* 在启动时 (以及重新加载配置时) ，它会将服务器的硬内存限制设为总物理 RAM 的这一比例，如上所述。
+* 在运行时，后台内存工作线程会定期按 `(常驻内存 + system available memory) * max_server_memory_usage_to_ram_ratio` 重新计算硬内存限制，从而为同一主机上运行的其他进程预留余量。当在具有有限内存限制的 cgroup 中运行时，会使用 cgroup 的可用内存，而不是整个主机范围内的值。随着其他进程占用增加、可用内存减少，服务器的硬限制也会随之下调，从而在主机 (或 cgroup) 耗尽内存之前限制其继续增长。
+
+将该比例设为 `0` 会同时禁用启动时上限和运行时调整。在非 Linux 系统中，以及在不提供此设置的 `clickhouse-keeper` 中，运行时调整同样是空操作。若要保留静态的启动/重新加载上限，但禁用运行时调整 (即先前版本的行为) ，请将 `memory_worker_dynamic_hard_limit` 设为 `0`。
+
 <Note>
   服务器的最大内存消耗还会进一步受到设置 `max_server_memory_usage` 的限制。
 </Note>
@@ -3484,6 +3509,18 @@ ClickHouse 使用全局线程池中的线程来处理查询。如果当前没有
 
 在动态调整 jemalloc 的 `dirty_decay_ms` 之前，内存压力必须持续的时间 (以毫秒为单位) 。当内存使用量在这段时间内持续高于清理阈值时，会禁用自动脏页衰减 (`dirty_decay_ms=0`) ，以更积极地回收内存。当内存使用量在这段时间内持续低于该阈值时，将恢复默认的衰减行为。设为 0 可禁用动态调整，并使用 jemalloc 的默认衰减设置。
 
+<div id="memory_worker_dynamic_hard_limit">
+  ## memory_worker_dynamic_hard_limit
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="否" />
+
+后台内存工作线程是否会在运行时按 `(常驻内存 + 系统可用内存) * max_server_memory_usage_to_ram_ratio` 周期性重新计算服务器的硬内存限制，从而为同一主机上运行的其他进程预留余量。
+
+禁用时，`max_server_memory_usage_to_ram_ratio` 只会像先前版本一样，在启动时和重新加载配置时以静态方式限制硬内存限制。
+
+当 `max_server_memory_usage_to_ram_ratio` 为 `0` 时，此项无效。
+
 <div id="memory_worker_period_ms">
   ## memory_worker_period_ms
 </div>
@@ -3574,6 +3611,12 @@ jemalloc 脏页相对于 ClickHouse server 可用内存的阈值比例。当脏�
 * [max&#95;memory&#95;usage](/zh/reference/settings/session-settings#max_memory_usage)
 * [merges&#95;mutations&#95;memory&#95;usage&#95;soft&#95;limit](/zh/reference/settings/server-settings/settings#merges_mutations_memory_usage_soft_limit)
 
+<div id="message_queue_disable_insertion">
+  ## message_queue_disable_insertion
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="是" />禁用消息队列引擎 (Kafka、RabbitMQ、NATS) 向已附加的 materialized view 插入数据
+
 <div id="metric_log">
   ## metric_log
 </div>
@@ -3610,6 +3653,20 @@ jemalloc 脏页相对于 ClickHouse server 可用内存的阈值比例。当脏�
 ```
 
 <SystemLogParameters />
+
+<div id="min_allocation_size_to_throw_on_memory_limit">
+  ## min_allocation_size_to_throw_on_memory_limit
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="0" changeable_without_restart="Yes" />
+
+达到 `max_server_memory_usage` 后，允许触发 `MEMORY_LIMIT_EXCEEDED` 的通用 C++ 内存分配的最小大小 (以字节为单位) 。这里的“通用分配”是指标准容器、字符串、`std::vector` 扩容、智能指针等所进行的那类分配。较小的通用分配仍会计入 memory tracker，但即使超出限制也会允许成功，从而减少接近 OOM 时在清理和异常处理路径中出现的误报失败。
+
+由 ClickHouse 自身的大型缓冲区发起的分配——列数据、哈希表、Arena、查询管道、IO 缓冲区——始终遵守内存限制，因此无论此值如何都可能抛出异常。此设置仅影响通过 `operator new` 进行的隐式分配。
+
+值为 `0` (默认值) 时，会保留旧版行为：memory tracker 永远不会拒绝隐式 `operator new` 分配，只有显式的 ClickHouse 分配才会触发 `MEMORY_LIMIT_EXCEEDED`。
+
+请注意，为避免副作用，建议将该值设置为大于 `max_untracked_memory`。
 
 <div id="min_os_cpu_wait_time_ratio_to_drop_connection">
   ## min_os_cpu_wait_time_ratio_to_drop_connection
@@ -3697,6 +3754,74 @@ jemalloc 脏页相对于 ClickHouse server 可用内存的阈值比例。当脏�
 </div>
 
 <SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />如果设置为 true，则要求客户端通过 [mysql&#95;port](/zh/reference/settings/server-settings/settings#mysql_port) 使用安全连接。使用 `<--ssl-mode=none>` 选项的连接将被拒绝。请结合 [OpenSSL](/zh/reference/settings/server-settings/settings#openssl) 设置使用。
+
+<div id="oom_canary_enable">
+  ## oom_canary_enable
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />
+
+Experimental。启用 OOM canary：这是一个充当“牺牲品”的子进程，会在主 ClickHouse 服务器进程之前吸引 Linux OOM killer，
+从而让服务器有机会主动卸载负载。
+需要 Linux &gt;= 5.3 (用于 `pidfd_open`) ；在较旧的内核上，canary 会在启动时被禁用。
+OOM 响应要求 cgroup v2 `memory.events.local` 中存在 OOM-kill 证据，并且可能会执行全局
+查询取消、merge 取消以及向 `system.crash_log` 写入记录。
+当服务器所在的 cgroup 启用了 cgroup v2 `memory.oom.group` 时，canary 无法保护服务器：
+此时内核会将整个 cgroup 作为一个整体一并杀死，其中也包括服务器，
+因此 OOM 响应根本不会运行。在这种模式下，启动时会记录一条警告日志。
+在完成生产环境验证之前，此行为在不同 ClickHouse 版本之间可能会发生变化。
+
+<div id="oom_canary_initial_backoff_seconds">
+  ## oom_canary_initial_backoff_seconds
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1" changeable_without_restart="No" />
+
+连续两次重新启动 OOM canary 之间的初始退避延迟，单位为秒。
+该延迟会在每次重新启动时加倍，直到达到 `oom_canary_max_backoff_seconds`。
+
+<div id="oom_canary_max_backoff_seconds">
+  ## oom_canary_max_backoff_seconds
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="60" changeable_without_restart="No" />
+
+连续两次 OOM canary 重新启动之间的最大退避延迟 (秒) 。
+
+<div id="oom_canary_max_rapid_relaunches">
+  ## oom_canary_max_rapid_relaunches
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="10" changeable_without_restart="No" />
+
+在自动重新启动被禁用之前，OOM canary 可连续快速重新启动的最大次数，
+以避免在持续的内存压力下发生抖动。当 canary 的存活时间超过 `oom_canary_max_backoff_seconds` 时，
+计数器和重新启动退避会重置，因此，如果 canary 只是在较长运行时间内偶尔终止，
+最终不会被禁用。
+仅在 `oom_canary_relaunch` 为 true 时适用。
+
+<div id="oom_canary_relaunch">
+  ## oom_canary_relaunch
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="No" />
+
+当值为 true 时，除永久性设置失败或服务器关闭外，只要 canary 进程因任何其他原因终止，OOM canary 都会自动重新启动——包括被 OOM kill、收到其他
+信号以及临时退出——但会受到 `oom_canary_max_rapid_relaunches` 和 退避
+设置的限制。只有在 cgroup v2 `memory.events.local`
+提供 OOM-kill 证据时，OOM 响应序列本身才会运行。
+
+<div id="oom_canary_size">
+  ## oom_canary_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="104857600" changeable_without_restart="No" />
+
+OOM canary 子进程分配并触碰的内存区域大小 (以字节为单位) 。
+使用 `mlock` 锁定该区域属于尽力而为：这需要 `CAP_IPC_LOCK` 或足够的
+`RLIMIT_MEMLOCK`。如果锁定失败，canary 会在日志中记录一条警告，并且该内存仍会保持
+已分配状态，但可能会被换出。
+默认值为 100 MB (104857600) 。值越大，canary 就越可能成为 OOM 的优先目标。
 
 <div id="oom_score">
   ## oom_score
@@ -4170,6 +4295,14 @@ Possible values：-20 到 19。
 <SettingsInfoBlock type="UInt64" default_value="10" changeable_without_restart="No" />
 
 向 `kill_delay_period` 增加一个从 0 到 x 秒均匀分布的随机值，以避免在表数量非常多时出现惊群效应，以及随后对 ZooKeeper 发起 DoS。仅在 ClickHouse Cloud 中可用
+
+<div id="parts_killer_max_condemned_parts_per_batch">
+  ## parts_killer_max_condemned_parts_per_batch
+</div>
+
+<SettingsInfoBlock type="NonZeroUInt64" default_value="100000" changeable_without_restart="No" />
+
+SharedMergeTree 表在单个清理周期内从 Keeper 拉取的废弃 parts 的最大数量。限制批次大小可确保列表查询和 multi-get 不会超出 Keeper 操作的超时时间，因此即使某个表积累了大量废弃 parts，清理也能持续推进。该值必须大于零：如果值为 `0`，Keeper 会在每个周期都返回空列表，从而导致清理永久停滞。仅在 ClickHouse Cloud 中可用
 
 <div id="parts_killer_pool_size">
   ## parts_killer_pool_size
@@ -5668,6 +5801,24 @@ MergeTree 家族表引擎使用的未压缩数据的最大大小 (以字节为�
 
 <SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />在未压缩缓存中，受保护队列 (采用 SLRU 策略时) 的大小占缓存总大小的比例。
 
+<div id="unique_key_index_cache_policy">
+  ## unique_key_index_cache_policy
+</div>
+
+<SettingsInfoBlock type="String" default_value="SLRU" changeable_without_restart="No" />UNIQUE KEY 索引缓存策略的名称 (SLRU 或 LRU) 。
+
+<div id="unique_key_index_cache_size_bytes">
+  ## unique_key_index_cache_size_bytes
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1073741824" changeable_without_restart="No" />UNIQUE KEY 索引 (SST) 块的进程内缓存最大大小 (以字节为单位) 。设为 0 以禁用缓存。
+
+<div id="unique_key_index_cache_size_ratio">
+  ## unique_key_index_cache_size_ratio
+</div>
+
+<SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />UNIQUE KEY 索引缓存中受保护队列 (采用 SLRU 策略时) 的大小占缓存总大小的比例。
+
 <div id="url_scheme_mappers">
   ## url_scheme_mappers
 </div>
@@ -5694,7 +5845,7 @@ MergeTree 家族表引擎使用的未压缩数据的最大大小 (以字节为�
   ## use_minimalistic_part_header_in_zookeeper
 </div>
 
-ZooKeeper 中数据分区片段头信息的存储方式。此设置仅适用于 [`MergeTree`](/zh/reference/engines/table-engines/mergetree-family) 家族。可按以下方式指定：
+ZooKeeper 中数据分区片段头信息的存储方式。此设置仅适用于 [`MergeTree`](/zh/reference/engines/table-engines/mergetree-family/index) 家族。可按以下方式指定：
 
 **在 `config.xml` 文件的 [merge&#95;tree](#merge_tree) 部分中全局设置**
 
@@ -6026,14 +6177,16 @@ ZooKeeper 节点的 path，用作存储所有 `CREATE WORKLOAD` 和 `CREATE RESO
 
 此外，还有一个 `zookeeper_load_balancing` 设置 (可选) ，可用于选择 ZooKeeper 节点的选取算法：
 
-| Algorithm Name                  | Description                                                        |
-| ------------------------------- | ------------------------------------------------------------------ |
-| `random`                        | 随机选择一个 ZooKeeper 节点。                                               |
-| `in_order`                      | 选择第一个 ZooKeeper 节点；如果它不可用，则选择第二个，依此类推。                             |
-| `nearest_hostname`              | 选择主机名与 server 的 hostname 最相似的 ZooKeeper 节点，按名称前缀比较 hostname。       |
-| `hostname_levenshtein_distance` | 与 nearest&#95;hostname 类似，但会以 Levenshtein distance 的方式比较 hostname。 |
-| `first_or_random`               | 选择第一个 ZooKeeper 节点；如果它不可用，则从其余 ZooKeeper 节点中随机选择一个。                |
-| `round_robin`                   | 选择第一个 ZooKeeper 节点；如果发生重新连接，则选择下一个。                                |
+| Algorithm Name                   | Description                                                                 |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| `random`                         | 随机选择一个 ZooKeeper 节点。                                                        |
+| `in_order`                       | 选择第一个 ZooKeeper 节点；如果它不可用，则选择第二个，依此类推。                                      |
+| `nearest_hostname`               | 选择主机名与 server 的 hostname 最相似的 ZooKeeper 节点，按名称前缀比较 hostname。                |
+| `hostname_levenshtein_distance`  | 与 nearest&#95;hostname 类似，但会以 Levenshtein distance 的方式比较 hostname。          |
+| `hostname_longest_common_prefix` | 与 nearest&#95;hostname 类似，但会优先选择其 hostname 与 server 的 hostname 具有最长公共前缀的节点。 |
+| `hostname_longest_common_suffix` | 与 nearest&#95;hostname 类似，但会优先选择其 hostname 与 server 的 hostname 具有最长公共后缀的节点。 |
+| `first_or_random`                | 选择第一个 ZooKeeper 节点；如果它不可用，则从其余 ZooKeeper 节点中随机选择一个。                         |
+| `round_robin`                    | 选择第一个 ZooKeeper 节点；如果发生重新连接，则选择下一个。                                         |
 
 **示例配置**
 
@@ -6049,15 +6202,15 @@ ZooKeeper 节点的 path，用作存储所有 `CREATE WORKLOAD` 和 `CREATE RESO
     </node>
     <session_timeout_ms>30000</session_timeout_ms>
     <operation_timeout_ms>10000</operation_timeout_ms>
-    <!-- 可选。Chroot 后缀。必须存在。-->
+    <!-- Optional. Chroot suffix. Should exist. -->
     <root>/path/to/zookeeper/node</root>
-    <!-- 可选。Zookeeper digest ACL 字符串。-->
+    <!-- Optional. Zookeeper digest ACL string. -->
     <identity>user:password</identity>
-    <!--<zookeeper_load_balancing>random / in_order / nearest_hostname / hostname_levenshtein_distance / first_or_random / round_robin</zookeeper_load_balancing>-->
+    <!--<zookeeper_load_balancing>random / in_order / nearest_hostname / hostname_levenshtein_distance / hostname_longest_common_prefix / hostname_longest_common_suffix / first_or_random / round_robin</zookeeper_load_balancing>-->
     <zookeeper_load_balancing>random</zookeeper_load_balancing>
-    <!-- 可选。启用 64 位事务 ID。-->
+    <!-- Optional. Enable 64-bit transaction IDs. -->
     <use_xid_64>false</use_xid_64>
-    <!-- 可选。启用 OpenTelemetry tracing 上下文传播。-->
+    <!-- Optional. Enable OpenTelemetry tracing context propagation. -->
     <pass_opentelemetry_tracing_context>false</pass_opentelemetry_tracing_context>
 </zookeeper>
 ```
@@ -6066,7 +6219,7 @@ ZooKeeper 节点的 path，用作存储所有 `CREATE WORKLOAD` 和 `CREATE RESO
 
 * [复制](/zh/reference/engines/table-engines/mergetree-family/replication)
 * [ZooKeeper 程序员指南](http://zookeeper.apache.org/doc/current/zookeeperProgrammers.html)
-* [ClickHouse 与 ZooKeeper 之间的可选安全通信](/zh/guides/oss/deployment-and-scaling/keeper/ssl-zookeeper)
+* [ClickHouse 与 Zookeeper 之间的可选安全通信](/zh/guides/oss/deployment-and-scaling/keeper/ssl-zookeeper)
 
 <div id="zookeeper_log">
   ## zookeeper_log

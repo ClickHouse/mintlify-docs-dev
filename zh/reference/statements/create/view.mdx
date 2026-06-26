@@ -6,9 +6,9 @@ title: 'CREATE VIEW'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import DeprecatedBadge from "/snippets/components/DeprecatedBadge/DeprecatedBadge.jsx";
-import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
+import ExperimentalBadge from "/snippets/zh/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import DeprecatedBadge from "/snippets/zh/components/DeprecatedBadge/DeprecatedBadge.jsx";
+import CloudNotSupportedBadge from "/snippets/zh/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
 
 创建一个新视图。视图可以是[普通](#normal-view)、[materialized](#materialized-view)、[可刷新的 materialized](#refreshable-materialized-view)和[窗口](/zh/reference/statements/create/view#window-view)。
 
@@ -112,23 +112,23 @@ AS SELECT ...
 **示例：**
 
 ```sql
--- 创建一个带有内部表的 materialized view
+-- Create a materialized view with an inner table
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, sum(y) AS total FROM src GROUP BY x;
 
--- 替换为新定义（旧内部表数据将丢失）
+-- Replace with a new definition (old inner table data is lost)
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, count() AS cnt FROM src GROUP BY x;
 
--- 使用 POPULATE 从现有源数据进行 backfill
+-- Replace with POPULATE to backfill from existing source data
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     POPULATE
     AS SELECT x FROM src;
 
--- 将内部表 MV 替换为 TO 表 MV（目标表数据保持不变）
+-- Replace an inner-table MV with a TO-table MV (target data is preserved)
 CREATE OR REPLACE MATERIALIZED VIEW mv TO target
     AS SELECT x FROM src;
 ```
@@ -137,7 +137,7 @@ CREATE OR REPLACE MATERIALIZED VIEW mv TO target
   以下是使用 [Materialized views](/zh/concepts/features/materialized-views/cascading-materialized-views) 的分步指南。
 </Tip>
 
-Materialized views 用于存储由相应 [SELECT](/zh/reference/statements/select) 查询转换后的数据。
+Materialized views 用于存储由相应 [SELECT](/zh/reference/statements/select/index) 查询转换后的数据。
 
 创建不带 `TO [db].[table]` 的 Materialized view 时，必须指定 `ENGINE`，即用于存储数据的表引擎。
 
@@ -146,18 +146,20 @@ Materialized views 用于存储由相应 [SELECT](/zh/reference/statements/selec
 Materialized view 的实现方式如下：当向 `SELECT` 中指定的表插入数据时，部分新插入的数据会经过该 `SELECT` 查询转换，结果再插入到该视图中。
 
 <Note>
-  ClickHouse 中的 Materialized views 在插入目标表时依据**列名**而不是列顺序。如果 `SELECT` 查询结果中缺少某些列名，ClickHouse 会使用默认值，即使该列不是 [Nullable](/zh/reference/data-types/nullable)。因此，使用 Materialized views 时，较稳妥的做法是为每一列都添加别名。
+  ClickHouse 中的 materialized view 在插入到目标表时使用**列名**，而不是列顺序。如果 `SELECT` 查询结果中缺少某些列名，ClickHouse 会使用默认值，即使该列不是 [Nullable](/zh/reference/data-types/nullable)。安全的做法是在使用 materialized view 时为每一列都添加别名。
 
-  ClickHouse 中的 Materialized views 更像是插入触发器。如果视图查询中包含 aggregation，它只会作用于刚插入的数据批次。对源表现有数据的任何更改 (如 update、delete、drop partition 等) 都不会改变 materialized view。
+  ClickHouse 中的 materialized view 在实现上更像插入触发器。如果视图查询中包含聚合，它只会应用于刚插入的那一批数据。对源表现有数据的任何更改 (如 update、delete、drop partition 等) 都不会改变 materialized view。
 
-  ClickHouse 中的 Materialized views 在发生错误时不具备确定性行为。这意味着，已经写入的块会保留在目标表中，但出错后的所有块都不会写入。
+  ClickHouse 中的 materialized view 在发生错误时不具有确定性行为。这意味着，已经写入的块会保留在目标表中，但出错后的所有块都不会保留。
 
-  默认情况下，如果推送到某个视图失败，`INSERT` 查询也会失败，并且某些块可能不会写入目标表。可通过 `materialized_views_ignore_errors` 设置更改此行为 (应在 `INSERT` 查询中设置) ；如果将 `materialized_views_ignore_errors=true`，则推送到视图时发生的任何错误都会被忽略，所有块都会写入目标表。
+  默认情况下，如果向某个视图写入时抛出异常，`INSERT` 查询将失败。此时数据块是否已经到达源表并不保证——这取决于插入管道的时序，而不是视图错误。对失败的 `INSERT` 使用插入去重 (`insert_deduplicate`、`deduplicate_blocks_in_dependent_materialized_views`) 进行重试，以获得对源表及所有依赖视图的 exactly-once 交付。
 
-  另请注意，对 `system.*_log` 表而言，`materialized_views_ignore_errors` 默认值为 `true`。
+  在 `INSERT` 查询上设置 `materialized_views_ignore_errors=true` 只会改变错误报告方式：每个视图错误都会作为警告记录下来，且 `INSERT` 查询会成功。向失败视图的目标端交付是不完整的——异常发生前已处理的块会被保留，而失败的块及其后的所有块都会从该视图中丢弃。该目标端下游的视图只能看到实际到达的那些块，因此它们的交付也同样是不完整的。未抛出异常的同级视图 (以及它们的下游链) 会被完整写入，而源表也会照常写入。由于 `INSERT` 会报告成功，客户端不会收到失败信号，也不会触发自动重试；仅当源表写入绝不能被视图侧问题阻塞时，才应使用此设置 (例如 `system.*_log` 表) 。
+
+  对于 `system.*_log` 表，`materialized_views_ignore_errors` 默认为 `true`。
 </Note>
 
-如果指定了 `POPULATE`，则创建视图时会将表中现有数据插入该视图，就像执行一次 `CREATE TABLE ... AS SELECT ...` 一样。否则，查询中只包含在视图创建后插入到表中的数据。我们**不建议**使用 `POPULATE`，因为在视图创建期间插入到表中的数据不会被插入到该视图中。
+如果指定 `POPULATE`，则在创建视图时，现有表数据会被插入到视图中，就像执行 `CREATE TABLE ... AS SELECT ...` 一样。否则，查询只包含在视图创建之后插入到表中的数据。我们**不建议**使用 `POPULATE`，因为在创建视图期间插入到表中的数据不会被插入到该视图中。
 
 <Note>
   鉴于 `POPULATE` 的工作方式类似于 `CREATE TABLE ... AS SELECT ...`，因此它有以下限制：
@@ -168,7 +170,7 @@ Materialized view 的实现方式如下：当向 `SELECT` 中指定的表插入�
   可改用单独的 `INSERT ... SELECT`。
 </Note>
 
-`SELECT` 查询可以包含 `DISTINCT`、`GROUP BY`、`ORDER BY`、`LIMIT`。请注意，相应的转换会在每个插入数据块上独立执行。例如，如果设置了 `GROUP BY`，数据会在插入期间进行 aggregation，但仅限于单个插入数据包内的数据，之后不会再进一步聚合。例外情况是使用可自行执行数据 aggregation 的 `ENGINE`，例如 `SummingMergeTree`。
+`SELECT` 查询可以包含 `DISTINCT`、`GROUP BY`、`ORDER BY`、`LIMIT`。请注意，相应的转换会在每个插入数据块上独立执行。例如，如果设置了 `GROUP BY`，数据会在插入期间进行 聚合，但仅限于单个插入数据包内的数据，之后不会再进一步聚合。例外情况是使用可自行执行数据 聚合 的 `ENGINE`，例如 `SummingMergeTree`。
 
 如果 materialized view 使用 `TO [db.]name` 这种写法，你可以先 `DETACH` 该视图，对目标表执行 `ALTER`，然后再 `ATTACH` 之前已 `DETACH` 的视图。
 
@@ -244,7 +246,7 @@ AS SELECT ...
 
 ```sql
 CREATE MATERIALIZED VIEW [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
-REFRESH EVERY|AFTER interval [OFFSET interval]
+REFRESH [EVERY|AFTER interval [OFFSET interval]]
 [RANDOMIZE FOR interval]
 [DEPENDS ON [db.]name [, [db.]name [, ...]]]
 [SETTINGS name = value [, name = value [, ...]]]
@@ -261,6 +263,8 @@ AS SELECT ...
 ```sql
 number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 ```
+
+`REFRESH` 子句必须至少指定 `EVERY`、`AFTER` 或 `DEPENDS ON` 之一。单独使用 `REFRESH` (即一个都不带) 会被拒绝。不带 `EVERY`/`AFTER` 的 `REFRESH DEPENDS ON ...` 是 `REFRESH AFTER 0 SECOND DEPENDS ON ...` 的简写；请参见下方的 [刷新依赖](#refresh-dependencies)。
 
 周期性运行相应的查询，并将其结果存储到表中。
 
@@ -283,28 +287,28 @@ number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 刷新调度示例：
 
 ```sql
-REFRESH EVERY 1 DAY -- 每天午夜（UTC）
-REFRESH EVERY 1 MONTH -- 每月第1天午夜
-REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- 每月第6天凌晨2:00
-REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- 每隔一个周六下午3:10
-REFRESH EVERY 30 MINUTE -- 在 00:00、00:30、01:00、01:30 等时刻执行
-REFRESH AFTER 30 MINUTE -- 上次刷新完成后30分钟执行，不与整点时刻对齐
--- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- 语法错误，AFTER 不支持 OFFSET
-REFRESH EVERY 1 WEEK 2 DAYS -- 每9天执行一次，不固定在每周或每月的特定日期；
-                            -- 具体而言，当天数编号（自1969-12-29起）能被9整除时触发
-REFRESH EVERY 5 MONTHS -- 每5个月执行一次，每年触发月份不固定（因为12不能被5整除）；
-                       -- 具体而言，当月份编号（自1970-01起）能被5整除时触发
+REFRESH EVERY 1 DAY -- every day, at midnight (UTC)
+REFRESH EVERY 1 MONTH -- on 1st day of every month, at midnight
+REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- on 6th day of every month, at 2:00 am
+REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- every other Saturday, at 3:10 pm
+REFRESH EVERY 30 MINUTE -- at 00:00, 00:30, 01:00, 01:30, etc
+REFRESH AFTER 30 MINUTE -- 30 minutes after the previous refresh completes, no alignment with time of day
+-- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- syntax error, OFFSET is not allowed with AFTER
+REFRESH EVERY 1 WEEK 2 DAYS -- every 9 days, not on any particular day of the week or month;
+                            -- specifically, when day number (since 1969-12-29) is divisible by 9
+REFRESH EVERY 5 MONTHS -- every 5 months, different months each year (as 12 is not divisible by 5);
+                       -- specifically, when month number (since 1970-01) is divisible by 5
 ```
 
 `RANDOMIZE FOR` 会随机调整每次刷新的时间，例如：
 
 ```sql
-REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- 每天在 01:30 到 02:30 之间的随机时间执行
+REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- every day at random time between 01:30 and 02:30
 ```
 
-对于给定视图，任一时刻最多只能有一个 refresh 在运行。例如，如果一个带有 `REFRESH EVERY 1 MINUTE` 的视图完成一次 refresh 需要 2 分钟，那么它实际上就只会每 2 分钟 refresh 一次。如果之后它变快了，能在 10 秒内完成 refresh，那么它又会恢复为每分钟 refresh 一次。 (特别地，它不会为了补上错过的 refresh 而改为每 10 秒 refresh 一次——因为并不存在这样的积压。)
+对于给定视图，任一时刻最多只能有一个 刷新 在运行。例如，如果一个带有 `REFRESH EVERY 1 MINUTE` 的视图完成一次 刷新 需要 2 分钟，那么它实际上就只会每 2 分钟 刷新 一次。如果之后它变快了，能在 10 秒内完成 刷新，那么它又会恢复为每分钟 刷新 一次。 (特别地，它不会为了补上错过的 刷新 而改为每 10 秒 刷新 一次——因为并不存在这样的积压。)
 
-此外，除非在 `CREATE` 查询中指定了 `EMPTY`，否则 materialized view 创建后会立即启动一次 refresh。如果指定了 `EMPTY`，则第一次 refresh 会按计划时间进行。
+通常，materialized view 创建后会立即启动第一次 刷新：距离上次 刷新 的时间相当于无穷大，因此无论什么调度，都会认为现在应该刷新。如果指定了 `EMPTY`，则会跳过这次初始 刷新，第一次 刷新 会在下一个计划时间发生；例如，对于 `EVERY 1 HOUR`，第一次 刷新 会在当前小时结束时发生。
 
 <div id="in-replicated-db">
   ### 在 Replicated DB 中
@@ -319,50 +323,106 @@ REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- 每天在 01:30 到 02
 协调通过 Keeper 完成。znode 路径由 [default&#95;replica&#95;path](/zh/reference/settings/server-settings/settings#default_replica_path) 服务器设置决定。
 
 <div id="refresh-dependencies">
-  ### 刷新依赖
+  ### 刷新依赖关系
 </div>
 
-`DEPENDS ON` 可用于同步不同表的刷新。比如，假设有一条由两个可刷新materialized view 组成的事件链：
+`DEPENDS ON` 用于同步不同表的刷新：
 
 ```sql
-CREATE MATERIALIZED VIEW source REFRESH EVERY 1 DAY AS SELECT * FROM url(...)
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH EVERY 1 HOUR DEPENDS ON dependency [...]
 ```
 
-如果没有 `DEPENDS ON`，两个视图都会在午夜开始刷新，而 `destination` 通常看到的仍是 `source` 中昨天的数据。如果我们添加依赖关系：
+只有在其所有依赖视图都完成刷新后，从属视图才会开始刷新。
+
+若要在另一个视图刷新后立即触发刷新：
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH AFTER 0 SECOND DEPENDS ON dependency [...]
 ```
 
-那么，`destination` 的刷新只会在 `source` 当天的刷新完成后才开始，因此 `destination` 将基于最新数据。
-
-或者，也可以通过以下方式达到相同的效果：
+或者，等价地说：
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH DEPENDS ON dependency [...]
 ```
-
-其中，`1 HOUR` 可以是任何小于 `source` 刷新周期的时长。依赖表的刷新频率不会高于其任一依赖项。这是在无需多次指定实际刷新周期的情况下，设置可刷新的视图事件链的一种有效方式。
-
-再举几个示例：
-
-* `REFRESH EVERY 1 DAY OFFSET 10 MINUTE` (`destination`) 依赖于 `REFRESH EVERY 1 DAY` (`source`) <br />
-  如果 `source` 刷新耗时超过 10 分钟，`destination` 就会等待它。
-* `REFRESH EVERY 1 DAY OFFSET 1 HOUR` 依赖于 `REFRESH EVERY 1 DAY OFFSET 23 HOUR`<br />
-  与上面类似，即使对应的刷新发生在不同的自然日也是如此。
-  `destination` 在第 `X+1` 天的刷新会等待 `source` 在第 `X` 天的刷新 (如果其耗时超过 2 小时) 。
-* `REFRESH EVERY 2 HOUR` 依赖于 `REFRESH EVERY 1 HOUR`<br />
-  `2 HOUR` 的刷新会在每隔一小时对应的 `1 HOUR` 刷新完成后发生，例如在午夜刷新之后，
-  然后在凌晨 2 点刷新之后，依此类推。
-* `REFRESH EVERY 1 MINUTE` 依赖于 `REFRESH EVERY 2 HOUR`<br />
-  `destination` 会在每次 `source` 刷新后刷新一次，也就是每 2 小时一次。这里的 `1 MINUTE` 实际上会被忽略。
-* `REFRESH AFTER 1 HOUR` 依赖于 `REFRESH AFTER 1 HOUR`<br />
-  目前不建议这样做。
 
 <Note>
-  `DEPENDS ON` 仅适用于可刷新materialized view 之间。在 `DEPENDS ON` 列表中列出普通表会导致该视图永远不会刷新 (可使用 `ALTER` 移除依赖关系，参见 [更改刷新参数](#changing-refresh-parameters)) 。
+  `DEPENDS ON` 仅适用于可刷新materialized view 之间。特别是，如果依赖视图使用了 `TO <table>`，请务必使用视图名称而不是表名称。如果 `DEPENDS ON` 列表中包含普通表、不可刷新的视图，或者存在拼写错误，该视图将永远不会刷新，并会在 `system.view_refreshes` 中显示状态 `MissingDependencies`。可以使用 `ALTER` 更改或移除依赖关系，参见 [更改刷新参数](#changing-refresh-parameters)。
 </Note>
+
+<div id="using-depends-on-for-consistent-propagation-latency">
+  #### 使用 DEPENDS ON 保持一致的传播延迟
+</div>
+
+如果两个视图都使用相同周期的 `REFRESH EVERY`，那么该依赖关系会在每个时间槽内生效。
+
+例如，假设视图 X 和 Y 都使用 `REFRESH EVERY 1 HOUR`，且 Y 从 X 的输出表中读取数据。在没有依赖关系时，Y 通常会看到 X 上一小时刷新生成的数据。使用 `DEPENDS ON X` 后，Y 在 11:00 的刷新只有在 X 于 11:00 的刷新完成后才会开始。
+
+```text
+           10:00            11:00            12:00
+           │                │                │
+  X:        [run]┐           [run]┐           [run]┐
+                 │                │                │
+  Y:             └►[run]          └►[run]          └►[run]
+```
+
+如果刷新执行时间超过刷新周期，依赖项和依赖方都可能各自独立地跳过某些时间槽。无法保证依赖方会对依赖项的每一次刷新都恰好执行一次刷新。
+
+```text
+           10:00          11:00          12:00          13:00
+           │              │              │              |
+  X:        [run]┐         [run]┐         [run]┐         [run]┐
+                 │              └────┐    (Y skips 12:00)     └───┐
+  Y:             └►[10:00 ru------un]└►[11:00 ru---------------un]└►[13:00 run]
+```
+
+<div id="using-depends-on-for-batched-stream-processing">
+  #### 使用 DEPENDS ON 进行批次流处理
+</div>
+
+如果未使用 `REFRESH EVERY`，则依赖视图 X 会在其所有依赖项自 X 上次刷新以来都至少刷新过一次后刷新。`REFRESH AFTER T` 会引入一个延迟：依赖视图会在依赖项完成刷新后的 T 时间开始刷新。
+
+允许循环依赖，而且这很有用。请考虑下面这个由可刷新materialized view 构成的关系图：
+
+1. X 从某个 stream 中取出一批行，并将其写入一个表。
+2. 然后，Y 和 Z 都从该表读取数据，执行不同的聚合，并将结果追加到其他表中。
+3. 该批次完全处理完后，X 会取出下一批次，然后循环重复进行。
+
+```text
+            source
+               │
+               ▼
+          ┌─────────┐
+     ┌───►│    X    │◄───┐
+     │    └──┬───┬──┘    │
+  DEPENDS    │   │    DEPENDS
+    ON       ▼   ▼      ON
+     │      ┌─┐ ┌─┐      │
+     └──────┤Y│ │Z├──────┘
+            └─┘ └─┘
+```
+
+完整示例：
+
+```sql
+CREATE TABLE current_batch (t UInt64, v Int64) ENGINE ReplicatedMergeTree ORDER BY t;
+CREATE TABLE batch_log (max_t UInt64, n Int64, v_sum Int64, processed_at DateTime64) ENGINE ReplicatedMergeTree ORDER BY max_t;
+CREATE TABLE stats (h UInt64, n UInt64) ENGINE ReplicatedSummingMergeTree ORDER BY h;
+
+-- (system.numbers stands in for a data source with monotonically increasing timestamps or sequence numbers)
+CREATE MATERIALIZED VIEW current_batch_v REFRESH EVERY 10 SECOND DEPENDS ON batch_log_v, stats_v TO current_batch AS SELECT number as t, number * 10 as v FROM system.numbers WHERE number > (SELECT max(max_t) FROM batch_log) LIMIT 100;
+
+CREATE MATERIALIZED VIEW batch_log_v REFRESH DEPENDS ON current_batch_v APPEND TO batch_log AS SELECT max(t) as max_t, count() as n, sum(v) as v_sum, now64() as processed_at FROM current_batch;
+
+CREATE MATERIALIZED VIEW stats_v REFRESH DEPENDS ON current_batch_v APPEND TO stats AS SELECT cityHash64(v) % 20 as h, count() as n FROM current_batch GROUP BY h;
+
+-- Must trigger initial refresh manually.
+SYSTEM REFRESH VIEW current_batch_v;
+```
+
+更长的事件链也同样适用。
+
+只有在启用刷新协调时，这种方式才能正常工作，也就是说，这些视图位于 Replicated 或 Shared database 中。如果没有协调机制，服务器重启会中断这一循环，因此每次重启后都需要手动执行一次 `SYSTEM REFRESH VIEW`，而不是只在创建视图后执行一次。
 
 <div id="refresh-settings">
   ### 刷新设置
@@ -374,8 +434,6 @@ CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS S
 * `refresh_retry_initial_backoff_ms` - 如果 `refresh_retries` 不为 0，首次重试前的延迟时间。此后每次重试的延迟都会翻倍，直到达到 `refresh_retry_max_backoff_ms`。默认值：100 毫秒。
 * `refresh_retry_max_backoff_ms` - 刷新尝试之间延迟时间指数增长的上限。默认值：60000 毫秒 (1 分钟) 。
 * `all_replicas` - 在带有 `APPEND` 的 [Replicated database](/zh/reference/engines/database-engines/replicated) 中，控制是让所有副本独立刷新，还是在每个计划时间点仅由一个副本刷新。视图创建后不可更改。默认值：`false`。
-* `prefer_dependency_replica` - 当视图带有 `DEPENDS ON` 时，执行父级刷新的副本会优先执行依赖刷新；其他副本则会将尝试延迟 `prefer_dependency_replica_delay_ms`。与 `SharedMergeTree` 搭配使用时，此设置可避免因复制延迟而导致依赖刷新事件链中出现数据缺失。默认值：`false`。
-* `prefer_dependency_replica_delay_ms` - 启用 `prefer_dependency_replica` 时，非优先副本在尝试执行依赖刷新前的等待时间。默认值：2000 毫秒。
 
 <div id="changing-refresh-parameters">
   ### 更改刷新参数

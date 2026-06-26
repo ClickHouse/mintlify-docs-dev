@@ -5,10 +5,10 @@ title: 'MergeTree 表设置'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
-import SettingsInfoBlock from "/snippets/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
-import VersionHistory from "/snippets/components/VersionHistory/VersionHistory.jsx";
+import ExperimentalBadge from "/snippets/zh/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import BetaBadge from "/snippets/zh/components/BetaBadge/BetaBadge.jsx";
+import SettingsInfoBlock from "/snippets/zh/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
+import VersionHistory from "/snippets/zh/components/VersionHistory/VersionHistory.jsx";
 
 系统表 `system.merge_tree_settings` 显示全局设置的 MergeTree 设置。
 
@@ -171,34 +171,11 @@ ALTER TABLE tab RESET SETTING max_suspicious_broken_parts;
   ## allow_experimental_reverse_key
 </div>
 
-<ExperimentalBadge />
-
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.12"},{"label": "0"},{"label": "新设置"}]}]} />
 
-启用对 MergeTree 排序键中降序排列的支持。此设置对于时间序列分析和 Top-N 查询尤其有用，可按时间逆序存储数据，从而优化查询性能。
-
-启用 `allow_experimental_reverse_key` 后，您可以在 MergeTree 表的 `ORDER BY` 子句中定义降序排序。这使得降序查询可以使用效率更高的 `ReadInOrder` 优化，而不是 `ReadInReverseOrder`。
-
-**示例**
-
-```sql
-CREATE TABLE example
-(
-time DateTime,
-key Int32,
-value String
-) ENGINE = MergeTree
-ORDER BY (time DESC, key)  -- 'time' 字段降序排列
-SETTINGS allow_experimental_reverse_key = 1;
-
-SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
-```
-
-在查询中使用 `ORDER BY time DESC` 时，会启用 `ReadInOrder`。
-
-**默认值：** false
+已废弃，不起作用。
 
 <div id="allow_floating_point_partition_key">
   ## allow_floating_point_partition_key
@@ -270,6 +247,19 @@ SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 拒绝表达式相同的主索引/二级索引和排序键
+
+<div id="allow_tuple_element_aggregation">
+  ## allow_tuple_element_aggregation
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新设置"}]}]} />
+
+启用后，Tuple 列中的各个元素会在 SummingMergeTree、AggregatingMergeTree 和
+CoalescingMergeTree 的合并过程中参与聚合。嵌套的 Tuple 会被递归展开，使所有
+叶子元素都能独立聚合。此设置不可更改，
+必须在创建表时指定。
 
 <div id="allow_vertical_merges_from_compact_to_wide_parts">
   ## allow_vertical_merges_from_compact_to_wide_parts
@@ -363,7 +353,7 @@ SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "minmax, uniq"},{"label": "默认启用自动统计"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": ""},{"label": "新增设置"}]}]} />
 
 以逗号分隔的统计信息类型列表，会在所有适用列上自动计算。
-支持的统计信息类型：tdigest、countmin、minmax、nullcount、uniq。
+支持的统计信息类型：basic、tdigest、countmin、minmax、uniq。
 
 <div id="background_task_preferred_step_execution_time_ms">
   ## background_task_preferred_step_execution_time_ms
@@ -757,7 +747,7 @@ Dynamic 数据类型的序列化版本。用于兼容性。
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "即使设置了 min_age_to_force_merge_seconds，默认也会限制 part 的大小"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "新增设置，用于限制 min_age_to_force_merge 的最大字节数。"}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "新设置"}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "即使设置了 min_age_to_force_merge_seconds，默认也会限制 part 的大小"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "新设置"}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "新增设置，用于限制 min_age_to_force_merge 的最大字节数。"}]}]} />
 
 控制设置 `min_age_to_force_merge_seconds` 和
 `min_age_to_force_merge_on_partition_only` 是否遵循设置
@@ -1206,6 +1196,30 @@ drop 或 rebuild 之类的任何操作。
 
 标记 使用的压缩编码。标记 体积很小且会被缓存，因此
 默认使用 ZSTD(3) 压缩。
+
+<div id="materialize_projections_on_insert">
+  ## materialize_projections_on_insert
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "新设置"}]}]} />
+
+启用后，INSERT 会创建包含PROJECTION的新 parts。
+否则，可以通过显式执行 [MATERIALIZE PROJECTION](/zh/reference/statements/alter/projection#materialize-projection)
+或在 [materialize&#95;projections&#95;on&#95;merge](/zh/reference/settings/merge-tree-settings#materialize_projections_on_merge) 合并期间创建。
+
+<div id="materialize_projections_on_merge">
+  ## materialize_projections_on_merge
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新设置"}]}]} />
+
+启用后，如果某次合并的所有源 parts 都缺少某个PROJECTION (例如因为它们是在 `materialize_projections_on_insert = 0` 的情况下插入的) ，合并时就会重建该PROJECTION，从而使合并后的 part 具备该PROJECTION。
+
+不过，合并操作仍然只会合并具有相同PROJECTION集合的 parts。要将某个PROJECTION回填到所有现有 parts，请显式使用 [MATERIALIZE PROJECTION](/zh/reference/statements/alter/projection#materialize-projection)。执行 INSERT 时，也会通过 [materialize&#95;projections&#95;on&#95;insert](/zh/reference/settings/merge-tree-settings#materialize_projections_on_insert) 创建PROJECTION。
 
 <div id="materialize_skip_indexes_on_merge">
   ## materialize_skip_indexes_on_merge
@@ -2600,6 +2614,47 @@ LZ4 或 ZSTD 的压缩率平均可提升 20-40%。
 对于高基数主键，例如包含 `DateTime64` 类型
 时间戳列的主键，通常无法从该设置中获益。
 
+<div id="packed_skip_index_max_bytes">
+  ## packed_skip_index_max_bytes
+</div>
+
+<ExperimentalBadge />
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新设置。将任一序列化后磁盘大小不超过该字节数的跳过索引子流，为每个分片打包到单个 skp_idx.packed 归档中；更大的子流则保留独立的 skp_idx_<name>.idx2 / .mrk2 布局。该决定会在写入时针对每个子流分别作出。"}]}]} />
+
+低于此阈值的跳过索引子流 (按序列化后的磁盘字节数计算，即经过子流压缩和哈希
+链之后) 会为每个分片打包到单个 `skp_idx.packed`
+归档中，而不是写成单独的 `skp_idx_<name>.idx2` / `.mrk2`
+文件。大于此值的子流会保留旧版的按文件布局。该决定会在写入时针对每个子流
+独立作出，因此单个分片可以同时包含已打包的小型索引
+(例如 `minmax`) 以及按文件存储的大型索引 (例如较重的 `bloom_filter`) 。设为 0
+可完全禁用打包 (默认值) 。
+
+每个跳过索引子流实际上都由一个数据文件和一个标记文件组成；在作出是否落盘
+的决定之前，这两个文件都会先在内存中缓冲到该阈值。因此，写入期间的峰值内存占用
+会随 `2 * packed_skip_index_max_bytes * (number of substreams that stay
+below the threshold)` 增长。
+
+全文索引不支持此设置，且永远不会被打包。
+
+当一个表上定义了许多跳过索引时，打包可减轻 inode 压力 (例如
+使用 `add_minmax_index_for_numeric_columns` 时) 。
+
+磁盘格式是自描述的：读取器会检测 `skp_idx.packed`，并透明地从中读取已打包的
+子流。更改此设置只会影响新写入的分片；
+现有分片会保留其写入时的布局。
+
+已知限制：`system.data_skipping_indices.data_uncompressed_bytes` 和
+`system.parts.secondary_indices_uncompressed_bytes` 对于已打包的
+子流会报告压缩后的大小 (因为归档索引不存储未压缩大小) 。这在
+监控中只是显示层面的问题，但有一个功能性后果：
+`distributed_index_analysis_min_indexes_bytes_to_activate` 会与
+`data_uncompressed` 比较，因此一个压缩效果很好的已打包索引 (`set` 或针对
+String 的 `bloom_filter`) 即使其真实的未压缩大小本应超过激活阈值，也可能不会触发激活。
+回退方式是使用正常的查询计划，不会产生错误结果。
+
 <div id="part_minmax_index_columns">
   ## part_minmax_index_columns
 </div>
@@ -3684,6 +3739,16 @@ Cloud 中可用
 
 如果启用，所有副本都会尝试从其他已存在这些数据的副本拉取 part 的内存数据 (如主键、分区信息等) 。
 
+<div id="shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup">
+  ## shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "允许 SMT 在启动时从副本而非 S3 下载 parts 数据的新设置"}]}]} />
+
+启用后，所有副本都会在启动时尝试从其他已具有这些数据的副本拉取 part 的内存中数据 (如主键、分区信息等) 。
+
 <div id="shared_merge_tree_update_replica_flags_delay_ms">
   ## shared_merge_tree_update_replica_flags_delay_ms
 </div>
@@ -3834,6 +3899,50 @@ Cloud 中可用
 
 tmp&#95; 目录应保留多少秒。你不应调低该值，
 因为如果此设置的值过低，merge 和 mutation 操作可能无法正常进行。
+
+<div id="text_index_dictionary_block_frontcoding_compression">
+  ## text_index_dictionary_block_frontcoding_compression
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "新设置"}]}]} />
+
+文本索引字典块默认使用的前缀编码压缩方式。
+可由显式指定的 `dictionary_block_frontcoding_compression` 索引参数覆盖。
+
+<div id="text_index_dictionary_block_size">
+  ## text_index_dictionary_block_size
+</div>
+
+<SettingsInfoBlock type="NonZeroUInt64" default_value="512" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "512"},{"label": "新设置"}]}]} />
+
+文本索引的默认字典块大小。
+可通过显式指定的 `dictionary_block_size` 索引参数覆盖。
+
+<div id="text_index_posting_list_block_size">
+  ## text_index_posting_list_block_size
+</div>
+
+<SettingsInfoBlock type="NonZeroUInt64" default_value="1048576" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1048576"},{"label": "新设置"}]}]} />
+
+文本索引的默认倒排列表块大小 (行数) 。
+可由显式指定的索引参数 `posting_list_block_size` 覆盖。
+
+<div id="text_index_posting_list_codec">
+  ## text_index_posting_list_codec
+</div>
+
+<SettingsInfoBlock type="TextIndexPostingListCodec" default_value="none" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "none"},{"label": "新增设置"}]}]} />
+
+文本索引的默认倒排列表编解码器。
+可由显式指定的 `posting_list_codec` 索引参数覆盖。
 
 <div id="try_fetch_recompressed_part_timeout">
   ## try_fetch_recompressed_part_timeout

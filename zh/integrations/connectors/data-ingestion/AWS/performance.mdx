@@ -7,7 +7,7 @@ doc_type: 'guide'
 keywords: ['S3', '性能', '优化', '对象存储', '数据加载']
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/zh/components/Image.jsx";
 
 本节重点介绍如何在使用 [S3 表函数](/zh/reference/functions/table-functions/s3) 从 S3 读取和插入数据时优化性能。
 
@@ -60,31 +60,31 @@ import { Image } from "/snippets/components/Image.jsx";
   #### 注意合并操作
 </div>
 
-配置的插入块大小越小，大规模数据加载时创建的初始 parts 就越多，并且在数据摄取过程中并发执行的后台 part merge 也会越多。这可能导致资源争用 (CPU 和内存) ，并且在摄取完成后，还需要额外的时间才能让 parts 数量降到[健康](/zh/reference/settings/merge-tree-settings#parts_to_throw_insert) (3000) 水平。
+配置的插入块大小越小，大规模数据加载时创建的初始 parts 就越多，并且在数据摄取过程中并发执行的后台 parts 合并也会越多。这可能导致资源争用 (CPU 和内存) ，并且在摄取完成后，还需要额外的时间才能让 parts 数量降到[健康](/zh/reference/settings/merge-tree-settings#parts_to_throw_insert) (3000) 水平。
 
 <Warning>
   如果 part 数量超过[建议限制](/zh/reference/settings/merge-tree-settings#parts_to_throw_insert)，ClickHouse 查询性能会受到负面影响。
 </Warning>
 
-ClickHouse 会持续将 [merge parts](https://clickhouse.com/blog/asynchronous-data-inserts-in-clickhouse#data-needs-to-be-batched-for-optimal-performance) 合并成更大的 parts，直到其[达到](/zh/reference/settings/merge-tree-settings#max_bytes_to_merge_at_max_space_in_pool)约 150 GiB 的 compressed size。下图展示了 ClickHouse server 如何合并 parts：
+ClickHouse 会持续将 [merge parts](https://clickhouse.com/blog/asynchronous-data-inserts-in-clickhouse#data-needs-to-be-batched-for-optimal-performance) 合并成更大的 parts，直到其[达到](/zh/reference/settings/merge-tree-settings#max_bytes_to_merge_at_max_space_in_pool)约 150 GiB 的 compressed size。下图展示了 ClickHouse 服务器 如何合并 parts：
 
 <Image img="/images/integrations/data-ingestion/s3/merges.png" size="lg" border alt="ClickHouse 中的后台合并" />
 
-单个 ClickHouse server 会使用多个 [background merge threads](/zh/reference/settings/server-settings/settings#background_pool_size) 来并发执行 [part merges](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#more-parts--more-background-part-merges:~:text=to%20execute%20concurrent-,part%20merges,-.%20Each%20thread%20executes)。每个线程都会执行一个循环：
+单个 ClickHouse 服务器 会使用多个 [后台合并线程](/zh/reference/settings/server-settings/settings#background_pool_size) 来并发执行 [parts 合并](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#more-parts--more-background-part-merges:~:text=to%20execute%20concurrent-,part%20merges,-.%20Each%20thread%20executes)。每个线程都会执行一个循环：
 
 ```bash
-① 决定接下来合并哪些 parts，并将这些 parts 作为块加载到内存中。
+① Decide which parts to merge next, and load these parts as blocks into memory.
 
-② 将内存中已加载的块合并为一个更大的块。
+② Merge the loaded blocks in memory into a larger block.
 
-③ 将合并后的块写入磁盘上的新 part。
+③ Write the merged block into a new part on disk.
 
-跳转至 ①
+Go to ①
 ```
 
 请注意，[增加](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#hardware-size) CPU 核心数量和 RAM 容量会提升后台合并吞吐量。
 
-已合并成更大 parts 的 parts 会被标记为[非活动](/zh/reference/system-tables/parts)，并在[可配置](/zh/reference/settings/merge-tree-settings#old_parts_lifetime)的若干分钟后最终删除。随着时间推移，这会形成一棵由已合并 parts 构成的树 (这也是 [`MergeTree`](/zh/reference/engines/table-engines/mergetree-family) 表名称的由来) 。
+已合并成更大 parts 的 parts 会被标记为[非活动](/zh/reference/system-tables/parts)，并在[可配置](/zh/reference/settings/merge-tree-settings#old_parts_lifetime)的若干分钟后最终删除。随着时间推移，这会形成一棵由已合并 parts 构成的树 (这也是 [`MergeTree`](/zh/reference/engines/table-engines/mergetree-family/index) 表名称的由来) 。
 
 <div id="insert-parallelism">
   ### 插入并行度
@@ -144,7 +144,7 @@ s3 等表函数支持通过 glob 模式指定一组待加载的文件名。当�
   ## 格式
 </div>
 
-ClickHouse 可以使用 `s3` 函数和 `S3` 引擎，读取存储在 S3 存储桶中且采用[支持的格式](/zh/reference/formats#formats-overview)的文件。如果读取的是原始文件，其中某些格式具有明显优势：
+ClickHouse 可以使用 `s3` 函数和 `S3` 引擎，读取存储在 S3 存储桶中且采用[支持的格式](/zh/reference/formats/index#formats-overview)的文件。如果读取的是原始文件，其中某些格式具有明显优势：
 
 * 对于包含列名信息的格式 (如 Native、Parquet、CSVWithNames 和 TabSeparatedWithNames) ，查询会更简洁，因为用户无需在 `s3` 函数中指定列名。系统可以根据文件中的列名推断这些信息。
 * 不同格式在读写吞吐量方面的性能各不相同。Native 和 Parquet 在读取性能上最优，因为它们本身就是列式格式，且更加紧凑。Native 格式还与 ClickHouse 在内存中存储数据的方式保持一致，因此在将数据流式写入 ClickHouse 时可进一步降低处理开销。

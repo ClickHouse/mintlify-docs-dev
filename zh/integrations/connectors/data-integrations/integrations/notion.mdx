@@ -2,7 +2,7 @@
 sidebarTitle: 'Notion'
 slug: /integrations/notion
 keywords: ['clickhouse', 'notion', 'mcp', '自定义智能体', 'ai', '集成', '连接']
-description: '通过 ClickHouse 服务器 将 ClickHouse Cloud 连接至 Notion 自定义智能体。'
+description: '通过 ClickHouse 远程 MCP 服务器 将 ClickHouse Cloud 连接至 Notion 自定义智能体。'
 title: '将 Notion 连接至 ClickHouse'
 doc_type: 'guide'
 integration:
@@ -10,73 +10,48 @@ integration:
   - category: 'data_integration'
 ---
 
-import PartnerBadge from "/snippets/components/PartnerBadge/PartnerBadge.jsx";
+import { Image } from "/snippets/zh/components/Image.jsx";
+import PartnerBadge from "/snippets/zh/components/PartnerBadge/PartnerBadge.jsx";
 
 <PartnerBadge />
 
 [Notion](https://www.notion.com/) 是一个将笔记、文档、项目和 AI 驱动的自定义智能体整合在一起的协作工作区。
 
-你可以将 ClickHouse Cloud 作为自定义 MCP Server 连接到 Notion 的[自定义智能体](https://www.notion.com/help/mcp-connections-for-custom-agents)。连接后，智能体无需离开 Notion，即可探索你的数据、运行只读分析查询，并调取 ClickHouse Cloud 中的服务信息和成本信息。
+你可以将 ClickHouse Cloud 连接到 Notion 的[自定义智能体](https://www.notion.com/help/mcp-connections-for-custom-agents)。连接后，智能体无需离开 Notion，即可探索你的数据、运行只读分析查询，并调取 ClickHouse Cloud 中的服务信息和成本信息。
 
 <div id="prerequisites">
   ## 前置条件
 </div>
 
-* 正在运行的 [ClickHouse Cloud 服务](/zh/get-started/setup/cloud)，且已[启用 服务器](/zh/products/cloud/features/ai-ml/mcp/remote-mcp#enable-remote-mcp-server)
+* 正在运行的 [ClickHouse Cloud 服务](/zh/get-started/setup/cloud)，且已[启用 远程 MCP 服务器](/zh/products/cloud/features/ai-ml/mcp/remote-mcp#enable-remote-mcp-server)
 * 使用 **Business** 或 **Enterprise** 套餐的 Notion 工作区
-* 工作区管理员已在 **Settings** &gt; **Notion AI** &gt; **AI connectors** 中启用 **Custom MCP servers**
 
 <div id="connect-clickhouse-to-notion">
   ## 将 ClickHouse 连接到 Notion 自定义智能体
 </div>
 
-1. 在 Notion 中，打开要扩展的自定义智能体，然后点击 **设置**。
-2. 在 **工具和访问权限** 下，点击 **添加连接**，然后选择 **自定义 MCP 服务器**。
+ClickHouse 在 Notion 中已作为预配置连接提供 (当前为 Beta) 。无需设置自定义 MCP 服务器，也无需粘贴 URL。
 
-{/* TODO(截图)：agent 的 Tools & Access 中“Add connection”菜单，显示“Custom MCP server”选项 */}
+1. 在 Notion 中，从侧边栏的 **智能体** 部分新建一个 **自定义智能体**。
+2. 在智能体的 **设置** 中，找到 **工具和访问权限**，选择 **添加连接**，然后从可用连接列表中添加 **ClickHouse**。
 
-3. 输入 ClickHouse Cloud 服务器 的 URL，并为该连接设置一个显示名称，例如 `ClickHouse`：
+<Image img="/images/integrations/tools/data-integration/notion/add-clickhouse-connection.png" size="md" alt="在 Notion 的“添加连接”选择器中选择 ClickHouse" />
 
-   ```text
-   https://mcp.clickhouse.cloud/mcp
-   ```
+3. 点击 **连接**，然后使用你的 ClickHouse Cloud 凭据完成 OAuth 流程。访问范围仅限于你的账户当前已可访问的组织和服务。
 
-{/* TODO（截图）：已填好服务器 URL 和显示名称的 Custom MCP server 对话框 */}
+4. 在智能体设置中展开新添加的 ClickHouse 连接，并开启你希望该智能体使用的工具。对于每个工具，你还可以选择让智能体自动运行，或始终请求批准。ClickHouse 远程 MCP 服务器公开的所有工具均为只读。有关完整的最新列表，请参阅[可用工具](/zh/products/cloud/features/ai-ml/remote-mcp#available-tools)参考文档。
 
-4. 点击 **保存**，然后完成 OAuth 流程，使用你的 ClickHouse Cloud 凭据进行身份验证。访问范围仅限于你的账户原本就有权访问的组织和服务。
-
-{/* TODO(screenshot): OAuth 授权同意 / “已连接”确认状态 */}
-
-5. 展开新连接，查看[可用的 ClickHouse 工具](/zh/products/cloud/features/ai-ml/remote-mcp#available-tools)，并启用你希望此智能体使用的工具。所有 ClickHouse 服务器 工具均为只读。
-
-{/* TODO(screenshot): 展开的 ClickHouse 连接，显示工具切换开关列表 */}
+<Image img="/images/integrations/tools/data-integration/notion/clickhouse-tools-toggles.png" size="md" alt="Notion 中展开的 ClickHouse 连接，显示各个工具的开关" />
 
 <Note>
-  每个自定义智能体都需要单独的 ClickHouse 连接，并且只有对该连接完成身份验证的人才能更改其工具设置。更多详情，请参阅 Notion 的[智能体连接安全最佳实践](https://www.notion.com/help/security-best-practices-for-agent-connections)。
+  每个自定义智能体都需要单独的 ClickHouse 连接，并且只有完成该连接身份验证的人才能更改其工具设置。更多详情，请参阅 Notion 的[智能体连接安全最佳实践](https://www.notion.com/help/security-best-practices-for-agent-connections)。
 </Note>
-
-<div id="example-prompts">
-  ## 提示词示例
-</div>
-
-连接后，您可以用自然语言向自定义智能体提问。以下是一些示例：
-
-| 提示词                                    | 调用的工具                   |
-| -------------------------------------- | ----------------------- |
-| &quot;我的 ClickHouse 服务中有哪些可用数据库？&quot; | `list_databases`        |
-| &quot;显示 `hits` 表中的前 10 行&quot;        | `run_select_query`      |
-| &quot;我所在组织上周的 ClickHouse 成本是多少？&quot; | `get_organization_cost` |
-| &quot;列出此服务最近的备份&quot;                 | `list_service_backups`  |
-
-如需查看完整的自然语言模式和工具集，请参阅 [Remote MCP 示例用法](/zh/products/cloud/features/ai-ml/mcp/remote-mcp#example-usage) 部分。
-
-{/* TODO（截图）：一个 Notion 自定义智能体会话，展示在 Notion UI 中呈现的 ClickHouse 查询结果 */}
 
 <div id="related-content">
   ## 相关内容
 </div>
 
 * [启用并连接 ClickHouse Cloud 远程 MCP 服务器](/zh/products/cloud/features/ai-ml/mcp/remote-mcp)
-* [Cloud 中的 Remote MCP — 工具参考](/zh/products/cloud/features/ai-ml/remote-mcp)
+* [Cloud 中的 Remote MCP: 工具参考](/zh/products/cloud/features/ai-ml/remote-mcp)
 * Notion: [自定义智能体的 MCP 连接](https://www.notion.com/help/mcp-connections-for-custom-agents)
 * Notion: [通过 MCP 集成将自定义智能体连接到您的工具栈](https://www.notion.com/help/guides/connect-custom-agents-to-mcp-integrations)

@@ -24,13 +24,13 @@ Aqui está um resumo das diferentes formas de excluir dados no ClickHouse:
 As exclusões leves fazem com que as linhas sejam imediatamente marcadas como excluídas, para que possam ser automaticamente filtradas de todas as consultas `SELECT` subsequentes. A remoção posterior dessas linhas excluídas ocorre durante ciclos naturais de merge e, assim, gera menos E/S. Como resultado, é possível que, por um período não especificado, os dados não sejam realmente excluídos do armazenamento, mas apenas marcados como excluídos. Se você precisar garantir que os dados sejam excluídos, considere o comando de mutação acima.
 
 ```sql
--- exclui todos os dados de 2018 com uma exclusão leve. Não recomendado.
+-- delete all data from 2018 with a lightweight delete. Not recommended.
 DELETE FROM posts WHERE toYear(CreationDate) = 2018
 ```
 
 Excluir grandes volumes de dados com a instrução `DELETE` leve também pode afetar negativamente o desempenho de consultas `SELECT`. O comando também não é compatível com tabelas com projeções.
 
-Observe que uma mutação é usada na operação para [marcar as linhas excluídas](/pt-BR/reference/statements/delete#how-lightweight-deletes-work-internally-in-clickhouse) (adicionando uma coluna `_row_exists`), o que gera alguma E/S.
+Observe que uma mutação é usada na operação para [marcar as linhas excluídas](/pt-BR/snippets/delete#how-lightweight-deletes-work-internally-in-clickhouse) (adicionando uma coluna `_row_exists`), o que gera alguma E/S.
 
 Em geral, as exclusões leves devem ser preferidas em vez de mutações se a existência dos dados excluídos em disco puder ser tolerada (por exemplo, em casos em que não há requisitos de conformidade). Essa abordagem ainda deve ser evitada se todos os dados precisarem ser excluídos.
 

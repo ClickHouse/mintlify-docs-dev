@@ -163,7 +163,7 @@ SELECT tupleConcat((1, 2), ('a',), (true, false))
 
 Introduced in: v21.11.0
 
-Calculates the division of corresponding elements of two tuples of the same size.
+Calculates the element-wise division of two or more tuples of the same size, applied left-to-right.
 
 <Note>
 Division by zero will return `inf`.
@@ -172,21 +172,21 @@ Division by zero will return `inf`.
 **Syntax**
 
 ```sql
-tupleDivide(t1, t2)
+tupleDivide(t1, t2[, tN, ...])
 ```
 
 **Arguments**
 
-- `t1` — First tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
-- `t2` — Second tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t1` — First input tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t2, ..., tN` — One or more further input tuples. All tuples must have the same size. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Returned value**
 
-Returns tuple with the result of division. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+Returns a tuple containing the element-wise quotients. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Examples**
 
-**Basic usage**
+**Two tuples**
 
 ```sql title=Query
 SELECT tupleDivide((1, 2), (2, 3))
@@ -194,6 +194,16 @@ SELECT tupleDivide((1, 2), (2, 3))
 
 ```response title=Response
 (0.5, 0.6666666666666666)
+```
+
+**Three tuples**
+
+```sql title=Query
+SELECT tupleDivide((100.0, 60.0), (5.0, 3.0), (2.0, 4.0))
+```
+
+```response title=Response
+(10, 5)
 ```
 
 ## tupleDivideByNumber {#tupleDivideByNumber}
@@ -260,11 +270,11 @@ tupleElement(tuple, index|name[, default_value])
 - `tuple` — A tuple or array of tuples. [`Tuple(T)`](/reference/data-types/tuple) or [`Array(Tuple(T))`](/reference/data-types/array)
 - `index` — Column index, starting from 1. [`const UInt8/16/32/64`](/reference/data-types/int-uint)
 - `name` — Name of the element. [`const String`](/reference/data-types/string)
-- `default_value` — Default value returned when index is out of bounds or element doesn't exist. [`Any`](/reference/data-types)
+- `default_value` — Default value returned when index is out of bounds or element doesn't exist. [`Any`](/reference/data-types/index)
 
 **Returned value**
 
-Returns the element at the specified index or name. [`Any`](/reference/data-types)
+Returns the element at the specified index or name. [`Any`](/reference/data-types/index)
 
 **Examples**
 
@@ -386,28 +396,28 @@ SELECT tupleHammingDistance(wordShingleMinHash(string), wordShingleMinHashCaseIn
 
 Introduced in: v23.8.0
 
-Performs an integer division with a tuple of numerators and a tuple of denominators. Returns a tuple of quotients.
-If either tuple contains non-integer elements then the result is calculated by rounding to the nearest integer for each non-integer numerator or divisor.
-Division by 0 causes an error to be thrown.
+Performs element-wise integer division of two or more tuples of the same size, applied left-to-right. Returns a tuple of quotients.
+If any tuple contains non-integer elements, the result is calculated by rounding to the nearest integer for each non-integer numerator or divisor.
+Division by 0 causes an exception to be thrown.
 
 **Syntax**
 
 ```sql
-tupleIntDiv(tuple_num, tuple_div)
+tupleIntDiv(t1, t2[, tN, ...])
 ```
 
 **Arguments**
 
-- `tuple_num` — Tuple of numerator values. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
-- `tuple_div` — Tuple of divisor values. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t1` — First input tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t2, ..., tN` — One or more further input tuples. All tuples must have the same size. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Returned value**
 
-Returns a tuple of the quotients. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+Returns a tuple of integer quotients. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Examples**
 
-**Basic usage**
+**Two tuples**
 
 ```sql title=Query
 SELECT tupleIntDiv((15, 10, 5), (5, 5, 5))
@@ -425,6 +435,16 @@ SELECT tupleIntDiv((15, 10, 5), (5.5, 5.5, 5.5))
 
 ```response title=Response
 (2, 1, 0)
+```
+
+**Three tuples**
+
+```sql title=Query
+SELECT tupleIntDiv((120, 60), (4, 3), (2, 4))
+```
+
+```response title=Response
+(15, 5)
 ```
 
 ## tupleIntDivByNumber {#tupleIntDivByNumber}
@@ -476,24 +496,24 @@ SELECT tupleIntDivByNumber((15.2, 10.7, 5.5), 5.8)
 
 Introduced in: v23.8.0
 
-Like [`tupleIntDiv`](#tupleIntDiv) performs integer division of a tuple of numerators and a tuple of denominators, and returns a tuple of the quotients.
-In case of division by 0, returns the quotient as 0 instead of throwing an exception.
-If either tuple contains non-integer elements then the result is calculated by rounding to the nearest integer for each non-integer numerator or divisor.
+Like [`tupleIntDiv`](#tupleIntDiv), performs element-wise integer division of two or more tuples of the same size, applied left-to-right.
+In case of division by 0, returns 0 for that element instead of throwing an exception.
+If any tuple contains non-integer elements, the result is calculated by rounding to the nearest integer for each non-integer numerator or divisor.
 
 **Syntax**
 
 ```sql
-tupleIntDivOrZero(tuple_num, tuple_div)
+tupleIntDivOrZero(t1, t2[, tN, ...])
 ```
 
 **Arguments**
 
-- `tuple_num` — Tuple of numerator values. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
-- `tuple_div` — Tuple of divisor values. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t1` — First input tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t2, ..., tN` — One or more further input tuples. All tuples must have the same size. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Returned value**
 
-Returns tuple of the quotients. Returns 0 for quotients where the divisor is 0. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+Returns a tuple of integer quotients, with 0 for any element where the divisor is 0. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Examples**
 
@@ -505,6 +525,16 @@ SELECT tupleIntDivOrZero((5, 10, 15), (0, 0, 0))
 
 ```response title=Response
 (0, 0, 0)
+```
+
+**Three tuples**
+
+```sql title=Query
+SELECT tupleIntDivOrZero((120, 60), (4, 3), (2, 4))
+```
+
+```response title=Response
+(15, 5)
 ```
 
 ## tupleIntDivOrZeroByNumber {#tupleIntDivOrZeroByNumber}
@@ -556,28 +586,28 @@ SELECT tupleIntDivOrZeroByNumber((15, 10, 5), 0)
 
 Introduced in: v21.11.0
 
-Calculates the difference between corresponding elements of two tuples of the same size.
+Calculates the element-wise difference of two or more tuples of the same size, applied left-to-right.
 
 **Syntax**
 
 ```sql
-tupleMinus(t1, t2)
+tupleMinus(t1, t2[, tN, ...])
 ```
 
 **Aliases**: `vectorDifference`
 
 **Arguments**
 
-- `t1` — First tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
-- `t2` — Second tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t1` — First input tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t2, ..., tN` — One or more further input tuples. All tuples must have the same size. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Returned value**
 
-Returns a tuple containing the results  of the subtractions. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+Returns a tuple containing the element-wise differences. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Examples**
 
-**Basic usage**
+**Two tuples**
 
 ```sql title=Query
 SELECT tupleMinus((1, 2), (2, 3))
@@ -587,30 +617,40 @@ SELECT tupleMinus((1, 2), (2, 3))
 (-1, -1)
 ```
 
+**Three tuples**
+
+```sql title=Query
+SELECT tupleMinus((10, 10), (3, 4), (2, 1))
+```
+
+```response title=Response
+(5, 5)
+```
+
 ## tupleModulo {#tupleModulo}
 
 Introduced in: v23.8.0
 
-Returns a tuple of the remainders (moduli) of division operations of two tuples.
+Returns a tuple of element-wise remainders from dividing two or more tuples of the same size, applied left-to-right.
 
 **Syntax**
 
 ```sql
-tupleModulo(tuple_num, tuple_mod)
+tupleModulo(t1, t2[, tN, ...])
 ```
 
 **Arguments**
 
-- `tuple_num` — Tuple of numerator values. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
-- `tuple_mod` — Tuple of modulus values. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t1` — First input tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t2, ..., tN` — One or more further input tuples. All tuples must have the same size. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Returned value**
 
-Returns tuple of the remainders of division. An error is thrown for division by zero. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+Returns a tuple of element-wise remainders. An exception is thrown for division by zero. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Examples**
 
-**Basic usage**
+**Two tuples**
 
 ```sql title=Query
 SELECT tupleModulo((15, 10, 5), (5, 3, 2))
@@ -618,6 +658,16 @@ SELECT tupleModulo((15, 10, 5), (5, 3, 2))
 
 ```response title=Response
 (0, 1, 1)
+```
+
+**Three tuples**
+
+```sql title=Query
+SELECT tupleModulo((10, 20), (7, 9), (3, 5))
+```
+
+```response title=Response
+(0, 2)
 ```
 
 ## tupleModuloByNumber {#tupleModuloByNumber}
@@ -657,26 +707,26 @@ SELECT tupleModuloByNumber((15, 10, 5), 2)
 
 Introduced in: v21.11.0
 
-Calculates the multiplication of corresponding elements of two tuples of the same size.
+Calculates the element-wise product of two or more tuples of the same size.
 
 **Syntax**
 
 ```sql
-tupleMultiply(t1, t2)
+tupleMultiply(t1, t2[, tN, ...])
 ```
 
 **Arguments**
 
-- `t1` — First tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
-- `t2` — Second tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t1` — First input tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t2, ..., tN` — One or more further input tuples. All tuples must have the same size. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Returned value**
 
-Returns a tuple with the results of the multiplications. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+Returns a tuple containing the element-wise products. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Examples**
 
-**Basic usage**
+**Two tuples**
 
 ```sql title=Query
 SELECT tupleMultiply((1, 2), (2, 3))
@@ -684,6 +734,16 @@ SELECT tupleMultiply((1, 2), (2, 3))
 
 ```response title=Response
 (2, 6)
+```
+
+**Three tuples**
+
+```sql title=Query
+SELECT tupleMultiply((1, 2), (2, 3), (1, 2))
+```
+
+```response title=Response
+(2, 12)
 ```
 
 ## tupleMultiplyByNumber {#tupleMultiplyByNumber}
@@ -785,28 +845,28 @@ SELECT tupleNegate((1, 2))
 
 Introduced in: v21.11.0
 
-Calculates the sum of corresponding elements of two tuples of the same size.
+Calculates the element-wise sum of two or more tuples of the same size.
 
 **Syntax**
 
 ```sql
-tuplePlus(t1, t2)
+tuplePlus(t1, t2[, tN, ...])
 ```
 
 **Aliases**: `vectorSum`
 
 **Arguments**
 
-- `t1` — First tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
-- `t2` — Second tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t1` — First input tuple. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+- `t2, ..., tN` — One or more further input tuples. All tuples must have the same size. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Returned value**
 
-Returns a tuple containing the sums of corresponding input tuple arguments. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
+Returns a tuple containing the element-wise sums. [`Tuple((U)Int*)`](/reference/data-types/tuple) or [`Tuple(Float*)`](/reference/data-types/tuple) or [`Tuple(Decimal)`](/reference/data-types/tuple)
 
 **Examples**
 
-**Basic usage**
+**Two tuples**
 
 ```sql title=Query
 SELECT tuplePlus((1, 2), (2, 3))
@@ -814,6 +874,16 @@ SELECT tuplePlus((1, 2), (2, 3))
 
 ```response title=Response
 (3, 5)
+```
+
+**Three tuples**
+
+```sql title=Query
+SELECT tuplePlus((1, 2), (2, 3), (3, 4))
+```
+
+```response title=Response
+(6, 9)
 ```
 
 ## tuplePositiveModuloByNumber {#tuplePositiveModuloByNumber}

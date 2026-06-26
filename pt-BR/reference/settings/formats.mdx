@@ -7,10 +7,10 @@ description: 'Configurações que controlam os formatos de entrada e saída.'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
-import SettingsInfoBlock from "/snippets/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
-import VersionHistory from "/snippets/components/VersionHistory/VersionHistory.jsx";
+import ExperimentalBadge from "/snippets/pt-BR/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import BetaBadge from "/snippets/pt-BR/components/BetaBadge/BetaBadge.jsx";
+import SettingsInfoBlock from "/snippets/pt-BR/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
+import VersionHistory from "/snippets/pt-BR/components/VersionHistory/VersionHistory.jsx";
 
 {/* Gerado automaticamente */}
 
@@ -168,6 +168,16 @@ Método para escrever erros na saída de texto.
 
 Para o formato AvroConfluent: tempo limite de conexão, em segundos, do cliente HTTP do Confluent Schema Registry. Usado tanto na obtenção do esquema quanto no registro do esquema. Deve ser maior que 0 e menor que 600 (10 minutos).
 
+<div id="format_avro_schema_registry_max_retries">
+  ## format_avro_schema_registry_max_retries
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="5" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "5"},{"label": "Nova configuração que controla o número máximo de tentativas em caso de falhas transitórias (timeouts de transporte, conexão recusada, erros de DNS, HTTP 5xx/408/429) ao se comunicar com o Confluent Schema Registry. Defina como 0 para desativar as tentativas. O comportamento anterior (sem tentativas) é preservado por `compatibility = '26.5'`."}]}]} />
+
+Para o formato AvroConfluent: número máximo de tentativas em caso de falhas transitórias ao se comunicar com o Confluent Schema Registry (timeouts de transporte, conexão recusada, erros de DNS, HTTP 5xx/408/429). Defina como 0 para desativar as tentativas. O valor máximo permitido é 20. Erros de validação de esquema (HTTP 409, Avro JSON malformado) não geram novas tentativas.
+
 <div id="format_avro_schema_registry_receive_timeout">
   ## format_avro_schema_registry_receive_timeout
 </div>
@@ -177,6 +187,16 @@ Para o formato AvroConfluent: tempo limite de conexão, em segundos, do cliente 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "Nova configuração para controlar o tempo limite de recebimento (em segundos) do cliente HTTP do Confluent Schema Registry usado pelo formato AvroConfluent."}]}]} />
 
 Para o formato AvroConfluent: tempo limite de recebimento, em segundos, para o cliente HTTP do Confluent Schema Registry. Usado tanto para a busca do esquema quanto para o registro do esquema. Deve ser maior que 0 e menor que 600 (10 minutos).
+
+<div id="format_avro_schema_registry_retry_initial_backoff_ms">
+  ## format_avro_schema_registry_retry_initial_backoff_ms
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="100" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "100"},{"label": "Nova configuração que controla o backoff inicial (em milissegundos) antes de repetir uma solicitação com falha para o Confluent Schema Registry. O backoff dobra a cada nova tentativa, limitado a 10 segundos. Não tem efeito quando `format_avro_schema_registry_max_retries = 0` (o comportamento anterior à 26.6, restaurado por `compatibility = '26.5'`)."}]}]} />
+
+Para o formato AvroConfluent: backoff inicial em milissegundos antes de repetir uma solicitação com falha para o Confluent Schema Registry. O backoff dobra a cada tentativa subsequente, limitado a 10 segundos. Deve ser maior que 0 e menor ou igual a 60000.
 
 <div id="format_avro_schema_registry_send_timeout">
   ## format_avro_schema_registry_send_timeout
@@ -827,6 +847,23 @@ Valores possíveis:
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.5"},{"label": "0"},{"label": "Desativa os valores padrão do tipo para campos omitidos quando necessário"}]}]} />
 
 Força a inicialização dos campos omitidos com valores NULL
+
+<div id="input_format_geojson_unsupported_geometry_handling">
+  ## input_format_geojson_unsupported_geometry_handling
+</div>
+
+<SettingsInfoBlock type="GeoJSONUnsupportedGeometryHandling" default_value="throw" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "throw"},{"label": "Nova configuração que controla como são tratados tipos de geometria GeoJSON que não podem ser representados no tipo Geometry (GeometryCollection, MultiPoint)"}]}]} />
+
+Controla o que acontece quando um tipo de geometria `GeoJSON` válido que não pode ser representado no tipo `Geometry` do ClickHouse (como `GeometryCollection` ou `MultiPoint`) precisa ser armazenado na coluna `geometry` durante a leitura da entrada `GeoJSON`.
+
+Valores possíveis:
+
+* `'throw'` (padrão) — gera uma exceção.
+* `'null'` — insere um valor `NULL` na coluna `geometry` e continua o parsing.
+
+Isso se aplica somente quando a coluna `geometry` é materializada. Quando ela não é uma coluna de saída solicitada, essa geometria é validada quanto à sua estrutura, mas não aciona esse tratamento.
 
 <div id="input_format_hive_text_allow_variable_number_of_columns">
   ## input_format_hive_text_allow_variable_number_of_columns
@@ -1938,6 +1975,18 @@ Quando ativado, os pontos nas chaves do JSON serão escapados durante o parsing.
 O número máximo de subcolunas dinâmicas que podem ser criadas em cada coluna durante a análise de uma coluna JSON.
 Isso permite controlar o número de subcolunas dinâmicas durante a análise, independentemente dos parâmetros dinâmicos especificados no tipo de dado.
 
+<div id="output_format_always_write_decimal_point_in_float_and_decimal">
+  ## output_format_always_write_decimal_point_in_float_and_decimal
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nova configuração para sempre exibir um separador decimal para números de ponto flutuante e Decimal em formatos de texto, mesmo quando o valor for um número inteiro."}]}]} />
+
+Sempre exibe um separador decimal para números de ponto flutuante e Decimal em formatos de texto, mesmo quando o valor for um número inteiro. Por exemplo, exibe `1.` em vez de `1`.
+
+Desativado por padrão.
+
 <div id="output_format_arrow_compression_method">
   ## output_format_arrow_compression_method
 </div>
@@ -2133,6 +2182,63 @@ Se definido como true, as Tuples no formato CSV são serializadas como colunas s
 Exibe zeros à direita ao imprimir valores Decimal. Ex.: 1.230000 em vez de 1.23.
 
 Desativado por padrão.
+
+<div id="output_format_float_precision">
+  ## output_format_float_precision
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Uma nova configuração para controlar os dígitos decimais na saída de números de ponto flutuante"}]}]} />
+
+Quando diferente de zero, formata a saída de números de ponto flutuante (`Float32`, `Float64`, `BFloat16`) com no máximo esse número de dígitos após o separador decimal (os zeros à direita são removidos).
+Quando 0 (o padrão), usa a menor representação que preserva o round-trip.
+
+Valores grandes demais para notação fixa e valores cuja magnitude é tão pequena que o arredondamento para a precisão solicitada faria perder todos os dígitos significativos (a mantissa se tornaria `±0`) são emitidos em notação científica. Nesses casos de fallback, a mantissa pode ter mais dígitos fracionários do que o número solicitado.
+
+Intervalo válido: 0 a 100.
+
+<div id="output_format_image_height">
+  ## output_format_image_height
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "Nova configuração que controla a altura da imagem de saída em formatos de saída de imagem, como PNG."}]}]} />
+
+A altura, em pixels, da imagem de saída em formatos de saída de imagem, como `PNG`.
+
+Valor padrão: 1024.
+
+<div id="output_format_image_terminal_mode">
+  ## output_format_image_terminal_mode
+</div>
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": ""},{"label": "Nova configuração que controla se formatos de saída de imagem, como PNG, são renderizados diretamente no terminal usando um protocolo de imagem em linha."}]}]} />
+
+Para formatos de saída de imagem, como `PNG`, envie a imagem diretamente para o terminal usando um protocolo de imagem em linha, em vez de gravar os bytes brutos da imagem.
+
+Valores possíveis:
+
+* &#96;&#96; (vazio) — grava os bytes brutos da imagem (padrão).
+* `iterm` — usa o protocolo de imagem em linha do iTerm2.
+* `kitty` — usa o protocolo gráfico do Kitty.
+* `sixel` — usa o protocolo Sixel.
+* `auto` — se a saída for um terminal, detecta as capacidades dele e usa `iterm`, `kitty` ou `sixel` (nesta ordem); caso contrário, grava os bytes brutos da imagem.
+
+Valor padrão: &#96;&#96; (vazio).
+
+<div id="output_format_image_width">
+  ## output_format_image_width
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "Nova configuração que controla a largura da imagem de saída em formatos de saída de imagem, como PNG."}]}]} />
+
+A largura, em pixels, da imagem de saída para formatos de saída de imagem, como `PNG`.
+
+Valor padrão: 1024.
 
 <div id="output_format_json_array_of_rows">
   ## output_format_json_array_of_rows
@@ -2847,6 +2953,8 @@ Se os dados exibidos nos formatos Pretty vierem em vários fragmentos, mesmo com
 
 Conjunto de caracteres usado para imprimir as bordas da grade. Conjuntos de caracteres disponíveis: ASCII, UTF-8 (padrão).
 
+No modo interativo, o `clickhouse-client` muda automaticamente para `ASCII` quando o terminal não oferece suporte a UTF-8 (conforme determinado pelas variáveis de ambiente `LC_ALL`, `LC_CTYPE` e `LANG`), a menos que essa configuração seja especificada explicitamente.
+
 <div id="output_format_pretty_highlight_digit_groups">
   ## output_format_pretty_highlight_digit_groups
 </div>
@@ -2987,6 +3095,18 @@ Isso evita a saída frequente de blocos muito pequenos, mas ainda permite exibir
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.1"},{"label": "1000"},{"label": "Nova configuração"}]}]} />
 
 Emite o bloco pendente em formatos Pretty se tiver decorrido mais do que o número especificado de milissegundos desde a saída anterior.
+
+<div id="output_format_pretty_use_nbsp_for_padding">
+  ## output_format_pretty_use_nbsp_for_padding
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nova configuração. Quando habilitada, o preenchimento na saída `Pretty` é renderizado com `U+00A0`, para que seja preservado ao copiar e colar em ferramentas que comprimem sequências de espaços comuns."}]}]} />
+
+Se habilitado, o preenchimento nos formatos de saída `Pretty` é renderizado com `U+00A0` em vez de um espaço ASCII.
+A saída permanece visualmente idêntica em fonte monoespaçada, mas o preenchimento é preservado em ferramentas que comprimem ou removem sequências de espaços comuns.
+Só tem efeito quando `output_format_pretty_grid_charset` é `UTF-8`.
 
 <div id="output_format_protobuf_nullables_with_google_wrappers">
   ## output_format_protobuf_nullables_with_google_wrappers

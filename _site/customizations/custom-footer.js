@@ -136,6 +136,7 @@
       // horizontal padding (pl-[32px] / pr-[32px]) so the footer's inner edges
       // align with the content area used by both doc pages and the home page.
       + '@media (min-width: 1024px) { #' + FOOTER_ID + ' { padding-left: calc(19rem + 32px) !important; padding-right: 32px !important; } }'
+      + '#' + FOOTER_ID + ' [data-inner] { max-width: 1280px; margin: 0 auto; }'
       + '#' + FOOTER_ID + ' * { box-sizing: border-box; }'
       + '#' + FOOTER_ID + ' a { text-decoration: none; transition: color 0.15s, border-color 0.15s; }'
       // Top section: sitemap + CTA side by side only at wide viewports
@@ -158,6 +159,10 @@
       + '#' + FOOTER_ID + ' [data-cta] form input { flex: 1; background: transparent; border: none; padding: 10px 14px; font-size: 13px; outline: none; min-width: 0; }'
       + '#' + FOOTER_ID + ' [data-cta] form button { background: #fdff75; color: #1c1c1c; border: none; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }'
       + '#' + FOOTER_ID + ' [data-cta] form button:hover { background: #eaec6a; }'
+      + '#' + FOOTER_ID + ' [data-cta] form button:disabled { cursor: default; opacity: 0.7; }'
+      + '#' + FOOTER_ID + ' .ch-signup-msg { font-size: 12px; margin: 6px 0 0; }'
+      + '#' + FOOTER_ID + ' .ch-signup-success { color: #22c55e; }'
+      + '#' + FOOTER_ID + ' .ch-signup-error { color: #ef4444; }'
       + '#' + FOOTER_ID + ' [data-gh] { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; width: 100%; }'
       + '#' + FOOTER_ID + ' [data-gh]:hover { border-color: #888 !important; }'
       // Bottom bar
@@ -182,6 +187,7 @@
       + '#' + FOOTER_ID + ' [data-copyright] { font-size: 13px; color: #6b7280; }'
       + '#' + FOOTER_ID + ' [data-bottom] a { color: #6b7280; }'
       + '#' + FOOTER_ID + ' [data-bottom] a:hover { color: #111; }'
+      + '#' + FOOTER_ID + ' [data-logo] { margin-bottom: 16px; }'
       + '#' + FOOTER_ID + ' [data-logo] svg * { fill: #111; }'
       // Dark mode colors
       + '.dark #' + FOOTER_ID + ' [data-sitemap] h3 { color: #f5f5f5; }'
@@ -216,15 +222,15 @@
         + link[0] + '</a>';
     });
 
-    return '<div style="max-width:1280px;margin:0 auto;">'
+    return '<div data-inner>'
       // Top: sitemap grid + CTA column side by side on desktop
       + '<div data-top>'
         + '<div data-sitemap>' + columnsHtml + '</div>'
         + '<div data-cta>'
-          + '<div data-logo style="margin-bottom:16px;">' + logoSvg + '</div>'
+          + '<div data-logo>' + logoSvg + '</div>'
           + '<p>Stay informed on feature releases, product roadmap, support, and cloud offerings!</p>'
-          + '<form onsubmit="return false;">'
-            + '<input type="email" placeholder="Email address" />'
+          + '<form data-signup>'
+            + '<input type="email" placeholder="Email address" autocomplete="email" />'
             + '<button type="submit">Sign up</button>'
           + '</form>'
           + '<a data-gh href="https://github.com/ClickHouse/ClickHouse" target="_blank" rel="noopener noreferrer">'
@@ -241,6 +247,114 @@
         + '<div data-legal>' + legalHtml + '</div>'
       + '</div>'
     + '</div>';
+  }
+
+  var mktoScriptLoading = false;
+  var mktoReadyQueue = [];
+
+  function ensureMarketoScript(callback) {
+    if (window.MktoForms2) { callback(); return; }
+    mktoReadyQueue.push(callback);
+    if (mktoScriptLoading) return;
+    mktoScriptLoading = true;
+    var s = document.createElement('script');
+    s.src = 'https://discover.clickhouse.com/js/forms2/js/forms2.min.js';
+    s.onload = function () {
+      var q = mktoReadyQueue.slice();
+      mktoReadyQueue = [];
+      q.forEach(function (fn) { fn(); });
+    };
+    s.onerror = function () {
+      // Reset so a later signup can retry loading the script instead of
+      // enqueuing callbacks that would never run.
+      mktoScriptLoading = false;
+      if (s.parentNode) s.parentNode.removeChild(s);
+      var q = mktoReadyQueue.slice();
+      mktoReadyQueue = [];
+      q.forEach(function (fn) { fn(new Error('script load failed')); });
+    };
+    document.head.appendChild(s);
+  }
+
+  function submitToMarketo(email, onSuccess, onError) {
+    ensureMarketoScript(function (err) {
+      if (err) { onError(); return; }
+      try {
+        var sink = document.createElement('div');
+        sink.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;';
+        document.body.appendChild(sink);
+        window.MktoForms2.loadForm('//discover.clickhouse.com', '238-FPC-317', 1122, function (form) {
+          form.vals({ Email: email, 'loc__c': 'docs-footer' });
+          form.onSuccess(function () {
+            if (sink.parentNode) sink.parentNode.removeChild(sink);
+            onSuccess();
+            return false;
+          });
+          form.submit();
+        });
+      } catch (e) {
+        onError();
+      }
+    });
+  }
+
+  function attachSignupHandler(footerEl) {
+    var form = footerEl.querySelector('form[data-signup]');
+    if (!form || form._chBound) return;
+    form._chBound = true;
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var input = form.querySelector('input[type="email"]');
+      var btn = form.querySelector('button[type="submit"]');
+      var email = (input.value || '').trim();
+
+      // Clear previous messages
+      var old = form.parentNode.querySelector('.ch-signup-msg');
+      if (old) old.parentNode.removeChild(old);
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        var errMsg = document.createElement('p');
+        errMsg.className = 'ch-signup-msg ch-signup-error';
+        errMsg.textContent = 'Please enter a valid email address.';
+        form.parentNode.insertBefore(errMsg, form.nextSibling);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Signing up…';
+
+      // Guard so success/error/timeout only resolve once. Marketo's loadForm
+      // or onSuccess can silently never fire (network/server stall), so a
+      // timeout fallback keeps the button from getting stuck on "Signing up…".
+      var settled = false;
+      var timeoutId = setTimeout(function () { handleError(); }, 10000);
+
+      function handleSuccess() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        form.style.display = 'none';
+        var ok = document.createElement('p');
+        ok.className = 'ch-signup-msg ch-signup-success';
+        ok.textContent = 'Thanks for subscribing!';
+        form.parentNode.insertBefore(ok, form.nextSibling);
+      }
+
+      function handleError() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        btn.disabled = false;
+        btn.textContent = 'Sign up';
+        var errMsg = document.createElement('p');
+        errMsg.className = 'ch-signup-msg ch-signup-error';
+        errMsg.textContent = 'Something went wrong. Please try again.';
+        form.parentNode.insertBefore(errMsg, form.nextSibling);
+      }
+
+      submitToMarketo(email, handleSuccess, handleError);
+    });
   }
 
   function findFooterTarget() {
@@ -301,6 +415,7 @@
     // a full-width block below the sidebar + content row.
     var target = findFooterTarget() || contentContainer;
     target.appendChild(wrapper);
+    attachSignupHandler(wrapper);
     return true;
   }
 

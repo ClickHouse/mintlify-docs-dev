@@ -8,7 +8,7 @@ doc_type: 'guide'
 keywords: ['índice primario', 'indexación', 'rendimiento', 'optimización de consultas', 'buenas prácticas']
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/es/components/Image.jsx";
 
 <div id="introduction">
   ## Introducción
@@ -147,7 +147,7 @@ Para que esto sea (mucho) más eficiente y (mucho) más rápido, necesitamos usa
 
 En los sistemas tradicionales de gestión de bases de datos relacionales, el índice primario contendría una entrada por cada fila de la tabla. Esto daría como resultado que el índice primario contuviera 8,87 millones de entradas para nuestro conjunto de datos. Un índice de este tipo permite localizar rápidamente filas concretas, lo que se traduce en una alta eficiencia para consultas de búsqueda y actualizaciones puntuales. Buscar una entrada en una estructura de datos `B(+)-Tree` tiene una complejidad temporal media de `O(log n)`; más concretamente, `log_b n = log_2 n / log_2 b`, donde `b` es el factor de ramificación del `B(+)-Tree` y `n` es el número de filas indexadas. Como `b` suele estar entre varios cientos y varios miles, los `B(+)-Trees` son estructuras muy poco profundas, y se requieren pocas búsquedas en disco para localizar registros. Con 8,87 millones de filas y un factor de ramificación de 1000, se necesitan de media 2,3 búsquedas en disco. Esta capacidad tiene un coste: mayor consumo de disco y memoria, costes de inserción más altos al añadir nuevas filas a la tabla y nuevas entradas al índice y, en ocasiones, el reequilibrado del B-Tree.
 
-Teniendo en cuenta los retos asociados a los índices B-Tree, los motores de tabla de ClickHouse utilizan un enfoque distinto. La [familia de motores MergeTree](/es/reference/engines/table-engines/mergetree-family) de ClickHouse se ha diseñado y optimizado para gestionar volúmenes masivos de datos. Estas tablas están diseñadas para recibir millones de inserciones de filas por segundo y almacenar volúmenes de datos muy grandes (cientos de petabytes). Los datos se escriben rápidamente en una tabla [parte por parte](/es/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage), aplicando reglas para fusionar las partes en segundo plano. En ClickHouse, cada parte tiene su propio índice primario. Cuando las partes se fusionan, los índices primarios de la parte resultante también se fusionan. A la escala masiva para la que está diseñado ClickHouse, la eficiencia en disco y memoria es fundamental. Por ello, en lugar de indexar cada fila, el índice primario de una parte tiene una entrada de índice (conocida como &quot;marca&quot;) por cada grupo de filas (llamado &quot;gránulo&quot;); esta técnica se denomina **índice disperso**.
+Teniendo en cuenta los retos asociados a los índices B-Tree, los motores de tabla de ClickHouse utilizan un enfoque distinto. La [familia de motores MergeTree](/es/reference/engines/table-engines/mergetree-family/index) de ClickHouse se ha diseñado y optimizado para gestionar volúmenes masivos de datos. Estas tablas están diseñadas para recibir millones de inserciones de filas por segundo y almacenar volúmenes de datos muy grandes (cientos de petabytes). Los datos se escriben rápidamente en una tabla [parte por parte](/es/reference/engines/table-engines/mergetree-family/mergetree#mergetree-data-storage), aplicando reglas para fusionar las partes en segundo plano. En ClickHouse, cada parte tiene su propio índice primario. Cuando las partes se fusionan, los índices primarios de la parte resultante también se fusionan. A la escala masiva para la que está diseñado ClickHouse, la eficiencia en disco y memoria es fundamental. Por ello, en lugar de indexar cada fila, el índice primario de una parte tiene una entrada de índice (conocida como &quot;marca&quot;) por cada grupo de filas (llamado &quot;gránulo&quot;); esta técnica se denomina **índice disperso**.
 
 La indexación dispersa es posible porque ClickHouse almacena en disco las filas de una parte ordenadas por las columnas de la clave primaria. En lugar de localizar directamente filas individuales (como haría un índice basado en B-Tree), el índice primario disperso permite identificar rápidamente, mediante una búsqueda binaria sobre las entradas del índice, grupos de filas que podrían coincidir con la consulta. Los grupos localizados de filas potencialmente coincidentes (gránulos) se transmiten después en paralelo al motor de ClickHouse para encontrar las coincidencias. Este diseño de índices permite que el índice primario sea pequeño (puede, y debe, caber por completo en la memoria principal) y, al mismo tiempo, acelera significativamente los tiempos de ejecución de las consultas, especialmente en las consultas de rango típicas de los casos de uso de analítica de datos.
 
@@ -393,7 +393,7 @@ En total, el índice tiene 1083 entradas para nuestra tabla con 8,87 millones de
   <p>
     En un clúster de ClickHouse autogestionado, podemos usar la <a href="/es/reference/functions/table-functions/file" target="_blank">función de tabla file</a> para inspeccionar el contenido del índice primario de nuestra tabla de ejemplo.
 
-    Para ello, primero debemos copiar el archivo del índice primario al <a href="/es/reference/settings/server-settings/settings#server_configuration_parameters-user_files_path" target="_blank">user&#95;files&#95;path</a> de un nodo del clúster en ejecución:
+    Para ello, primero debemos copiar el archivo del índice primario al <a href="/es/reference/settings/server-settings/settings#user_files_path" target="_blank">user&#95;files&#95;path</a> de un nodo del clúster en ejecución:
 
     <ul>
       <li>Paso 1: Obtener la ruta de la parte que contiene el archivo del índice primario</li>
@@ -429,7 +429,7 @@ En total, el índice tiene 1083 entradas para nuestra tabla con 8,87 millones de
       devuelve
 
       `240923, http://showtopics.html%3...<br/>
-            4073710, http://mk.ru&pos=3_0`
+                  4073710, http://mk.ru&pos=3_0`
 
       <li>Obtener la última marca del índice</li>
       `SELECT UserID, URL FROM file('primary-hits_UserID_URL.idx', 'RowBinary', 'UserID UInt32, URL String')<br/>LIMIT 1082, 1;`
@@ -500,7 +500,7 @@ Processed 8.19 thousand rows,
 
 La salida del cliente de ClickHouse ahora muestra que, en lugar de realizar un escaneo completo de la tabla, solo se transmitieron 8,19 mil filas a ClickHouse.
 
-Si el <a href="/es/reference/settings/server-settings/settings#server_configuration_parameters-logger" target="_blank">registro de trazas</a> está habilitado, el archivo de registro del servidor ClickHouse muestra que ClickHouse estaba realizando una <a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1452" target="_blank">búsqueda binaria</a> sobre las 1083 marcas del índice UserID para identificar los gránulos que podían contener filas con un valor de `749927693` en la columna UserID. Esto requiere 19 pasos, con una complejidad temporal media de `O(log2 n)`:
+Si el <a href="/es/reference/settings/server-settings/settings#logger" target="_blank">registro de trazas</a> está habilitado, el archivo de registro del servidor ClickHouse muestra que ClickHouse estaba realizando una <a href="https://github.com/ClickHouse/ClickHouse/blob/22.3/src/Storages/MergeTree/MergeTreeDataSelectExecutor.cpp#L1452" target="_blank">búsqueda binaria</a> sobre las 1083 marcas del índice UserID para identificar los gránulos que podían contener filas con un valor de `749927693` en la columna UserID. Esto requiere 19 pasos, con una complejidad temporal media de `O(log2 n)`:
 
 ```response highlight={2,7}
 ...Executor): Key condition: (column 0 in [749927693, 749927693])

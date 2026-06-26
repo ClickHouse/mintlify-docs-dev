@@ -15,8 +15,8 @@ doc_type: 'reference'
 ```sql
 CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
 (
-    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1] [TTL expr1],
-    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2] [TTL expr2],
+    name1 [type1] [DEFAULT|MATERIALIZED|ALIAS expr1],
+    name2 [type2] [DEFAULT|MATERIALIZED|ALIAS expr2],
     ...
 ) ENGINE = MySQL({host:port, database, table, user, password[, replace_query, on_duplicate_clause] | named_collection[, option=value [,..]]})
 SETTINGS
@@ -25,7 +25,8 @@ SETTINGS
     [ connection_wait_timeout=5, ]
     [ connection_auto_close=true, ]
     [ connect_timeout=10, ]
-    [ read_write_timeout=300 ]
+    [ read_write_timeout=300, ]
+    [ enable_compression=false ]
 ;
 ```
 
@@ -207,6 +208,37 @@ SELECT * FROM mysql_table
 * Положительное целое число.
 
 Значение по умолчанию: `300`.
+
+<div id="enable-compression">
+  ### `enable_compression`
+</div>
+
+Включает сжатие для соединения по протоколу MySQL.
+
+Значение по умолчанию: `false`.
+
+Этот параметр применяется к:
+
+* движку таблицы `MySQL`;
+* движку базы данных `MySQL`;
+* табличной функции `mysql`;
+* именованным коллекциям, используемым в интеграциях MySQL.
+
+Когда этот параметр включен, ClickHouse запрашивает сжатие для соединения.
+
+Пример:
+
+```sql
+CREATE TABLE mysql_engine_compression
+(
+    id UInt32,
+    name String,
+    age UInt32,
+    money UInt32
+)
+ENGINE = MySQL('mysql80:3306', 'clickhouse', 'test_table', 'root', 'password')
+SETTINGS enable_compression = 1;
+```
 
 <div id="see-also">
   ## См. также

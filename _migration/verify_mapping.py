@@ -51,10 +51,11 @@ def normalize_slug(slug: str) -> str:
 # placeholder slugs and shouldn't show up in the mapping report.
 SKIP_FILES = (
     "scripts/vale/test/test_headings_must_fail.md",
+    "scripts/vale/test/test_headings_must_pass.md",
 )
 
 
-def scan_docs(root: Path, skip_dirs: tuple = ("snippets", "_snippets", "__pycache__", "en", "i18n", "src")) -> dict:
+def scan_docs(root: Path, skip_dirs: tuple = ("snippets", "_snippets", "__pycache__", "en", "i18n", "src", ".claude")) -> dict:
     """Scan a docs directory and return {normalized_slug: {slug, title, path}}."""
     pages = {}
     duplicates = []
@@ -370,8 +371,8 @@ def scan_translations(docusaurus_root: Path, mintlify_root: Path):
         if not docu_lang_dir.is_dir():
             continue
 
-        docu_pages = scan_docs(docu_lang_dir, skip_dirs=("snippets", "_snippets", "__pycache__"))
-        mint_pages = scan_docs(mint_lang_dir, skip_dirs=("snippets", "_snippets", "__pycache__")) if mint_lang_dir.is_dir() else {}
+        docu_pages = scan_docs(docu_lang_dir, skip_dirs=("snippets", "_snippets", "__pycache__", ".claude"))
+        mint_pages = scan_docs(mint_lang_dir, skip_dirs=("snippets", "_snippets", "__pycache__", ".claude")) if mint_lang_dir.is_dir() else {}
 
         total = len(docu_pages)
         matched = len(set(docu_pages.keys()) & set(mint_pages.keys()))

@@ -7,7 +7,7 @@ title: '기능 및 구성'
 doc_type: 'guide'
 ---
 
-import ClickHouseSupportedBadge from "/snippets/components/ClickHouseSupported/ClickHouseSupported.jsx";
+import ClickHouseSupportedBadge from "/snippets/ko/components/ClickHouseSupported/ClickHouseSupported.jsx";
 
 <ClickHouseSupportedBadge />
 
@@ -26,36 +26,37 @@ your_profile_name:
     dev:
       type: clickhouse
 
-      # 선택 사항
-      schema: [default] # dbt 모델용 ClickHouse 데이터베이스
-      driver: [http] # http 또는 native. 설정하지 않으면 포트 설정에 따라 자동으로 결정됩니다.
+      # Optional
+      schema: [default] # ClickHouse database for dbt models
+      driver: [http] # http or native.  If not set this will be autodetermined based on port setting
       host: [localhost] 
-      port: [8123]  # 설정하지 않으면 secure 및 driver 설정에 따라 8123, 8443, 9000, 9440 중 하나가 기본값으로 사용됩니다. 
-      user: [default] # 모든 데이터베이스 작업에 사용할 사용자
-      password: [<empty string>] # 사용자 비밀번호
-      cluster: [<empty string>] # 설정하면 특정 DDL/테이블 작업이 이 클러스터를 사용하여 `ON CLUSTER` 절로 실행됩니다. 분산 머티리얼라이제이션에는 이 설정이 필요합니다. 자세한 내용은 아래 ClickHouse 클러스터 섹션을 참조하십시오.
-      verify: [True] # TLS/SSL 사용 시 TLS 인증서 유효성 검사
-      secure: [False] # TLS(네이티브 프로토콜) 또는 HTTPS(http 프로토콜) 사용
-      client_cert: [null] # .pem 형식의 TLS 클라이언트 인증서 경로
-      client_cert_key: [null] # TLS 클라이언트 인증서의 개인 키 경로
-      retries: [1] # "재시도 가능한" 데이터베이스 예외(예: 503 'Service Unavailable' 오류) 발생 시 재시도 횟수
-      compression: [<empty string>] # 참(truthy)이면 gzip 압축 사용(http), 네이티브 연결의 경우 압축 유형 지정
-      connect_timeout: [10] # ClickHouse 연결 수립 제한 시간(초)
-      send_receive_timeout: [300] # ClickHouse 서버로부터 데이터 수신 제한 시간(초)
-      cluster_mode: [False] # 복제된 데이터베이스 운영 개선을 위한 특정 설정 사용(ClickHouse Cloud 권장)
-      use_lw_deletes: [False] # `delete+insert` 전략을 기본 증분 전략으로 사용합니다.
-      check_exchange: [True] # ClickHouse가 원자적 EXCHANGE TABLES 명령을 지원하는지 검증합니다. (대부분의 ClickHouse 버전에서는 불필요)
-      local_suffix: [_local] # 분산 머티리얼라이제이션에서 세그먼트의 로컬 테이블 접미사
-      local_db_prefix: [<empty string>] # 분산 머티리얼라이제이션에서 세그먼트의 로컬 테이블 데이터베이스 접두사. 비어 있으면 분산 테이블과 동일한 데이터베이스를 사용합니다.
-      allow_automatic_deduplication: [False] # 복제된 테이블에 대한 ClickHouse 자동 중복 제거 활성화
-      tcp_keepalive: [False] # 네이티브 클라이언트 전용. TCP keepalive 구성을 지정합니다. 사용자 정의 keepalive 설정은 [idle_time_sec, interval_sec, probes] 형식으로 지정하십시오.
-      custom_settings: [{}] # 연결에 사용할 사용자 정의 ClickHouse 설정의 딕셔너리/매핑 - 기본값은 비어 있습니다.
-      database_engine: '' # 새 ClickHouse 스키마(데이터베이스) 생성 시 사용할 데이터베이스 엔진. 설정하지 않으면(기본값) 새 데이터베이스는 기본 ClickHouse 데이터베이스 엔진(일반적으로 Atomic)을 사용합니다.
-      threads: [1] # 쿼리 실행 시 사용할 스레드 수. 1보다 큰 값으로 설정하기 전에 반드시 [read-after-write consistency](#read-after-write-consistency) 섹션을 읽으십시오.
+      port: [8123]  # If not set, defaults to 8123, 8443, 9000, 9440 depending on the secure and driver settings 
+      user: [default] # User for all database operations
+      password: [<empty string>] # Password for the user
+      cluster: [<empty string>] # If set, certain DDL/table operations will be executed with the `ON CLUSTER` clause using this cluster. 분산 머티리얼라이제이션 require this setting to work. See the following ClickHouse 클러스터 section for more details.
+      verify: [True] # Validate TLS certificate if using TLS/SSL
+      secure: [False] # Use TLS (native protocol) or HTTPS (http protocol)
+      client_cert: [null] # Path to a TLS client certificate in .pem format
+      client_cert_key: [null] # Path to the private key for the TLS client certificate
+      retries: [1] # Number of times to retry a "retriable" database exception (such as a 503 'Service Unavailable' error)
+      compression: [<empty string>] # Use gzip compression if truthy (http), or compression type for a native connection
+      connect_timeout: [10] # Timeout in seconds to establish a connection to ClickHouse
+      send_receive_timeout: [300] # Timeout in seconds to receive data from the ClickHouse server
+      cluster_mode: [False] # Use specific settings designed to improve operation on Replicated databases (recommended for ClickHouse Cloud)
+      use_lw_deletes: [False] # Use the strategy `delete+insert` as the default incremental strategy.
+      check_exchange: [True] # Validate that clickhouse support the atomic EXCHANGE TABLES command.  (Not needed for most ClickHouse versions)
+      local_suffix: [_local] # Table suffix of local tables on shards for 분산 머티리얼라이제이션.
+      local_db_prefix: [<empty string>] # Database prefix of local tables on shards for 분산 머티리얼라이제이션. If empty, it uses the same database as the distributed table.
+      allow_automatic_deduplication: [False] # Enable ClickHouse automatic deduplication for Replicated tables
+      tcp_keepalive: [False] # Native client only, specify TCP keepalive configuration. Specify custom keepalive settings as [idle_time_sec, interval_sec, probes].
+      reuse_connections: [True] # Re-use the same connection across models. Set to `False` to close the connection at the end of each model — useful on multi-replica ClickHouse Cloud services where the load balancer routes by TCP connection.
+      custom_settings: [{}] # A dictionary/mapping of custom ClickHouse settings for the connection - default is empty.
+      database_engine: '' # Database engine to use when creating new ClickHouse schemas (databases).  If not set (the default), new databases will use the default ClickHouse database engine (usually Atomic).
+      threads: [1] # Number of threads to use when running queries. Before setting it to a number higher than 1, make sure to read the [쓰기 후 읽기 일관성](#read-after-write-consistency) section.
       
-      # 네이티브(clickhouse-driver) 연결 설정
-      sync_request_timeout: [5] # 서버 Ping 제한 시간
-      compress_block_size: [1048576] # 압축이 활성화된 경우 압축 블록 크기
+      # Native (clickhouse-driver) connection settings
+      sync_request_timeout: [5] # Timeout for server ping
+      compress_block_size: [1048576] # Compression block size if compression is enabled
 ```
 
 <div id="schema-vs-database">

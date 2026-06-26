@@ -6,9 +6,9 @@ title: 'CREATE VIEW'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import DeprecatedBadge from "/snippets/components/DeprecatedBadge/DeprecatedBadge.jsx";
-import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
+import ExperimentalBadge from "/snippets/ru/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import DeprecatedBadge from "/snippets/ru/components/DeprecatedBadge/DeprecatedBadge.jsx";
+import CloudNotSupportedBadge from "/snippets/ru/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
 
 Создает новое представление. Представления бывают [обычными](#normal-view), [материализованными](#materialized-view), [обновляемыми материализованными](#refreshable-materialized-view) и [оконными](/ru/reference/statements/create/view#window-view).
 
@@ -112,23 +112,23 @@ AS SELECT ...
 **Примеры:**
 
 ```sql
--- Создание materialized view со внутренней таблицей
+-- Create a materialized view with an inner table
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, sum(y) AS total FROM src GROUP BY x;
 
--- Замена новым определением (данные старой внутренней таблицы будут утеряны)
+-- Replace with a new definition (old inner table data is lost)
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, count() AS cnt FROM src GROUP BY x;
 
--- Замена с POPULATE для дозагрузки из существующих исходных данных
+-- Replace with POPULATE to backfill from existing source data
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     POPULATE
     AS SELECT x FROM src;
 
--- Замена MV с внутренней таблицей на MV с TO-таблицей (данные целевой таблицы сохраняются)
+-- Replace an inner-table MV with a TO-table MV (target data is preserved)
 CREATE OR REPLACE MATERIALIZED VIEW mv TO target
     AS SELECT x FROM src;
 ```
@@ -137,7 +137,7 @@ CREATE OR REPLACE MATERIALIZED VIEW mv TO target
   Вот пошаговое руководство по использованию [materialized views](/ru/concepts/features/materialized-views/cascading-materialized-views).
 </Tip>
 
-Materialized views хранят данные, преобразованные соответствующим запросом [SELECT](/ru/reference/statements/select).
+Materialized views хранят данные, преобразованные соответствующим запросом [SELECT](/ru/reference/statements/select/index).
 
 При создании materialized view без `TO [db].[table]` необходимо указать `ENGINE` — движок таблицы для хранения данных.
 
@@ -146,18 +146,20 @@ Materialized views хранят данные, преобразованные с�
 Materialized view работает следующим образом: при вставке данных в таблицу, указанную в `SELECT`, часть вставленных данных преобразуется этим запросом `SELECT`, а результат вставляется в представление.
 
 <Note>
-  Materialized views в ClickHouse при вставке в целевую таблицу используют **имена столбцов**, а не их порядок. Если каких-либо имен столбцов нет в результате запроса `SELECT`, ClickHouse использует значение по умолчанию, даже если столбец не имеет тип [Nullable](/ru/reference/data-types/nullable). Поэтому рекомендуется задавать псевдонимы для каждого столбца при использовании materialized views.
+  В ClickHouse materialized view при вставке в целевую таблицу используют **имена столбцов**, а не их порядок. Если каких-то имён столбцов нет в результате запроса `SELECT`, ClickHouse использует значение по умолчанию, даже если столбец не является [Nullable](/ru/reference/data-types/nullable). Надёжнее всего указывать псевдонимы для каждого столбца при использовании materialized view.
 
-  Materialized views в ClickHouse по своей сути больше похожи на триггеры вставки. Если в запросе представления есть агрегация, она применяется только к батчу только что вставленных данных. Любые изменения существующих данных в исходной таблице (например, update, delete, drop partition и т. д.) не изменяют materialized view.
+  В ClickHouse materialized view реализованы скорее как триггеры вставки. Если в запросе представления есть агрегация, она применяется только к пакету только что вставленных данных. Любые изменения существующих данных в исходной таблице (например, update, delete, drop partition и т. д.) не изменяют materialized view.
 
-  Поведение materialized views в ClickHouse при ошибках не является детерминированным. Это означает, что блоки, которые уже были записаны, сохранятся в целевой таблице, а все блоки после ошибки — нет.
+  В ClickHouse у materialized view нет детерминированного поведения в случае ошибок. Это означает, что блоки, которые уже были записаны, сохранятся в целевой таблице, а все блоки после ошибки — нет.
 
-  По умолчанию, если отправка в одно из представлений завершается ошибкой, запрос `INSERT` тоже завершается ошибкой, и некоторые блоки могут не записаться в целевую таблицу. Это поведение можно изменить с помощью настройки `materialized_views_ignore_errors` (ее следует задавать для запроса `INSERT`): если установить `materialized_views_ignore_errors=true`, любые ошибки при отправке в представления будут игнорироваться, и все блоки будут записаны в целевую таблицу.
+  По умолчанию, если запись в одно из представлений приводит к исключению, запрос `INSERT` завершается ошибкой. При этом нет гарантии, что к этому моменту блок уже попал в исходную таблицу — это зависит от момента срабатывания конвейера вставки, а не от ошибки представления. Повторите неудавшийся `INSERT` с дедупликацией вставки (`insert_deduplicate`, `deduplicate_blocks_in_dependent_materialized_views`), чтобы получить доставку exactly-once в исходную таблицу и все зависимые представления.
 
-  Также обратите внимание, что для таблиц `system.*_log` значение `materialized_views_ignore_errors` по умолчанию равно `true`.
+  Установка `materialized_views_ignore_errors=true` в запросе `INSERT` изменяет только отчётность об ошибках: каждая ошибка представления записывается как предупреждение, а запрос `INSERT` завершается успешно. Доставка в пункт назначения представления, завершившегося с ошибкой, будет частичной — блоки, обработанные до исключения, сохраняются, а проблемный блок и все последующие блоки отбрасываются из этого представления. Представления ниже по цепочке от этого пункта назначения видят только те блоки, которые действительно поступили, поэтому их доставка тоже частична. Соседние представления (и их нисходящие цепочки), которые не сгенерировали исключение, записываются полностью, а запись в исходную таблицу происходит как обычно. Поскольку `INSERT` сообщает об успехе, клиент не получает сигнала о сбое и автоматический повтор не запускается; используйте эту настройку только тогда, когда запись в исходную таблицу не должна блокироваться из-за проблем на стороне представлений (например, для таблиц `system.*_log`).
+
+  Для таблиц `system.*_log` значение `materialized_views_ignore_errors` по умолчанию равно `true`.
 </Note>
 
-Если указать `POPULATE`, существующие данные таблицы будут вставлены в представление при его создании, как при выполнении `CREATE TABLE ... AS SELECT ...`. В противном случае запрос будет содержать только данные, вставленные в таблицу после создания представления. Мы **не рекомендуем** использовать `POPULATE`, поскольку данные, вставленные в таблицу во время создания представления, не будут вставлены в него.
+Если указать `POPULATE`, существующие данные таблицы будут вставлены в представление при его создании, как при выполнении `CREATE TABLE ... AS SELECT ...`. В противном случае запрос содержит только данные, вставленные в таблицу после создания представления. Мы **не рекомендуем** использовать `POPULATE`, поскольку данные, вставленные в таблицу во время создания представления, в него не попадут.
 
 <Note>
   Поскольку `POPULATE` работает как `CREATE TABLE ... AS SELECT ...`, у него есть ограничения:
@@ -244,7 +246,7 @@ AS SELECT ...
 
 ```sql
 CREATE MATERIALIZED VIEW [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
-REFRESH EVERY|AFTER interval [OFFSET interval]
+REFRESH [EVERY|AFTER interval [OFFSET interval]]
 [RANDOMIZE FOR interval]
 [DEPENDS ON [db.]name [, [db.]name [, ...]]]
 [SETTINGS name = value [, name = value [, ...]]]
@@ -262,6 +264,8 @@ AS SELECT ...
 number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 ```
 
+В части `REFRESH` должно быть указано как минимум одно из `EVERY`, `AFTER` или `DEPENDS ON`. Просто `REFRESH` (без них) не допускается. `REFRESH DEPENDS ON ...` без `EVERY`/`AFTER` — это сокращение для `REFRESH AFTER 0 SECOND DEPENDS ON ...`; см. ниже раздел [Refresh Dependencies](#refresh-dependencies).
+
 Периодически выполняет соответствующий запрос и сохраняет его результат в таблице.
 
 * Если указано `APPEND`, при каждом обновлении в таблицу добавляются новые строки без удаления существующих. Вставка не является атомарной, как и в обычном запросе `INSERT INTO ... SELECT`.
@@ -270,7 +274,7 @@ number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 Отличия от обычных non-refreshable materialized views:
 
 * Нет insert trigger. Когда новые данные вставляются в таблицу, указанную в `SELECT`, они *не* передаются автоматически в refreshable materialized view. Вместо этого данные вставляются только во время периодических или ручных обновлений.
-* Для запроса `SELECT` нет ограничений. Допускаются table functions (например, `url()`), views, UNION, JOIN.
+* Для запроса `SELECT` нет ограничений. Допускаются табличные функции (например, `url()`), просмотры, UNION, JOIN.
 
 <Note>
   Настройки в части запроса `REFRESH ... SETTINGS` — это настройки обновления (например, `refresh_retries`), а не обычные настройки (например, `max_threads`). Обычные настройки можно указать с помощью `SETTINGS` в конце запроса.
@@ -283,28 +287,28 @@ number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 Примеры расписаний обновления:
 
 ```sql
-REFRESH EVERY 1 DAY -- каждый день, в полночь (UTC)
-REFRESH EVERY 1 MONTH -- в 1-й день каждого месяца, в полночь
-REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- в 6-й день каждого месяца, в 2:00
-REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- каждую вторую субботу, в 15:10
-REFRESH EVERY 30 MINUTE -- в 00:00, 00:30, 01:00, 01:30 и т.д.
-REFRESH AFTER 30 MINUTE -- через 30 минут после завершения предыдущего обновления, без привязки к времени суток
--- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- синтаксическая ошибка: OFFSET не допускается с AFTER
-REFRESH EVERY 1 WEEK 2 DAYS -- каждые 9 дней, без привязки к конкретному дню недели или месяца;
-                            -- а именно: когда номер дня (начиная с 1969-12-29) кратен 9
-REFRESH EVERY 5 MONTHS -- каждые 5 месяцев, в разные месяцы каждого года (так как 12 не кратно 5);
-                       -- а именно: когда номер месяца (начиная с 1970-01) кратен 5
+REFRESH EVERY 1 DAY -- every day, at midnight (UTC)
+REFRESH EVERY 1 MONTH -- on 1st day of every month, at midnight
+REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- on 6th day of every month, at 2:00 am
+REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- every other Saturday, at 3:10 pm
+REFRESH EVERY 30 MINUTE -- at 00:00, 00:30, 01:00, 01:30, etc
+REFRESH AFTER 30 MINUTE -- 30 minutes after the previous refresh completes, no alignment with time of day
+-- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- syntax error, OFFSET is not allowed with AFTER
+REFRESH EVERY 1 WEEK 2 DAYS -- every 9 days, not on any particular day of the week or month;
+                            -- specifically, when day number (since 1969-12-29) is divisible by 9
+REFRESH EVERY 5 MONTHS -- every 5 months, different months each year (as 12 is not divisible by 5);
+                       -- specifically, when month number (since 1970-01) is divisible by 5
 ```
 
 `RANDOMIZE FOR` случайным образом смещает время каждого обновления, например:
 
 ```sql
-REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- каждый день в случайное время между 01:30 и 02:30
+REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- every day at random time between 01:30 and 02:30
 ```
 
 Для одного представления одновременно может выполняться не более одного обновления. Например, если обновление представления с `REFRESH EVERY 1 MINUTE` занимает 2 минуты, оно будет обновляться раз в 2 минуты. Если затем оно начнёт выполняться быстрее и обновляться за 10 секунд, оно снова вернётся к обновлению раз в минуту. (В частности, оно не будет обновляться каждые 10 секунд, чтобы наверстать пропущенные обновления — никакой очереди таких обновлений не существует.)
 
-Кроме того, обновление запускается сразу после создания materialized view, если только в запросе `CREATE` не указано `EMPTY`. Если указано `EMPTY`, первое обновление произойдёт по расписанию.
+Обычно первое обновление запускается сразу после создания materialized view: время с момента последнего обновления равно бесконечности, поэтому по любому расписанию обновление должно начаться прямо сейчас. Если указано `EMPTY`, это начальное обновление пропускается, а первое обновление произойдёт в следующий момент по расписанию; например, для `EVERY 1 HOUR` первое обновление произойдёт в конце текущего часа.
 
 <div id="in-replicated-db">
   ### В базе данных Replicated
@@ -319,50 +323,106 @@ REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- каждый день 
 Координация выполняется через Keeper. Путь znode определяется настройкой сервера [default&#95;replica&#95;path](/ru/reference/settings/server-settings/settings#default_replica_path).
 
 <div id="refresh-dependencies">
-  ### Зависимости обновления
+  ### Зависимости при обновлении
 </div>
 
-`DEPENDS ON` синхронизирует обновление разных таблиц. Например, предположим, что существует цепочка из двух refreshable materialized view:
+`DEPENDS ON` синхронизирует обновление разных таблиц:
 
 ```sql
-CREATE MATERIALIZED VIEW source REFRESH EVERY 1 DAY AS SELECT * FROM url(...)
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH EVERY 1 HOUR DEPENDS ON dependency [...]
 ```
 
-Без `DEPENDS ON` оба представления начнут обновляться в полночь, и в `destination` обычно будут попадать вчерашние данные из `source`. Если добавить зависимость:
+Обновление зависимого представления начнется только после того, как завершится обновление всех представлений, от которых оно зависит.
+
+Чтобы запускать обновление сразу после обновления другого представления:
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH AFTER 0 SECOND DEPENDS ON dependency [...]
 ```
 
-тогда обновление `destination` начнется только после того, как в этот день завершится обновление `source`, поэтому `destination` будет основан на актуальных данных.
-
-Того же результата также можно добиться с помощью:
+Или, что то же самое:
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH DEPENDS ON dependency [...]
 ```
-
-где `1 HOUR` может быть любой длительностью, меньшей, чем период обновления `source`. Зависимая таблица не будет обновляться чаще, чем любая из её зависимостей. Это корректный способ настроить цепочку refreshable views, не указывая фактический период обновления более одного раза.
-
-Ещё несколько примеров:
-
-* `REFRESH EVERY 1 DAY OFFSET 10 MINUTE` (`destination`) зависит от `REFRESH EVERY 1 DAY` (`source`)<br />
-  Если обновление `source` занимает больше 10 минут, `destination` будет его ждать.
-* `REFRESH EVERY 1 DAY OFFSET 1 HOUR` зависит от `REFRESH EVERY 1 DAY OFFSET 23 HOUR`<br />
-  Аналогично примеру выше, хотя соответствующие обновления происходят в разные календарные дни.
-  Обновление `destination` в день `X+1` будет ждать обновления `source` в день `X` (если оно занимает более 2 часов).
-* `REFRESH EVERY 2 HOUR` зависит от `REFRESH EVERY 1 HOUR`<br />
-  Обновление `2 HOUR` выполняется после обновления `1 HOUR` через каждый второй час, например после полуночного
-  обновления, затем после обновления в 2 часа ночи и т. д.
-* `REFRESH EVERY 1 MINUTE` зависит от `REFRESH EVERY 2 HOUR`<br />
-  `destination` обновляется один раз после каждого обновления `source`, то есть каждые 2 часа. `1 MINUTE` фактически игнорируется.
-* `REFRESH AFTER 1 HOUR` зависит от `REFRESH AFTER 1 HOUR`<br />
-  В настоящее время это не рекомендуется.
 
 <Note>
-  `DEPENDS ON` работает только между refreshable materialized views. Если указать обычную таблицу в списке `DEPENDS ON`, view вообще никогда не будет обновляться (зависимости можно удалить с помощью `ALTER`, см. [Изменение параметров обновления](#changing-refresh-parameters)).
+  `DEPENDS ON` работает только между refreshable materialized view. В частности, если представление-зависимость использует `TO <table>`, обязательно указывайте имя представления, а не таблицы. Если список `DEPENDS ON` содержит обычную таблицу, не-refreshable представление или опечатку, представление никогда не будет обновляться и в `system.view_refreshes` будет иметь состояние `MissingDependencies`. Зависимости можно изменить или удалить с помощью `ALTER`, см. [Изменение параметров обновления](#changing-refresh-parameters).
 </Note>
+
+<div id="using-depends-on-for-consistent-propagation-latency">
+  #### Использование DEPENDS ON для согласованной задержки распространения
+</div>
+
+Если оба представления используют `REFRESH EVERY` с одинаковым периодом, зависимость действует в каждом временном интервале.
+
+Например, предположим, что представления X и Y используют `REFRESH EVERY 1 HOUR`, а Y читает из выходной таблицы X. Без зависимостей Y обычно будет видеть данные X из обновления за предыдущий час. С `DEPENDS ON X` обновление Y в 11:00 начнется только после завершения обновления X в 11:00.
+
+```text
+           10:00            11:00            12:00
+           │                │                │
+  X:        [run]┐           [run]┐           [run]┐
+                 │                │                │
+  Y:             └►[run]          └►[run]          └►[run]
+```
+
+И зависимость, и зависящий от неё объект могут независимо пропускать временные интервалы, если обновление занимает больше времени, чем период обновления. Нет гарантии, что зависимый объект будет обновляться ровно один раз на каждое обновление зависимости.
+
+```text
+           10:00          11:00          12:00          13:00
+           │              │              │              |
+  X:        [run]┐         [run]┐         [run]┐         [run]┐
+                 │              └────┐    (Y skips 12:00)     └───┐
+  Y:             └►[10:00 ru------un]└►[11:00 ru---------------un]└►[13:00 run]
+```
+
+<div id="using-depends-on-for-batched-stream-processing">
+  #### Использование DEPENDS ON для батчевой потоковой обработки
+</div>
+
+Если `REFRESH EVERY` не используется, зависимое представление X обновляется, когда все его зависимости обновились хотя бы один раз с момента последнего обновления X. `REFRESH AFTER T` добавляет задержку: зависимое представление начнет обновляться через T после завершения обновления зависимости.
+
+Циклические зависимости допустимы и полезны. Рассмотрим такой граф refreshable materialized views:
+
+1. X берет батч строк из некоторого потока и помещает их в таблицу.
+2. Затем Y и Z читают из этой таблицы, выполняют разные агрегации и добавляют результаты в другие таблицы.
+3. После полной обработки батча X берет следующий батч, и цикл повторяется.
+
+```text
+            source
+               │
+               ▼
+          ┌─────────┐
+     ┌───►│    X    │◄───┐
+     │    └──┬───┬──┘    │
+  DEPENDS    │   │    DEPENDS
+    ON       ▼   ▼      ON
+     │      ┌─┐ ┌─┐      │
+     └──────┤Y│ │Z├──────┘
+            └─┘ └─┘
+```
+
+Полный пример:
+
+```sql
+CREATE TABLE current_batch (t UInt64, v Int64) ENGINE ReplicatedMergeTree ORDER BY t;
+CREATE TABLE batch_log (max_t UInt64, n Int64, v_sum Int64, processed_at DateTime64) ENGINE ReplicatedMergeTree ORDER BY max_t;
+CREATE TABLE stats (h UInt64, n UInt64) ENGINE ReplicatedSummingMergeTree ORDER BY h;
+
+-- (system.numbers stands in for a data source with monotonically increasing timestamps or sequence numbers)
+CREATE MATERIALIZED VIEW current_batch_v REFRESH EVERY 10 SECOND DEPENDS ON batch_log_v, stats_v TO current_batch AS SELECT number as t, number * 10 as v FROM system.numbers WHERE number > (SELECT max(max_t) FROM batch_log) LIMIT 100;
+
+CREATE MATERIALIZED VIEW batch_log_v REFRESH DEPENDS ON current_batch_v APPEND TO batch_log AS SELECT max(t) as max_t, count() as n, sum(v) as v_sum, now64() as processed_at FROM current_batch;
+
+CREATE MATERIALIZED VIEW stats_v REFRESH DEPENDS ON current_batch_v APPEND TO stats AS SELECT cityHash64(v) % 20 as h, count() as n FROM current_batch GROUP BY h;
+
+-- Must trigger initial refresh manually.
+SYSTEM REFRESH VIEW current_batch_v;
+```
+
+Более длинные цепочки тоже работают.
+
+Однако это работает хорошо только при включенной координации обновления, то есть когда представления находятся в базе данных Replicated или Shared. Без координации перезапуск сервера прерывает цикл, и после каждого перезапуска приходится вручную выполнять `SYSTEM REFRESH VIEW`, а не только один раз после создания представлений.
 
 <div id="refresh-settings">
   ### Настройки обновления
@@ -374,8 +434,6 @@ CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS S
 * `refresh_retry_initial_backoff_ms` - Задержка перед первой повторной попыткой, если `refresh_retries` не равно нулю. При каждой следующей повторной попытке задержка удваивается, вплоть до `refresh_retry_max_backoff_ms`. Значение по умолчанию: 100 мс.
 * `refresh_retry_max_backoff_ms` - Ограничение на экспоненциальный рост задержки между попытками обновления. Значение по умолчанию: 60000 мс (1 минута).
 * `all_replicas` - В [Replicated database](/ru/reference/engines/database-engines/replicated) с `APPEND` определяет, будут ли все реплики обновляться независимо или в каждый запланированный момент обновление будет выполнять только одна реплика. Не может быть изменено после создания представления. Значение по умолчанию: `false`.
-* `prefer_dependency_replica` - Если у представления есть `DEPENDS ON`, приоритет на выполнение зависимого обновления получает реплика, выполнившая обновление родительского объекта; остальные реплики откладывают свою попытку на `prefer_dependency_replica_delay_ms`. Полезно при использовании `SharedMergeTree`, чтобы избежать ситуаций, когда отставание репликации приводит к отсутствию данных в цепочках зависимых обновлений. Значение по умолчанию: `false`.
-* `prefer_dependency_replica_delay_ms` - Как долго неприоритетные реплики ждут перед попыткой выполнить зависимое обновление, когда включен параметр `prefer_dependency_replica`. Значение по умолчанию: 2000 мс.
 
 <div id="changing-refresh-parameters">
   ### Изменение параметров обновления

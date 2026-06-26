@@ -6,9 +6,9 @@ title: 'CREATE VIEW'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import DeprecatedBadge from "/snippets/components/DeprecatedBadge/DeprecatedBadge.jsx";
-import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
+import ExperimentalBadge from "/snippets/es/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import DeprecatedBadge from "/snippets/es/components/DeprecatedBadge/DeprecatedBadge.jsx";
+import CloudNotSupportedBadge from "/snippets/es/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
 
 Crea una nueva vista. Las vistas pueden ser [normales](#normal-view), [materializadas](#materialized-view), [materializadas actualizables](#refreshable-materialized-view) y [de ventana](/es/reference/statements/create/view#window-view).
 
@@ -112,23 +112,23 @@ Comportamientos clave:
 **Ejemplos:**
 
 ```sql
--- Crear una vista materializada con una tabla interna
+-- Create a materialized view with an inner table
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, sum(y) AS total FROM src GROUP BY x;
 
--- Reemplazar con una nueva definición (los datos de la tabla interna anterior se pierden)
+-- Replace with a new definition (old inner table data is lost)
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, count() AS cnt FROM src GROUP BY x;
 
--- Reemplazar con POPULATE para rellenar datos históricos desde la fuente existente
+-- Replace with POPULATE to backfill from existing source data
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     POPULATE
     AS SELECT x FROM src;
 
--- Reemplazar una vista materializada con tabla interna por una con cláusula TO (los datos del destino se conservan)
+-- Replace an inner-table MV with a TO-table MV (target data is preserved)
 CREATE OR REPLACE MATERIALIZED VIEW mv TO target
     AS SELECT x FROM src;
 ```
@@ -137,7 +137,7 @@ CREATE OR REPLACE MATERIALIZED VIEW mv TO target
   Aquí tienes una guía paso a paso sobre cómo usar [vistas materializadas](/es/concepts/features/materialized-views/cascading-materialized-views).
 </Tip>
 
-Las vistas materializadas almacenan los datos transformados por la consulta [SELECT](/es/reference/statements/select) correspondiente.
+Las vistas materializadas almacenan los datos transformados por la consulta [SELECT](/es/reference/statements/select/index) correspondiente.
 
 Al crear una vista materializada sin `TO [db].[table]`, debes especificar `ENGINE`: el motor de tabla para almacenar los datos.
 
@@ -146,18 +146,20 @@ Al crear una vista materializada con `TO [db].[table]`, tampoco puedes usar `POP
 Una vista materializada se implementa de la siguiente manera: al insertar datos en la tabla especificada en `SELECT`, una parte de los datos insertados se transforma mediante esta consulta `SELECT`, y el resultado se inserta en la vista.
 
 <Note>
-  Las vistas materializadas en ClickHouse usan **nombres de columna** en lugar del orden de las columnas durante la inserción en la tabla de destino. Si algunos nombres de columna no están presentes en el resultado de la consulta `SELECT`, ClickHouse usa un valor predeterminado, incluso si la columna no es [Nullable](/es/reference/data-types/nullable). Una práctica segura es añadir alias para cada columna al usar vistas materializadas.
+  Las vistas materializadas en ClickHouse usan **nombres de columna** en lugar del orden de las columnas durante la inserción en la tabla de destino. Si algunos nombres de columna no están presentes en el resultado de la consulta `SELECT`, ClickHouse usa un valor predeterminado, incluso si la columna no es [Nullable](/es/reference/data-types/nullable). Una práctica segura es agregar alias para cada columna al usar vistas materializadas.
 
-  Las vistas materializadas en ClickHouse se implementan más bien como triggers de inserción. Si hay alguna agregación en la consulta de la vista, se aplica solo al lote de datos recién insertados. Cualquier cambio en los datos existentes de la tabla de origen (como update, delete, drop partition, etc.) no modifica la vista materializada.
+  Las vistas materializadas en ClickHouse se implementan más bien como desencadenadores de inserción. Si hay alguna agregación en la consulta de la vista, se aplica solo al lote de datos recién insertados. Cualquier cambio en los datos existentes de la tabla de origen (como `UPDATE`, `DELETE`, `DROP PARTITION`, etc.) no modifica la vista materializada.
 
-  Las vistas materializadas en ClickHouse no tienen un comportamiento determinista en caso de error. Esto significa que los bloques que ya se hayan escrito se conservarán en la tabla de destino, pero no se conservarán los bloques posteriores al error.
+  Las vistas materializadas en ClickHouse no tienen un comportamiento determinista en caso de errores. Esto significa que los bloques que ya se hayan escrito se conservarán en la tabla de destino, pero todos los bloques posteriores al error no.
 
-  De forma predeterminada, si falla el envío a una de las vistas, la consulta `INSERT` también fallará, y es posible que algunos bloques no se escriban en la tabla de destino. Esto se puede cambiar usando la configuración `materialized_views_ignore_errors` (debes establecerla para la consulta `INSERT`); si configuras `materialized_views_ignore_errors=true`, se ignorará cualquier error al enviar a las vistas y todos los bloques se escribirán en la tabla de destino.
+  De forma predeterminada, si el envío a una de las vistas genera una excepción, la consulta `INSERT` falla. No se garantiza que, para ese momento, el bloque ya haya llegado a la tabla de origen: eso depende del momento en la canalización de inserción, no del error de la vista. Reintente el `INSERT` fallido con deduplicación de inserción (`insert_deduplicate`, `deduplicate_blocks_in_dependent_materialized_views`) para obtener entrega exactly-once a la tabla de origen y a todas las vistas dependientes.
 
-  Ten en cuenta también que `materialized_views_ignore_errors` está establecido en `true` de forma predeterminada para las tablas `system.*_log`.
+  Establecer `materialized_views_ignore_errors=true` en la consulta `INSERT` solo cambia el informe de errores: cada error de vista se registra como una advertencia y la consulta `INSERT` se completa correctamente. La entrega al destino de la vista que falla es parcial: los bloques procesados antes de la excepción se conservan, y el bloque que falla más cualquier bloque posterior se descartan de esa vista. Las vistas aguas abajo de ese destino ven solo los bloques que sí llegaron, por lo que su entrega también es parcial. Las vistas hermanas (y sus cadenas aguas abajo) que no generaron una excepción se escriben por completo, y en la tabla de origen se escribe como de costumbre. Como el `INSERT` informa éxito, el cliente no recibe ninguna señal de fallo y no se activa ningún reintento automático; use esta configuración solo cuando las escrituras en la tabla de origen no deban bloquearse por problemas del lado de la vista (por ejemplo, tablas `system.*_log`).
+
+  `materialized_views_ignore_errors` es `true` de forma predeterminada para las tablas `system.*_log`.
 </Note>
 
-Si especificas `POPULATE`, los datos existentes de la tabla se insertan en la vista al crearla, como si se hiciera un `CREATE TABLE ... AS SELECT ...`. De lo contrario, la consulta contiene solo los datos insertados en la tabla después de crear la vista. **No recomendamos** usar `POPULATE`, ya que los datos insertados en la tabla durante la creación de la vista no se insertarán en ella.
+Si especifica `POPULATE`, los datos existentes de la tabla se insertan en la vista al crearla, como si se hiciera un `CREATE TABLE ... AS SELECT ...`. De lo contrario, la consulta contiene solo los datos insertados en la tabla después de crear la vista. **No recomendamos** usar `POPULATE`, ya que los datos insertados en la tabla durante la creación de la vista no se insertarán en ella.
 
 <Note>
   Dado que `POPULATE` funciona como `CREATE TABLE ... AS SELECT ...`, tiene limitaciones:
@@ -244,7 +246,7 @@ Para mayor comodidad, la documentación anterior está disponible [aquí](https:
 
 ```sql
 CREATE MATERIALIZED VIEW [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
-REFRESH EVERY|AFTER interval [OFFSET interval]
+REFRESH [EVERY|AFTER interval [OFFSET interval]]
 [RANDOMIZE FOR interval]
 [DEPENDS ON [db.]name [, [db.]name [, ...]]]
 [SETTINGS name = value [, name = value [, ...]]]
@@ -261,6 +263,8 @@ donde `interval` es una secuencia de intervalos simples:
 ```sql
 number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 ```
+
+La cláusula `REFRESH` debe especificar al menos uno de `EVERY`, `AFTER` o `DEPENDS ON`. `REFRESH` sin más (sin ninguno de ellos) se rechaza. `REFRESH DEPENDS ON ...` sin `EVERY`/`AFTER` es una forma abreviada de `REFRESH AFTER 0 SECOND DEPENDS ON ...`; consulta [Dependencias de actualización](#refresh-dependencies) más abajo.
 
 Ejecuta periódicamente la consulta correspondiente y almacena su resultado en una tabla.
 
@@ -283,28 +287,28 @@ Diferencias con las vistas materializadas normales no actualizables:
 Ejemplos de programación de actualización:
 
 ```sql
-REFRESH EVERY 1 DAY -- cada día, a medianoche (UTC)
-REFRESH EVERY 1 MONTH -- el día 1 de cada mes, a medianoche
-REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- el día 6 de cada mes, a las 2:00 am
-REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- cada dos sábados, a las 3:10 pm
-REFRESH EVERY 30 MINUTE -- a las 00:00, 00:30, 01:00, 01:30, etc.
-REFRESH AFTER 30 MINUTE -- 30 minutos después de que finalice la actualización anterior, sin ajuste a la hora del día
--- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- error de sintaxis, OFFSET no está permitido con AFTER
-REFRESH EVERY 1 WEEK 2 DAYS -- cada 9 días, sin coincidir con ningún día específico de la semana ni del mes;
-                            -- concretamente, cuando el número de día (desde el 1969-12-29) es divisible por 9
-REFRESH EVERY 5 MONTHS -- cada 5 meses, en meses distintos cada año (ya que 12 no es divisible por 5);
-                       -- concretamente, cuando el número de mes (desde 1970-01) es divisible por 5
+REFRESH EVERY 1 DAY -- every day, at midnight (UTC)
+REFRESH EVERY 1 MONTH -- on 1st day of every month, at midnight
+REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- on 6th day of every month, at 2:00 am
+REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- every other Saturday, at 3:10 pm
+REFRESH EVERY 30 MINUTE -- at 00:00, 00:30, 01:00, 01:30, etc
+REFRESH AFTER 30 MINUTE -- 30 minutes after the previous refresh completes, no alignment with time of day
+-- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- syntax error, OFFSET is not allowed with AFTER
+REFRESH EVERY 1 WEEK 2 DAYS -- every 9 days, not on any particular day of the week or month;
+                            -- specifically, when day number (since 1969-12-29) is divisible by 9
+REFRESH EVERY 5 MONTHS -- every 5 months, different months each year (as 12 is not divisible by 5);
+                       -- specifically, when month number (since 1970-01) is divisible by 5
 ```
 
 `RANDOMIZE FOR` ajusta aleatoriamente el momento en que se realiza cada actualización, por ejemplo:
 
 ```sql
-REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- cada día a una hora aleatoria entre las 01:30 y las 02:30
+REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- every day at random time between 01:30 and 02:30
 ```
 
 Como máximo, puede haber una sola actualización en ejecución a la vez para una vista determinada. Por ejemplo, si una vista con `REFRESH EVERY 1 MINUTE` tarda 2 minutos en actualizarse, simplemente se actualizará cada 2 minutos. Si después se vuelve más rápida y empieza a actualizarse en 10 segundos, volverá a actualizarse cada minuto. (En particular, no se actualizará cada 10 segundos para compensar actualizaciones omitidas: no existe tal retraso acumulado).
 
-Además, una actualización se inicia inmediatamente después de crear la vista materializada, a menos que se especifique `EMPTY` en la consulta `CREATE`. Si se especifica `EMPTY`, la primera actualización se realiza según la programación.
+Normalmente, la primera actualización se inicia inmediatamente después de crear la vista materializada: el tiempo transcurrido desde la última actualización es infinito, por lo que cualquier programación indica que es momento de actualizarla. Si se especifica `EMPTY`, esta actualización inicial se omite y la primera actualización se realiza en el siguiente momento programado; por ejemplo, para `EVERY 1 HOUR`, la primera actualización se realizará al final de la hora actual.
 
 <div id="in-replicated-db">
   ### En una DB Replicated
@@ -322,47 +326,103 @@ La coordinación se realiza mediante Keeper. La ruta del znode se determina medi
   ### Dependencias de actualización
 </div>
 
-`DEPENDS ON` sincroniza las actualizaciones de distintas tablas. Por ejemplo, supongamos que hay una secuencia de dos vistas materializadas actualizables:
+`DEPENDS ON` sincroniza las actualizaciones de diferentes tablas:
 
 ```sql
-CREATE MATERIALIZED VIEW source REFRESH EVERY 1 DAY AS SELECT * FROM url(...)
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH EVERY 1 HOUR DEPENDS ON dependency [...]
 ```
 
-Sin `DEPENDS ON`, ambas vistas empezarán a actualizarse a medianoche, y `destination` normalmente verá en `source` los datos de ayer. Si añadimos una dependencia:
+La actualización de la vista dependiente solo comenzará una vez que hayan finalizado las actualizaciones de todas las vistas de las que depende.
+
+Para actualizarla inmediatamente después de la actualización de otra vista:
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH AFTER 0 SECOND DEPENDS ON dependency [...]
 ```
 
-entonces la actualización de `destination` comenzará solo después de que haya finalizado la actualización de `source` de ese día, por lo que `destination` se basará en datos actualizados.
-
-Alternativamente, se puede lograr el mismo resultado con:
+O, de forma equivalente:
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH DEPENDS ON dependency [...]
 ```
-
-donde `1 HOUR` puede ser cualquier duración inferior al período de actualización de `source`. La tabla dependiente no se actualizará con más frecuencia que ninguna de sus dependencias. Esta es una forma válida de configurar una cadena de vistas actualizables sin especificar el período de actualización real más de una vez.
-
-Algunos ejemplos más:
-
-* `REFRESH EVERY 1 DAY OFFSET 10 MINUTE` (`destination`) depende de `REFRESH EVERY 1 DAY` (`source`)<br />
-  Si la actualización de `source` tarda más de 10 minutos, `destination` esperará.
-* `REFRESH EVERY 1 DAY OFFSET 1 HOUR` depende de `REFRESH EVERY 1 DAY OFFSET 23 HOUR`<br />
-  Similar al caso anterior, aunque las actualizaciones correspondientes se produzcan en días naturales distintos.
-  La actualización de `destination` del día `X+1` esperará a la actualización de `source` del día `X` (si tarda más de 2 horas).
-* `REFRESH EVERY 2 HOUR` depende de `REFRESH EVERY 1 HOUR`<br />
-  La actualización de `2 HOUR` se produce después de la de `1 HOUR` en horas alternas; por ejemplo, después de la
-  actualización de medianoche, luego después de la de las 2 a. m., etc.
-* `REFRESH EVERY 1 MINUTE` depende de `REFRESH EVERY 2 HOUR`<br />
-  `destination` se actualiza una vez después de cada actualización de `source`, es decir, cada 2 horas. En la práctica, `1 MINUTE` se ignora.
-* `REFRESH AFTER 1 HOUR` depende de `REFRESH AFTER 1 HOUR`<br />
-  Actualmente, esto no se recomienda.
 
 <Note>
-  `DEPENDS ON` solo funciona entre vistas materializadas actualizables. Incluir una tabla normal en la lista `DEPENDS ON` impedirá que la vista llegue a actualizarse (las dependencias pueden eliminarse con `ALTER`; consulta [Cambio de los parámetros de actualización](#changing-refresh-parameters)).
+  `DEPENDS ON` solo funciona entre vistas materializadas actualizables. En particular, si la vista de la que depende usa `TO <table>`, asegúrate de usar el nombre de la vista y no el de la tabla. Si la lista de `DEPENDS ON` contiene una tabla normal, una vista no actualizable o un error tipográfico, la vista no se actualizará nunca y mostrará el estado `MissingDependencies` en `system.view_refreshes`. Las dependencias pueden modificarse o eliminarse con `ALTER`; consulta [Cambiar los parámetros de actualización](#changing-refresh-parameters).
 </Note>
+
+<div id="using-depends-on-for-consistent-propagation-latency">
+  #### Uso de DEPENDS ON para una latencia de propagación constante
+</div>
+
+Si ambas vistas usan `REFRESH EVERY` con el mismo período, la dependencia se aplica en cada franja horaria.
+
+P. ej., supongamos que las vistas X e Y usan `REFRESH EVERY 1 HOUR`, y que Y lee de la tabla de salida de X. Sin dependencias, Y normalmente vería los datos de X de la actualización de la hora anterior. Con `DEPENDS ON X`, la actualización de Y de las 11:00 solo comenzará después de que finalice la actualización de X de las 11:00.
+
+```text
+           10:00            11:00            12:00
+           │                │                │
+  X:        [run]┐           [run]┐           [run]┐
+                 │                │                │
+  Y:             └►[run]          └►[run]          └►[run]
+```
+
+Tanto la dependencia como la vista dependiente pueden omitir franjas horarias de forma independiente si las actualizaciones tardan más que el período de actualización. No se garantiza que la vista dependiente se actualice exactamente una vez por cada actualización de la dependencia.
+
+```text
+           10:00          11:00          12:00          13:00
+           │              │              │              |
+  X:        [run]┐         [run]┐         [run]┐         [run]┐
+                 │              └────┐    (Y skips 12:00)     └───┐
+  Y:             └►[10:00 ru------un]└►[11:00 ru---------------un]└►[13:00 run]
+```
+
+<div id="using-depends-on-for-batched-stream-processing">
+  #### Uso de DEPENDS ON para el procesamiento de flujo por lotes
+</div>
+
+Si no se usa `REFRESH EVERY`, la vista dependiente X se actualiza si todas sus dependencias se han actualizado al menos una vez desde la última actualización de X. `REFRESH AFTER T` añade un retraso: la vista dependiente iniciará la actualización T unidades de tiempo después de que la dependencia complete una actualización.
+
+Se permiten las dependencias circulares y son útiles. Considere este grafo de vistas materializadas actualizables:
+
+1. X toma un lote de filas de un flujo y las coloca en una tabla.
+2. Luego, Y y Z leen de esa tabla, realizan agregaciones distintas y añaden los resultados a otras tablas.
+3. Una vez que el lote se ha procesado por completo, X toma el siguiente lote y el ciclo se repite.
+
+```text
+            source
+               │
+               ▼
+          ┌─────────┐
+     ┌───►│    X    │◄───┐
+     │    └──┬───┬──┘    │
+  DEPENDS    │   │    DEPENDS
+    ON       ▼   ▼      ON
+     │      ┌─┐ ┌─┐      │
+     └──────┤Y│ │Z├──────┘
+            └─┘ └─┘
+```
+
+Ejemplo completo:
+
+```sql
+CREATE TABLE current_batch (t UInt64, v Int64) ENGINE ReplicatedMergeTree ORDER BY t;
+CREATE TABLE batch_log (max_t UInt64, n Int64, v_sum Int64, processed_at DateTime64) ENGINE ReplicatedMergeTree ORDER BY max_t;
+CREATE TABLE stats (h UInt64, n UInt64) ENGINE ReplicatedSummingMergeTree ORDER BY h;
+
+-- (system.numbers stands in for a data source with monotonically increasing timestamps or sequence numbers)
+CREATE MATERIALIZED VIEW current_batch_v REFRESH EVERY 10 SECOND DEPENDS ON batch_log_v, stats_v TO current_batch AS SELECT number as t, number * 10 as v FROM system.numbers WHERE number > (SELECT max(max_t) FROM batch_log) LIMIT 100;
+
+CREATE MATERIALIZED VIEW batch_log_v REFRESH DEPENDS ON current_batch_v APPEND TO batch_log AS SELECT max(t) as max_t, count() as n, sum(v) as v_sum, now64() as processed_at FROM current_batch;
+
+CREATE MATERIALIZED VIEW stats_v REFRESH DEPENDS ON current_batch_v APPEND TO stats AS SELECT cityHash64(v) % 20 as h, count() as n FROM current_batch GROUP BY h;
+
+-- Must trigger initial refresh manually.
+SYSTEM REFRESH VIEW current_batch_v;
+```
+
+Las cadenas más largas también funcionan.
+
+Esto solo funciona bien cuando la coordinación de actualización está habilitada, es decir, cuando las vistas están en una base de datos Replicated o Shared. Sin coordinación, un reinicio del servidor interrumpe el ciclo, por lo que se requiere un `SYSTEM REFRESH VIEW` manual después de cada reinicio, en lugar de solo una vez tras crear las vistas.
 
 <div id="refresh-settings">
   ### Parámetros de actualización
@@ -374,8 +434,6 @@ Parámetros de actualización disponibles:
 * `refresh_retry_initial_backoff_ms` - Retraso antes del primer reintento, si `refresh_retries` no es cero. Cada reintento posterior duplica el retraso, hasta `refresh_retry_max_backoff_ms`. Predeterminado: 100 ms.
 * `refresh_retry_max_backoff_ms` - Límite del crecimiento exponencial del retraso entre intentos de actualización. Predeterminado: 60000 ms (1 minuto).
 * `all_replicas` - En una [base de datos Replicated](/es/reference/engines/database-engines/replicated) con `APPEND`, controla si todas las réplicas se actualizan de forma independiente o si solo una réplica se actualiza en cada momento programado. No se puede cambiar después de crear la vista. Predeterminado: `false`.
-* `prefer_dependency_replica` - Cuando la vista tiene `DEPENDS ON`, la réplica que ejecutó la actualización primaria tiene prioridad para ejecutar la actualización dependiente; las demás réplicas retrasan su intento en `prefer_dependency_replica_delay_ms`. Es útil con `SharedMergeTree` para evitar que el retraso de replicación provoque la falta de datos en cadenas de actualizaciones dependientes. Predeterminado: `false`.
-* `prefer_dependency_replica_delay_ms` - Cuánto tiempo esperan las réplicas no preferidas antes de intentar ejecutar una actualización dependiente cuando `prefer_dependency_replica` está habilitado. Predeterminado: 2000 ms.
 
 <div id="changing-refresh-parameters">
   ### Cambiar los parámetros de actualización

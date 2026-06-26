@@ -24,11 +24,11 @@ The MCP server is available in the following ClickStack deployment types:
 | **ClickStack on ClickHouse Cloud** | Available |
 | **HyperDX v1** ([hyperdx.io](https://hyperdx.io)) | Not supported |
 
-<Note>
+<Info>
 **Different setup for ClickHouse Cloud vs OSS/BYOC**
 
 ClickStack on ClickHouse Cloud uses a different endpoint and authentication method than Open Source and BYOC deployments. See the [ClickStack on ClickHouse Cloud](#managed-clickstack) section below for Cloud-specific setup.
-</Note>
+</Info>
 
 ## ClickStack on ClickHouse Cloud {#managed-clickstack}
 
@@ -36,8 +36,8 @@ ClickStack on ClickHouse Cloud connects through the Cloud MCP endpoint at `https
 
 ### Prerequisites {#managed-prerequisites}
 
-- A running ClickHouse Cloud service with [ClickStack enabled](/use-cases/observability/clickstack/deployment/clickstack-clickhouse-cloud)
-- [MCP enabled](/use-cases/AI/MCP/remote_mcp#enable-remote-mcp-server) on the service — open the Cloud console, click **Connect**, select **Connect with MCP**, and toggle it on
+- A running ClickHouse Cloud service with [ClickStack enabled](/clickstack/deployment/managed)
+- [MCP enabled](/products/cloud/features/ai-ml/mcp/remote-mcp#enable-remote-mcp-server) on the service — open the Cloud console, click **Connect**, select **Connect with MCP**, and toggle it on
 
 ### Endpoint {#managed-endpoint}
 
@@ -55,10 +55,10 @@ Each client handles the OAuth flow automatically on first connection.
 <Tab title="Claude Code">
 
 ```shell
-claude mcp add --transport http clickstack-cloud https://mcp.clickhouse.cloud/clickstack
+claude mcp add --transport http clickstack https://mcp.clickhouse.cloud/clickstack
 ```
 
-Launch Claude Code and run `/mcp`, then select `clickstack-cloud` to complete the OAuth flow.
+Launch Claude Code and run `/mcp`, then select `clickstack` to complete the OAuth flow.
 
 </Tab>
 <Tab title="Cursor">
@@ -68,7 +68,7 @@ Add the following to `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "clickstack-cloud": {
+    "clickstack": {
       "url": "https://mcp.clickhouse.cloud/clickstack"
     }
   }
@@ -83,7 +83,7 @@ Add the following to `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "clickstack-cloud": {
+    "clickstack": {
       "type": "http",
       "url": "https://mcp.clickhouse.cloud/clickstack"
     }
@@ -99,12 +99,24 @@ Add the following to `opencode.json`:
 ```json
 {
   "mcp": {
-    "clickstack-cloud": {
+    "clickstack": {
       "type": "remote",
       "url": "https://mcp.clickhouse.cloud/clickstack"
     }
   }
 }
+```
+
+</Tab>
+<Tab title="LibreChat">
+
+Add the following to `librechat.yaml`:
+
+```yaml
+mcpServers:
+  clickstack:
+    type: streamable-http
+    url: https://mcp.clickhouse.cloud/clickstack
 ```
 
 </Tab>
@@ -183,14 +195,12 @@ Add the following to `.vscode/mcp.json`:
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "hyperdx": {
-        "type": "http",
-        "url": "<YOUR_CLICKSTACK_URL>/api/mcp",
-        "headers": {
-          "Authorization": "Bearer <YOUR_API_KEY>"
-        }
+  "servers": {
+    "hyperdx": {
+      "type": "http",
+      "url": "<YOUR_CLICKSTACK_URL>/api/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_API_KEY>"
       }
     }
   }
@@ -215,6 +225,20 @@ Add the following to `opencode.json`:
     }
   }
 }
+```
+
+</Tab>
+<Tab title="LibreChat">
+
+Add the following to `librechat.yaml`:
+
+```yaml
+mcpServers:
+  clickstack:
+    type: streamable-http
+    url: <YOUR_CLICKSTACK_URL>/api/mcp
+    headers:
+      Authorization: "Bearer <YOUR_API_KEY>"
 ```
 
 </Tab>
@@ -262,7 +286,7 @@ Use the team listing tool from your MCP client to discover which teams you have 
 
 <Accordion title="MCP is enabled but the client can't connect">
 - Confirm you're using the ClickStack endpoint (`https://mcp.clickhouse.cloud/clickstack`), not the general Cloud MCP endpoint (`https://mcp.clickhouse.cloud/mcp`).
-- Verify that [MCP is enabled](/use-cases/AI/MCP/remote_mcp#enable-remote-mcp-server) on the service in the Cloud console.
+- Verify that [MCP is enabled](/products/cloud/features/ai-ml/mcp/remote-mcp#enable-remote-mcp-server) on the service in the Cloud console.
 </Accordion>
 
 <Accordion title="Requests go to the wrong service">
