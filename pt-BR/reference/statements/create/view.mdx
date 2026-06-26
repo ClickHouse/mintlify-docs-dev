@@ -6,9 +6,9 @@ title: 'CREATE VIEW'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import DeprecatedBadge from "/snippets/components/DeprecatedBadge/DeprecatedBadge.jsx";
-import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
+import ExperimentalBadge from "/snippets/pt-BR/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import DeprecatedBadge from "/snippets/pt-BR/components/DeprecatedBadge/DeprecatedBadge.jsx";
+import CloudNotSupportedBadge from "/snippets/pt-BR/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
 
 Cria uma nova view. As views podem ser [normais](#normal-view), [materializadas](#materialized-view), [materializadas atualizáveis](#refreshable-materialized-view) e [de janela](/pt-BR/reference/statements/create/view#window-view).
 
@@ -87,7 +87,7 @@ AS SELECT ...
   ### CREATE OR REPLACE MATERIALIZED VIEW
 </div>
 
-`CREATE OR REPLACE MATERIALIZED VIEW` substitui atomicamente uma visão materializada existente e sua tabela de armazenamento interna (se houver). A operação requer um motor de banco de dados `Atomic` ou `Replicated`.
+`CREATE OR REPLACE MATERIALIZED VIEW` substitui atomicamente uma VIEW materializada existente e sua tabela de armazenamento interna (se houver). A operação requer um motor de banco de dados `Atomic` ou `Replicated`.
 
 ```sql
 CREATE OR REPLACE MATERIALIZED VIEW [db.]name [ON CLUSTER cluster]
@@ -101,7 +101,7 @@ AS SELECT ...
 Principais comportamentos:
 
 * **Sem a cláusula `TO`**: a tabela interna antiga é excluída e uma nova é criada. Os dados existentes na tabela interna são perdidos, a menos que `POPULATE` seja especificado.
-* **Com a cláusula `TO`**: apenas a definição da visão é substituída; a tabela de destino e seus dados permanecem inalterados.
+* **Com a cláusula `TO`**: apenas a definição da VIEW é substituída; a tabela de destino e seus dados permanecem inalterados.
 * Compatível com `REFRESH`, `ON CLUSTER` e todas as opções de motor. `POPULATE` é suportado apenas em bancos de dados `Atomic` — ele é rejeitado em bancos de dados `Replicated` (veja a observação sobre `POPULATE` abaixo).
 * Requer os privilégios `CREATE VIEW` e `DROP VIEW`.
 
@@ -112,52 +112,54 @@ Principais comportamentos:
 **Exemplos:**
 
 ```sql
--- Cria uma visão materializada com uma tabela interna
+-- Create a materialized view with an inner table
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, sum(y) AS total FROM src GROUP BY x;
 
--- Substitui por uma nova definição (os dados da tabela interna antiga são perdidos)
+-- Replace with a new definition (old inner table data is lost)
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     AS SELECT x, count() AS cnt FROM src GROUP BY x;
 
--- Substitui com POPULATE para preencher a partir dos dados de origem existentes
+-- Replace with POPULATE to backfill from existing source data
 CREATE OR REPLACE MATERIALIZED VIEW mv
     ENGINE = MergeTree ORDER BY x
     POPULATE
     AS SELECT x FROM src;
 
--- Substitui uma visão materializada com tabela interna por uma com cláusula TO (os dados do destino são preservados)
+-- Replace an inner-table MV with a TO-table MV (target data is preserved)
 CREATE OR REPLACE MATERIALIZED VIEW mv TO target
     AS SELECT x FROM src;
 ```
 
 <Tip>
-  Aqui está um guia passo a passo sobre como usar [visões materializadas](/pt-BR/concepts/features/materialized-views/cascading-materialized-views).
+  Aqui está um guia passo a passo sobre como usar [VIEWs materializadas](/pt-BR/concepts/features/materialized-views/cascading-materialized-views).
 </Tip>
 
-Visões materializadas armazenam dados transformados pela consulta [SELECT](/pt-BR/reference/statements/select) correspondente.
+VIEWs materializadas armazenam dados transformados pela consulta [SELECT](/pt-BR/reference/statements/select/index) correspondente.
 
-Ao criar uma visão materializada sem `TO [db].[table]`, você deve especificar `ENGINE` — o motor de tabela usado para armazenar os dados.
+Ao criar uma VIEW materializada sem `TO [db].[table]`, você deve especificar `ENGINE` — o motor de tabela usado para armazenar os dados.
 
-Ao criar uma visão materializada com `TO [db].[table]`, você também não pode usar `POPULATE`.
+Ao criar uma VIEW materializada com `TO [db].[table]`, você também não pode usar `POPULATE`.
 
-Uma visão materializada é implementada da seguinte forma: ao inserir dados na tabela especificada em `SELECT`, parte dos dados inseridos é transformada por essa consulta `SELECT`, e o resultado é inserido na visão.
+Uma VIEW materializada é implementada da seguinte forma: ao inserir dados na tabela especificada em `SELECT`, parte dos dados inseridos é transformada por essa consulta `SELECT`, e o resultado é inserido na VIEW.
 
 <Note>
-  Visões materializadas no ClickHouse usam **nomes de colunas** em vez da ordem das colunas durante a inserção na tabela de destino. Se alguns nomes de colunas não estiverem presentes no resultado da consulta `SELECT`, o ClickHouse usará um valor padrão, mesmo que a coluna não seja [Nullable](/pt-BR/reference/data-types/nullable). Uma prática segura é adicionar aliases para cada coluna ao usar visões materializadas.
+  VIEWs materializadas no ClickHouse usam **nomes de colunas** em vez da ordem das colunas durante a inserção na tabela de destino. Se alguns nomes de colunas não estiverem presentes no resultado da consulta `SELECT`, o ClickHouse usará um valor padrão, mesmo que a coluna não seja [Nullable](/pt-BR/reference/data-types/nullable). Uma prática segura é adicionar aliases para todas as colunas ao usar VIEWs materializadas.
 
-  Visões materializadas no ClickHouse são implementadas mais como gatilhos de inserção. Se houver alguma agregação na consulta da visão, ela será aplicada apenas ao lote de dados recém-inseridos. Quaisquer alterações nos dados existentes da tabela de origem (como update, delete, drop partition etc.) não alteram a visão materializada.
+  VIEWs materializadas no ClickHouse funcionam mais como gatilhos de inserção. Se houver alguma agregação na consulta da VIEW, ela será aplicada apenas ao lote de dados recém-inseridos. Quaisquer alterações nos dados existentes da tabela de origem (como update, delete, drop partition etc.) não alteram a VIEW materializada.
 
-  Visões materializadas no ClickHouse não têm comportamento determinístico em caso de erros. Isso significa que os blocos que já foram gravados serão preservados na tabela de destino, mas todos os blocos após o erro não serão.
+  VIEWs materializadas no ClickHouse não têm comportamento determinístico em caso de erro. Isso significa que os blocos que já tiverem sido gravados serão preservados na tabela de destino, mas todos os blocos após o erro não serão.
 
-  Por padrão, se o envio para uma das visões falhar, a consulta `INSERT` também falhará, e alguns blocos podem não ser gravados na tabela de destino. Isso pode ser alterado usando a configuração `materialized_views_ignore_errors` (você deve defini-la para a consulta `INSERT`); se você definir `materialized_views_ignore_errors=true`, quaisquer erros durante o envio para as visões serão ignorados e todos os blocos serão gravados na tabela de destino.
+  Por padrão, se o envio para uma das VIEWs gerar uma exceção, a consulta `INSERT` falhará. Não há garantia de que o bloco já tenha chegado à tabela de origem nesse ponto — isso depende do momento em que o pipeline de inserção estava, não do erro da VIEW. Tente novamente o `INSERT` com falha com desduplicação de inserção (`insert_deduplicate`, `deduplicate_blocks_in_dependent_materialized_views`) para obter entrega exactly-once para a tabela de origem e todas as VIEWs dependentes.
 
-  Observe também que `materialized_views_ignore_errors` é definido como `true` por padrão para tabelas `system.*_log`.
+  Definir `materialized_views_ignore_errors=true` na consulta `INSERT` altera apenas o relatório de erros: cada erro de VIEW é registrado como um aviso e a consulta `INSERT` é bem-sucedida. A entrega ao destino da VIEW com falha é parcial — os blocos processados antes da exceção são mantidos, e o bloco com falha mais quaisquer blocos subsequentes são descartados dessa VIEW. As VIEWs a jusante desse destino veem apenas os blocos que realmente chegaram, então a entrega delas também é parcial. As VIEWs irmãs (e suas cadeias a jusante) que não geraram exceção são gravadas integralmente, e a tabela de origem é gravada como de costume. Como o `INSERT` informa sucesso, o cliente não recebe nenhum sinal de falha e nenhuma nova tentativa automática é acionada; use essa configuração apenas quando gravações na tabela de origem não puderem ser bloqueadas por problemas no lado da VIEW (por exemplo, tabelas `system.*_log`).
+
+  `materialized_views_ignore_errors` é `true` por padrão para tabelas `system.*_log`.
 </Note>
 
-Se você especificar `POPULATE`, os dados existentes da tabela serão inseridos na visão ao criá-la, como se fosse executado um `CREATE TABLE ... AS SELECT ...`. Caso contrário, a consulta conterá apenas os dados inseridos na tabela após a criação da visão. **Não recomendamos** usar `POPULATE`, pois os dados inseridos na tabela durante a criação da visão não serão inseridos nela.
+Se você especificar `POPULATE`, os dados existentes da tabela serão inseridos na VIEW no momento da criação, como se fosse executado um `CREATE TABLE ... AS SELECT ...`. Caso contrário, a consulta conterá apenas os dados inseridos na tabela após a criação da VIEW. **Não recomendamos** usar `POPULATE`, pois os dados inseridos na tabela durante a criação da VIEW não serão inseridos nela.
 
 <Note>
   Como `POPULATE` funciona como `CREATE TABLE ... AS SELECT ...`, ele tem algumas limitações:
@@ -170,13 +172,13 @@ Se você especificar `POPULATE`, os dados existentes da tabela serão inseridos 
 
 Uma consulta `SELECT` pode conter `DISTINCT`, `GROUP BY`, `ORDER BY`, `LIMIT`. Observe que as transformações correspondentes são realizadas de forma independente em cada bloco de dados inseridos. Por exemplo, se `GROUP BY` estiver definido, os dados serão agregados durante a inserção, mas apenas dentro de um único pacote de dados inseridos. Os dados não serão agregados posteriormente. A exceção é ao usar um `ENGINE` que realiza agregação de dados por conta própria, como `SummingMergeTree`.
 
-Se a visão materializada usar a construção `TO [db.]name`, você pode fazer `DETACH` da visão, executar `ALTER` na tabela de destino e, em seguida, fazer `ATTACH` da visão previamente desanexada (`DETACH`).
+Se a VIEW materializada usar a construção `TO [db.]name`, você pode fazer `DETACH` da VIEW, executar `ALTER` na tabela de destino e, em seguida, fazer `ATTACH` da VIEW previamente desanexada (`DETACH`).
 
-Observe que a visão materializada é influenciada pela configuração [optimize&#95;on&#95;insert](/pt-BR/reference/settings/session-settings#optimize_on_insert). Os dados são mesclados antes de serem inseridos na visão.
+Observe que a VIEW materializada é influenciada pela configuração [optimize&#95;on&#95;insert](/pt-BR/reference/settings/session-settings#optimize_on_insert). Os dados são mesclados antes de serem inseridos na VIEW.
 
-As views têm a mesma aparência das tabelas normais. Por exemplo, elas são listadas no resultado da consulta `SHOW TABLES`.
+As VIEWs têm a mesma aparência das tabelas normais. Por exemplo, elas são listadas no resultado da consulta `SHOW TABLES`.
 
-Para excluir uma view, use [DROP VIEW](/pt-BR/reference/statements/drop#drop-view). Embora `DROP TABLE` também funcione para VIEWs.
+Para excluir uma VIEW, use [DROP VIEW](/pt-BR/reference/statements/drop#drop-view). Embora `DROP TABLE` também funcione para VIEWs.
 
 <div id="sql_security">
   ## Segurança SQL
@@ -239,12 +241,12 @@ Este recurso está obsoleto e será removido no futuro.
 Para sua conveniência, a documentação antiga está disponível [aqui](https://pastila.nl/?00f32652/fdf07272a7b54bda7e13b919264e449f.md)
 
 <div id="refreshable-materialized-view">
-  ## visão materializada atualizável
+  ## VIEW materializada atualizável
 </div>
 
 ```sql
 CREATE MATERIALIZED VIEW [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
-REFRESH EVERY|AFTER interval [OFFSET interval]
+REFRESH [EVERY|AFTER interval [OFFSET interval]]
 [RANDOMIZE FOR interval]
 [DEPENDS ON [db.]name [, [db.]name [, ...]]]
 [SETTINGS name = value [, name = value [, ...]]]
@@ -262,15 +264,17 @@ em que `interval` é uma sequência de intervalos simples:
 number SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR
 ```
 
+A cláusula `REFRESH` deve especificar pelo menos um de `EVERY`, `AFTER` ou `DEPENDS ON`. `REFRESH` isolado (sem nenhum deles) é rejeitado. `REFRESH DEPENDS ON ...` sem `EVERY`/`AFTER` é uma forma abreviada de `REFRESH AFTER 0 SECOND DEPENDS ON ...`; veja [Dependências de atualização](#refresh-dependencies) abaixo.
+
 Executa periodicamente a consulta correspondente e armazena o resultado em uma tabela.
 
 * Se `APPEND` for especificado, cada atualização insere linhas na tabela sem excluir as já existentes. A inserção não é atômica, assim como em uma consulta `INSERT INTO ... SELECT` comum.
 * Caso contrário, cada atualização substitui atomicamente o conteúdo anterior da tabela.
 
-Diferenças em relação às visões materializadas comuns, não atualizáveis:
+Diferenças em relação às VIEWs materializadas comuns, não atualizáveis:
 
-* Não há gatilho de inserção. Quando novos dados são inseridos na tabela especificada em `SELECT`, eles *não* são enviados automaticamente para a visão materializada atualizável. Em vez disso, a inserção de dados ocorre apenas durante execuções de atualização periódicas ou manuais.
-* Não há restrições para a consulta `SELECT`. Funções de tabela (por exemplo, `url()`), views, UNION e JOIN são permitidos.
+* Não há gatilho de inserção. Quando novos dados são inseridos na tabela especificada em `SELECT`, eles *não* são enviados automaticamente para a VIEW materializada atualizável. Em vez disso, a inserção de dados ocorre apenas durante execuções de atualização periódicas ou manuais.
+* Não há restrições para a consulta `SELECT`. Funções de tabela (por exemplo, `url()`), VIEWs, UNION e JOIN são permitidos.
 
 <Note>
   As configurações na parte `REFRESH ... SETTINGS` da consulta são configurações de atualização (por exemplo, `refresh_retries`), distintas das configurações comuns (por exemplo, `max_threads`). As configurações comuns podem ser especificadas com `SETTINGS` no final da consulta.
@@ -283,28 +287,28 @@ Diferenças em relação às visões materializadas comuns, não atualizáveis:
 Exemplos de programação de atualização:
 
 ```sql
-REFRESH EVERY 1 DAY -- todo dia, à meia-noite (UTC)
-REFRESH EVERY 1 MONTH -- no 1º dia de cada mês, à meia-noite
-REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- no 6º dia de cada mês, às 2:00
-REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- a cada dois sábados, às 15:10
-REFRESH EVERY 30 MINUTE -- às 00:00, 00:30, 01:00, 01:30, etc
-REFRESH AFTER 30 MINUTE -- 30 minutos após a conclusão do refresh anterior, sem alinhamento com o horário do dia
--- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- erro de sintaxe, OFFSET não é permitido com AFTER
-REFRESH EVERY 1 WEEK 2 DAYS -- a cada 9 dias, sem dia fixo da semana ou do mês;
-                            -- especificamente, quando o número do dia (desde 1969-12-29) é divisível por 9
-REFRESH EVERY 5 MONTHS -- a cada 5 meses, em meses diferentes a cada ano (pois 12 não é divisível por 5);
-                       -- especificamente, quando o número do mês (desde 1970-01) é divisível por 5
+REFRESH EVERY 1 DAY -- every day, at midnight (UTC)
+REFRESH EVERY 1 MONTH -- on 1st day of every month, at midnight
+REFRESH EVERY 1 MONTH OFFSET 5 DAY 2 HOUR -- on 6th day of every month, at 2:00 am
+REFRESH EVERY 2 WEEK OFFSET 5 DAY 15 HOUR 10 MINUTE -- every other Saturday, at 3:10 pm
+REFRESH EVERY 30 MINUTE -- at 00:00, 00:30, 01:00, 01:30, etc
+REFRESH AFTER 30 MINUTE -- 30 minutes after the previous refresh completes, no alignment with time of day
+-- REFRESH AFTER 1 HOUR OFFSET 1 MINUTE -- syntax error, OFFSET is not allowed with AFTER
+REFRESH EVERY 1 WEEK 2 DAYS -- every 9 days, not on any particular day of the week or month;
+                            -- specifically, when day number (since 1969-12-29) is divisible by 9
+REFRESH EVERY 5 MONTHS -- every 5 months, different months each year (as 12 is not divisible by 5);
+                       -- specifically, when month number (since 1970-01) is divisible by 5
 ```
 
 `RANDOMIZE FOR` ajusta aleatoriamente o momento de cada atualização, por exemplo:
 
 ```sql
-REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- todos os dias em um horário aleatório entre 01:30 e 02:30
+REFRESH EVERY 1 DAY OFFSET 2 HOUR RANDOMIZE FOR 1 HOUR -- every day at random time between 01:30 and 02:30
 ```
 
-No máximo, uma atualização pode estar em execução por vez para uma determinada visão. Por exemplo, se uma visão com `REFRESH EVERY 1 MINUTE` levar 2 minutos para ser atualizada, ela simplesmente passará a ser atualizada a cada 2 minutos. Se depois ficar mais rápida e passar a ser atualizada em 10 segundos, voltará a ser atualizada a cada minuto. (Em particular, ela não será atualizada a cada 10 segundos para compensar um acúmulo de atualizações perdidas — esse acúmulo não existe.)
+No máximo, uma atualização pode estar em execução por vez para uma determinada VIEW. Por exemplo, se uma VIEW com `REFRESH EVERY 1 MINUTE` levar 2 minutos para ser atualizada, ela simplesmente passará a ser atualizada a cada 2 minutos. Se depois ficar mais rápida e passar a ser atualizada em 10 segundos, voltará a ser atualizada a cada minuto. (Em particular, ela não será atualizada a cada 10 segundos para compensar um acúmulo de atualizações perdidas — esse acúmulo não existe.)
 
-Além disso, uma atualização é iniciada imediatamente após a criação da visão materializada, a menos que `EMPTY` seja especificado na consulta `CREATE`. Se `EMPTY` for especificado, a primeira atualização ocorrerá de acordo com o agendamento.
+Normalmente, a primeira atualização é iniciada imediatamente após a criação da VIEW materializada: o tempo desde a última atualização é infinito, então qualquer agendamento indica que é hora de atualizar agora. Se `EMPTY` for especificado, essa atualização inicial será ignorada, e a primeira atualização ocorrerá no próximo horário agendado; por exemplo, para `EVERY 1 HOUR`, a primeira atualização ocorrerá no fim da hora atual.
 
 <div id="in-replicated-db">
   ### Em banco de dados Replicated
@@ -322,47 +326,103 @@ A coordenação é feita por meio do Keeper. O caminho do znode é determinado p
   ### Dependências de atualização
 </div>
 
-`DEPENDS ON` sincroniza as atualizações de diferentes tabelas. Por exemplo, suponha que haja uma cadeia de duas visões materializadas atualizáveis:
+`DEPENDS ON` sincroniza as atualizações de diferentes tabelas:
 
 ```sql
-CREATE MATERIALIZED VIEW source REFRESH EVERY 1 DAY AS SELECT * FROM url(...)
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH EVERY 1 HOUR DEPENDS ON dependency [...]
 ```
 
-Sem `DEPENDS ON`, ambas as views iniciarão a atualização à meia-noite, e `destination` normalmente verá em `source` os dados de ontem. Se adicionarmos uma dependência:
+A atualização da VIEW dependente só começará depois que todas as VIEWs das quais ela depende forem atualizadas.
+
+Para atualizar imediatamente após a atualização de outra VIEW:
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH EVERY 1 DAY DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH AFTER 0 SECOND DEPENDS ON dependency [...]
 ```
 
-então a atualização de `destination` só começará depois que a atualização de `source` terminar nesse dia, de modo que `destination` se baseie em dados atualizados.
-
-Como alternativa, o mesmo resultado pode ser obtido com:
+Ou, equivalentemente:
 
 ```sql
-CREATE MATERIALIZED VIEW destination REFRESH AFTER 1 HOUR DEPENDS ON source AS SELECT ... FROM source
+CREATE MATERIALIZED VIEW dependent REFRESH DEPENDS ON dependency [...]
 ```
-
-em que `1 HOUR` pode ser qualquer duração menor que o período de refresh de `source`. A tabela dependente não será atualizada com mais frequência do que qualquer uma de suas dependências. Essa é uma forma válida de configurar uma cadeia de views atualizáveis sem especificar o período real de refresh mais de uma vez.
-
-Mais alguns exemplos:
-
-* `REFRESH EVERY 1 DAY OFFSET 10 MINUTE` (`destination`) depende de `REFRESH EVERY 1 DAY` (`source`)<br />
-  Se o refresh de `source` levar mais de 10 minutos, `destination` esperará por ele.
-* `REFRESH EVERY 1 DAY OFFSET 1 HOUR` depende de `REFRESH EVERY 1 DAY OFFSET 23 HOUR`<br />
-  Semelhante ao caso acima, mesmo que os refreshes correspondentes ocorram em dias diferentes do calendário.
-  O refresh de `destination` no dia `X+1` esperará pelo refresh de `source` no dia `X` (se ele levar mais de 2 horas).
-* `REFRESH EVERY 2 HOUR` depende de `REFRESH EVERY 1 HOUR`<br />
-  O refresh de `2 HOUR` ocorre após o refresh de `1 HOUR` a cada duas horas, por exemplo, após o refresh
-  da meia-noite, depois após o refresh das 2h etc.
-* `REFRESH EVERY 1 MINUTE` depende de `REFRESH EVERY 2 HOUR`<br />
-  `destination` é atualizada uma vez após cada refresh de `source`, ou seja, a cada 2 horas. O `1 MINUTE` é efetivamente ignorado.
-* `REFRESH AFTER 1 HOUR` depende de `REFRESH AFTER 1 HOUR`<br />
-  Atualmente, isso não é recomendado.
 
 <Note>
-  `DEPENDS ON` só funciona entre visões materializadas atualizáveis. Listar uma tabela comum na lista `DEPENDS ON` impedirá que a view seja atualizada (as dependências podem ser removidas com `ALTER`; consulte [Alterando os parâmetros de atualização](#changing-refresh-parameters)).
+  `DEPENDS ON` funciona apenas entre VIEWs materializadas atualizáveis. Em particular, se a VIEW de dependência usar `TO <table>`, certifique-se de usar o nome da VIEW, e não o da tabela. Se a lista de `DEPENDS ON` contiver uma tabela comum, uma VIEW não atualizável ou um erro de digitação, a VIEW nunca será atualizada e exibirá o estado `MissingDependencies` em `system.view_refreshes`. As dependências podem ser alteradas ou removidas com `ALTER`; consulte [Alterando os parâmetros de atualização](#changing-refresh-parameters).
 </Note>
+
+<div id="using-depends-on-for-consistent-propagation-latency">
+  #### Usando `DEPENDS ON` para manter a latência de propagação consistente
+</div>
+
+Se ambas as VIEWs usarem `REFRESH EVERY` com o mesmo período, a dependência será aplicada em cada intervalo de tempo.
+
+Por exemplo, suponha que as VIEWs X e Y usem `REFRESH EVERY 1 HOUR` e que Y leia da tabela de saída de X. Sem dependências, Y normalmente veria os dados da atualização de X da hora anterior. Com `DEPENDS ON X`, a atualização das 11:00 de Y só começará depois que a atualização das 11:00 de X for concluída.
+
+```text
+           10:00            11:00            12:00
+           │                │                │
+  X:        [run]┐           [run]┐           [run]┐
+                 │                │                │
+  Y:             └►[run]          └►[run]          └►[run]
+```
+
+Tanto a dependência quanto o dependente podem, independentemente, pular intervalos de tempo se as atualizações levarem mais tempo do que o período de atualização. Não há garantia de que o dependente seja atualizado exatamente uma vez para cada atualização da dependência.
+
+```text
+           10:00          11:00          12:00          13:00
+           │              │              │              |
+  X:        [run]┐         [run]┐         [run]┐         [run]┐
+                 │              └────┐    (Y skips 12:00)     └───┐
+  Y:             └►[10:00 ru------un]└►[11:00 ru---------------un]└►[13:00 run]
+```
+
+<div id="using-depends-on-for-batched-stream-processing">
+  #### Usando DEPENDS ON para processamento em lote de streams
+</div>
+
+Se `REFRESH EVERY` não for usado, a VIEW dependente X será atualizada se todas as suas dependências tiverem sido atualizadas pelo menos uma vez desde a última atualização de X. `REFRESH AFTER T` adiciona um atraso: a dependente iniciará a atualização T unidades de tempo após a dependência concluir uma atualização.
+
+Dependências circulares são permitidas e úteis. Considere este grafo de VIEWs materializadas atualizáveis:
+
+1. X pega um lote de linhas de algum stream e as coloca em uma tabela.
+2. Em seguida, Y e Z leem dessa tabela, fazem agregações diferentes e acrescentam os resultados a outras tabelas.
+3. Depois que o lote for totalmente processado, X pega o próximo lote, e o ciclo se repete.
+
+```text
+            source
+               │
+               ▼
+          ┌─────────┐
+     ┌───►│    X    │◄───┐
+     │    └──┬───┬──┘    │
+  DEPENDS    │   │    DEPENDS
+    ON       ▼   ▼      ON
+     │      ┌─┐ ┌─┐      │
+     └──────┤Y│ │Z├──────┘
+            └─┘ └─┘
+```
+
+Exemplo completo:
+
+```sql
+CREATE TABLE current_batch (t UInt64, v Int64) ENGINE ReplicatedMergeTree ORDER BY t;
+CREATE TABLE batch_log (max_t UInt64, n Int64, v_sum Int64, processed_at DateTime64) ENGINE ReplicatedMergeTree ORDER BY max_t;
+CREATE TABLE stats (h UInt64, n UInt64) ENGINE ReplicatedSummingMergeTree ORDER BY h;
+
+-- (system.numbers stands in for a data source with monotonically increasing timestamps or sequence numbers)
+CREATE MATERIALIZED VIEW current_batch_v REFRESH EVERY 10 SECOND DEPENDS ON batch_log_v, stats_v TO current_batch AS SELECT number as t, number * 10 as v FROM system.numbers WHERE number > (SELECT max(max_t) FROM batch_log) LIMIT 100;
+
+CREATE MATERIALIZED VIEW batch_log_v REFRESH DEPENDS ON current_batch_v APPEND TO batch_log AS SELECT max(t) as max_t, count() as n, sum(v) as v_sum, now64() as processed_at FROM current_batch;
+
+CREATE MATERIALIZED VIEW stats_v REFRESH DEPENDS ON current_batch_v APPEND TO stats AS SELECT cityHash64(v) % 20 as h, count() as n FROM current_batch GROUP BY h;
+
+-- Must trigger initial refresh manually.
+SYSTEM REFRESH VIEW current_batch_v;
+```
+
+Encadeamentos mais longos também funcionam.
+
+Isso só funciona bem quando a coordenação da atualização está habilitada, ou seja, quando as VIEWs estão em um banco de dados Replicated ou Shared. Sem coordenação, a reinicialização do servidor interrompe o ciclo, exigindo um `SYSTEM REFRESH VIEW` manual após cada reinicialização, em vez de apenas uma vez após a criação das VIEWs.
 
 <div id="refresh-settings">
   ### Configurações de atualização
@@ -373,9 +433,7 @@ Configurações de atualização disponíveis:
 * `refresh_retries` - Quantas vezes tentar novamente se a consulta de atualização falhar com uma exceção. Se todas as tentativas falharem, a atualização será adiada para o próximo horário agendado. 0 significa nenhuma tentativa adicional; -1 significa tentativas infinitas. Padrão: 2.
 * `refresh_retry_initial_backoff_ms` - Atraso antes da primeira tentativa de repetição, se `refresh_retries` não for zero. Cada nova tentativa dobra esse atraso, até `refresh_retry_max_backoff_ms`. Padrão: 100 ms.
 * `refresh_retry_max_backoff_ms` - Limite para o crescimento exponencial do atraso entre tentativas de atualização. Padrão: 60000 ms (1 minuto).
-* `all_replicas` - Em um [banco de dados Replicated](/pt-BR/reference/engines/database-engines/replicated) com `APPEND`, controla se todas as réplicas são atualizadas de forma independente ou se apenas uma réplica é atualizada em cada horário agendado. Não pode ser alterado após a criação da view. Padrão: `false`.
-* `prefer_dependency_replica` - Quando a view tem `DEPENDS ON`, a réplica que executou a atualização pai recebe prioridade para executar a atualização dependente; as outras réplicas adiam sua tentativa em `prefer_dependency_replica_delay_ms`. Útil com `SharedMergeTree` para evitar que o atraso de replicação cause ausência de dados em cadeias de atualizações dependentes. Padrão: `false`.
-* `prefer_dependency_replica_delay_ms` - Por quanto tempo réplicas não preferenciais aguardam antes de tentar executar uma atualização dependente quando `prefer_dependency_replica` está habilitado. Padrão: 2000 ms.
+* `all_replicas` - Em um [banco de dados Replicated](/pt-BR/reference/engines/database-engines/replicated) com `APPEND`, controla se todas as réplicas são atualizadas de forma independente ou se apenas uma réplica é atualizada em cada horário agendado. Não pode ser alterado após a criação da VIEW. Padrão: `false`.
 
 <div id="changing-refresh-parameters">
   ### Alterando os parâmetros de atualização

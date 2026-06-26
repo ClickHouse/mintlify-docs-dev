@@ -173,30 +173,30 @@ SELECT tupleConcat((1, 2), ('a',), (true, false))
 
 Добавленный в: v21.11.0
 
-Вычисляет результат деления соответствующих элементов двух кортежей одинакового размера.
+Вычисляет поэлементное деление двух или более кортежей одинакового размера слева направо.
 
 <Note>
-  При делении на ноль возвращается `inf`.
+  Деление на ноль вернёт `inf`.
 </Note>
 
 **Синтаксис**
 
 ```sql
-tupleDivide(t1, t2)
+tupleDivide(t1, t2[, tN, ...])
 ```
 
 **Аргументы**
 
-* `t1` — Первый кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
-* `t2` — Второй кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t1` — Первый входной кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t2, ..., tN` — Один или несколько дополнительных входных кортежей. Все кортежи должны иметь одинаковую длину. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Возвращаемое значение**
 
-Возвращает кортеж с результатом деления. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+Возвращает кортеж, содержащий результаты поэлементного деления. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Примеры**
 
-**Базовое использование**
+**Два кортежа**
 
 ```sql title=Query
 SELECT tupleDivide((1, 2), (2, 3))
@@ -204,6 +204,16 @@ SELECT tupleDivide((1, 2), (2, 3))
 
 ```response title=Response
 (0.5, 0.6666666666666666)
+```
+
+**Три Tuple**
+
+```sql title=Query
+SELECT tupleDivide((100.0, 60.0), (5.0, 3.0), (2.0, 4.0))
+```
+
+```response title=Response
+(10, 5)
 ```
 
 <div id="tupleDivideByNumber">
@@ -251,12 +261,12 @@ SELECT tupleDivideByNumber((1, 2), 0.5)
 
 Добавленный в: v1.1.0
 
-Извлекает элемент из Tuple по индексу или имени.
+Извлекает элемент из кортежа по индексу или имени.
 
 Для доступа по индексу ожидается числовой индекс, начиная с 1.
-Для доступа по имени имя элемента можно указать в виде строки (работает только для именованных Tuple).
+Для доступа по имени имя элемента можно указать в виде строки (работает только для именованных кортежей).
 
-Поддерживаются отрицательные индексы. В этом случае выбирается соответствующий элемент с нумерацией от конца. Например, `tuple.-1` — это последний элемент в Tuple.
+Поддерживаются отрицательные индексы. В этом случае выбирается соответствующий элемент с нумерацией от конца. Например, `tuple.-1` — это последний элемент в кортеже.
 
 Необязательный третий аргумент задает значение по умолчанию, которое возвращается вместо того, чтобы генерировать исключение, если запрашиваемый элемент не существует.
 Все аргументы должны быть константами.
@@ -274,11 +284,11 @@ tupleElement(tuple, index|name[, default_value])
 * `tuple` — Кортеж или массив кортежей. [`Tuple(T)`](/ru/reference/data-types/tuple) или [`Array(Tuple(T))`](/ru/reference/data-types/array)
 * `index` — Индекс столбца, нумерация с 1. [`const UInt8/16/32/64`](/ru/reference/data-types/int-uint)
 * `name` — Имя элемента. [`const String`](/ru/reference/data-types/string)
-* `default_value` — Значение по умолчанию, возвращаемое, если индекс выходит за границы или элемент отсутствует. [`Any`](/ru/reference/data-types)
+* `default_value` — Значение по умолчанию, возвращаемое, если индекс выходит за границы или элемент отсутствует. [`Any`](/ru/reference/data-types/index)
 
 **Возвращаемое значение**
 
-Возвращает элемент по указанному индексу или имени. [`Any`](/ru/reference/data-types)
+Возвращает элемент по указанному индексу или имени. [`Any`](/ru/reference/data-types/index)
 
 **Примеры**
 
@@ -404,28 +414,28 @@ SELECT tupleHammingDistance(wordShingleMinHash(string), wordShingleMinHashCaseIn
 
 Добавленный в: v23.8.0
 
-Выполняет целочисленное деление кортежа числителей на кортеж знаменателей. Возвращает кортеж частных.
-Если хотя бы один из кортежей содержит нецелочисленные элементы, результат вычисляется с округлением каждого нецелочисленного числителя или делителя до ближайшего целого.
-При делении на 0 генерируется ошибка.
+Выполняет поэлементное целочисленное деление двух или более кортежей одинакового размера последовательно слева направо. Возвращает кортеж частных.
+Если какой-либо кортеж содержит нецелочисленные элементы, результат вычисляется с округлением до ближайшего целого для каждого нецелочисленного делимого или делителя.
+Деление на 0 вызывает исключение.
 
 **Синтаксис**
 
 ```sql
-tupleIntDiv(tuple_num, tuple_div)
+tupleIntDiv(t1, t2[, tN, ...])
 ```
 
 **Аргументы**
 
-* `tuple_num` — Кортеж значений числителя. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
-* `tuple_div` — Кортеж значений делителя. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t1` — Первый входной кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t2, ..., tN` — Один или несколько дополнительных входных кортежей. Все кортежи должны быть одинакового размера. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Возвращаемое значение**
 
-Возвращает кортеж частных. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+Возвращает кортеж целочисленных частных. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Примеры**
 
-**Базовое использование**
+**Два кортежа**
 
 ```sql title=Query
 SELECT tupleIntDiv((15, 10, 5), (5, 5, 5))
@@ -435,7 +445,7 @@ SELECT tupleIntDiv((15, 10, 5), (5, 5, 5))
 (3, 2, 1)
 ```
 
-**С десятичными дробями**
+**С типом Decimal**
 
 ```sql title=Query
 SELECT tupleIntDiv((15, 10, 5), (5.5, 5.5, 5.5))
@@ -443,6 +453,16 @@ SELECT tupleIntDiv((15, 10, 5), (5.5, 5.5, 5.5))
 
 ```response title=Response
 (2, 1, 0)
+```
+
+**Три Tuple**
+
+```sql title=Query
+SELECT tupleIntDiv((120, 60), (4, 3), (2, 4))
+```
+
+```response title=Response
+(15, 5)
 ```
 
 <div id="tupleIntDivByNumber">
@@ -498,24 +518,24 @@ SELECT tupleIntDivByNumber((15.2, 10.7, 5.5), 5.8)
 
 Добавленный в: v23.8.0
 
-Как и [`tupleIntDiv`](#tupleIntDiv), выполняет целочисленное деление кортежа числителей на кортеж знаменателей и возвращает кортеж частных.
-В случае деления на 0 возвращает частное 0 вместо того, чтобы генерировать исключение.
-Если любой из кортежей содержит нецелочисленные элементы, результат вычисляется путем округления каждого нецелочисленного числителя или делителя до ближайшего целого числа.
+Как и [`tupleIntDiv`](#tupleIntDiv), выполняет поэлементное целочисленное деление двух или более кортежей одинакового размера слева направо.
+В случае деления на 0 для этого элемента возвращает 0 вместо того, чтобы генерировать исключение.
+Если любой кортеж содержит нецелочисленные элементы, результат вычисляется путем округления каждого нецелочисленного числителя или делителя до ближайшего целого числа.
 
 **Синтаксис**
 
 ```sql
-tupleIntDivOrZero(tuple_num, tuple_div)
+tupleIntDivOrZero(t1, t2[, tN, ...])
 ```
 
 **Аргументы**
 
-* `tuple_num` — Tuple значений делимого. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
-* `tuple_div` — Tuple значений делителя. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t1` — Первый входной кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t2, ..., tN` — Один или несколько дополнительных входных кортежей. Все кортежи должны иметь одинаковый размер. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Возвращаемое значение**
 
-Возвращает Tuple частных. Для частных, где делитель равен 0, возвращает 0. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+Возвращает кортеж целочисленных частных. Для любого элемента, где делитель равен 0, возвращает 0. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Примеры**
 
@@ -527,6 +547,16 @@ SELECT tupleIntDivOrZero((5, 10, 15), (0, 0, 0))
 
 ```response title=Response
 (0, 0, 0)
+```
+
+**Три кортежа**
+
+```sql title=Query
+SELECT tupleIntDivOrZero((120, 60), (4, 3), (2, 4))
+```
+
+```response title=Response
+(15, 5)
 ```
 
 <div id="tupleIntDivOrZeroByNumber">
@@ -582,28 +612,28 @@ SELECT tupleIntDivOrZeroByNumber((15, 10, 5), 0)
 
 Добавленный в: v21.11.0
 
-Вычисляет разность соответствующих элементов двух кортежей одинакового размера.
+Вычисляет поэлементную разность двух или более кортежей одинакового размера; операция применяется слева направо.
 
 **Синтаксис**
 
 ```sql
-tupleMinus(t1, t2)
+tupleMinus(t1, t2[, tN, ...])
 ```
 
 **Псевдонимы**: `vectorDifference`
 
 **Аргументы**
 
-* `t1` — Первый кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
-* `t2` — Второй кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t1` — Первый входной кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t2, ..., tN` — Один или несколько последующих входных кортежей. Все кортежи должны иметь одинаковую длину. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Возвращаемое значение**
 
-Возвращает кортеж с результатами вычитания. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+Возвращает кортеж с поэлементными разностями. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Примеры**
 
-**Базовое использование**
+**Два кортежа**
 
 ```sql title=Query
 SELECT tupleMinus((1, 2), (2, 3))
@@ -613,32 +643,42 @@ SELECT tupleMinus((1, 2), (2, 3))
 (-1, -1)
 ```
 
+**Три tuple**
+
+```sql title=Query
+SELECT tupleMinus((10, 10), (3, 4), (2, 1))
+```
+
+```response title=Response
+(5, 5)
+```
+
 <div id="tupleModulo">
   ## tupleModulo
 </div>
 
 Добавленный в: v23.8.0
 
-Возвращает кортеж остатков от деления двух кортежей.
+Возвращает кортеж с поэлементными остатками от деления двух или более кортежей одинакового размера; операция применяется слева направо.
 
 **Синтаксис**
 
 ```sql
-tupleModulo(tuple_num, tuple_mod)
+tupleModulo(t1, t2[, tN, ...])
 ```
 
 **Аргументы**
 
-* `tuple_num` — Кортеж значений делимого. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
-* `tuple_mod` — Кортеж значений модуля. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t1` — Первый входной кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t2, ..., tN` — Один или несколько дополнительных входных кортежей. Все кортежи должны иметь одинаковую длину. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Возвращаемое значение**
 
-Возвращает кортеж остатков от деления. При делении на ноль генерируется исключение. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+Возвращает кортеж с поэлементными остатками от деления. При делении на ноль генерируется исключение. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Примеры**
 
-**Базовое использование**
+**Два кортежа**
 
 ```sql title=Query
 SELECT tupleModulo((15, 10, 5), (5, 3, 2))
@@ -646,6 +686,16 @@ SELECT tupleModulo((15, 10, 5), (5, 3, 2))
 
 ```response title=Response
 (0, 1, 1)
+```
+
+**Три Tuple**
+
+```sql title=Query
+SELECT tupleModulo((10, 20), (7, 9), (3, 5))
+```
+
+```response title=Response
+(0, 2)
 ```
 
 <div id="tupleModuloByNumber">
@@ -689,26 +739,26 @@ SELECT tupleModuloByNumber((15, 10, 5), 2)
 
 Добавленный в: v21.11.0
 
-Вычисляет произведение соответствующих элементов двух кортежей одного размера.
+Вычисляет поэлементное произведение двух или более кортежей одного размера.
 
 **Синтаксис**
 
 ```sql
-tupleMultiply(t1, t2)
+tupleMultiply(t1, t2[, tN, ...])
 ```
 
 **Аргументы**
 
-* `t1` — Первый кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
-* `t2` — Второй кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t1` — Первый входной кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t2, ..., tN` — Один или несколько дополнительных входных кортежей. Все кортежи должны иметь одинаковую длину. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Возвращаемое значение**
 
-Возвращает кортеж с результатами умножения. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+Возвращает кортеж, содержащий произведения соответствующих элементов. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Примеры**
 
-**Базовое использование**
+**Два кортежа**
 
 ```sql title=Query
 SELECT tupleMultiply((1, 2), (2, 3))
@@ -716,6 +766,16 @@ SELECT tupleMultiply((1, 2), (2, 3))
 
 ```response title=Response
 (2, 6)
+```
+
+**Три Tuple**
+
+```sql title=Query
+SELECT tupleMultiply((1, 2), (2, 3), (1, 2))
+```
+
+```response title=Response
+(2, 12)
 ```
 
 <div id="tupleMultiplyByNumber">
@@ -825,28 +885,28 @@ SELECT tupleNegate((1, 2))
 
 Добавленный в: v21.11.0
 
-Вычисляет сумму соответствующих элементов двух кортежей одного размера.
+Вычисляет поэлементную сумму двух или более кортежей одинаковой длины.
 
 **Синтаксис**
 
 ```sql
-tuplePlus(t1, t2)
+tuplePlus(t1, t2[, tN, ...])
 ```
 
 **Псевдонимы**: `vectorSum`
 
 **Аргументы**
 
-* `t1` — Первый кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
-* `t2` — Второй кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t1` — Первый входной кортеж. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+* `t2, ..., tN` — Один или несколько дополнительных входных кортежей. Все кортежи должны быть одинакового размера. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Возвращаемое значение**
 
-Возвращает кортеж, содержащий суммы соответствующих элементов входных кортежей. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
+Возвращает кортеж с поэлементными суммами. [`Tuple((U)Int*)`](/ru/reference/data-types/tuple) или [`Tuple(Float*)`](/ru/reference/data-types/tuple) или [`Tuple(Decimal)`](/ru/reference/data-types/tuple)
 
 **Примеры**
 
-**Базовое использование**
+**Два кортежа**
 
 ```sql title=Query
 SELECT tuplePlus((1, 2), (2, 3))
@@ -854,6 +914,16 @@ SELECT tuplePlus((1, 2), (2, 3))
 
 ```response title=Response
 (3, 5)
+```
+
+**Три Tuple**
+
+```sql title=Query
+SELECT tuplePlus((1, 2), (2, 3), (3, 4))
+```
+
+```response title=Response
+(6, 9)
 ```
 
 <div id="tuplePositiveModuloByNumber">

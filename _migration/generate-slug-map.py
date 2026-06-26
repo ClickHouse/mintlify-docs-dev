@@ -31,7 +31,7 @@ from pathlib import Path
 
 THIS_REPO = Path(__file__).resolve().parent.parent
 DEFAULT_DOCUSAURUS = Path.home() / "Desktop" / "clickhouse-docs"
-SKIP_DIRS = {"node_modules", ".git", "build", "i18n", ".claude", "scripts", "snippets"}
+SKIP_DIRS = {"node_modules", ".git", "i18n", ".claude", "scripts", "snippets", "ja", "ko", "ru", "zh", "es", "pt-BR"}
 EXTS = (".md", ".mdx")
 SLUG_RE = re.compile(r"^slug:\s*['\"]?(\S+?)['\"]?\s*$", re.MULTILINE)
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---", re.DOTALL)
@@ -106,8 +106,6 @@ def file_to_url_path(rel_path: Path) -> str:
     stem_path = str(rel_path.with_suffix("")).replace("\\", "/")
     if stem_path == "index":
         return "/"
-    if stem_path.endswith("/index"):
-        stem_path = stem_path[: -len("/index")]
     return "/" + stem_path
 
 

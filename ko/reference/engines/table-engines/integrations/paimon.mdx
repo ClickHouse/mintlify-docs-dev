@@ -21,7 +21,7 @@ Paimon 테이블은 저장소에 이미 존재해야 합니다. 이 명령은 �
 SET allow_experimental_paimon_storage_engine = 1;
 
 CREATE TABLE paimon_table_s3
-    ENGINE = PaimonS3(url,  [, access_key_id, secret_access_key] [,format] [,structure] [,compression])
+    ENGINE = PaimonS3(url,  [, access_key_id, secret_access_key] [,format] [,compression])
 
 CREATE TABLE paimon_table_azure
     ENGINE = PaimonAzure(connection_string|storage_account_url, container_name, blobpath, [,account_name], [,account_key] [,format] [,compression_method])
@@ -138,12 +138,12 @@ SETTINGS max_consume_snapshots = 2;
 
 **1단계 — 증분 읽기와 메타데이터 갱신을 활성화한 Paimon 원본 테이블을 생성합니다.**
 
-아래 예시에서는 `PaimonLocal`을 사용합니다. 스토리지 백엔드에 맞게 엔진을 `PaimonS3`, `PaimonAzure`, `PaimonHDFS` 또는 `Paimon` 별칭으로 대체하십시오:
+아래 예시에서는 `PaimonLocal`을 사용합니다. 스토리지 백엔드에 맞게 엔진을 `PaimonS3`, `PaimonAzure`, `PaimonHDFS` 또는 자동 감지하는 `Paimon` 엔진으로 대체하십시오:
 
 ```sql
 SET allow_experimental_paimon_storage_engine = 1;
 
--- 로컬 스토리지
+-- Local storage
 CREATE TABLE paimon_mv_source
 ENGINE = PaimonLocal('/path/to/paimon/table')
 SETTINGS
@@ -152,7 +152,7 @@ SETTINGS
     paimon_replica_name = '{replica}',
     paimon_metadata_refresh_interval_sec = 1;
 
--- S3 스토리지 (Paimon은 PaimonS3의 별칭(alias))
+-- S3 storage (the `Paimon` engine defaults to the S3 implementation when no `disk` is specified)
 CREATE TABLE paimon_mv_source
 ENGINE = Paimon('http://minio:9000/bucket/path/to/table', 'access_key', 'secret_key')
 SETTINGS
@@ -212,7 +212,7 @@ DROP TABLE IF EXISTS paimon_mv_source SYNC;
   ## 별칭
 </div>
 
-테이블 엔진 `Paimon`은 이제 `PaimonS3`의 별칭으로 사용됩니다.
+`Paimon` 테이블 엔진은 `disk` 설정을 바탕으로 스토리지 백엔드를 자동으로 감지한 뒤, 이에 따라 `PaimonS3`, `PaimonAzure` 또는 `PaimonLocal`을 사용합니다. `disk`를 지정하지 않으면 기본적으로 `PaimonS3` 구현이 사용됩니다.
 
 <div id="virtual-columns">
   ## 가상 컬럼

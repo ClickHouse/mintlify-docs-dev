@@ -7,7 +7,7 @@ title: 'SummingMergeTree 表引擎'
 doc_type: 'reference'
 ---
 
-该引擎继承自 [MergeTree](/zh/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree)。不同之处在于，在合并 `SummingMergeTree` 表的数据分区片段时，ClickHouse 会将所有具有相同主键 (更准确地说，具有相同[排序键](/zh/reference/engines/table-engines/mergetree-family/mergetree)) 的行合并为一行，其中包含数值数据类型列的求和值。如果排序键的组成方式使一个键值对应大量行，这将显著减少存储占用并加快数据查询。
+该引擎继承自 [MergeTree](/zh/reference/engines/table-engines/mergetree-family/mergetree)。不同之处在于，在合并 `SummingMergeTree` 表的数据分区片段时，ClickHouse 会将所有具有相同主键 (更准确地说，具有相同[排序键](/zh/reference/engines/table-engines/mergetree-family/mergetree)) 的行合并为一行，其中包含数值数据类型列的求和值。如果排序键的组成方式使一个键值对应大量行，这将显著减少存储占用并加快数据查询。
 
 我们建议将该引擎与 `MergeTree` 搭配使用。将完整数据存储在 `MergeTree` 表中，并使用 `SummingMergeTree` 存储聚合数据，例如在生成报表时。这样可以避免因主键设计不当而丢失宝贵数据。
 
@@ -203,6 +203,52 @@ ARRAY JOIN
 请求数据时，使用 [sumMap(key, value)](/zh/reference/functions/aggregate-functions/sumMap) 函数对 `Map` 进行聚合。
 
 对于嵌套数据结构，无需在用于求和的列元组中显式指定其列。
+
+<div id="tuple-element-aggregation">
+  ### Tuple 元素聚合
+</div>
+
+启用 `allow_tuple_element_aggregation` 设置后，`Tuple` 列会被递归展平，因此每个叶子元素都会独立参与求和。这样，你就可以在单个 `Tuple` 列中存储多个指标，并在合并过程中按元素分别求和。
+
+这些展平后的子列适用与普通列相同的规则：
+
+* 只有数值型子列会被求和。
+* 属于排序键或分区键中的 `Tuple` 的子列不会参与求和。
+* 如果指定了 `columns`，则只会对所列 `Tuple` 列的子列求和。
+* 如果一行中所有数值型子列在求和后都为零，则该行会被删除。
+
+<Note>
+  此设置不可变，必须在创建表时指定。
+</Note>
+
+```sql
+CREATE TABLE summing_tuples
+(
+    key UInt32,
+    metrics Tuple(
+        impressions UInt64,
+        clicks UInt64,
+        nested Tuple(
+            conversions UInt64
+        )
+    )
+) ENGINE = SummingMergeTree()
+ORDER BY key
+SETTINGS allow_tuple_element_aggregation = 1;
+
+INSERT INTO summing_tuples VALUES (1, (100, 10, (1)));
+INSERT INTO summing_tuples VALUES (1, (200, 20, (3)));
+
+OPTIMIZE TABLE summing_tuples FINAL;
+
+SELECT key, metrics.impressions, metrics.clicks, metrics.nested.conversions FROM summing_tuples;
+```
+
+```text
+┌─key─┬─metrics.impressions─┬─metrics.clicks─┬─metrics.nested.conversions─┐
+│   1 │                 300 │             30 │                          4 │
+└─────┴─────────────────────┴────────────────┴────────────────────────────┘
+```
 
 <div id="related-content">
   ## 相关内容

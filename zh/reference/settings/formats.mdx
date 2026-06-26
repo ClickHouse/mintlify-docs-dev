@@ -7,10 +7,10 @@ description: '用于控制输入和输出格式的设置项。'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
-import SettingsInfoBlock from "/snippets/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
-import VersionHistory from "/snippets/components/VersionHistory/VersionHistory.jsx";
+import ExperimentalBadge from "/snippets/zh/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import BetaBadge from "/snippets/zh/components/BetaBadge/BetaBadge.jsx";
+import SettingsInfoBlock from "/snippets/zh/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
+import VersionHistory from "/snippets/zh/components/VersionHistory/VersionHistory.jsx";
 
 {/* 自动生成 */}
 
@@ -168,6 +168,16 @@ Possible values:
 
 对于 AvroConfluent 格式：Confluent Schema Registry HTTP 客户端的连接超时时间 (秒) 。同时用于 schema 拉取和 schema 注册。必须大于 0 且小于 600 (10 分钟) 。
 
+<div id="format_avro_schema_registry_max_retries">
+  ## format_avro_schema_registry_max_retries
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="5" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "5"},{"label": "新增设置：控制与 Confluent Schema Registry 通信时，遇到瞬时故障（传输超时、连接被拒绝、DNS 错误、HTTP 5xx/408/429）时的最大重试次数。设置为 0 可禁用重试。`compatibility = '26.5'` 会保留之前的行为（不重试）。"}]}]} />
+
+对于 AvroConfluent 格式：与 Confluent Schema Registry 通信时，如果遇到瞬时故障 (传输超时、连接被拒绝、DNS 错误、HTTP 5xx/408/429) ，最大重试次数。设置为 0 可禁用重试。允许的最大值为 20。schema 验证错误 (HTTP 409、格式错误的 Avro JSON) 不会重试。
+
 <div id="format_avro_schema_registry_receive_timeout">
   ## format_avro_schema_registry_receive_timeout
 </div>
@@ -177,6 +187,16 @@ Possible values:
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "用于控制 AvroConfluent 格式 所使用的 Confluent Schema Registry HTTP 客户端接收超时（单位：秒）的新设置。"}]}]} />
 
 对于 AvroConfluent 格式：Confluent Schema Registry HTTP 客户端的接收超时时间 (单位：秒) 。同时用于 schema 拉取和 schema 注册。该值必须大于 0 且小于 600 (10 分钟) 。
+
+<div id="format_avro_schema_registry_retry_initial_backoff_ms">
+  ## format_avro_schema_registry_retry_initial_backoff_ms
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="100" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "100"},{"label": "用于控制失败的 Confluent Schema Registry 请求在重试前初始退避时间（以毫秒为单位）的新设置。退避时间会在每次重试时加倍，最长为 10 秒。当 `format_avro_schema_registry_max_retries = 0` 时，此设置不生效（可通过 `compatibility = '26.5'` 恢复 26.6 之前的行为）。"}]}]} />
+
+对于 AvroConfluent 格式：重试失败的 Confluent Schema Registry 请求前的初始退避时间，以毫秒为单位。退避时间会在后续每次重试时加倍，最长为 10 秒。该值必须大于 0 且小于或等于 60000。
 
 <div id="format_avro_schema_registry_send_timeout">
   ## format_avro_schema_registry_send_timeout
@@ -826,6 +846,23 @@ ClickHouse 就可以只读取所需的字节范围，并减少内存占用。
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.5"},{"label": "0"},{"label": "在需要时禁用对省略字段使用类型默认值"}]}]} />
 
 强制将省略的字段初始化为 null 值
+
+<div id="input_format_geojson_unsupported_geometry_handling">
+  ## input_format_geojson_unsupported_geometry_handling
+</div>
+
+<SettingsInfoBlock type="GeoJSONUnsupportedGeometryHandling" default_value="throw" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "throw"},{"label": "新增设置，用于控制如何处理无法用 `Geometry` 类型表示的 GeoJSON 几何类型（GeometryCollection、MultiPoint）"}]}]} />
+
+控制在读取 `GeoJSON` 输入时，如果需要将一种有效但无法用 ClickHouse 的 `Geometry` 类型表示的 `GeoJSON` 几何类型 (例如 `GeometryCollection` 或 `MultiPoint`) 存储到 `geometry` 列中，会如何处理。
+
+可能的值：
+
+* `'throw'` (默认) — 抛出异常。
+* `'null'` — 为 `geometry` 列插入 `NULL` 值并继续解析。
+
+这仅在 `geometry` 列被 materialized 时适用。如果它不是请求的输出列，则这类几何对象只会校验格式是否有效，不会触发该处理逻辑。
 
 <div id="input_format_hive_text_allow_variable_number_of_columns">
   ## input_format_hive_text_allow_variable_number_of_columns
@@ -1936,6 +1973,18 @@ Parquet reader 输出的平均块大小 (字节)
 在解析 JSON 列时，每个列中可创建的动态子列的最大数量。
 它可在解析期间控制动态子列的数量，而不受数据类型中指定的动态参数限制。
 
+<div id="output_format_always_write_decimal_point_in_float_and_decimal">
+  ## output_format_always_write_decimal_point_in_float_and_decimal
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新增设置：在文本格式中始终为浮点数和 Decimal 数值输出小数点，即使该值为整数也是如此。"}]}]} />
+
+在文本格式中，始终为浮点数和 Decimal 数值输出小数点，即使该值为整数也是如此。例如，输出 `1.` 而不是 `1`。
+
+默认情况下禁用。
+
 <div id="output_format_arrow_compression_method">
   ## output_format_arrow_compression_method
 </div>
@@ -2131,6 +2180,63 @@ Arrow 输出格式的压缩方法。支持的编解码器：lz4&#95;frame、zstd
 打印 Decimal 值时输出末尾的零。例如，输出 1.230000 而不是 1.23。
 
 默认禁用。
+
+<div id="output_format_float_precision">
+  ## output_format_float_precision
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "一项用于控制 Float 输出中小数位数的新设置"}]}]} />
+
+当该值非 0 时，浮点输出 (`Float32`、`Float64`、`BFloat16`) 会被格式化为小数点后最多保留这么多位数字 (会移除末尾的零) 。
+当该值为 0 (默认值) 时，使用最短的往返表示形式。
+
+对于大到不适合使用定点表示的值，以及量级小到按请求精度舍入后会丢失所有有效数字的值 (即尾数会变成 `±0`) ，则会改用科学计数法输出。在这些回退情况下，尾数的小数位数可能会超过请求的位数。
+
+有效范围：0 到 100。
+
+<div id="output_format_image_height">
+  ## output_format_image_height
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "用于控制 PNG 等图像输出格式的输出图像高度的新设置。"}]}]} />
+
+`PNG` 等图像输出格式的输出图像高度，单位为像素。
+
+默认值：1024。
+
+<div id="output_format_image_terminal_mode">
+  ## output_format_image_terminal_mode
+</div>
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": ""},{"label": "控制是否通过内联图像协议将 PNG 等图像输出格式直接渲染到终端的新设置。"}]}]} />
+
+对于 `PNG` 等图像输出格式，使用内联图像协议将图像直接输出到终端，而不是写出原始图像字节。
+
+可能的值：
+
+* &#96;&#96; (空) — 写出原始图像字节 (默认值) 。
+* `iterm` — 使用 iTerm2 内联图像协议。
+* `kitty` — 使用 Kitty 图形协议。
+* `sixel` — 使用 Sixel 协议。
+* `auto` — 如果输出目标是终端，则检测其能力，并使用 `iterm`、`kitty` 或 `sixel` (按此顺序) ；否则写出原始图像字节。
+
+默认值：&#96;&#96; (空) 。
+
+<div id="output_format_image_width">
+  ## output_format_image_width
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1024" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1024"},{"label": "新增设置，用于控制 `PNG` 等图像输出格式的输出图像宽度。"}]}]} />
+
+`PNG` 等图像输出格式的输出图像宽度，以像素为单位。
+
+默认值：1024。
 
 <div id="output_format_json_array_of_rows">
   ## output_format_json_array_of_rows
@@ -2845,6 +2951,8 @@ SELECT *, toTypeName(*) FROM (SELECT * FROM system.numbers LIMIT 1000);
 
 用于输出网格边框的字符集。可用字符集：ASCII、UTF-8 (默认) 。
 
+在交互模式下，如果终端不支持 UTF-8 (由 `LC_ALL`、`LC_CTYPE` 和 `LANG` 环境变量确定) ，`clickhouse-client` 会自动切换到 `ASCII`，除非已显式指定此设置。
+
 <div id="output_format_pretty_highlight_digit_groups">
   ## output_format_pretty_highlight_digit_groups
 </div>
@@ -2985,6 +3093,18 @@ Pretty 格式 的最大行数限制。
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.1"},{"label": "1000"},{"label": "新增设置"}]}]} />
 
 如果距离上一次输出已经超过指定的毫秒数，则将待处理的块以 Pretty 格式输出。
+
+<div id="output_format_pretty_use_nbsp_for_padding">
+  ## output_format_pretty_use_nbsp_for_padding
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "新设置。启用后，`Pretty` 输出中的填充将使用 `U+00A0` 渲染，这样在通过会压缩连续普通空格的工具进行复制粘贴时也能保留。"}]}]} />
+
+如果启用，`Pretty` 输出格式中的填充将使用 `U+00A0`，而不是 ASCII 空格进行渲染。
+在等宽字体下，输出的视觉效果保持不变，但填充可在会压缩或裁剪连续普通空格的工具中保留下来。
+仅当 `output_format_pretty_grid_charset` 为 `UTF-8` 时生效。
 
 <div id="output_format_protobuf_nullables_with_google_wrappers">
   ## output_format_protobuf_nullables_with_google_wrappers

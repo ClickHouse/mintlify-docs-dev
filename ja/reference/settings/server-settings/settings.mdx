@@ -8,7 +8,7 @@ doc_type: 'reference'
 ---
 
 import SystemLogParameters from '/snippets/ja/_system-log-parameters.mdx';
-import SettingsInfoBlock from "/snippets/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
+import SettingsInfoBlock from "/snippets/ja/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
 
 このセクションでは、サーバー設定について説明します。これらの設定は、
 セッションレベルまたはクエリレベルでは変更できません。
@@ -89,7 +89,7 @@ SQL コマンドで作成されたユーザーおよびロールの設定を Cli
   ## allow_experimental_webterminal
 </div>
 
-<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />`/webterminal` HTTPエンドポイントで、実験的なウェブターミナル インターフェイスを有効にします。WebSocket 経由で、ブラウザ上で対話型の `clickhouse-client` セッションを利用できます。
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="No" />`enable_webterminal` の以前の (実験的な) 名称です。`enable_webterminal` が設定されていない場合は、後方互換性のため引き続き認識されます。この設定は非推奨です。
 
 <div id="allow_feature_tier">
   ## allow_feature_tier
@@ -310,7 +310,7 @@ proxy 経由で接続するクライアントの認証には、送信元アド�
   ## background_common_pool_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="8" changeable_without_restart="No" />バックグラウンドで[*MergeTree-engine](/ja/reference/engines/table-engines/mergetree-family)テーブルに対してさまざまな操作 (主にガベージコレクション) を実行する際に使用されるスレッドの最大数です。
+<SettingsInfoBlock type="UInt64" default_value="8" changeable_without_restart="No" />バックグラウンドで[*MergeTree-engine](/ja/reference/engines/table-engines/mergetree-family/index)テーブルに対してさまざまな操作 (主にガベージコレクション) を実行する際に使用されるスレッドの最大数です。
 
 <div id="background_distributed_schedule_pool_size">
   ## background_distributed_schedule_pool_size
@@ -322,7 +322,7 @@ proxy 経由で接続するクライアントの認証には、送信元アド�
   ## background_fetches_pool_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="16" changeable_without_restart="No" />[*MergeTree-engine](/ja/reference/engines/table-engines/mergetree-family) テーブルで、別のレプリカからデータパーツをバックグラウンドでフェッチする際に使用されるスレッドの最大数です。
+<SettingsInfoBlock type="UInt64" default_value="16" changeable_without_restart="No" />[*MergeTree-engine](/ja/reference/engines/table-engines/mergetree-family/index) テーブルで、別のレプリカからデータパーツをバックグラウンドでフェッチする際に使用されるスレッドの最大数です。
 
 <div id="background_merges_mutations_concurrency_ratio">
   ## background_merges_mutations_concurrency_ratio
@@ -383,9 +383,9 @@ MergeTree エンジンを使用するテーブルで、バックグラウンド�
   * この設定を調整することで、CPU とディスクの負荷を管理できます。
 </Note>
 
-<Warning>
+<Danger>
   プールサイズを小さくすると、使用する CPU リソースとディスク リソースは少なくなりますが、バックグラウンドプロセスの進行が遅くなり、最終的にクエリパフォーマンスに影響する可能性があります。
-</Warning>
+</Danger>
 
 変更する前に、次のような関連する MergeTree 設定も確認してください。
 
@@ -1377,6 +1377,12 @@ hostname の DNS cache の更新でこの回数だけ連続して失敗すると
 
 <SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />Azure SDK からのログ出力を有効にします
 
+<div id="enable_webterminal">
+  ## enable_webterminal
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="No" />`/webterminal` HTTPエンドポイントで、ウェブターミナル インターフェイスを有効にします。WebSocket 経由で、ブラウザ上で対話型の `clickhouse-client` セッションを利用できます。`false` の場合、`/webterminal` へのリクエストは HTTP ステータス `403 Forbidden` を返します。
+
 <div id="encryption">
   ## encryption
 </div>
@@ -1709,28 +1715,40 @@ HSTS の有効期間 (秒) 。
 新しい http ハンドラーを追加するには、新しい `<rule>` を追加するだけです。
 ルールは定義された順に上から順に評価され、
 最初に一致したルールのハンドラーが実行されます。
+一致条件を持たないルール (`handler` のみ) はすべてのリクエストに一致します。ルールは順番に評価されるため、
+そのようなルールは最後に配置するフォールバックとしてのみ有用です。
 
-以下の設定はサブタグで構成できます:
+以下の設定はサブタグで構成できます (`handler` を除き、これらのサブタグはすべて任意です):
 
-| Sub-tags             | Definition                                                                                    |
-| -------------------- | --------------------------------------------------------------------------------------------- |
-| `url`                | リクエスト URL を照合するには、&#39;regex:&#39; プレフィックスを使用して正規表現マッチを指定できます (任意)                            |
-| `methods`            | リクエストメソッドを照合するには、カンマ区切りで複数のメソッドを指定できます (任意)                                                   |
-| `headers`            | リクエストヘッダーを照合するには、各子要素を照合します (子要素名はヘッダー名です) 。&#39;regex:&#39; プレフィックスを使用して正規表現マッチを指定できます (任意)  |
-| `handler`            | リクエストハンドラー                                                                                    |
-| `empty_query_string` | URL にクエリ文字列が含まれていないことを確認します                                                                   |
+| Sub-tags             | Definition                                                                                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`                | リクエスト URL パスを照合します。照合時にはクエリ文字列は無視されます                                                                                                                                 |
+| `url_prefix`         | リクエスト URL パスをベースパスに対して照合します。対象はパス自体、またはパスセグメント境界でその配下にあるものです (例: &#39;/api/v1&#39; は /api/v1、/api/v1/、/api/v1/write には一致しますが、/api/v1beta には一致しません)。照合時にはクエリ文字列は無視されます |
+| `url_regexp`         | リクエスト URL パスを正規表現に対して照合します。照合時にはクエリ文字列は無視されます                                                                                                                         |
+| `full_url`           | 完全なリクエスト URL `scheme://host:port/path` を照合します。照合時にはクエリ文字列は無視され、host は接続の IP アドレスです (`Host` ヘッダーではありません)                                                               |
+| `full_url_prefix`    | 完全なリクエスト URL `scheme://host:port/path` をベース URL `scheme://host:port/base_path` に対して、パスセグメント境界で照合します (`url_prefix` を参照)。照合時にはクエリ文字列は無視されます                             |
+| `full_url_regexp`    | 完全なリクエスト URL `scheme://host:port/path` を正規表現に対して照合します。照合時にはクエリ文字列は無視されます                                                                                              |
+| `methods`            | リクエストメソッドを照合するには、カンマ区切りで複数のメソッドを指定できます                                                                                                                                |
+| `headers`            | リクエストヘッダーを照合するには、各子要素を照合します (子要素名はヘッダー名です)                                                                                                                            |
+| `headers_regexp`     | `headers` と同様ですが、各子要素の値を正規表現に対して照合します                                                                                                                                 |
+| `empty_query_string` | URL にクエリ文字列が含まれていないことを確認します                                                                                                                                           |
+| `handler`            | リクエストハンドラー (必須)                                                                                                                                                       |
+
+<Note>
+  `url_regexp`、`full_url_regexp`、`headers_regexp` の代わりに、`url`、`full_url`、`headers` で `regex:` プレフィックスを使って正規表現を書くこともできます (例: `<url>regex:/api/.*</url>`)。これは後方互換性のため引き続きサポートされていますが、廃止された方法です。専用の `url_regexp`、`full_url_regexp`、`headers_regexp` サブタグを優先してください。
+</Note>
 
 `handler` には以下の設定があり、サブタグで構成できます:
 
-| Sub-tags           | Definition                                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `url`              | リダイレクト先 URL                                                                                                                          |
-| `type`             | サポートされる type: static, dynamic&#95;query&#95;handler, predefined&#95;query&#95;handler, redirect                                      |
-| `status`           | static type で使用します。レスポンスのステータスコード                                                                                                    |
-| `query_param_name` | dynamic&#95;query&#95;handler type で使用します。HTTP リクエストパラメータ内の `<query_param_name>` に対応する値を抽出して実行します                                    |
-| `query`            | predefined&#95;query&#95;handler type で使用します。ハンドラーが呼び出されたときにクエリを実行します                                                                |
-| `content_type`     | static type で使用します。レスポンスの content-type                                                                                               |
-| `response_content` | static type で使用します。クライアントに送信するレスポンス内容です。&#39;file://&#39; または &#39;config://&#39; プレフィックスを使用すると、ファイルまたは config から内容を取得してクライアントに送信します |
+| Sub-tags           | Definition                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`              | リダイレクト先 URL                                                                                                                                 |
+| `type`             | サポートされる type: static, dynamic&#95;query&#95;handler, predefined&#95;query&#95;handler, redirect                                             |
+| `status`           | static type で使用します。レスポンスのステータスコード                                                                                                           |
+| `query_param_name` | dynamic&#95;query&#95;handler type で使用します。HTTP リクエスト params 内の `<query_param_name>` に対応する値を抽出して実行します                                        |
+| `query`            | predefined&#95;query&#95;handler type で使用します。ハンドラーが呼び出されたときにクエリを実行します                                                                       |
+| `content_type`     | static type で使用します。レスポンスの content-type                                                                                                      |
+| `response_content` | static type で使用します。クライアントに送信するレスポンス内容です。&#39;file://&#39; または &#39;config://&#39; プレフィックスを使用すると、ファイルまたは configuration から内容を取得してクライアントに送信します |
 
 ルールの一覧に加えて、すべてのデフォルトハンドラーを有効にする `<defaults/>` を指定することもできます。
 
@@ -1863,7 +1881,7 @@ ClickHouse HTTP(s) サーバーにアクセスした際にデフォルトで表�
   ## iceberg_metadata_files_cache_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="1073741824" changeable_without_restart="Yes" />Iceberg メタデータキャッシュの最大サイズをバイト単位で指定します。0 は無効を意味します。
+<SettingsInfoBlock type="UInt64" default_value="134217728" changeable_without_restart="Yes" />Iceberg メタデータキャッシュの最大サイズをバイト単位で指定します。0 は無効を意味します。
 
 <div id="iceberg_metadata_files_cache_size_ratio">
   ## iceberg_metadata_files_cache_size_ratio
@@ -2389,26 +2407,26 @@ listen ソケットのバックログ (保留中の接続のキューサイズ) 
 
 **キー**:
 
-| Key                          | Description                                                                                                                                                                        |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `async`                      | `true` (デフォルト) の場合、ログは非同期に記録されます (出力チャネルごとに 1 つのバックグラウンドスレッド) 。それ以外の場合は、`LOG` を呼び出したスレッド内でログが記録されます                                                                                |
-| `async_queue_max_size`       | 非同期ログを使用する場合に、フラッシュ待ちのキューに保持されるメッセージの最大数です。これを超えたメッセージは破棄されます                                                                                                                      |
-| `console`                    | コンソールへのログ出力を有効にします。有効にするには `1` または `true` を設定します。デフォルトは、ClickHouse がデーモンモードで実行されていない場合は `1`、それ以外は `0` です。                                                                          |
-| `console_log_level`          | コンソール出力のログレベルです。デフォルトは `level` です。                                                                                                                                                 |
-| `console_shutdown_log_level` | Shutdown level は、サーバーのシャットダウン時にコンソールのログレベルを設定するために使用されます。                                                                                                                          |
-| `console_startup_log_level`  | Startup level は、サーバー起動時のコンソールログレベルを設定するために使用されます。起動後、ログレベルは `console_log_level` 設定に戻ります                                                                                            |
+| Key                          | Description                                                                                                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `async`                      | `true` (デフォルト) の場合、ログは非同期に記録されます (出力チャネルごとに 1 つのバックグラウンドスレッド) 。それ以外の場合は、`LOG` を呼び出したスレッド内でログが記録されます                                                                            |
+| `async_queue_max_size`       | 非同期ログを使用する場合に、フラッシュ待ちのキューに保持されるメッセージの最大数です。これを超えたメッセージは破棄されます                                                                                                                  |
+| `console`                    | コンソールへのログ出力を有効にします。有効にするには `1` または `true` を設定します。デフォルトは、ClickHouse がデーモンモードで実行されていない場合は `1`、それ以外は `0` です。                                                                      |
+| `console_log_level`          | コンソール出力のログレベルです。デフォルトは `level` です。                                                                                                                                             |
+| `console_shutdown_log_level` | Shutdown level は、サーバーのシャットダウン時にコンソールのログレベルを設定するために使用されます。                                                                                                                      |
+| `console_startup_log_level`  | Startup level は、サーバー起動時のコンソールログレベルを設定するために使用されます。起動後、ログレベルは `console_log_level` 設定に戻ります                                                                                        |
 | `count`                      | ローテーションポリシー: ClickHouse が保持する過去のログファイルの最大数です。                                                                                                                                  |
-| `errorlog`                   | エラーログファイルへのパスです。                                                                                                                                                                   |
-| `formatting.type`            | コンソール出力のログフォーマットです。現在は `json` のみサポートされています                                                                                                                                         |
-| `level`                      | ログレベルです。有効な値: `none` (ログを無効化) 、`fatal`、`critical`、`error`、`warning`、`notice`、`information`,`debug`、`trace`、`test`                                                                  |
-| `log`                        | ログファイルへのパスです。                                                                                                                                                                      |
+| `errorlog`                   | エラーログファイルへのパスです。                                                                                                                                                               |
+| `formatting.type`            | コンソール出力のログフォーマットです。現在は `json` のみサポートされています                                                                                                                                     |
+| `level`                      | ログレベルです。有効な値: `none` (ログを無効化) 、`fatal`、`critical`、`error`、`warning`、`notice`、`information`,`debug`、`trace`、`test`                                                              |
+| `log`                        | ログファイルへのパスです。                                                                                                                                                                  |
 | `rotation`                   | ローテーションポリシー: ログファイルをいつローテーションするかを制御します。ローテーションはサイズ、時間、またはその両方の組み合わせに基づいて行えます。例: 100M, daily, 100M,daily。ログファイルが指定サイズを超えた場合、または指定した時間間隔に達した場合、名前が変更されてアーカイブされ、新しいログファイルが作成されます。 |
-| `shutdown_level`             | Shutdown level は、サーバーのシャットダウン時にルートロガーのレベルを設定するために使用されます。                                                                                                                           |
+| `shutdown_level`             | Shutdown level は、サーバーのシャットダウン時にルートロガーのレベルを設定するために使用されます。                                                                                                                       |
 | `size`                       | ローテーションポリシー: ログファイルの最大サイズ (バイト単位) です。ログファイルのサイズがこのしきい値を超えると、名前が変更されてアーカイブされ、新しいログファイルが作成されます。                                                                                  |
-| `startup_level`              | Startup level は、サーバー起動時にルートロガーのレベルを設定するために使用されます。起動後、ログレベルは `level` 設定に戻ります                                                                                                        |
-| `stream_compress`            | LZ4 を使用してログメッセージを圧縮します。有効にするには `1` または `true` を設定します。                                                                                                                              |
-| `syslog_level`               | syslog に出力する際のログレベルです。                                                                                                                                                             |
-| `use_syslog`                 | ログ出力を syslog にも転送します。                                                                                                                                                              |
+| `startup_level`              | Startup level は、サーバー起動時にルートロガーのレベルを設定するために使用されます。起動後、ログレベルは `level` 設定に戻ります                                                                                                    |
+| `stream_compress`            | LZ4 を使用してログメッセージを圧縮します。有効にするには `1` または `true` を設定します。                                                                                                                          |
+| `syslog_level`               | syslog に出力する際のログレベルです。                                                                                                                                                         |
+| `use_syslog`                 | ログ出力を syslog にも転送します。                                                                                                                                                          |
 
 **ログフォーマット指定子**
 
@@ -2706,7 +2724,7 @@ Startup level は、サーバー起動時のルートロガーのレベルを設
 
 <SettingsInfoBlock type="UInt64" default_value="5368709120" changeable_without_restart="Yes" />
 
-マーク用 cache の最大サイズ ([`MergeTree`](/ja/reference/engines/table-engines/mergetree-family) ファミリーのテーブルの索引) 。
+マーク用 mark cache の最大サイズ ([`MergeTree`](/ja/reference/engines/table-engines/mergetree-family/index) ファミリーのテーブルの索引) 。
 
 <Note>
   この設定は実行時に変更でき、変更は即座に反映されます。
@@ -3245,6 +3263,13 @@ server が使用できるメモリの最大量を、利用可能な総メモリ�
 メモリの少ないシステムで、memory usage を抑えることができます。
 RAM とスワップが少ないホストでは、[`max_server_memory_usage_to_ram_ratio`](#max_server_memory_usage_to_ram_ratio) の値を 1 より大きく設定する必要がある場合があります。
 
+この比率は、次の 2 つの方法で適用されます。
+
+* 起動時 (および設定の再読み込み時) には、前述のとおり、server のハードメモリ制限は物理 RAM 全体のこの比率を上限として設定されます。
+* 実行時には、バックグラウンドメモリワーカー がハードメモリ制限を `(resident memory + system available memory) * max_server_memory_usage_to_ram_ratio` として定期的に再計算します。これにより、server は同じホスト上で動作するほかのプロセスのためのヘッドルームを確保できます。有限のメモリ制限を持つ cgroup 内で実行されている場合は、ホスト全体の値ではなく cgroup の利用可能メモリが使用されます。ほかのプロセスの使用量が増えて利用可能メモリが減少すると、server のハード制限もそれに応じて引き下げられ、ホスト (または cgroup) のメモリが枯渇する前に増加が抑えられます。
+
+比率を `0` に設定すると、起動時の上限制限と実行時の調整の両方が無効になります。実行時の調整は、非 Linux システムおよびこの設定を公開していない `clickhouse-keeper` では no-op です。静的な起動時/再読み込み時の制限は維持しつつ、実行時の調整 (以前のバージョンの動作) を無効にするには、`memory_worker_dynamic_hard_limit` を `0` に設定してください。
+
 <Note>
   server の最大メモリ消費量は、さらに `max_server_memory_usage` 設定によって制限されます。
 </Note>
@@ -3485,6 +3510,18 @@ ClickHouse は、クエリの処理にグローバルスレッドプールのス
 
 メモリプレッシャーが継続した状態と見なされ、jemalloc の `dirty_decay_ms` を動的に調整するまでの時間 (ミリ秒) です。メモリ使用量がこの期間にわたってパージしきい値を上回っている場合、メモリを積極的に回収するために dirty page decay は無効化されます (`dirty_decay_ms=0`) 。メモリ使用量がこの期間にわたってしきい値を下回っている場合は、デフォルトの decay 動作が復元されます。0 に設定すると、動的調整を無効にし、jemalloc のデフォルトの decay 設定を使用します。
 
+<div id="memory_worker_dynamic_hard_limit">
+  ## memory_worker_dynamic_hard_limit
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="No" />
+
+バックグラウンドメモリワーカーが、実行時に `(resident memory + system available memory) * max_server_memory_usage_to_ram_ratio` としてサーバーのハードメモリ制限を定期的に再計算し、同じホスト上で実行されている他のプロセスのためのヘッドルームを確保するかどうかを指定します。
+
+無効にすると、`max_server_memory_usage_to_ram_ratio` は以前のバージョンと同様、起動時および設定の再読み込み時にのみハードメモリ制限の上限を静的に設定します。
+
+`max_server_memory_usage_to_ram_ratio` が `0` の場合は効果がありません。
+
 <div id="memory_worker_period_ms">
   ## memory_worker_period_ms
 </div>
@@ -3575,6 +3612,12 @@ ClickHouse が設定された上限に達すると、新しいバックグラウ
 * [max&#95;memory&#95;usage](/ja/reference/settings/session-settings#max_memory_usage)
 * [merges&#95;mutations&#95;memory&#95;usage&#95;soft&#95;limit](/ja/reference/settings/server-settings/settings#merges_mutations_memory_usage_soft_limit)
 
+<div id="message_queue_disable_insertion">
+  ## message_queue_disable_insertion
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="Yes" />メッセージキュー エンジン (Kafka、RabbitMQ、NATS) から、アタッチ済みの materialized view への挿入を無効にします
+
 <div id="metric_log">
   ## metric_log
 </div>
@@ -3611,6 +3654,20 @@ ClickHouse が設定された上限に達すると、新しいバックグラウ
 ```
 
 <SystemLogParameters />
+
+<div id="min_allocation_size_to_throw_on_memory_limit">
+  ## min_allocation_size_to_throw_on_memory_limit
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="0" changeable_without_restart="Yes" />
+
+`max_server_memory_usage` に達した際に `MEMORY_LIMIT_EXCEEDED` の発生を許可する、汎用的な C++ の割り当て (標準コンテナー、文字列、`std::vector` の拡張、スマートポインターなどで行われるもの) の最小サイズを、バイト単位で指定します。これより小さい汎用割り当ても引き続き memory tracker に計上されますが、制限を超えた後でも成功が許可されるため、OOM 付近でのクリーンアップ処理や例外処理経路における不要な失敗を減らせます。
+
+ClickHouse 自身の大きなバッファ — カラムデータ、ハッシュテーブル、アリーナ、クエリパイプライン、I/O バッファ — による割り当ては、常にメモリ制限に従い、この値に関係なく例外を送出する場合があります。この設定の影響を受けるのは、`operator new` を経由する暗黙的な割り当てだけです。
+
+値を `0` (デフォルト) にすると、従来の動作が維持されます。つまり、暗黙的な `operator new` の割り当てが memory tracker によって拒否されることはなく、`MEMORY_LIMIT_EXCEEDED` を発生させられるのは明示的な ClickHouse の割り当てだけです。
+
+なお、副作用を避けるため、値は `max_untracked_memory` より大きく設定することを推奨します。
 
 <div id="min_os_cpu_wait_time_ratio_to_drop_connection">
   ## min_os_cpu_wait_time_ratio_to_drop_connection
@@ -3698,6 +3755,72 @@ MySQL プロトコルでクライアントと通信するためのポート。
 </div>
 
 <SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="いいえ" />true に設定すると、[mysql&#95;port](/ja/reference/settings/server-settings/settings#mysql_port) 経由で接続するクライアントにはセキュアな通信が必須になります。`<--ssl-mode=none>` オプションを指定した接続は拒否されます。[OpenSSL](/ja/reference/settings/server-settings/settings#openssl) の設定とあわせて使用してください。
+
+<div id="oom_canary_enable">
+  ## oom_canary_enable
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />
+
+実験的機能です。OOM canary を有効にします。これは、Linux の OOM キラーがメインの ClickHouse サーバープロセスより先に標的とする犠牲用の子プロセスで、
+サーバーが負荷を逃がすための猶予を確保します。
+Linux &gt;= 5.3 (`pidfd_open` のため) が必要です。古いカーネルでは、起動時に OOM canary は無効化されます。
+OOM への対応には、cgroup v2 の `memory.events.local` に OOM-kill の発生記録があることが必要で、グローバルな
+クエリのキャンセル、マージのキャンセル、および `system.crash_log` への書き込みが実行される場合があります。
+サーバーの cgroup で cgroup v2 の `memory.oom.group` が有効になっている場合、カナリアはサーバーを保護できません。その場合、
+カーネルはサーバーを含む cgroup 全体を 1 つの単位として終了させるため、
+OOM への対応は実行されません。このモードでは、起動時に警告がログに記録されます。
+本番環境での検証が完了するまで、ClickHouse のバージョン間で動作が変わる可能性があります。
+
+<div id="oom_canary_initial_backoff_seconds">
+  ## oom_canary_initial_backoff_seconds
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1" changeable_without_restart="No" />
+
+連続する OOM canary の再起動の間隔に適用される、秒単位の初期バックオフ遅延です。
+この遅延は再起動のたびに 2 倍になり、`oom_canary_max_backoff_seconds` まで増加します。
+
+<div id="oom_canary_max_backoff_seconds">
+  ## oom_canary_max_backoff_seconds
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="60" changeable_without_restart="No" />
+
+連続する OOM canary の再起動間における最大バックオフ遅延時間 (秒) です。
+
+<div id="oom_canary_max_rapid_relaunches">
+  ## oom_canary_max_rapid_relaunches
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="10" changeable_without_restart="No" />
+
+継続的なメモリ逼迫時のスラッシングを防ぐため、自動再起動が無効になるまでに許容される OOM canary の連続高速再起動の最大回数です。
+canary が `oom_canary_max_backoff_seconds` より長く生存すると、カウンターと再起動のバックオフはリセットされます。したがって、長い稼働時間の中で散発的にのみ停止する canary が、最終的に無効化されることはありません。
+`oom_canary_relaunch` が true の場合にのみ適用されます。
+
+<div id="oom_canary_relaunch">
+  ## oom_canary_relaunch
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="No" />
+
+true の場合、恒久的なセットアップの失敗またはサーバーのシャットダウン以外の理由で canary プロセスが終了すると、
+OOM kill、その他のシグナル、一時的な終了を含め、`oom_canary_max_rapid_relaunches` とバックオフ
+設定に従って、OOM canary は自動的に再起動されます。OOM 応答の一連の処理自体は、cgroup v2 `memory.events.local`
+が OOM-kill の証拠を提供する場合にのみ実行されます。
+
+<div id="oom_canary_size">
+  ## oom_canary_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="104857600" changeable_without_restart="No" />
+
+OOM canary の子プロセスが確保し、実際にアクセスするメモリ領域のサイズ (バイト単位) 。
+`mlock` による領域のロックはベストエフォートです。これには `CAP_IPC_LOCK` または十分な
+`RLIMIT_MEMLOCK` が必要で、ロックに失敗した場合、canary は警告をログに記録し、メモリは
+確保されたままですが、スワップアウトされる可能性があります。
+デフォルトは 100 MB (104857600) です。値を大きくすると、canary は OOM の対象として選ばれやすくなります。
 
 <div id="oom_score">
   ## oom_score
@@ -4171,6 +4294,14 @@ SharedMergeTree のパーツを完全に削除するまでの期間。ClickHouse
 <SettingsInfoBlock type="UInt64" default_value="10" changeable_without_restart="No" />
 
 テーブル数が非常に多い場合に、サンダリングハード問題や、それに続く ZooKeeper への DoS を回避するため、0 から x 秒までの一様分布の値を `kill_delay_period` に加算します。ClickHouse Cloud でのみ利用できます
+
+<div id="parts_killer_max_condemned_parts_per_batch">
+  ## parts_killer_max_condemned_parts_per_batch
+</div>
+
+<SettingsInfoBlock type="NonZeroUInt64" default_value="100000" changeable_without_restart="No" />
+
+1 回のクリーンアップサイクルで SharedMergeTree テーブルが Keeper から取得する廃棄対象パーツの最大数です。バッチに上限を設けることで、一覧取得とマルチゲットを Keeper の操作タイムアウト内に収められるため、テーブルに非常に大量の廃棄対象パーツのバックログが蓄積している場合でも、クリーンアップを継続して進められます。0 より大きい値でなければなりません。`0` を指定すると、Keeper は毎サイクル空の一覧を返すようになり、クリーンアップが恒久的に停止します。ClickHouse Cloud でのみ利用できます
 
 <div id="parts_killer_pool_size">
   ## parts_killer_pool_size
@@ -5677,6 +5808,24 @@ server には共有 cache が 1 つあります。メモリは必要に応じて
 
 <SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />非圧縮 cache における protected queue (SLRU ポリシーの場合) のサイズが、cache の総サイズに占める割合です。
 
+<div id="unique_key_index_cache_policy">
+  ## unique_key_index_cache_policy
+</div>
+
+<SettingsInfoBlock type="String" default_value="SLRU" changeable_without_restart="No" />UNIQUE KEY 索引キャッシュのポリシー名 (SLRU または LRU) 。
+
+<div id="unique_key_index_cache_size_bytes">
+  ## unique_key_index_cache_size_bytes
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1073741824" changeable_without_restart="No" />UNIQUE KEY 索引 (SST) ブロック用のプロセス内キャッシュの最大サイズをバイト単位で指定します。0 は無効を意味します。
+
+<div id="unique_key_index_cache_size_ratio">
+  ## unique_key_index_cache_size_ratio
+</div>
+
+<SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />UNIQUE KEY 索引キャッシュにおける protected queue (SLRU ポリシーの場合) のサイズを、キャッシュ全体のサイズに対する比率で表した設定です。
+
 <div id="url_scheme_mappers">
   ## url_scheme_mappers
 </div>
@@ -5703,7 +5852,7 @@ server には共有 cache が 1 つあります。メモリは必要に応じて
   ## use_minimalistic_part_header_in_zookeeper
 </div>
 
-ZooKeeper 内でのデータパーツヘッダーの保存方式です。この設定は [`MergeTree`](/ja/reference/engines/table-engines/mergetree-family) family にのみ適用されます。指定方法は次のとおりです。
+ZooKeeper 内でのデータパーツヘッダーの保存方式です。この設定は [`MergeTree`](/ja/reference/engines/table-engines/mergetree-family/index) family にのみ適用されます。指定方法は次のとおりです。
 
 **`config.xml` ファイルの [merge&#95;tree](#merge_tree) セクションでグローバルに指定**
 
@@ -6036,14 +6185,16 @@ ClickHouse が [ZooKeeper](http://zookeeper.apache.org/) クラスターと連�
 
 また、ZooKeeper ノードの選択アルゴリズムを指定できる `zookeeper_load_balancing` 設定 (任意) もあります。
 
-| Algorithm Name                  | Description                                                                           |
-| ------------------------------- | ------------------------------------------------------------------------------------- |
-| `random`                        | ZooKeeper ノードのいずれか 1 つをランダムに選択します。                                                    |
-| `in_order`                      | 最初の ZooKeeper ノードを選択し、利用できない場合は 2 番目、その次は 3 番目というように選択します。                            |
-| `nearest_hostname`              | server の hostname に最も近い hostname を持つ ZooKeeper ノードを選択します。hostname は名前のプレフィックスで比較されます。 |
-| `hostname_levenshtein_distance` | nearest&#95;hostname と同様ですが、hostname をレーベンシュタイン距離で比較します。                              |
-| `first_or_random`               | 最初の ZooKeeper ノードを選択し、利用できない場合は残りの ZooKeeper ノードから 1 つをランダムに選択します。                    |
-| `round_robin`                   | 最初の ZooKeeper ノードを選択し、再接続が発生した場合は次のノードを選択します。                                         |
+| Algorithm Name                   | Description                                                                            |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| `random`                         | ZooKeeper ノードのいずれか 1 つをランダムに選択します。                                                     |
+| `in_order`                       | 最初の ZooKeeper ノードを選択し、利用できない場合は 2 番目、その次は 3 番目というように選択します。                             |
+| `nearest_hostname`               | server の hostname に最も近い hostname を持つ ZooKeeper ノードを選択します。hostname は名前のプレフィックスで比較されます。  |
+| `hostname_levenshtein_distance`  | nearest&#95;hostname と同様ですが、hostname をレーベンシュタイン距離で比較します。                               |
+| `hostname_longest_common_prefix` | nearest&#95;hostname と同様ですが、server の hostname と最長共通プレフィックスを共有する hostname を持つノードを優先します。 |
+| `hostname_longest_common_suffix` | nearest&#95;hostname と同様ですが、server の hostname と最長共通接尾辞を共有する hostname を持つノードを優先します。     |
+| `first_or_random`                | 最初の ZooKeeper ノードを選択し、利用できない場合は残りの ZooKeeper ノードから 1 つをランダムに選択します。                     |
+| `round_robin`                    | 最初の ZooKeeper ノードを選択し、再接続が発生した場合は次のノードを選択します。                                          |
 
 **設定例**
 
@@ -6059,15 +6210,15 @@ ClickHouse が [ZooKeeper](http://zookeeper.apache.org/) クラスターと連�
     </node>
     <session_timeout_ms>30000</session_timeout_ms>
     <operation_timeout_ms>10000</operation_timeout_ms>
-    <!-- オプション。Chrootの接尾辞。事前に存在している必要があります。 -->
+    <!-- Optional. Chroot suffix. Should exist. -->
     <root>/path/to/zookeeper/node</root>
-    <!-- オプション。ZooKeeperのダイジェストACL文字列。 -->
+    <!-- Optional. Zookeeper digest ACL string. -->
     <identity>user:password</identity>
-    <!--<zookeeper_load_balancing>random / in_order / nearest_hostname / hostname_levenshtein_distance / first_or_random / round_robin</zookeeper_load_balancing>-->
+    <!--<zookeeper_load_balancing>random / in_order / nearest_hostname / hostname_levenshtein_distance / hostname_longest_common_prefix / hostname_longest_common_suffix / first_or_random / round_robin</zookeeper_load_balancing>-->
     <zookeeper_load_balancing>random</zookeeper_load_balancing>
-    <!-- オプション。64ビットトランザクションIDを有効にします。 -->
+    <!-- Optional. Enable 64-bit transaction IDs. -->
     <use_xid_64>false</use_xid_64>
-    <!-- オプション。OpenTelemetryトレーシングコンテキストの伝播を有効にします。 -->
+    <!-- Optional. Enable OpenTelemetry tracing context propagation. -->
     <pass_opentelemetry_tracing_context>false</pass_opentelemetry_tracing_context>
 </zookeeper>
 ```
@@ -6075,8 +6226,8 @@ ClickHouse が [ZooKeeper](http://zookeeper.apache.org/) クラスターと連�
 **関連項目**
 
 * [レプリケーション](/ja/reference/engines/table-engines/mergetree-family/replication)
-* [ZooKeeper プログラマーズガイド](http://zookeeper.apache.org/doc/current/zookeeperProgrammers.html)
-* [ClickHouse と ZooKeeper 間のセキュアな通信 (オプション) ](/ja/guides/oss/deployment-and-scaling/keeper/ssl-zookeeper)
+* [ZooKeeper Programmer&#39;s Guide](http://zookeeper.apache.org/doc/current/zookeeperProgrammers.html)
+* [ClickHouse と Zookeeper 間のオプションのセキュアな通信](/ja/guides/oss/deployment-and-scaling/keeper/ssl-zookeeper)
 
 <div id="zookeeper_log">
   ## zookeeper_log

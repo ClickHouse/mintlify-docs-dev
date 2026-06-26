@@ -12,7 +12,7 @@ integration:
 
 import BucketDetails from '/snippets/pt-BR/_S3_authentication_and_bucket.mdx';
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/pt-BR/components/Image.jsx";
 
 Você pode inserir dados do S3 no ClickHouse e também usar o S3 como destino de exportação, permitindo assim a interação com arquiteturas de &quot;lago de dados&quot;. Além disso, o S3 pode oferecer camadas de armazenamento &quot;frias&quot; e ajudar a separar armazenamento e computação. Nas seções abaixo, usamos o conjunto de dados de táxis da cidade de Nova York para demonstrar o processo de mover dados entre o S3 e o ClickHouse, além de identificar parâmetros importantes de configuração e fornecer dicas para otimizar o desempenho.
 
@@ -28,12 +28,12 @@ s3(path, [aws_access_key_id, aws_secret_access_key,] [format, [structure, [compr
 
 onde:
 
-* path — URL do bucket com o path para o arquivo. Isso oferece suporte aos seguintes curingas no modo somente leitura: `*`, `?`, `{abc,def}` e `{N..M}`, em que `N`, `M` são números e `'abc'`, `'def'` são strings. Para mais informações, consulte a documentação sobre [uso de curingas no path](/pt-BR/reference/engines/table-engines/integrations/s3#wildcards-in-path).
-* format — O [formato](/pt-BR/reference/formats#formats-overview) do arquivo.
+* path — URL do bucket com o caminho para o arquivo. Isso oferece suporte aos seguintes curingas no modo somente leitura: `*`, `?`, `{abc,def}` e `{N..M}`, em que `N`, `M` são números e `'abc'`, `'def'` são strings. Para mais informações, consulte a documentação sobre [uso de curingas no caminho](/pt-BR/reference/engines/table-engines/integrations/s3#wildcards-in-path).
+* format — O [formato](/pt-BR/reference/formats/index#formats-overview) do arquivo.
 * structure — Estrutura da tabela. Formato `'column1_name column1_type, column2_name column2_type, ...'`.
 * compression — O parâmetro é opcional. Valores compatíveis: `none`, `gzip/gz`, `brotli/br`, `xz/LZMA`, `zstd/zst`. Por padrão, a compressão será detectada automaticamente pela extensão do arquivo.
 
-O uso de curingas na expressão do path permite referenciar vários arquivos e abre espaço para paralelismo.
+O uso de curingas na expressão do caminho permite referenciar vários arquivos e abre espaço para paralelismo.
 
 <div id="preparation">
   ### Preparação
@@ -324,7 +324,7 @@ s3Cluster(cluster_name, source, [access_key_id, secret_access_key,] format, stru
 * `cluster_name` — Nome de um cluster usado para montar um conjunto de endereços e parâmetros de conexão para servidores remotos e locais.
 * `source` — URL para um arquivo ou um conjunto de arquivos. Suporta os seguintes curingas no modo somente leitura: `*`, `?`, `{'abc','def'}` e `{N..M}`, em que N, M — números; abc, def — strings. Para mais informações, consulte [Wildcards In Path](/pt-BR/reference/engines/table-engines/integrations/s3#wildcards-in-path).
 * `access_key_id` e `secret_access_key` — Chaves que especificam as credenciais a serem usadas com o endpoint informado. Opcional.
-* `format` — O [formato](/pt-BR/reference/formats#formats-overview) do arquivo.
+* `format` — O [formato](/pt-BR/reference/formats/index#formats-overview) do arquivo.
 * `structure` — Estrutura da tabela. Formato &#39;column1&#95;name column1&#95;type, column2&#95;name column2&#95;type, ...&#39;.
 
 Como em qualquer função `s3`, as credenciais são opcionais se o bucket for inseguro ou se você configurar a segurança por meio do ambiente, por exemplo, com IAM roles. Ao contrário da função s3, no entanto, a estrutura deve ser especificada na requisição a partir da versão 22.3.1, ou seja, o esquema não é inferido.
@@ -356,7 +356,7 @@ CREATE TABLE s3_engine_table (name String, value UInt32)
 ```
 
 * `path` — URL do bucket com o caminho para o arquivo. Oferece suporte aos seguintes curingas no modo somente leitura: `*`, `?`, `{abc,def}` e `{N..M}`, em que N e M são números, e &#39;abc&#39; e &#39;def&#39; são strings. Para mais informações, consulte [aqui](/pt-BR/reference/engines/table-engines/integrations/s3#wildcards-in-path).
-* `format` — O [formato](/pt-BR/reference/formats#formats-overview) do arquivo.
+* `format` — O [formato](/pt-BR/reference/formats/index#formats-overview) do arquivo.
 * `aws_access_key_id`, `aws_secret_access_key` - Credenciais de longo prazo do usuário da conta AWS. Você pode usá-las para autenticar suas solicitações. O parâmetro é opcional. Se as credenciais não forem especificadas, serão usados os valores do arquivo de configuração. Para mais informações, consulte [Gerenciamento de credenciais](#managing-credentials).
 * `compression` — Tipo de compressão. Valores compatíveis: none, gzip/gz, brotli/br, xz/LZMA, zstd/zst. O parâmetro é opcional. Por padrão, a compressão será detectada automaticamente pela extensão do arquivo.
 
@@ -571,7 +571,7 @@ O ClickHouse reconhece que o S3 é uma solução de armazenamento atraente, espe
   ### Camadas de armazenamento
 </div>
 
-Os volumes de armazenamento do ClickHouse permitem desacoplar os discos físicos do motor de tabela MergeTree. Um único volume pode ser composto por um conjunto ordenado de discos. Embora essa abstração sirva principalmente para possibilitar o uso de vários dispositivos de bloco no armazenamento de dados, ela também viabiliza outros tipos de armazenamento, incluindo S3. As partes de dados do ClickHouse podem ser movidas entre volumes e níveis de ocupação de acordo com as políticas de armazenamento, criando assim o conceito de camadas de armazenamento.
+Os volumes de armazenamento do ClickHouse permitem desacoplar os discos físicos do motor de tabela MergeTree. Um único volume pode ser composto por um conjunto ordenado de discos. Embora essa abstração sirva principalmente para possibilitar o uso de vários dispositivos de bloco no armazenamento de dados, ela também viabiliza outros tipos de armazenamento, incluindo S3. As partes de dados do ClickHouse podem ser movidas entre volumes de acordo com as políticas de armazenamento e a taxa de ocupação, criando assim o conceito de camadas de armazenamento.
 
 As camadas de armazenamento viabilizam arquiteturas hot-cold, nas quais os dados mais recentes, que normalmente também são os mais consultados, exigem apenas uma pequena quantidade de espaço em armazenamento de alto desempenho, como SSDs NVMe. À medida que os dados envelhecem, os SLAs de tempo de consulta aumentam, assim como a frequência das consultas. Essa longa cauda de dados pode ser armazenada em mídias mais lentas e com menor desempenho, como HDDs, ou em armazenamento de objetos, como o S3.
 

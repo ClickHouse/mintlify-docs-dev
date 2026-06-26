@@ -6,7 +6,7 @@ keywords: ['desnormalización de datos', 'desnormalizar', 'optimización de cons
 doc_type: 'guide'
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/es/components/Image.jsx";
 
 La desnormalización de datos es una técnica de ClickHouse que utiliza tablas aplanadas para ayudar a minimizar la latencia de las consultas al evitar joins.
 
@@ -69,7 +69,7 @@ También nos limitamos a considerar la desnormalización de otras tablas en `Pos
 *Para cada uno de los siguientes ejemplos, suponga que existe una consulta que requiere usar ambas tablas en un join.*
 
 <div id="posts-and-votes">
-  ### Posts and Votes
+  ### Publicaciones and Votes
 </div>
 
 Los votos de las publicaciones se representan en tablas separadas. A continuación se muestra el esquema optimizado para ello, así como el comando `insert` para cargar los datos:
@@ -94,9 +94,9 @@ INSERT INTO votes SELECT * FROM s3('https://datasets-documentation.s3.eu-west-3.
 0 rows in set. Elapsed: 26.272 sec. Processed 238.98 million rows, 2.13 GB (9.10 million rows/s., 80.97 MB/s.)
 ```
 
-A primera vista, estos podrían ser candidatos para desnormalizarse en la tabla posts. Este enfoque plantea algunos desafíos.
+A primera vista, estos podrían ser candidatos para desnormalizarse en la tabla de publicaciones. Este enfoque plantea algunos desafíos.
 
-Los votos se añaden con frecuencia a los posts. Aunque esto podría disminuir con el tiempo para cada post, la siguiente consulta muestra que tenemos alrededor de 40k votos por hora en 30k posts.
+Los votos se añaden con frecuencia a las publicaciones. Aunque esto podría disminuir con el tiempo para cada publicación, la siguiente consulta muestra que tenemos alrededor de 40k votos por hora en 30k publicaciones.
 
 ```sql
 SELECT round(avg(c)) AS avg_votes_per_hr, round(avg(posts)) AS avg_posts_per_hr
@@ -139,7 +139,7 @@ LIMIT 5
 └──────────┴──────────────────────────────────────────────┴───────┘
 ```
 
-La principal observación aquí es que las estadísticas agregadas de votos de cada publicación serían suficientes para la mayoría de los análisis; no necesitamos desnormalizar toda la información de votos. Por ejemplo, la columna `Score` actual representa una de esas estadísticas, es decir, el total de votos positivos menos los votos negativos. Idealmente, bastaría con poder recuperar estas estadísticas durante la consulta con una búsqueda simple (consulta [diccionarios](/es/concepts/features/dictionaries)).
+La principal observación aquí es que las estadísticas agregadas de votos de cada publicación serían suficientes para la mayoría de los análisis; no necesitamos desnormalizar toda la información de votos. Por ejemplo, la columna `Score` actual representa una de esas estadísticas, es decir, el total de votos positivos menos los votos negativos. Idealmente, bastaría con poder recuperar estas estadísticas durante la consulta con una búsqueda simple (consulta [diccionarios](/es/concepts/features/dictionaries/index)).
 
 <div id="users-and-badges">
   ### Users e Insignias
@@ -401,7 +401,7 @@ DuplicatePosts: [('2017-04-11 12:18:37.260',3922739),('2017-04-11 12:18:37.260',
 </div>
 
 <div id="batch">
-  ### Batch
+  ### Lote
 </div>
 
 Aprovechar la desnormalización requiere un proceso de transformación en el que pueda llevarse a cabo y orquestarse.
@@ -411,7 +411,7 @@ Hemos mostrado anteriormente cómo ClickHouse puede utilizarse para realizar est
 Los usuarios tienen varias opciones para orquestar esto en ClickHouse, siempre que un proceso periódico de carga por lotes sea aceptable:
 
 * **[Vistas materializadas actualizables](/es/concepts/features/materialized-views/refreshable-materialized-view)** - Las vistas materializadas actualizables pueden utilizarse para programar periódicamente una consulta cuyos resultados se envían a una tabla de destino. Al ejecutar la consulta, la vista garantiza que la tabla de destino se actualice de forma atómica. Esto proporciona un mecanismo nativo de ClickHouse para programar este trabajo.
-* **Herramientas externas** - Utilizar herramientas como [dbt](https://www.getdbt.com/) y [Airflow](https://airflow.apache.org/) para programar periódicamente la transformación. La [integración de ClickHouse para dbt](/es/integrations/connectors/data-ingestion/etl-tools/dbt) garantiza que esto se realice de forma atómica: se crea una nueva versión de la tabla de destino y luego se intercambia atómicamente con la versión que recibe consultas (mediante el comando [EXCHANGE](/es/reference/statements/exchange)).
+* **Herramientas externas** - Utilizar herramientas como [dbt](https://www.getdbt.com/) y [Airflow](https://airflow.apache.org/) para programar periódicamente la transformación. La [integración de ClickHouse para dbt](/es/integrations/connectors/data-ingestion/etl-tools/dbt/index) garantiza que esto se realice de forma atómica: se crea una nueva versión de la tabla de destino y luego se intercambia atómicamente con la versión que recibe consultas (mediante el comando [EXCHANGE](/es/reference/statements/exchange)).
 
 <div id="streaming">
   ### Streaming

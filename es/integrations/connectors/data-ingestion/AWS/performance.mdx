@@ -7,7 +7,7 @@ doc_type: 'guide'
 keywords: ['S3', 'rendimiento', 'optimización', 'almacenamiento de objetos', 'carga de datos']
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/es/components/Image.jsx";
 
 Esta sección se centra en optimizar el rendimiento al leer e insertar datos desde S3 mediante las [funciones de tabla de S3](/es/reference/functions/table-functions/s3).
 
@@ -73,18 +73,18 @@ ClickHouse [fusionará partes](https://clickhouse.com/blog/asynchronous-data-ins
 Un único servidor de ClickHouse utiliza varios [hilos de fusión en segundo plano](/es/reference/settings/server-settings/settings#background_pool_size) para ejecutar [fusiones de partes](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#more-parts--more-background-part-merges:~:text=to%20execute%20concurrent-,part%20merges,-.%20Each%20thread%20executes) de forma concurrente. Cada hilo ejecuta un bucle:
 
 ```bash
-① Decidir qué partes fusionar a continuación y cargar estas partes como bloques en memoria.
+① Decide which parts to merge next, and load these parts as blocks into memory.
 
-② Fusionar los bloques cargados en memoria en un bloque más grande.
+② Merge the loaded blocks in memory into a larger block.
 
-③ Escribir el bloque fusionado en una nueva parte en disco.
+③ Write the merged block into a new part on disk.
 
-Ir a ①
+Go to ①
 ```
 
-Ten en cuenta que [aumentar](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#hardware-size) el número de núcleos de CPU y el tamaño de la RAM aumenta el throughput de las fusiones en segundo plano.
+Ten en cuenta que [aumentar](https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1#hardware-size) el número de núcleos de CPU y el tamaño de la RAM aumenta el rendimiento de las fusiones en segundo plano.
 
-Las partes que se han fusionado en partes más grandes se marcan como [inactivas](/es/reference/system-tables/parts) y, con el tiempo, se eliminan tras un número de minutos [configurable](/es/reference/settings/merge-tree-settings#old_parts_lifetime). Con el tiempo, esto crea un árbol de partes fusionadas (de ahí el nombre de la tabla [`MergeTree`](/es/reference/engines/table-engines/mergetree-family)).
+Las partes que se han fusionado en partes más grandes se marcan como [inactivas](/es/reference/system-tables/parts) y, con el tiempo, se eliminan tras un número de minutos [configurable](/es/reference/settings/merge-tree-settings#old_parts_lifetime). Con el tiempo, esto crea un árbol de partes fusionadas (de ahí el nombre de la tabla [`MergeTree`](/es/reference/engines/table-engines/mergetree-family/index)).
 
 <div id="insert-parallelism">
   ### Paralelismo de inserción
@@ -144,10 +144,10 @@ Asegúrese de que sus buckets estén ubicados en la misma región que sus instan
   ## Formatos
 </div>
 
-ClickHouse puede leer archivos almacenados en buckets de S3 en los [formatos compatibles](/es/reference/formats#formats-overview) mediante la función `s3` y el motor `S3`. Si se leen archivos sin procesar, algunos de estos formatos ofrecen ventajas claras:
+ClickHouse puede leer archivos almacenados en buckets de S3 en los [formatos compatibles](/es/reference/formats/index#formats-overview) mediante la función `s3` y el motor `S3`. Si se leen archivos sin procesar, algunos de estos formatos ofrecen ventajas claras:
 
 * Los formatos con nombres de columna codificados, como Native, Parquet, CSVWithNames y TabSeparatedWithNames, hacen que las consultas sean menos verbosas, ya que el usuario no tiene que especificar el nombre de la columna en la función `s3`. Los nombres de columna permiten inferir esta información.
-* Los formatos difieren en rendimiento en cuanto al throughput de lectura y escritura. Native y Parquet son los formatos más óptimos para el rendimiento de lectura, ya que ya están orientados a columnas y son más compactos. Además, el formato Native se beneficia de su alineación con la forma en que ClickHouse almacena los datos en memoria, lo que reduce la sobrecarga de procesamiento a medida que los datos se transfieren a ClickHouse.
+* Los formatos difieren en rendimiento en cuanto al rendimiento de lectura y escritura. Native y Parquet son los formatos más óptimos para el rendimiento de lectura, ya que ya están orientados a columnas y son más compactos. Además, el formato Native se beneficia de su alineación con la forma en que ClickHouse almacena los datos en memoria, lo que reduce la sobrecarga de procesamiento a medida que los datos se transfieren a ClickHouse.
 * El tamaño del bloque suele afectar a la latencia de lectura en archivos grandes. Esto resulta muy evidente si solo se toma una muestra de los datos; por ejemplo, al devolver las primeras N filas. En el caso de formatos como CSV y TSV, los archivos deben analizarse para devolver un conjunto de filas. Como resultado, formatos como Native y Parquet permiten un muestreo más rápido.
 * Cada formato de compresión tiene sus ventajas y desventajas, y a menudo equilibra el nivel de compresión con la velocidad, favoreciendo el rendimiento de la compresión o de la descompresión. Si se comprimen archivos sin procesar, como CSV o TSV, lz4 ofrece el mejor rendimiento de descompresión, a costa del nivel de compresión. Gzip suele comprimir mejor, a cambio de velocidades de lectura ligeramente más lentas. Xz lleva esto más lejos, ya que por lo general ofrece la mejor compresión, pero con el peor rendimiento tanto en compresión como en descompresión. Si se exporta, Gz y lz4 ofrecen velocidades de compresión comparables. Sopesa esto frente a la velocidad de tu conexión. Cualquier mejora derivada de una compresión o descompresión más rápida puede verse anulada fácilmente por una conexión más lenta a tus buckets de S3.
 * Formatos como Native o Parquet normalmente no justifican la sobrecarga de la compresión. Cualquier ahorro en tamaño de datos probablemente será mínimo, ya que estos formatos son inherentemente compactos. El tiempo dedicado a comprimir y descomprimir rara vez compensará los tiempos de transferencia de red, especialmente porque S3 está disponible globalmente con un mayor ancho de banda de red.

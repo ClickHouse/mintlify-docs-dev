@@ -6,7 +6,7 @@ keywords: ['part']
 doc_type: 'reference'
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/zh/components/Image.jsx";
 
 <div id="what-are-table-parts-in-clickhouse">
   ## 什么是 ClickHouse 中的表 parts？
@@ -14,7 +14,7 @@ import { Image } from "/snippets/components/Image.jsx";
 
 <br />
 
-ClickHouse [MergeTree 引擎家族](/zh/reference/engines/table-engines/mergetree-family)中每个表的数据，都会以一组不可变的 `data parts` 形式存储在磁盘上。
+ClickHouse [MergeTree 引擎家族](/zh/reference/engines/table-engines/mergetree-family/index)中每个表的数据，都会以一组不可变的 `数据分区片段` 形式存储在磁盘上。
 
 为了说明这一点，我们使用[这张](https://sql.clickhouse.com/?query=U0hPVyBDUkVBVEUgVEFCTEUgdWsudWtfcHJpY2VfcGFpZF9zaW1wbGU\&run_query=true\&tab=results)表 (改编自 [UK property prices dataset](/zh/get-started/sample-datasets/uk-price-paid)) ，它记录了英国已售房产的成交日期、城镇、街道和价格：
 
@@ -32,7 +32,7 @@ ORDER BY (town, street);
 
 你可以在我们的 ClickHouse SQL Playground 中[查询此表](https://sql.clickhouse.com/?query=U0VMRUNUICogRlJPTSB1ay51a19wcmljZV9wYWlkX3NpbXBsZTs\&run_query=true\&tab=results)。
 
-每当一组行被插入到该表中时，就会创建一个 data part。下图对此进行了示意：
+每当一组行被插入到该表中时，就会创建一个数据分区片段。下图对此进行了示意：
 
 <Image img="/images/managing-data/core-concepts/part.png" size="lg" />
 
@@ -46,11 +46,11 @@ ORDER BY (town, street);
 
 ③ **压缩**：对每一列进行[压缩](https://clickhouse.com/blog/optimize-clickhouse-codecs-compression-schema)。
 
-④ **写入磁盘**：压缩后的各列会以二进制列文件的形式保存到一个新目录中，该目录对应此次插入生成的 data part。稀疏主索引也会被压缩并存储在同一目录中。
+④ **写入磁盘**：压缩后的各列会以二进制列文件的形式保存到一个新目录中，该目录对应此次插入生成的数据分区片段。稀疏主索引也会被压缩并存储在同一目录中。
 
 根据表使用的具体引擎，在排序的同时还[可能](/zh/reference/settings/session-settings)会发生其他转换。
 
-数据 parts 是自包含的，包含了解释其内容所需的全部元数据，无需依赖中心目录。除稀疏主索引外，数据 parts 还包含其他元数据，例如二级[数据跳过索引](/zh/concepts/features/performance/skip-indexes/skipping-indexes)、[列统计信息](https://clickhouse.com/blog/clickhouse-release-23-11#column-statistics-for-prewhere)、校验和、最小-最大索引 (如果使用了[分区](/zh/concepts/core-concepts/partitions)) 以及[更多](https://github.com/ClickHouse/ClickHouse/blob/a065b11d591f22b5dd50cb6224fab2ca557b4989/src/Storages/MergeTree/MergeTreeData.h#L104)。
+数据分区片段是自包含的，包含了解释其内容所需的全部元数据，无需依赖中心目录。除稀疏主索引外，数据分区片段还包含其他元数据，例如二级[数据跳过索引](/zh/concepts/features/performance/skip-indexes/skipping-indexes)、[列统计信息](https://clickhouse.com/blog/clickhouse-release-23-11#column-statistics-for-prewhere)、校验和、最小-最大索引 (如果使用了[分区](/zh/concepts/core-concepts/partitions)) 以及[更多](https://github.com/ClickHouse/ClickHouse/blob/a065b11d591f22b5dd50cb6224fab2ca557b4989/src/Storages/MergeTree/MergeTreeData.h#L104)。
 
 <div id="part-merges">
   ## parts 合并
@@ -68,7 +68,7 @@ ORDER BY (town, street);
   ## 监控表 parts
 </div>
 
-您可以使用[虚拟列](/zh/reference/engines/table-engines#table_engines-virtual_columns) `_part`，[查询](https://sql.clickhouse.com/?query=U0VMRUNUIF9wYXJ0CkZST00gdWsudWtfcHJpY2VfcGFpZF9zaW1wbGUKR1JPVVAgQlkgX3BhcnQKT1JERVIgQlkgX3BhcnQgQVNDOw\&run_query=true\&tab=results)示例表中当前所有现存活动 parts 的列表：
+您可以使用[虚拟列](/zh/reference/engines/table-engines/index#table_engines-virtual_columns) `_part`，[查询](https://sql.clickhouse.com/?query=U0VMRUNUIF9wYXJ0CkZST00gdWsudWtfcHJpY2VfcGFpZF9zaW1wbGUKR1JPVVAgQlkgX3BhcnQKT1JERVIgQlkgX3BhcnQgQVNDOw\&run_query=true\&tab=results)示例表中当前所有现存活动 parts 的列表：
 
 ```sql
 SELECT _part
@@ -86,9 +86,9 @@ ORDER BY _part ASC;
    └─────────────┘
 ```
 
-上述查询会检索磁盘上各个目录的名称，其中每个目录都表示该表的一个活动数据 parts。对想进一步了解的读者来说，这些目录名称的各个组成部分都有特定含义，相关文档见[此处](https://github.com/ClickHouse/ClickHouse/blob/f90551824bb90ade2d8a1d8edd7b0a3c0a459617/src/Storages/MergeTree/MergeTreeData.h#L130)。
+上述查询会检索磁盘上各个目录的名称，其中每个目录都表示该表的一个活动数据分区片段。对想进一步了解的读者来说，这些目录名称的各个组成部分都有特定含义，相关文档见[此处](https://github.com/ClickHouse/ClickHouse/blob/f90551824bb90ade2d8a1d8edd7b0a3c0a459617/src/Storages/MergeTree/MergeTreeData.h#L130)。
 
-或者，ClickHouse 会在 [system.parts](/zh/reference/system-tables/parts) 系统表中跟踪所有表的所有数据 parts 信息，而下面的查询会为我们上面的示例表[返回](https://sql.clickhouse.com/?query=U0VMRUNUCiAgICBuYW1lLAogICAgbGV2ZWwsCiAgICByb3dzCkZST00gc3lzdGVtLnBhcnRzCldIRVJFIChkYXRhYmFzZSA9ICd1aycpIEFORCAoYHRhYmxlYCA9ICd1a19wcmljZV9wYWlkX3NpbXBsZScpIEFORCBhY3RpdmUKT1JERVIgQlkgbmFtZSBBU0M7\&run_query=true\&tab=results)当前所有活动数据 parts 的列表、它们的合并层级，以及这些数据 parts 中存储的行数：
+或者，ClickHouse 会在 [system.parts](/zh/reference/system-tables/parts) 系统表中跟踪所有表的所有数据分区片段信息，而下面的查询会为我们上面的示例表[返回](https://sql.clickhouse.com/?query=U0VMRUNUCiAgICBuYW1lLAogICAgbGV2ZWwsCiAgICByb3dzCkZST00gc3lzdGVtLnBhcnRzCldIRVJFIChkYXRhYmFzZSA9ICd1aycpIEFORCAoYHRhYmxlYCA9ICd1a19wcmljZV9wYWlkX3NpbXBsZScpIEFORCBhY3RpdmUKT1JERVIgQlkgbmFtZSBBU0M7\&run_query=true\&tab=results)当前所有活动数据分区片段的列表、它们的合并层级，以及这些数据分区片段中存储的行数：
 
 ```sql
 SELECT

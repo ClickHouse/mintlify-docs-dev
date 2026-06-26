@@ -149,9 +149,12 @@ CREATE SERVER taxi_srv FOREIGN DATA WRAPPER clickhouse_fdw
 
 * `driver`: 使用する ClickHouse 接続ドライバーです。&quot;binary&quot; または
   &quot;http&quot; のいずれかを指定します。**必須です。**
+* `compression`: バイナリドライバー用のネイティブプロトコル圧縮です。&quot;none&quot;、
+  &quot;lz4&quot;、&quot;zstd&quot; のいずれかです。デフォルトは &quot;lz4&quot; です。&quot;http&quot; ドライバーでは
+  無視されます。
 * `dbname`: 接続時に使用する ClickHouse データベースです。デフォルトは
   &quot;default&quot; です。
-* `fetch_size`: HTTPストリーミングの、おおよそのバッチサイズ (バイト単位) です。バッチは
+* `fetch_size`: HTTP streaming の、おおよそのバッチサイズ (バイト単位) です。バッチは
   行の境界で分割されます。デフォルトは `50000000` (50 MB) です。`0` を指定すると
   ストリーミングが無効になり、レスポンス全体がバッファリングされます。外部テーブルはこの
   値を上書きできます。
@@ -163,6 +166,16 @@ CREATE SERVER taxi_srv FOREIGN DATA WRAPPER clickhouse_fdw
   * `driver` が &quot;binary&quot; で、`host` が ClickHouse Cloud ホストではない場合は 9004
   * `driver` が &quot;http&quot; で、`host` が ClickHouse Cloud ホストの場合は 8443
   * `driver` が &quot;http&quot; で、`host` が ClickHouse Cloud ホストではない場合は 8123
+* `min_tls_version`: TLS を使用する接続でネゴシエートする最小 TLS プロトコルバージョンです。
+  `TLSv1`、`TLSv1.1`、`TLSv1.2`、`TLSv1.3` のいずれかです。デフォルトは TLS
+  ライブラリ自体の最小バージョンです。両方のドライバーに適用されます。
+* `secure`: 接続で使用する TLS を制御します。次のいずれかです。
+  * `auto` (デフォルト): `host` が ClickHouse Cloud ホストであるか、
+    `port` がセキュアポートの場合は TLS を使用し、それ以外では平文を使用します。
+  * `on` (または `true`/`yes`/`1`): 常に TLS を使用します。デフォルトの `port` は 8443
+    (&quot;http&quot;) または 9440 (&quot;binary&quot;) です。
+  * `off` (または `false`/`no`/`0`): TLS を使用しません。デフォルトの `port` は 8123
+    (&quot;http&quot;) または 9000 (&quot;binary&quot;) です.
 
 <div id="alter-server">
   ### ALTER SERVER
@@ -1148,6 +1161,10 @@ SELECT clickhouse_raw_query(
 * `reverse(bytea)`: [reverse](/ja/reference/functions/regular-functions/string-functions#reverse)
 * `strpos`: [positionUTF8](/ja/reference/functions/regular-functions/string-search-functions#positionutf8)
 * `regexp_like`: [match](/ja/reference/functions/regular-functions/string-search-functions#match)
+* `regexp_match`: 正規表現に丸括弧で囲まれた部分式が含まれている場合は [extractGroups](/ja/reference/functions/regular-functions/string-search-functions#extractGroups)、
+  そうでない場合は
+  [extractAll](/ja/reference/functions/regular-functions/string-search-functions#extractAll)
+  を [arraySlice](/ja/reference/functions/regular-functions/array-functions#arraySlice) でスライスしたものです。
 * `regexp_replace`: `g` フラグがある場合は [replaceRegexpOne](/ja/reference/functions/regular-functions/string-replace-functions#replaceRegexpOne)、または [replaceRegexpOne](/ja/reference/functions/regular-functions/string-replace-functions#replaceRegexpAll)
 * `regexp_split_to_array`: [splitByRegexp](/ja/reference/functions/regular-functions/splitting-merging-functions#splitByRegexp)
 * `md5`: [MD5](/ja/reference/functions/regular-functions/hash-functions#MD5)
@@ -1329,17 +1346,17 @@ SELECT quantile(0.25)(a) FROM t1;
 以下の PostgreSQL の[ウィンドウ関数]は、該当する場合はフレーム指定を含む `OVER
 (PARTITION BY ... ORDER BY ...)` 句とともに ClickHouse にプッシュダウンされます。
 
-* [row&#95;number](/ja/reference/functions/window-functions#row_number)
-* [rank](/ja/reference/functions/window-functions#rank)
-* [dense&#95;rank](/ja/reference/functions/window-functions#dense_rank)
-* [ntile](/ja/reference/functions/window-functions#ntile)
-* [cume&#95;dist](/ja/reference/functions/window-functions#cume_dist)
-* [percent&#95;rank](/ja/reference/functions/window-functions#percent_rank)
-* [lead](/ja/reference/functions/window-functions#lead)
-* [lag](/ja/reference/functions/window-functions#lag)
-* [first&#95;value](/ja/reference/functions/window-functions#first_value)
-* [last&#95;value](/ja/reference/functions/window-functions#last_value)
-* [nth&#95;value](/ja/reference/functions/window-functions#nth_value)
+* [row&#95;number](/ja/reference/functions/window-functions/index#row_number)
+* [rank](/ja/reference/functions/window-functions/index#rank)
+* [dense&#95;rank](/ja/reference/functions/window-functions/index#dense_rank)
+* [ntile](/ja/reference/functions/window-functions/index#ntile)
+* [cume&#95;dist](/ja/reference/functions/window-functions/index#cume_dist)
+* [percent&#95;rank](/ja/reference/functions/window-functions/index#percent_rank)
+* [lead](/ja/reference/functions/window-functions/index#lead)
+* [lag](/ja/reference/functions/window-functions/index#lag)
+* [first&#95;value](/ja/reference/functions/window-functions/index#first_value)
+* [last&#95;value](/ja/reference/functions/window-functions/index#last_value)
+* [nth&#95;value](/ja/reference/functions/window-functions/index#nth_value)
 * `min` / `max` (`OVER` 句付き)
 
 順位付け関数 (`row_number`、`rank`、`dense_rank`、`ntile`、`cume_dist`、
@@ -1354,61 +1371,93 @@ SELECT quantile(0.25)(a) FROM t1;
 </div>
 
 [pg&#95;clickhouse.pushdown&#95;regex](#pg_clickhousepushdown_regex) が true の場合 (デフォルト) 、pg&#95;clickhouse は
-正規表現を ClickHouse の同等表現に pushdown し、基本的な互換性を確保するよう努めます。
+正規表現を ClickHouse の同等表現に プッシュダウン し、基本的な互換性を確保するよう努めます。
 ただし、両者の違いと、それらを pg&#95;clickhouse がどのように扱うかは把握しておいてください。
 
-* PostgreSQL は [POSIX Regular Expressions] をサポートし、ClickHouse は
-  [RE2 正規表現][RE2] をサポートします。動作の違いに注意してください。正規表現が
-  ClickHouse で評価される場合 (例: `WHERE` 句内) は RE2 を、
-  Postgres で評価される場合 (例: `SELECT` 句内) は POSIX を
-  記述してください。
+* PostgreSQL は [POSIX 正規表現] をサポートし、ClickHouse は
+  [RE2 正規表現][RE2] をサポートしています。動作の違いに注意してください。正規表現が ClickHouse によって評価される場合 (例: `WHERE` 句内) は RE2 を、Postgres によって評価される場合 (例: `SELECT` 句内) は POSIX を使用してください。
 
-* pg&#95;clickhouse は Postgres の [Regex flags] を
-  ClickHouse の正規表現の先頭に `(?)` 内で付与することで pushdown します。たとえば:
+* pg&#95;clickhouse は、[Postgres フラグ]を ClickHouse の正規表現の `(?)` 内の先頭に追加することで、プッシュダウンします。たとえば:
 
   ```sql
   regexp_like(val, '^VAL\d', 'i')
   ```
 
-  は次のようになります
+  になります
 
   ```sql
-  match(val, concat('(?i-s)', '^VAL\\d'))
+  match(val, concat('(?i)', '^VAL\\d'))
   ```
 
-  `-s` が含まれている点に注意してください。これは、ClickHouse でデフォルトで有効な `s` を
-  無効化し、Postgres の正規表現の動作に合わせるためです。
-  Postgres 関数呼び出し内のフラグに `s` が含まれている場合、pg&#95;clickhouse は `-s` を付けません。
-  残念ながら、この挙動により Postgres 24 以前では
-  一部の正規表現との互換性が損なわれます。
+* 両方でサポートされており、そのため
+  ClickHouse で評価される際に使用できるフラグは、次のとおりです:
 
-* 両方がサポートしており、そのため ClickHouse で評価される場合に
-  使用できるフラグは次のとおりです:
+  | フラグ | 相当    | 注記                                      |
+  | --- | ----- | --------------------------------------- |
+  | `i` | `i`   | 大文字と小文字を区別しないマッチング                      |
+  | `m` | `m-s` | `^` と `$` は、テキストの先頭/末尾に加えて行頭/行末にもマッチします |
+  | `n` | `m-s` | Postgres での `m` の別名                     |
+  | `p` | `-s`  | `.` と `[^x]` が `\n` にマッチしないようにします       |
+  | `s` | `s`   | `.` と `[^x]` が `\n` にマッチするようにします        |
+  | `t` |       | 厳密構文、無視されます                             |
+  | `w` | `m`   | 部分的な改行感知マッチングの逆                         |
 
-  * `i`: 大文字小文字を区別しない
-  * `m`: 複数行モード
-  * `s`: `.` を `\n` に一致させる
-  * `p`: 改行に部分的に敏感なマッチング (`s` と同様に扱われる)
-  * `t`: 厳格な構文 (デフォルト。pg&#95;clickhouse によって削除される)
+  RE2 がサポートしているのはこれらのフラグだけです。それ以外の [Postgres のフラグ] は使用しないでください。
 
-  RE2 がサポートするフラグはこれらのみです。[Postgres flags] の他のフラグは使用しないでください
+* この表は、改行および行末のマッチングにおける各種フラグ (およびフラグなし。これは
+  `s` と同じです) の効果を要約したものです。Postgres では、
+  `m` と `p` を指定すると否定文字クラス (`[^xyz]`) が
+  改行にマッチしなくなる点に注意してください。一方、ClickHouse の同等の機能ではそうなりません。それ以外の
+  動作は、ClickHouse でも Postgres と同じです:
 
-* 正規表現関数にこれ以外のフラグが渡されると、
-  その関数は pushdown されません。
+  | `a\nb` に適用した pattern | Postgres | ClickHouse | 一致? |
+  | -------------------- | :------: | :--------: | :-: |
+  | `a.b`                |   true   |    true    |  ✔︎ |
+  | `a[^x]b`             |   true   |    true    |  ✔︎ |
+  | `a$`                 |   false  |    false   |  ✔︎ |
+  | **`s` フラグ**          |          |            |     |
+  | `(?s)a.b`            |   true   |    true    |  ✔︎ |
+  | `(?s)a[^x]b`         |   true   |    true    |  ✔︎ |
+  | `(?s)a$`             |   false  |    false   |  ✔︎ |
+  | **`m` フラグ**          |          |            |     |
+  | `(?m)a.b`            |   false  |    false   |  ✔︎ |
+  | `(?m)a[^x]b`         |   true   |    false   |  ✘  |
+  | `(?m)a$`             |   true   |    true    |  ✔︎ |
+  | **`p` フラグ**          |          |            |     |
+  | `(?p)a.b`            |   false  |    false   |  ✔︎ |
+  | `(?p)a[^x]b`         |   true   |    false   |  ✘  |
+  | `(?p)a$`             |   false  |    false   |  ✔︎ |
+  | **`w` フラグ**          |          |            |     |
+  | `(?w)a.b`            |   true   |    true    |  ✔  |
+  | `(?w)a[^x]b`         |   true   |    true    |  ✔  |
+  | `(?w)a$`             |   true   |    true    |  ✔  |
 
-* 例外は `regexp_replace()` で、これは `g` フラグもサポートします。`g` が
-  指定されている場合、pg&#95;clickhouse は `replaceRegexpOne()` の代わりに
-  `replaceRegexpAll()` を使用し、他のフラグを先頭に付与する前に `g` フラグを削除します。
+* 正規表現関数に渡すその他のフラグがあると、その関数は
+  プッシュダウンされません。
 
-* Postgres の `regexp_replace()` の置換引数では、マッチ全体を参照するために `\&` を
-  サポートしますが、ClickHouse ではマッチ全体の参照に `\0` を使用します。
-  関数が ClickHouse に pushdown される場合は、必ず `\0` を使用してください。
+* 例外は `regexp_replace()` で、これも `g` フラグをサポートします。
+  `g` が設定されている場合、pg&#95;clickhouse は
+  `replaceRegexpOne()` ではなく `replaceRegexpAll()` を使用し、
+  他のフラグを先頭に追加する前に `g` フラグを削除します。
+
+* Postgres の `regexp_replace()` の置換引数では、一致全体を参照するために
+  `\&` を使用できますが、ClickHouse では一致全体に `\0` を使用します。
+  関数が ClickHouse にプッシュダウンされる場合は、必ず `\0` を使用してください。
+
+* Postgres の `regexp_match` は一致がない場合に `NULL` を返しますが、
+  push down される式は空の配列を返します。戻り値を
+  互換性のある形で比較するには、`COALESCE()`
+  を使って `NULL` ではなく空の配列を返すようにします。例えば:
+
+  ```sql
+  SELECT * FROM events WHERE COALESCE(regexp_match(msg, '^ERR'), '{}');
+  ```
 
 曖昧さを完全に避けるには、
-Postgres の正規表現が ClickHouse に pushdown されないよう
+Postgres の正規表現が ClickHouse に プッシュダウン されないよう
 [pg&#95;clickhouse.pushdown&#95;regex](#pg_clickhousepushdown_regex) を設定し、
 pg&#95;clickhouse が ClickHouse 互換の [RE2] 正規表現の
-[direct pushdown](#re2) をサポートしている
+[direct プッシュダウン](#re2) をサポートしている
 [re2 拡張機能] の使用を検討してください。
 
 <div id="to_char">
@@ -1495,7 +1544,7 @@ ClickHouse の指定子プレフィックスをエスケープするため、`%%
 
 [CREATE FOREIGN TABLE]: https://www.postgresql.org/docs/current/sql-createforeigntable.html "PostgreSQL ドキュメント: CREATE FOREIGN TABLE"
 
-[table engine]: /reference/engines/table-engines "ClickHouse ドキュメント: テーブルエンジン"
+[table engine]: /reference/engines/table-engines/index "ClickHouse ドキュメント: テーブルエンジン"
 
 [AggregateFunction Type]: /reference/data-types/aggregatefunction "ClickHouse ドキュメント: AggregateFunction Type"
 
@@ -1557,9 +1606,9 @@ ClickHouse の指定子プレフィックスをエスケープするため、`%%
 
 [window functions]: https://www.postgresql.org/docs/current/functions-window.html "PostgreSQL Docs: ウィンドウ関数"
 
-[POSIX Regular Expressions]: https://www.postgresql.org/docs/18/functions-matching.html#FUNCTIONS-POSIX-REGEXP "PostgreSQL Docs: POSIX 正規表現"
+[POSIX Regular Expressions]: https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-POSIX-REGEXP "PostgreSQL Docs: POSIX 正規表現"
 
-[Postgres flags]: https://www.postgresql.org/docs/18/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "PostgreSQL Docs: ARE 埋め込みオプション文字"
+[Postgres flags]: https://www.postgresql.org/docs/current/functions-matching.html#POSIX-EMBEDDED-OPTIONS-TABLE "PostgreSQL Docs: ARE 埋め込みオプション文字"
 
 [RE2]: https://github.com/google/re2/wiki/Syntax "RE2 構文"
 

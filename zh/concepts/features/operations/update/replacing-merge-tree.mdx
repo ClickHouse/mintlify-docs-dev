@@ -7,7 +7,7 @@ doc_type: 'guide'
 sidebarTitle: '使用 ReplacingMergeTree 引擎'
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/zh/components/Image.jsx";
 
 虽然事务型数据库针对事务性更新和删除工作负载进行了优化，但 OLAP 数据库对此类操作提供的保证较弱。相反，它们针对以批次插入的不可变数据进行了优化，以显著提升分析查询的速度。虽然 ClickHouse 通过 mutations 提供更新操作，也提供了轻量级的行删除方式，但其面向列的结构意味着这些操作应按上文所述谨慎安排。这些操作以异步方式处理，由单个线程执行，并且 (对于更新而言) 需要在磁盘上重写数据。因此，不应将它们用于大量零散的小规模变更。
 为了在避免上述使用模式的同时处理更新行和删除行的 stream，我们可以使用 ClickHouse 表引擎 ReplacingMergeTree。
@@ -103,16 +103,22 @@ ORDER BY (PostTypeId, toDate(CreationDate), CreationDate, Id)
   ## 查询 ReplacingMergeTree
 </div>
 
-在 merge 期间，ReplacingMergeTree 会识别重复行，将 `ORDER BY` 列的值用作唯一标识符，并且要么只保留最高版本，要么在最新版本表示删除时移除所有重复项。然而，这只能提供最终一致的正确性——并不能保证行一定会被去重，因此不应依赖它。因此，由于查询时会将更新行和删除行也纳入考虑，查询结果可能不正确。
+在合并时，ReplacingMergeTree 会识别重复行，将 `ORDER BY` 列的值用作唯一标识符，并且要么只保留最高版本，要么在最新版本表示删除时移除所有重复项。然而，这只能提供最终一致的正确性——并不能保证行一定会被去重，因此不应依赖它。
 
-要获得正确结果，你需要结合 background merges，并在 query time 执行去重和删除移除。这可以通过使用 `FINAL` 运算符来实现。
+<Info>
+  **使用 FINAL 读取去重后的数据**
+
+  由于去重只会在 background 合并 期间发生，普通的 `SELECT` 仍然可能返回重复行或已删除的行。要在查询时读取正确结果，请使用 `FINAL` 修饰符，它会在查询执行时完成去重并移除已删除的行。
+</Info>
 
 以上面的 posts 表为例。我们可以使用加载该数据集的常规方法，但额外指定 deleted 列和 version 列，并将它们的值设为 0。为了便于演示，这里我们只加载 10000 行。
 
 ```sql
 INSERT INTO stackoverflow.posts_updateable SELECT 0 AS Version, 0 AS Deleted, *
 FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/stackoverflow/parquet/posts/*.parquet') WHERE AnswerCount > 0 LIMIT 10000
+```
 
+```response
 0 rows in set. Elapsed: 1.980 sec. Processed 8.19 thousand rows, 3.52 MB (4.14 thousand rows/s., 1.78 MB/s.)
 ```
 
@@ -120,12 +126,14 @@ FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/stackoverflow
 
 ```sql
 SELECT count() FROM stackoverflow.posts_updateable
+```
 
+```response
 ┌─count()─┐
 │   10000 │
 └─────────┘
 
-1 行，耗时 0.002 秒。
+1 row in set. Elapsed: 0.002 sec.
 ```
 
 我们现在更新回答后的帖子统计信息。我们不直接更新这些值，而是插入 5000 行的新副本，并将它们的版本号加一 (这意味着表中将有 150 行) 。我们可以用一个简单的 `INSERT INTO SELECT` 来模拟这一过程：
@@ -156,10 +164,12 @@ INSERT INTO posts_updateable SELECT
         ParentId,
         CommunityOwnedDate,
         ClosedDate
-FROM posts_updateable --随机选取100行
+FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0
 LIMIT 5000
+```
 
+```response
 0 rows in set. Elapsed: 4.056 sec. Processed 1.42 million rows, 2.20 GB (349.63 thousand rows/s., 543.39 MB/s.)
 ```
 
@@ -191,32 +201,38 @@ INSERT INTO posts_updateable SELECT
         ParentId,
         CommunityOwnedDate,
         ClosedDate
-FROM posts_updateable --随机选取 100 行
+FROM posts_updateable --select 100 random rows
 WHERE (Id % toInt32(floor(randUniform(1, 11)))) = 0 AND AnswerCount > 0
 LIMIT 1000
+```
 
+```response
 0 rows in set. Elapsed: 0.166 sec. Processed 135.53 thousand rows, 212.65 MB (816.30 thousand rows/s., 1.28 GB/s.)
 ```
 
-上述操作的结果将是 16,000 行，即 10,000 + 5000 + 1000。而这里实际正确的总数应仅比原始总数少 1000 行，即 10,000 - 1000 = 9000。
+上述操作后，结果将是 16,000 行，即 10,000 + 5000 + 1000。实际上，正确的总数应该只比原始总数少 1000 行，即 10,000 - 1000 = 9000。
 
 ```sql
 SELECT count()
 FROM posts_updateable
+```
 
+```response
 ┌─count()─┐
 │   10000 │
 └─────────┘
 1 row in set. Elapsed: 0.002 sec.
 ```
 
-这里的结果会因已发生的合并而有所不同。我们可以看到，这里的总数不一样，因为存在重复行。对表应用 `FINAL` 可得到正确结果。
+结果会因已发生的合并而有所不同。我们可以看到，由于存在重复行，总数会有所不同。对表应用 `FINAL` 可得到正确结果。
 
 ```sql
 SELECT count()
 FROM posts_updateable
 FINAL
+```
 
+```response
 ┌─count()─┐
 │    9000 │
 └─────────┘
@@ -260,7 +276,9 @@ ORDER BY (PostTypeId, toDate(CreationDate), CreationDate, Id)
 
 INSERT INTO stackoverflow.posts_no_part SELECT 0 AS Version, 0 AS Deleted, *
 FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/stackoverflow/parquet/posts/*.parquet')
+```
 
+```response
 0 rows in set. Elapsed: 182.895 sec. Processed 59.82 million rows, 38.07 GB (327.07 thousand rows/s., 208.17 MB/s.)
 ```
 
@@ -280,7 +298,9 @@ FROM posts_no_part
 FINAL
 GROUP BY year
 ORDER BY year ASC
+```
 
+```response
 ┌─year─┬─total_answers─┐
 │ 2008 │        371480 │
 ...
@@ -305,14 +325,16 @@ ENGINE = ReplacingMergeTree
 PARTITION BY toYear(CreationDate)
 ORDER BY (PostTypeId, toDate(CreationDate), CreationDate, Id)
 
-// 填充与更新步骤已省略
+// populate & update omitted
 
 SELECT toYear(CreationDate) AS year, sum(AnswerCount) AS total_answers
 FROM posts_with_part
 FINAL
 GROUP BY year
 ORDER BY year ASC
+```
 
+```response
 ┌─year─┬─total_answers─┐
 │ 2008 │       387832  │
 │ 2009 │       1165506 │
@@ -359,11 +381,11 @@ ClickHouse 中的 ReplacingMergeTree 引擎经过优化，可通过合并 parts 
   ### 调优合并以提升查询性能
 </div>
 
-默认情况下，min&#95;age&#95;to&#95;force&#95;merge&#95;seconds 和 min&#95;age&#95;to&#95;force&#95;merge&#95;on&#95;partition&#95;only 分别设置为 0 和 false，因此这些功能默认处于禁用状态。在这种配置下，ClickHouse 会采用标准的合并行为，不会根据分区的时间强制执行合并。
+默认情况下，`min_age_to_force_merge_seconds` 和 `min_age_to_force_merge_on_partition_only` 分别设置为 0 和 false，因此这些功能默认处于禁用状态。在这种配置下，ClickHouse 会采用标准的合并行为，不会根据分区的时间强制执行合并。
 
-如果为 min&#95;age&#95;to&#95;force&#95;merge&#95;seconds 指定了值，ClickHouse 将对早于该时间阈值的 parts 忽略常规的合并启发式规则。虽然这种做法通常只在目标是尽量减少 parts 总数时才有明显效果，但在 ReplacingMergeTree 中，它可以通过减少查询时需要合并的 parts 数量来提升查询性能。
+如果为 `min_age_to_force_merge_seconds` 指定了值，ClickHouse 将对早于该时间阈值的 parts 忽略常规的合并启发式规则。虽然这种做法通常只在目标是尽量减少 parts 总数时才有明显效果，但在 ReplacingMergeTree 中，它可以通过减少查询时需要合并的 parts 数量来提升查询性能。
 
-还可以通过设置 min&#95;age&#95;to&#95;force&#95;merge&#95;on&#95;partition&#95;only=true 进一步调优这一行为。这样一来，只有当分区中的所有 parts 都早于 min&#95;age&#95;to&#95;force&#95;merge&#95;seconds 时，才会执行更激进的合并。这种配置可使较旧的分区随着时间推移逐步合并为单个 part，从而整合数据并维持查询性能。
+还可以通过设置 `min_age_to_force_merge_on_partition_only=true` 进一步调优这一行为。这样一来，只有当分区中的所有 parts 都早于 `min_age_to_force_merge_seconds` 时，才会执行更激进的合并。这种配置可使较旧的分区随着时间推移逐步合并为单个 part，从而整合数据并维持查询性能。
 
 <div id="recommended-settings">
   ### 推荐设置
@@ -373,6 +395,6 @@ ClickHouse 中的 ReplacingMergeTree 引擎经过优化，可通过合并 parts 
   调整 merge 行为属于高级操作。我们建议在生产工作负载中启用这些设置之前，先咨询 ClickHouse 支持团队。
 </Warning>
 
-在大多数情况下，建议将 min&#95;age&#95;to&#95;force&#95;merge&#95;seconds 设为较低的值——即明显小于分区周期。这样可以尽量减少 parts 的数量，并避免在查询时使用 FINAL 运算符进行不必要的合并。
+在大多数情况下，建议将 `min_age_to_force_merge_seconds` 设为较低的值——即明显小于分区周期。这样可以尽量减少 parts 的数量，并避免在查询时使用 `FINAL` 运算符进行不必要的合并。
 
-例如，假设某个按月分区的数据已经合并成一个单独的 part。如果一次零散的小规模插入在该分区中又创建了一个新的 part，那么在合并完成前，ClickHouse 就必须读取多个 parts，从而可能影响查询性能。设置 min&#95;age&#95;to&#95;force&#95;merge&#95;seconds 可以促使这些 parts 更积极地合并，避免查询性能下降。
+例如，假设某个按月分区的数据已经合并成一个单独的 part。如果一次零散的小规模插入在该分区中又创建了一个新的 part，那么在合并完成前，ClickHouse 就必须读取多个 parts，从而可能影响查询性能。设置 `min_age_to_force_merge_seconds` 可以促使这些 parts 更积极地合并，避免查询性能下降。

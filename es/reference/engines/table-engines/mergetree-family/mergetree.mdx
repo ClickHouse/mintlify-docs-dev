@@ -7,8 +7,8 @@ title: 'Motor de tabla MergeTree'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
+import ExperimentalBadge from "/snippets/es/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import CloudNotSupportedBadge from "/snippets/es/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
 
 El motor `MergeTree` y otros motores de la familia `MergeTree` (p. ej., `ReplacingMergeTree`, `AggregatingMergeTree` ) son los motores de tabla más utilizados y robustos de ClickHouse.
 
@@ -258,7 +258,7 @@ Esta característica resulta útil al usar los motores de tabla [SummingMergeTre
 
 En este caso, tiene sentido dejar solo unas pocas columnas en la clave primaria para permitir exploraciones de rango eficientes y añadir el resto de las columnas de dimensión a la tupla de la clave de ordenación.
 
-[ALTER](/es/reference/statements/alter) de la clave de ordenación es una operación ligera porque, cuando se añade simultáneamente una nueva columna a la tabla y a la clave de ordenación, no es necesario modificar las partes de datos existentes. Como la antigua clave de ordenación es un prefijo de la nueva clave de ordenación y no hay datos en la columna recién añadida, en el momento de modificar la tabla los datos quedan ordenados tanto por la antigua como por la nueva clave de ordenación.
+[ALTER](/es/reference/statements/alter/index) de la clave de ordenación es una operación ligera porque, cuando se añade simultáneamente una nueva columna a la tabla y a la clave de ordenación, no es necesario modificar las partes de datos existentes. Como la antigua clave de ordenación es un prefijo de la nueva clave de ordenación y no hay datos en la columna recién añadida, en el momento de modificar la tabla los datos quedan ordenados tanto por la antigua como por la nueva clave de ordenación.
 
 <div id="use-of-indexes-and-partitions-in-queries">
   ### Uso de índices y particiones en consultas
@@ -635,7 +635,9 @@ Los índices de tipo `set` pueden ser utilizados por todas las funciones. Los de
 | [match](/es/reference/functions/regular-functions/string-search-functions#match)                                                       | ✗              | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [startsWith](/es/reference/functions/regular-functions/string-functions#startsWith)                                                    | ✔              | ✔      | ✔              | ✔              | ✗                | ✔                | ✔    |
 | [endsWith](/es/reference/functions/regular-functions/string-functions#endsWith)                                                        | ✗              | ✗      | ✔              | ✔              | ✗                | ✔                | ✔    |
-| [multiSearchAny](/es/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗              | ✗      | ✔              | ✗              | ✗                | ✗                | ✗    |
+| [multiSearchAny](/es/reference/functions/regular-functions/string-search-functions#multiSearchAny)                                     | ✗              | ✗      | ✔              | ✗              | ✗                | ✗                | ✔    |
+| [multiSearchAnyUTF8](/es/reference/functions/regular-functions/string-search-functions#multiSearchAnyUTF8)                             | ✗              | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
+| [multiMatchAny](/es/reference/functions/regular-functions/string-search-functions#multiMatchAny)                                       | ✗              | ✗      | ✗              | ✗              | ✗                | ✗                | ✔    |
 | [in](/es/reference/functions/regular-functions/in-functions)                                                                           | ✔              | ✔      | ✔              | ✔              | ✔                | ✔                | ✔    |
 | [notIn](/es/reference/functions/regular-functions/in-functions)                                                                        | ✔              | ✔      | ✔              | ✔              | ✔                | ✔                | ✗    |
 | [less (`<`)](/es/reference/functions/regular-functions/comparison-functions#less)                                                      | ✔              | ✔      | ✗              | ✗              | ✗                | ✗                | ✗    |
@@ -798,7 +800,7 @@ TTL time_column
 TTL time_column + interval
 ```
 
-Para definir `interval`, utilice los operadores de [intervalo de tiempo](/es/reference/operators#operators-for-working-with-dates-and-times), por ejemplo:
+Para definir `interval`, utilice los operadores de [intervalo de tiempo](/es/reference/operators/index#operators-for-working-with-dates-and-times), por ejemplo:
 
 ```sql
 TTL date_time + INTERVAL 1 MONTH
@@ -1181,7 +1183,7 @@ El número de hilos que realizan movimientos en segundo plano de partes de datos
 En el caso de las tablas `MergeTree`, los datos llegan al disco de distintas maneras:
 
 * Como resultado de una operación de insert (consulta `INSERT`).
-* Durante las fusiones en segundo plano y las [mutaciones](/es/reference/statements/alter#mutations).
+* Durante las fusiones en segundo plano y las [mutaciones](/es/reference/statements/alter/index#mutations).
 * Al descargarlos desde otra réplica.
 * Como resultado de la congelación de particiones [ALTER TABLE ... FREEZE PARTITION](/es/reference/statements/alter/partition#freeze-partition).
 
@@ -1387,13 +1389,13 @@ Solo pueden usarse para la optimización de PREWHERE si habilitamos `set use_sta
 </div>
 
 Cuando `use_statistics_for_part_pruning` está habilitado, las estadísticas pueden usarse para la poda de partes.
-Actualmente, las estadísticas `MinMax` y `NullCount` admiten la poda de partes. Cuando se definen estadísticas MinMax en una columna, ClickHouse registra los valores mínimo y máximo de esa columna en cada parte. Cuando se definen estadísticas NullCount en una columna `Nullable`, ClickHouse registra el número de valores NULL en cada parte, lo que permite la poda basada en predicados `IS NULL` / `IS NOT NULL` y mejora la precisión de la poda de filtros de rango en columnas con valores NULL.
+Actualmente, solo las estadísticas `MinMax` y `Basic` admiten la poda de partes. Cuando se definen dichas estadísticas en una columna, ClickHouse registra los valores mínimo y máximo de esa columna en cada parte.
 La poda de partes permite omitir la lectura de partes de datos completas cuando la condición de filtro de la consulta no puede coincidir con ninguna fila de esa parte.
 
 **Ejemplo:**
 
 ```sql
--- Crear una tabla con estadísticas MinMax en la columna 'value'
+-- Create a table with MinMax statistics on the 'value' column
 CREATE TABLE test_stats
 (
     id UInt64,
@@ -1404,23 +1406,35 @@ ORDER BY id;
 
 SYSTEM STOP MERGES test_stats;
 
--- Insertar datos en inserciones separadas para crear múltiples partes
-INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- Parte 1: rango de value [0, 999]
-INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- Parte 2: rango de value [10000, 10999]
+-- Insert data in separate inserts to create multiple parts
+INSERT INTO test_stats SELECT number, number FROM numbers(1000); -- Part 1: value range [0, 999]
+INSERT INTO test_stats SELECT number, number + 10000 FROM numbers(1000); -- Part 2: value range [10000, 10999]
 
 SET use_statistics_for_part_pruning = 1;
 
--- Esta consulta omitirá la Parte 1 por completo porque su valor máximo (999) < 5000
+-- This query will skip Part 1 entirely because its max value (999) < 5000
 SELECT count() FROM test_stats WHERE value > 5000;
 
--- Usar EXPLAIN para ver el efecto del pruning
+-- Use EXPLAIN to see the pruning effect
 EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
--- La salida mostrará "Parts: 1/2" indicando que una parte fue eliminada por pruning
+-- The output will show "Parts: 1/2" indicating one part was pruned
 ```
 
 <div id="available-types-of-column-statistics">
   ### Tipos disponibles de estadísticas de columnas
 </div>
+
+* `Basic`
+
+  Un conjunto compacto de resúmenes de un solo valor derivados de una columna. Según el tipo de columna, se rellenan los siguientes elementos:
+
+  * para cualquier columna cuyos valores se representen mediante un número (enteros, flotantes, `Decimal*`, `Date*`, `DateTime*`, `Enum*`, `IPv4`, ...): el valor mínimo y máximo, que permiten estimar la selectividad de los filtros por rango y habilitan la poda de partes;
+  * para columnas `String` y `FixedString`: la longitud total en bytes de los valores no `NULL` (a partir de la cual puede derivarse la longitud media de las cadenas);
+  * para columnas `Nullable` y `LowCardinality(Nullable)`: el recuento de valores `NULL`, que el optimizador usa para descontar las filas `NULL` de las estimaciones de selectividad.
+
+    Una única estadística `Basic` puede rellenar varias de estas a la vez; por ejemplo, en una columna `Nullable(UInt32)` lleva un seguimiento tanto del mínimo/máximo numérico como del recuento de nulos. En comparación con `MinMax`, `Basic` además funciona en columnas `String` / `FixedString` y puede declararse en envolturas `Nullable` de tipos como `UUID` o `IPv6` únicamente para llevar un seguimiento del recuento de nulos.
+
+    Sintaxis: `basic`
 
 * `MinMax`
 
@@ -1440,12 +1454,6 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
 
   Sintaxis: `uniq`
 
-* `NullCount`
-
-  Lleva un seguimiento del número de valores `NULL` en columnas `Nullable`. Se usa para estimar con precisión la selectividad de los predicados `IS NULL`/`IS NOT NULL` en la optimización de PREWHERE y permite la poda de partes según la presencia de NULL.
-
-  Sintaxis: `nullcount`
-
 * `CountMin`
 
   Resúmenes [CountMin](https://en.wikipedia.org/wiki/Count%E2%80%93min_sketch) que proporcionan un recuento aproximado de la frecuencia de cada valor de una columna.
@@ -1456,25 +1464,31 @@ EXPLAIN indexes = 1 SELECT count() FROM test_stats WHERE value > 5000;
   ### Tipos de datos compatibles
 </div>
 
-|           | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | String o FixedString | Nullable(*) / LowCardinality(Nullable(*)) |
-| --------- | -------------------------------------------------- | -------------------- | ----------------------------------------- |
-| CountMin  | ✔                                                  | ✔                    | ✗                                         |
-| MinMax    | ✔                                                  | ✗                    | ✔                                         |
-| NullCount | ✗                                                  | ✗                    | ✔                                         |
-| TDigest   | ✔                                                  | ✗                    | ✔                                         |
-| Uniq      | ✔                                                  | ✔                    | ✔                                         |
+|          | (U)Int*, Float*, Decimal(*), Date*, Boolean, Enum* | IPv4 | String or FixedString |
+| -------- | -------------------------------------------------- | ---- | --------------------- |
+| Basic    | ✔                                                  | ✔    | ✔                     |
+| CountMin | ✔                                                  | ✔    | ✔                     |
+| MinMax   | ✔                                                  | ✔    | ✗                     |
+| TDigest  | ✔                                                  | ✗    | ✗                     |
+| Uniq     | ✔                                                  | ✔    | ✔                     |
+
+Todo lo anterior también acepta las envolturas `Nullable` y `LowCardinality(Nullable)` de los tipos indicados. `Basic` también puede declararse sobre envolturas `Nullable` de tipos como `UUID` o `IPv6` únicamente para registrar el recuento de valores nulos.
 
 <div id="supported-operations">
-  ### Operaciones admitidas
+  ### Operaciones compatibles
 </div>
 
-|           | Filtros de igualdad (==) | Filtros de rango (`>, >=, <, <=`) | `IS NULL` / `IS NOT NULL` |
-| --------- | ------------------------ | --------------------------------- | ------------------------- |
-| CountMin  | ✔                        | ✗                                 | ✗                         |
-| MinMax    | ✗                        | ✔                                 | ✗                         |
-| NullCount | ✗                        | ✗                                 | ✔                         |
-| TDigest   | ✗                        | ✔                                 | ✗                         |
-| Uniq      | ✔                        | ✗                                 | ✗                         |
+|          | Filtros de igualdad (==) | Filtros de rango (`>, >=, <, <=`) |
+| -------- | ------------------------ | --------------------------------- |
+| Basic    | ✗                        | ✔ (solo columnas numéricas)       |
+| CountMin | ✔                        | ✗                                 |
+| MinMax   | ✗                        | ✔ (solo columnas numéricas)       |
+| TDigest  | ✗                        | ✔ (solo columnas numéricas)       |
+| Uniq     | ✔                        | ✗                                 |
+
+Para `Basic` en columnas `String` / `FixedString`, la estadística solo registra la longitud total
+en bytes no `NULL` (utilizada para estimar la longitud media de las cadenas) y el recuento de nulos;
+no se usa para filtros de rango ni para la poda de partes.
 
 <div id="column-level-settings">
   ## Configuración por columna

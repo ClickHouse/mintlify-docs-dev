@@ -115,24 +115,47 @@ doc_type: 'guide'
 
 하나 이상의 시간 인터벌에서 이 제한을 초과하면, 어떤 제한이 초과되었는지, 어떤 인터벌에 해당하는지, 그리고 새 인터벌이 언제 시작되는지(다시 쿼리를 보낼 수 있는 시점)를 설명하는 텍스트와 함께 예외가 발생합니다.
 
-쿼터는 여러 키의 리소스를 각각 독립적으로 보고하기 위해 &quot;QUOTA key&quot; 기능을 사용할 수 있습니다. 다음은 그 예시입니다:
+QUOTA는 여러 키의 리소스를 각각 독립적으로 보고하기 위해 &quot;QUOTA key&quot; 기능을 사용할 수 있습니다. 다음은 그 예시입니다:
 
 ```xml
-<!-- 글로벌 보고서 디자이너용. -->
+<!-- For the global reports designer. -->
 <web_global>
-    <!-- keyed – quota_key "key"가 쿼리 매개변수로 전달되며,
-            각 키 값마다 쿼터가 독립적으로 추적됩니다.
-        예를 들어, 사용자 이름을 키로 전달하면
-            사용자 이름별로 쿼터가 별도로 집계됩니다.
-        키 사용은 quota_key가 사용자가 아닌 프로그램에 의해 전달되는 경우에만 의미가 있습니다.
+    <!-- keyed – The quota_key "key" is passed in the query parameter,
+            and the quota is tracked separately for each key value.
+        For example, you can pass a username as the key,
+            so the quota will be counted separately for each username.
+        Using keys makes sense only if quota_key is transmitted by the program, not by a user.
 
-        <keyed_by_ip />를 사용하면 IP 주소가 쿼터 키로 사용됩니다.
-        (단, 사용자가 IPv6 주소를 비교적 쉽게 변경할 수 있다는 점을 유의하십시오.)
+        You can also write <keyed_by_ip />, so the IP address is used as the quota key.
+        (But keep in mind that users can change the IPv6 address fairly easily.)
+
+        Instead of <keyed_by_ip /> you can use <keyed_by_forwarded_ip />, so the address
+        from the X-Forwarded-For header is used as the quota key.
+
+        For both <keyed_by_ip /> and <keyed_by_forwarded_ip /> you can additionally specify
+        <ipv4_prefix_bits> and <ipv6_prefix_bits> to group clients by subnet instead of by a
+        single address: the IP address is masked to the given prefix length before being used
+        as the quota key. For example, <ipv4_prefix_bits>24</ipv4_prefix_bits> shares one bucket
+        across a /24 IPv4 subnet, and <ipv6_prefix_bits>64</ipv6_prefix_bits> across a /64 IPv6
+        subnet. These elements can only be used together with <keyed_by_ip /> or
+        <keyed_by_forwarded_ip />.
     -->
     <keyed />
 ```
 
-DDL 구문을 사용할 때는 정규화된 쿼리 해시를 기준으로 쿼터를 설정할 수도 있으며, 그러면 서로 다른 각 쿼리 패턴에 독립적인 쿼터 버킷이 할당됩니다:
+정규화된 쿼리 해시를 기준으로 QUOTA를 설정할 수도 있으며, 그러면 서로 다른 각 쿼리 패턴에 독립적인 QUOTA 버킷이 할당됩니다. XML 구성에서는 이를 `<keyed_by_normalized_query_hash />`로 작성합니다:
+
+```xml
+<my_quota>
+    <keyed_by_normalized_query_hash />
+    <interval>
+        <duration>3600</duration>
+        <queries>100</queries>
+    </interval>
+</my_quota>
+```
+
+같은 내용은 DDL 구문으로도 표현할 수 있습니다:
 
 ```sql
 CREATE QUOTA my_quota KEYED BY normalized_query_hash FOR INTERVAL 1 hour MAX queries = 100 TO my_user;
@@ -140,11 +163,11 @@ CREATE QUOTA my_quota KEYED BY normalized_query_hash FOR INTERVAL 1 hour MAX que
 
 이 예시에서는 서로 다른 각 정규화된 쿼리를 시간당 최대 100회까지 실행할 수 있습니다. `SELECT number FROM numbers(1)`와 `SELECT number FROM numbers(2)`는 동일한 버킷을 공유하지만(정규화된 형식이 같기 때문), `SELECT number, number FROM numbers(1)`는 별도의 버킷을 사용합니다.
 
-이 쿼터는 config의 &#39;users&#39; 섹션에서 사용자에게 할당됩니다. &quot;접근 권한&quot; 섹션을 참조하십시오.
+이 QUOTA는 config의 &#39;users&#39; 섹션에서 사용자에게 할당됩니다. &quot;접근 권한&quot; 섹션을 참조하십시오.
 
-분산 쿼리 처리에서는 누적된 값이 요청을 보낸 서버에 저장됩니다. 따라서 사용자가 다른 서버로 이동하면 해당 서버의 쿼터는 &quot;처음부터 다시&quot; 시작됩니다.
+분산 쿼리 처리에서는 누적된 값이 요청을 보낸 서버에 저장됩니다. 따라서 사용자가 다른 서버로 이동하면 해당 서버의 QUOTA는 &quot;처음부터 다시&quot; 시작됩니다.
 
-서버를 재시작하면 쿼터가 재설정됩니다.
+서버를 재시작하면 QUOTA가 재설정됩니다.
 
 <div id="related-content">
   ## 관련 콘텐츠

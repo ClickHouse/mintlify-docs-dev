@@ -7,9 +7,12 @@ doc_type: 'guide'
 keywords: ['clickstack', 'observabilidad', 'logs', 'rendimiento', 'optimización']
 ---
 
-import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
+import BetaBadge from "/snippets/es/components/BetaBadge/BetaBadge.jsx";
 
-import { Image } from "/snippets/components/Image.jsx";
+import OtelLogsSchema from '/snippets/es/clickstack/_schema_otel_logs.mdx';
+import OtelTracesSchema from '/snippets/es/clickstack/_schema_otel_traces.mdx';
+
+import { Image } from "/snippets/es/components/Image.jsx";
 
 <div id="introduction">
   ## Introducción
@@ -108,47 +111,7 @@ Columnas materializadas:
 
 Considere el esquema predeterminado de ClickStack para las trazas, donde los metadatos de Kubernetes se almacenan en `ResourceAttributes`:
 
-```sql
-CREATE TABLE IF NOT EXISTS otel_traces
-(
-    `Timestamp` DateTime64(9) CODEC(Delta(8), ZSTD(1)),
-    `TraceId` String CODEC(ZSTD(1)),
-    `SpanId` String CODEC(ZSTD(1)),
-    `ParentSpanId` String CODEC(ZSTD(1)),
-    `TraceState` String CODEC(ZSTD(1)),
-    `SpanName` LowCardinality(String) CODEC(ZSTD(1)),
-    `SpanKind` LowCardinality(String) CODEC(ZSTD(1)),
-    `ServiceName` LowCardinality(String) CODEC(ZSTD(1)),
-    `ResourceAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `ScopeName` String CODEC(ZSTD(1)),
-    `ScopeVersion` String CODEC(ZSTD(1)),
-    `SpanAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `Duration` UInt64 CODEC(ZSTD(1)),
-    `StatusCode` LowCardinality(String) CODEC(ZSTD(1)),
-    `StatusMessage` String CODEC(ZSTD(1)),
-    `Events.Timestamp` Array(DateTime64(9)) CODEC(ZSTD(1)),
-    `Events.Name` Array(LowCardinality(String)) CODEC(ZSTD(1)),
-    `Events.Attributes` Array(Map(LowCardinality(String), String)) CODEC(ZSTD(1)),
-    `Links.TraceId` Array(String) CODEC(ZSTD(1)),
-    `Links.SpanId` Array(String) CODEC(ZSTD(1)),
-    `Links.TraceState` Array(String) CODEC(ZSTD(1)),
-    `Links.Attributes` Array(Map(LowCardinality(String), String)) CODEC(ZSTD(1)),
-    `__hdx_materialized_rum.sessionId` String MATERIALIZED ResourceAttributes['rum.sessionId'] CODEC(ZSTD(1)),
-    INDEX idx_trace_id TraceId TYPE bloom_filter(0.001) GRANULARITY 1,
-    INDEX idx_rum_session_id __hdx_materialized_rum.sessionId TYPE bloom_filter(0.001) GRANULARITY 1,
-    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_span_attr_key mapKeys(SpanAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_span_attr_value mapValues(SpanAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_duration Duration TYPE minmax GRANULARITY 1,
-    INDEX idx_lower_span_name lower(SpanName) TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 8
-)
-ENGINE = MergeTree
-PARTITION BY toDate(Timestamp)
-ORDER BY (ServiceName, SpanName, toDateTime(Timestamp))
-TTL toDate(Timestamp) + toIntervalDay(30)
-SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
-```
+<OtelTracesSchema />
 
 Un usuario puede filtrar trazas mediante la sintaxis de Lucene, p. ej., `ResourceAttributes.k8s.pod.name:"checkout-675775c4cc-f2p9c"`:
 
@@ -180,16 +143,16 @@ Ahora los usuarios pueden consultar los nombres de los pods de Kubernetes de for
 
 En los datos recién insertados, esto evita por completo el acceso al mapa y reduce significativamente la E/S.
 
-Sin embargo, aunque los usuarios sigan consultando la ruta del atributo original, por ejemplo `ResourceAttributes.k8s.pod.name:"checkout-675775c4cc-f2p9c"`, **ClickStack reescribirá automáticamente la consulta** internamente para usar la columna materializada `PodName`, es decir, con el predicado:
+Sin embargo, incluso si los usuarios siguen consultando la ruta del atributo original, por ejemplo `ResourceAttributes.k8s.pod.name:"checkout-675775c4cc-f2p9c"`, **ClickStack reescribirá automáticamente la consulta** internamente para usar la columna materializada `PodName`, es decir, usando el predicado:
 
 ```sql
 PodName = 'checkout-675775c4cc-f2p9c'
 ```
 
-Esto garantiza que los usuarios aprovechen la optimización sin cambiar paneles, alertas ni consultas guardadas.
+Esto garantiza que los usuarios aprovechen la optimización sin cambiar dashboards, alertas ni consultas guardadas.
 
 <Note>
-  De forma predeterminada, las columnas materializadas se excluyen de las consultas `SELECT *`. Así se mantiene la garantía de que los resultados de las consultas siempre puedan volver a insertarse en la tabla.
+  De forma predeterminada, las columnas materializadas se excluyen de las `SELECT * queries`. Esto preserva la garantía de que los resultados de las consultas siempre pueden reinsertarse en la tabla.
 </Note>
 
 <div id="materializing-historical-data">
@@ -229,7 +192,7 @@ Espere hasta que `is_done = 1` en la mutación correspondiente.
   Las mutaciones generan una sobrecarga adicional de E/S y CPU, y deben usarse con moderación. En muchos casos, basta con dejar que los datos más antiguos se eliminen de forma natural con el tiempo y confiar en las mejoras de rendimiento de los datos ingeridos recientemente.
 </Warning>
 
-<div id="adding-skip-indices">
+<div id="adding-skip-indexes">
   ## Optimización 2. Añadir índices de omisión
 </div>
 
@@ -239,52 +202,15 @@ Los índices de omisión permiten a ClickHouse evitar escanear bloques completos
 
 Considere el esquema predeterminado de trazas de ClickStack, que incluye índices de omisión:
 
-```sql
-CREATE TABLE IF NOT EXISTS otel_traces
-(
-    `Timestamp` DateTime64(9) CODEC(Delta(8), ZSTD(1)),
-    `TraceId` String CODEC(ZSTD(1)),
-    `SpanId` String CODEC(ZSTD(1)),
-    `ParentSpanId` String CODEC(ZSTD(1)),
-    `TraceState` String CODEC(ZSTD(1)),
-    `SpanName` LowCardinality(String) CODEC(ZSTD(1)),
-    `SpanKind` LowCardinality(String) CODEC(ZSTD(1)),
-    `ServiceName` LowCardinality(String) CODEC(ZSTD(1)),
-    `ResourceAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `ScopeName` String CODEC(ZSTD(1)),
-    `ScopeVersion` String CODEC(ZSTD(1)),
-    `SpanAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
-    `Duration` UInt64 CODEC(ZSTD(1)),
-    `StatusCode` LowCardinality(String) CODEC(ZSTD(1)),
-    `StatusMessage` String CODEC(ZSTD(1)),
-    `Events.Timestamp` Array(DateTime64(9)) CODEC(ZSTD(1)),
-    `Events.Name` Array(LowCardinality(String)) CODEC(ZSTD(1)),
-    `Events.Attributes` Array(Map(LowCardinality(String), String)) CODEC(ZSTD(1)),
-    `Links.TraceId` Array(String) CODEC(ZSTD(1)),
-    `Links.SpanId` Array(String) CODEC(ZSTD(1)),
-    `Links.TraceState` Array(String) CODEC(ZSTD(1)),
-    `Links.Attributes` Array(Map(LowCardinality(String), String)) CODEC(ZSTD(1)),
-    `__hdx_materialized_rum.sessionId` String MATERIALIZED ResourceAttributes['rum.sessionId'] CODEC(ZSTD(1)),
-    INDEX idx_trace_id TraceId TYPE bloom_filter(0.001) GRANULARITY 1,
-    INDEX idx_rum_session_id __hdx_materialized_rum.sessionId TYPE bloom_filter(0.001) GRANULARITY 1,
-    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_span_attr_key mapKeys(SpanAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_span_attr_value mapValues(SpanAttributes) TYPE bloom_filter(0.01) GRANULARITY 1,
-    INDEX idx_duration Duration TYPE minmax GRANULARITY 1,
-    INDEX idx_lower_span_name lower(SpanName) TYPE tokenbf_v1(32768, 3, 0) GRANULARITY 8
-)
-ENGINE = MergeTree
-PARTITION BY toDate(Timestamp)
-ORDER BY (ServiceName, SpanName, toDateTime(Timestamp))
-TTL toDate(Timestamp) + toIntervalDay(30)
-SETTINGS index_granularity = 8192, ttl_only_drop_parts = 1;
-```
+<OtelTracesSchema />
 
-Estos índices se centran en dos patrones comunes:
+Estos índices se centran en tres patrones comunes:
 
 * Filtrado de cadenas con alta cardinalidad, como TraceId, identificadores de sesión, claves de atributo o valores
+* Filtrado de subclaves de mapas acelerado por [índices de texto](#text-indexes) en las columnas [`*AttributeItems`](#map-direct-read-optimization)
 * Filtrado por rangos numéricos, como la duración del span
+
+La tabla de logs usa índices `text(tokenizer = 'array')` en todo el esquema en lugar de filtros de Bloom, y añade un índice `text(tokenizer = 'splitByNonAlpha')` en `lower(Body)` para la búsqueda de texto completo. Consulte [&quot;Tables and schemas used by ClickStack&quot;](/es/clickstack/ingesting-data/schemas#logs) para ver el DDL completo.
 
 <div id="bloom-filters">
   ### Filtros de Bloom
@@ -317,7 +243,75 @@ Los filtros de Bloom son más eficaces cuando la distribución de los valores ha
 
 Como ocurre con todos los índices de omisión, los filtros de Bloom deben añadirse de forma selectiva y validarse con patrones de consulta reales para garantizar que aportan un beneficio medible; consulte [&quot;Evaluar la eficacia del índice de omisión.&quot;](#evaluating-skip-index-effectiveness)
 
-<div id="min-max-indices">
+<div id="text-indexes">
+  ### Índices de texto
+</div>
+
+Los [índices de texto](/es/reference/engines/table-engines/mergetree-family/textindexes) ofrecen una alternativa a los filtros Bloom. Un filtro Bloom es una estructura probabilística que puede descartar gránulos de forma definitiva, pero tiene una tasa de falsos positivos, por lo que los gránulos que no excluye deben seguir cargándose y evaluándose con la condición `WHERE`. Los índices de texto son índices invertidos que asignan tokens a desplazamientos exactos dentro de una parte. Como evalúan desplazamientos en lugar de gránulos y no producen falsos positivos, normalmente pueden resolver la condición `WHERE` sin cargar la columna subyacente. Esta es una optimización conocida como [lectura directa](https://github.com/ClickHouse/clickhouse-docs/pull/6356/%E2%80%A6). Dado que la carga de datos suele ser el principal factor en el tiempo de consulta, la lectura directa puede reducir de forma significativa la latencia de la consulta.
+
+Además, los índices de texto también se pueden consultar directamente, lo que permite el autocompletado y otras funciones de introspección en ClickStack.
+
+Dos tokenizadores cubren la mayoría de los patrones de ClickStack:
+
+| Tokenizer         | Se usa para                                                             | Columna típica                    |
+| ----------------- | ----------------------------------------------------------------------- | --------------------------------- |
+| `array`           | Indexación de elementos `Array(String)` como tokens completos           | `mapKeys(...)`, `*AttributeItems` |
+| `splitByNonAlpha` | Búsqueda de texto completo a nivel de palabra en cadenas de texto libre | `Body`, `lower(Body)`, `SpanName` |
+
+<div id="array-tokenizer">
+  #### Tokenizador `array` para columnas Map y columnas de tipo array
+</div>
+
+El esquema predeterminado de logs crea índices sobre `mapKeys` y los arrays materializados de elementos con
+el tokenizador `array`:
+
+```sql
+INDEX idx_log_attr_key mapKeys(LogAttributes) TYPE text(tokenizer = 'array'),
+INDEX idx_log_attr_items LogAttributeItems TYPE text(tokenizer = 'array')
+```
+
+Cada clave de Map (o elemento de Array) se convierte en un único token. Filtrar por una
+clave de atributo conocida permite entonces descartar cualquier fila que no la contenga, sin escanear la
+columna Map correspondiente. Este es el mecanismo que hace que la [optimización de lectura directa de Map](#map-direct-read-optimization)
+sea rentable.
+
+<div id="text-index-body">
+  #### `splitByNonAlpha` para el cuerpo de los logs
+</div>
+
+La búsqueda de texto completo en la columna `Body` se beneficia de un índice de texto
+`splitByNonAlpha`. ClickStack define este índice en `lower(Body)` para que las búsquedas de
+Lucene que no distinguen entre mayúsculas y minúsculas puedan usarlo:
+
+```sql
+INDEX idx_lower_body lower(Body) TYPE text(tokenizer = 'splitByNonAlpha')
+```
+
+Cuando ClickStack detecta un índice `text(tokenizer = 'splitByNonAlpha')` en
+`lower(Body)`, reescribe consultas de Lucene sobre columnas implícitas como `error` o
+`"connection refused"` como `hasAllTokens(lower(Body), lower(...))`, que el
+índice puede resolver sin leer la columna `Body` completa. Para la mayoría de
+las cargas de trabajo de logs de observabilidad, esta es, con diferencia, la mayor mejora de velocidad de filtrado disponible.
+
+<Info>
+  **Índices de texto frente a `tokenbf_v1`**
+
+  El antiguo tipo de índice `tokenbf_v1` (que todavía se usa en el esquema predeterminado de trazas para
+  `lower(SpanName)`) es funcionalmente similar, pero está en desuso en ClickHouse 26.2
+  y versiones posteriores. Los nuevos índices de búsqueda de texto deben usar `text(tokenizer = ...)`.
+</Info>
+
+Para obtener una referencia más detallada sobre las opciones de tokenizador, preprocesadores y verificación, consulta la [documentación de búsqueda de texto completo](/es/reference/engines/table-engines/mergetree-family/textindexes).
+
+<div id="text-indexes-in-default-logs-schema">
+  #### Índices de texto en el esquema predeterminado de logs
+</div>
+
+El esquema predeterminado `otel_logs`, sincronizado con upstream, incluye todos los índices de texto mencionados anteriormente: `text(tokenizer = 'array')` en `TraceId`, en cada arreglo `mapKeys(...)` y `*AttributeItems`, y `text(tokenizer = 'splitByNonAlpha')` en `lower(Body)` para la búsqueda de texto completo. Para ver el DDL canónico, consulta [&quot;Tables and schemas used by ClickStack&quot;](/es/clickstack/ingesting-data/schemas#logs); a continuación se reproduce el mismo esquema.
+
+<OtelLogsSchema />
+
+<div id="min-max-indexes">
   ### Índices MinMax
 </div>
 
@@ -493,19 +487,137 @@ Desactivar `use_query_condition_cache` garantiza que los resultados no se vean a
 </Tip>
 
 <div id="when-to-add-skip-indexes">
-  ### Cuándo añadir skip indexes
+  ### Cuándo añadir índices de omisión de datos
 </div>
 
-Los skip indexes deben añadirse de forma selectiva, en función de los tipos de filtros que los usuarios aplican con más frecuencia y de la distribución de los datos en las partes y los gránulos. El objetivo es descartar suficientes gránulos como para compensar el coste de evaluar el propio índice, por lo que es esencial hacer benchmarks con datos parecidos a los de producción.
+Los índices de omisión de datos deben añadirse de forma selectiva, en función de los tipos de filtros que los usuarios aplican con más frecuencia y de la distribución de los datos en las partes y los gránulos. El objetivo es descartar suficientes gránulos como para compensar el coste de evaluar el propio índice, por lo que es esencial hacer benchmarks con datos parecidos a los de producción.
 
-**En las columnas numéricas que se usan en filtros, un skip index `minmax` casi siempre es una buena opción.** Es ligero, barato de evaluar y puede ser eficaz para predicados de rango, especialmente cuando los valores están poco ordenados o quedan confinados a rangos estrechos dentro de las partes. Incluso cuando `minmax` no ayuda con un patrón de consulta concreto, su sobrecarga suele ser lo bastante baja como para que siga siendo razonable mantenerlo.
+**En las columnas numéricas que se usan en filtros, un índice de omisión de datos `minmax` casi siempre es una buena opción.** Es ligero, barato de evaluar y puede ser eficaz para predicados de rango, especialmente cuando los valores están poco ordenados o quedan confinados a rangos estrechos dentro de las partes. Incluso cuando `minmax` no ayuda con un patrón de consulta concreto, su sobrecarga suele ser lo bastante baja como para que siga siendo razonable mantenerlo.
 
-**Columnas de texto. Use filtros Bloom cuando la cardinalidad sea alta y los valores sean dispersos.**
+**En las columnas de texto, prefiera los índices de texto cuando sean compatibles; en caso contrario, recurra a filtros Bloom.** Los índices de texto aceleran los mismos filtros de igualdad e `IN` que los filtros Bloom y, además, habilitan predicados basados en tokens (`hasToken`, `hasAllTokens`, `has`) que se usan en la búsqueda de texto completo y en la [optimización de lectura directa de Map](#map-direct-read-optimization). En clústeres más antiguos que todavía no admiten índices de texto, los filtros Bloom siguen siendo una opción sólida.
 
 Los filtros Bloom son más eficaces en columnas de texto con alta cardinalidad en las que cada valor tiene una frecuencia relativamente baja, lo que significa que la mayoría de las partes y los gránulos no contienen el valor buscado. Como regla general, los filtros Bloom son más prometedores cuando la columna tiene al menos 10.000 valores distintos, y a menudo ofrecen el mejor rendimiento con más de 100.000 valores distintos. También son más eficaces cuando los valores coincidentes se agrupan en un número reducido de partes secuenciales, lo que normalmente ocurre cuando la columna está correlacionada con la clave de ordenación. De nuevo, esto puede variar según el caso; nada sustituye a las pruebas en el mundo real.
 
+<div id="map-direct-read-optimization">
+  ## Optimización 3. Lectura directa de Map
+</div>
+
+Cuando se filtra por una subclave de Map como `LogAttributes['k8s.pod.name'] =
+'checkout'`, ClickHouse debe leer la columna Map `LogAttributes` completa desde
+disco y desempaquetar cada fila para evaluar el predicado. [Materializar los atributos consultados con frecuencia](#materialize-frequently-queried-attributes)
+resuelve esto para las claves que conoce de antemano, pero no escala bien para
+atributos arbitrarios por los que los usuarios filtran de forma ad hoc.
+
+Incluso si un esquema tiene índices sobre `mapKeys` y `mapValues`, esos índices pueden indicarle si una fila tiene una clave determinada y si tiene un valor determinado, pero no si la clave y el valor pertenecen a la misma entrada. En otras palabras, `mapKeys` responde `mapContainsKey(ResourceAttributes, 'foo')` y `mapValues` responde `mapContainsValue(ResourceAttributes, 'bar')`, pero ninguno responde `ResourceAttributes['foo'] = 'bar'`.
+
+Al concatenar las claves y los valores en una única columna `Array(String)`, la
+optimización de lectura directa de Map permite responder
+`ResourceAttributes['foo'] = 'bar'` sin cargar el Map subyacente. Los Maps suelen ser grandes y aumentan
+de tamaño a medida que crece el volumen. En combinación con una reescritura de
+consultas a nivel de aplicación, los filtros de igualdad sobre cualquier subclave de Map se convierten en una única llamada `has(...)`
+respaldada por ese índice, sin deserialización del Map en tiempo de consulta. Además,
+el único coste de almacenamiento es el del text index, ya que la columna subyacente es
+una columna `ALIAS` y no se almacena.
+
+Esta optimización es automática. ClickStack incluye las columnas e
+índices necesarios en las tablas predeterminadas de logs y trazas, y reescribe los filtros con subíndice de Map
+en tiempo de ejecución cuando el ClickHouse server conectado admite la primitiva
+subyacente. Si su esquema no contiene estas columnas, o si tiene
+columnas Map adicionales que quiere acelerar además de las predeterminadas, siga leyendo para
+habilitarlas.
+
+<div id="map-direct-read-schema">
+  ### Esquema
+</div>
+
+Para cada columna `Map` que quieras acelerar, ClickStack define una
+columna `Array(String)` `ALIAS` que combina cada clave con su valor mediante `=`:
+
+```sql
+ALTER TABLE otel_logs
+ADD COLUMN LogAttributeItems Array(String)
+ALIAS arrayMap(
+  (arr) -> concat(arr.1, '=', arr.2),
+  LogAttributes::Array(Tuple(String, String))
+)
+```
+
+La forma ALIAS significa que el array no ocupa bytes en disco. ClickHouse lo calcula en
+tiempo de consulta y al crear el índice. Un índice de omisión de datos `text(tokenizer = 'array')` sobre
+la columna `ALIAS` almacena un token por cada par `key=value`, que ClickHouse usa
+para descartar gránulos sin tocar el Map de origen:
+
+```sql
+ALTER TABLE otel_logs
+ADD INDEX idx_log_attr_items LogAttributeItems
+TYPE text(tokenizer = 'array')
+```
+
+Después de crear el índice en una tabla existente, materialízalo para que los
+datos históricos puedan aprovecharlo (consulta [&quot;Materializar índice de omisión de datos&quot;](#materialize-skip-index)).
+
+Los esquemas predeterminados de ClickStack incluyen estas columnas e índices:
+
+| Tabla         | columnas ALIAS                                                       | Índices de texto                                                   |
+| ------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `otel_logs`   | `ResourceAttributeItems`, `ScopeAttributeItems`, `LogAttributeItems` | `idx_res_attr_items`, `idx_scope_attr_items`, `idx_log_attr_items` |
+| `otel_traces` | `ResourceAttributeItems`, `SpanAttributeItems`                       | `idx_res_attr_items`, `idx_span_attr_items`                        |
+
+<div id="map-direct-read-rewrite">
+  ### Reescritura de consultas
+</div>
+
+Cuando un usuario filtra por una subclave de Map a través de la UI de ClickStack o del SDK, ClickStack
+reescribe:
+
+```sql
+LogAttributes['k8s.pod.name'] = 'checkout'
+```
+
+a:
+
+```sql
+has(LogAttributeItems, concat('k8s.pod.name', '=', 'checkout'))
+```
+
+La forma reescrita utiliza el índice de texto en `LogAttributeItems`, descarta filas
+enteras que no contienen el token `key=value` y nunca deserializa el
+Map de origen `LogAttributes` en las filas que no coinciden. Para cargas de trabajo de
+observabilidad con alta cardinalidad, esto suele ofrecer una reducción de un orden de magnitud
+en E/S respecto al acceso mediante subíndice al Map.
+
+La reescritura se aplica automáticamente: las consultas guardadas, dashboards y alertas que
+hacen referencia a `LogAttributes['key']` se benefician de esta mejora de velocidad sin ningún cambio.
+
+<div id="map-direct-read-version">
+  ### Requisitos de versión de ClickHouse
+</div>
+
+La reescritura de consultas requiere una versión de ClickHouse que admita la
+poda directa a nivel de token en columnas de arrays indexadas por texto. ClickStack detecta la
+versión del servidor conectado (`SELECT version()`, almacenada en caché por conexión) y solo
+emite la forma reescrita cuando el servidor alcanza o supera el umbral. Los
+servidores más antiguos vuelven automáticamente a la forma original de subíndice de Map.
+
+| Rama de ClickHouse | Versión mínima      |
+| ------------------ | ------------------- |
+| 26.2               | 26.2.19.43          |
+| 26.3               | 26.3.12.3           |
+| 26.4               | 26.4.3.37           |
+| 26.5+              | Todas las versiones |
+
+<Info>
+  **Por qué ALIAS y no MATERIALIZED**
+
+  El array `items` es una vista de datos que ya están en la columna Map.
+  Almacenarlo dos veces —una vez en el Map y otra en el array— duplicaría la E/S de escritura
+  sin aportar nuevos patrones de consulta. El índice de texto de la columna `ALIAS` se
+  construye en el momento de la inserción a partir de los mismos datos de origen, por lo que la optimización solo añade
+  la huella del índice en disco.
+</Info>
+
 <div id="modifying-the-primary-key">
-  ## Optimización 3. Modificar la clave primaria
+  ## Optimización 4. Modificar la clave primaria
 </div>
 
 La clave primaria es uno de los componentes más importantes para optimizar el rendimiento de ClickHouse en la mayoría de las cargas de trabajo. Para ajustarla eficazmente, es necesario comprender cómo funciona y cómo interactúa con los patrones de consulta. En última instancia, la clave primaria debe ajustarse a la forma en que los usuarios acceden a los datos, en particular a las columnas por las que se filtra con más frecuencia.
@@ -517,7 +629,7 @@ Filtrar por columnas que aparecen antes en la clave primaria es más eficiente q
 <Info>
   **Nota sobre la terminología**
 
-  A lo largo de este documento, el término &quot;ordering key&quot; se usa indistintamente con &quot;primary key&quot;. En sentido estricto, estos conceptos difieren en ClickHouse, pero en ClickStack normalmente se refieren a las mismas columnas especificadas en la cláusula `ORDER BY` de la tabla. Para más información, consulta la [documentación de ClickHouse](/es/reference/engines/table-engines/mergetree-family/mergetree#choosing-a-primary-key-that-differs-from-the-sorting-key) sobre cómo elegir una clave primaria distinta de la clave de ordenación.
+  A lo largo de este documento, el término &quot;clave de ordenación&quot; se usa indistintamente con &quot;primary key&quot;. En sentido estricto, estos conceptos difieren en ClickHouse, pero en ClickStack normalmente se refieren a las mismas columnas especificadas en la cláusula `ORDER BY` de la tabla. Para más información, consulta la [documentación de ClickHouse](/es/reference/engines/table-engines/mergetree-family/mergetree#choosing-a-primary-key-that-differs-from-the-sorting-key) sobre cómo elegir una clave primaria distinta de la clave de ordenación.
 </Info>
 
 Antes de modificar cualquier clave primaria, se recomienda encarecidamente leer nuestra [guía para entender cómo funcionan los índices primarios](/es/concepts/core-concepts/primary-indexes) en ClickHouse:
@@ -526,12 +638,12 @@ El ajuste de la clave primaria depende de la tabla y del tipo de datos. Un cambi
 
 **Normalmente optimizarás las tablas de logs y trazas. Rara vez es necesario cambiar la clave primaria de otros tipos de datos.**
 
-A continuación se muestran las claves primarias predeterminadas para las tablas de ClickStack de logs y métricas.
+A continuación se muestran las claves primarias predeterminadas para las tablas de ClickStack de logs y trazas.
 
-* Logs ([`otel_logs`](/es/clickstack/ingesting-data/schemas#logs)) - `(ServiceName, TimestampTime, Timestamp)`
-* Traces ([&#39;otel&#95;traces](/es/clickstack/ingesting-data/schemas#traces)) - `(ServiceName, SpanName, toDateTime(Timestamp))`
+* Logs ([`otel_logs`](/es/clickstack/ingesting-data/schemas#logs)) - `(toStartOfFiveMinutes(Timestamp), ServiceName, Timestamp)`
+* Trazas ([`otel_traces`](/es/clickstack/ingesting-data/schemas#traces)) - `(ServiceName, SpanName, toDateTime(Timestamp))`
 
-Consulta [&quot;Tablas y esquemas usados por ClickStack&quot;](/es/clickstack/ingesting-data/schemas) para ver las claves primarias usadas por las tablas de otros tipos de datos. Por ejemplo, las tablas de trazas están optimizadas para filtrar por nombre de servicio y nombre de span, seguidos del timestamp y el trace ID. Las tablas de logs, en cambio, están optimizadas para filtrar por nombre de servicio, luego por fecha y después por timestamp. Aunque lo ideal es que el usuario aplique los filtros en el orden de la clave primaria, las consultas seguirán beneficiándose enormemente al filtrar por cualquiera de estas columnas en cualquier orden, ya que ClickHouse [descarta datos antes de leerlos](/es/concepts/features/performance/skip-indexes/skipping-indexes).
+Consulta [&quot;Tablas y esquemas usados por ClickStack&quot;](/es/clickstack/ingesting-data/schemas) para ver las claves primarias usadas por las tablas de otros tipos de datos. Las tablas de trazas están optimizadas para filtrar por nombre de servicio y nombre de span, seguidos del timestamp. Las tablas de logs comienzan con un bucket temporal de cinco minutos para que los análisis por rango de tiempo lleguen primero al índice primario y luego se acoten por nombre de servicio dentro de cada bucket, una estructura adecuada para el flujo de trabajo habitual de &quot;qué ocurrió en los últimos N minutos para el servicio X&quot;. Aunque lo ideal es aplicar los filtros en el orden de la clave primaria, las consultas siguen beneficiándose enormemente de filtrar por cualquiera de estas columnas en cualquier orden, ya que ClickHouse [descarta datos antes de leerlos](/es/concepts/features/performance/skip-indexes/skipping-indexes).
 
 Al elegir una clave primaria, también hay otros factores que conviene tener en cuenta para determinar el orden óptimo de las columnas. Consulta [&quot;Elegir una clave primaria.&quot;](#choosing-a-primary-key)
 
@@ -574,8 +686,8 @@ El siguiente ejemplo muestra una forma sencilla de crear una nueva tabla de logs
 
     ```sql
     CREATE TABLE otel_logs_temp AS otel_logs
-    PRIMARY KEY (SeverityText, ServiceName, TimestampTime)
-    ORDER BY (SeverityText, ServiceName, TimestampTime)
+    PRIMARY KEY (SeverityText, ServiceName, Timestamp)
+    ORDER BY (SeverityText, ServiceName, Timestamp)
     ```
 
     <Info>
@@ -602,7 +714,7 @@ El siguiente ejemplo muestra una forma sencilla de crear una nueva tabla de logs
 
 Sin embargo, **la clave primaria no puede modificarse en una tabla existente**. Para cambiarla, es necesario crear una nueva tabla.
 
-El siguiente proceso puede utilizarse para garantizar que los datos antiguos se conserven y sigan pudiéndose consultar de forma transparente (usando su clave existente en HyperDX, si es necesario), mientras que los datos nuevos se exponen a través de una nueva tabla optimizada para los patrones de acceso de los usuarios. Este enfoque garantiza que las canalizaciones de ingestión no tengan que modificarse: los datos siguen enviándose a los nombres de tabla predeterminados y todos los cambios son transparentes para los usuarios.
+El siguiente proceso puede utilizarse para garantizar que los datos antiguos se conserven y sigan pudiéndose consultar de forma transparente (usando su clave existente en la UI de ClickStack, si es necesario), mientras que los datos nuevos se exponen a través de una nueva tabla optimizada para los patrones de acceso de los usuarios. Este enfoque garantiza que las canalizaciones de ingestión no tengan que modificarse: los datos siguen enviándose a los nombres de tabla predeterminados y todos los cambios son transparentes para los usuarios.
 
 <Note>
   Rara vez compensa hacer backfill de los datos existentes en una nueva tabla a gran escala. El coste de cómputo y E/S suele ser alto y no justifica las ventajas de rendimiento. En su lugar, deja que los datos más antiguos expiren [mediante TTL](/es/clickstack/managing/ttl), mientras que los datos más recientes se benefician de la clave mejorada.
@@ -614,19 +726,19 @@ A continuación se usa el mismo ejemplo de introducir `SeverityText` como primer
   <Step>
     #### Crear una nueva tabla
 
-    Crea la nueva tabla con la clave primaria deseada. Observa el sufijo `_23_01_2025`: adáptalo para que sea la fecha actual. Por ejemplo:
+    Crea la nueva tabla con la clave primaria deseada. Ten en cuenta el sufijo `_23_01_2025`: adáptalo para que corresponda a la fecha actual. Por ejemplo:
 
     ```sql
     CREATE TABLE otel_logs_23_01_2025 AS otel_logs
-    PRIMARY KEY (SeverityText, ServiceName, TimestampTime)
-    ORDER BY (SeverityText, ServiceName, TimestampTime)
+    PRIMARY KEY (SeverityText, ServiceName, Timestamp)
+    ORDER BY (SeverityText, ServiceName, Timestamp)
     ```
   </Step>
 
   <Step>
     #### Crear una tabla Merge
 
-    El [motor Merge](/es/reference/engines/table-engines/special/merge) (no debe confundirse con MergeTree) no almacena datos por sí mismo, pero permite leer al mismo tiempo de cualquier número de tablas.
+    El [motor Merge](/es/reference/engines/table-engines/special/merge) (no debe confundirse con MergeTree) no almacena datos por sí mismo, pero permite leer simultáneamente de cualquier número de tablas.
 
     ```sql
     CREATE TABLE otel_logs_merge
@@ -642,25 +754,25 @@ A continuación se usa el mismo ejemplo de introducir `SeverityText` como primer
   </Step>
 
   <Step>
-    #### Actualizar HyperDX para leer desde la tabla Merge
+    #### Actualizar la UI de ClickStack para leer desde la tabla Merge
 
-    Configura HyperDX para usar `otel_logs_merge` como tabla de la fuente de datos de logs.
+    Configura la UI de ClickStack para usar `otel_logs_merge` como tabla de la fuente de datos de logs.
 
     <Image img="/images/clickstack/performance_guide/select_merge_table.png" size="lg" alt="Seleccionar tabla Merge" />
 
-    En este punto, las escrituras continúan en `otel_logs` con la clave primaria original, mientras que las lecturas usan la tabla Merge. No hay ningún cambio visible para los usuarios ni impacto en la ingestión.
+    En este punto, las escrituras continúan en `otel_logs` con la clave primaria original, mientras que las lecturas usan la tabla Merge. No hay cambios visibles para los usuarios ni impacto en la ingestión.
   </Step>
 
   <Step>
     #### Intercambiar las tablas
 
-    Ahora se usa una instrucción `EXCHANGE` para intercambiar atómicamente los nombres de las tablas `otel_logs` y `otel_logs_23_01_2025`.
+    Ahora se utiliza una sentencia `EXCHANGE` para intercambiar atómicamente los nombres de las tablas `otel_logs` y `otel_logs_23_01_2025`.
 
     ```sql
     EXCHANGE TABLES otel_logs AND otel_logs_23_01_2025
     ```
 
-    Las escrituras ahora van a la nueva tabla `otel_logs` con la clave primaria actualizada. Los datos existentes permanecen en `otel_logs_23_01_2025` y siguen siendo accesibles a través de la tabla Merge. El sufijo indica la fecha en que se aplicó el cambio y representa el timestamp más reciente contenido en esa tabla.
+    Las escrituras ahora se dirigen a la nueva tabla `otel_logs` con la clave primaria actualizada. Los datos existentes permanecen en `otel_logs_23_01_2025` y siguen siendo accesibles a través de la tabla Merge. El sufijo indica la fecha en que se aplicó el cambio y representa la marca temporal más reciente contenida en esa tabla.
 
     Este proceso permite cambiar la clave primaria sin interrumpir la ingestión y sin impacto visible para el usuario.
   </Step>
@@ -701,8 +813,43 @@ Este proceso puede adaptarse si se requieren más cambios en la clave primaria. 
   Si hay políticas TTL configuradas, lo cual se recomienda, las tablas con claves primarias antiguas que ya no reciben escrituras se irán vaciando gradualmente a medida que caduquen los datos. Deben supervisarse y limpiarse periódicamente cuando ya no contengan datos. Por ahora, este proceso de limpieza es manual.
 </Info>
 
-<div id="exploting-materialied-views">
-  ## Optimización 4. Uso de vistas materializadas
+<div id="row-lookup-block-columns">
+  ### Aceleración de búsquedas por fila con columnas de bloque
+</div>
+
+El esquema predeterminado de logs de ClickStack habilita dos configuraciones de MergeTree que no
+afectan directamente al rendimiento de las consultas, pero sí aceleran de forma notable las búsquedas
+de detalles por fila en la UI de ClickStack:
+
+```sql
+SETTINGS enable_block_number_column = 1, enable_block_offset_column = 1
+```
+
+Con esta configuración, cada fila de la tabla lleva un par implícito
+`(_block_number, _block_offset)` que la identifica de forma única dentro de una
+parte. Cuando haces clic en una fila de logs en la UI de ClickStack para abrir el panel de detalles, ClickStack
+emite una consulta de seguimiento para obtener esa única fila. Sin columnas de bloque, la
+cláusula `WHERE` de la fila debe incluir suficientes columnas — normalmente la clave primaria
+más `Body` y `SeverityText` — para distinguirla. Con columnas de bloque,
+la clave primaria más `_block_number` más `_block_offset` es suficiente. Las
+columnas grandes como `Body` nunca se leen para la búsqueda, lo que acelera efectivamente la consulta.
+
+ClickStack detecta la configuración a partir de la instrucción `CREATE` de la tabla y genera
+automáticamente la cláusula `WHERE` más concisa cuando ambas columnas están habilitadas. No
+se requiere ningún cambio en la configuración de la aplicación.
+
+Para habilitar esta optimización en una tabla existente de logs o trazas:
+
+```sql
+ALTER TABLE otel_logs
+MODIFY SETTING enable_block_number_column = 1, enable_block_offset_column = 1
+```
+
+La configuración se aplica a los datos escritos después del `ALTER`. Las partes existentes siguen
+usando el método anterior de búsqueda por fila hasta que una fusión las reescriba.
+
+<div id="exploiting-materialized-views">
+  ## Optimización 5. Uso de vistas materializadas
 </div>
 
 <BetaBadge />
@@ -712,10 +859,10 @@ ClickStack puede aprovechar las [vistas materializadas incrementales](/es/concep
 Para obtener más información sobre cómo usar esta funcionalidad en ClickStack, consulta nuestra guía específica [&quot;ClickStack - Vistas materializadas.&quot;](/es/clickstack/managing/materialized-views)
 
 <div id="exploting-projections">
-  ## Optimización 5. Aprovechar las proyecciones
+  ## Optimización 6. Aprovechar las proyecciones
 </div>
 
-Las proyecciones representan una optimización avanzada final que puede considerarse una vez evaluadas las columnas materializadas, los skip indexes, las claves primarias y las vistas materializadas. Aunque las proyecciones y las vistas materializadas pueden parecer similares, en ClickStack cumplen funciones distintas y conviene usarlas en escenarios diferentes.
+Las proyecciones representan una optimización avanzada final que puede considerarse una vez evaluadas las columnas materializadas, los índices de omisión de datos, las claves primarias y las vistas materializadas. Aunque las proyecciones y las vistas materializadas pueden parecer similares, en ClickStack cumplen funciones distintas y conviene usarlas en escenarios diferentes.
 
 <Frame>
   <iframe src="https://www.youtube.com/embed/6CdnUdZSEG0?si=1zUyrP-tCvn9tXse" title="Reproductor de video de YouTube" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen />

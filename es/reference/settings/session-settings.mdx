@@ -7,11 +7,11 @@ description: 'Configuración que se encuentra en la tabla ``system.settings``.'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
-import CloudOnlyBadge from "/snippets/components/CloudOnlyBadge/CloudOnlyBadge.jsx";
-import SettingsInfoBlock from "/snippets/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
-import VersionHistory from "/snippets/components/VersionHistory/VersionHistory.jsx";
+import ExperimentalBadge from "/snippets/es/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import BetaBadge from "/snippets/es/components/BetaBadge/BetaBadge.jsx";
+import CloudOnlyBadge from "/snippets/es/components/CloudOnlyBadge/CloudOnlyBadge.jsx";
+import SettingsInfoBlock from "/snippets/es/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
+import VersionHistory from "/snippets/es/components/VersionHistory/VersionHistory.jsx";
 
 {/* Generado automáticamente */}
 
@@ -198,6 +198,28 @@ Tamaño máximo del bloque, en bytes, acumulado durante la agregación en el ord
 
 Número de hilos que se deben usar para fusionar los resultados intermedios de agregación en el modo de uso eficiente de memoria. Cuanto mayor sea, más memoria se consumirá. 0 significa lo mismo que &#39;max&#95;threads&#39;.
 
+<div id="ai_function_credentials">
+  ## ai_function_credentials
+</div>
+
+<ExperimentalBadge />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": ""},{"label": "Nueva configuración"}]}]} />
+
+Nombre de la colección con nombre que usan las funciones de IA para las credenciales del proveedor y la configuración (`provider`, `endpoint`, `model`, `api_key` opcional, etc.). Si está vacío, se genera una excepción.
+
+<div id="ai_function_embedding_max_batch_size">
+  ## ai_function_embedding_max_batch_size
+</div>
+
+<ExperimentalBadge />
+
+<SettingsInfoBlock type="NonZeroUInt64" default_value="100" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "100"},{"label": "Nueva configuración"}]}]} />
+
+Número máximo de textos que se pueden incluir en una sola solicitud HTTP que realiza `aiEmbed`. Los textos se agrupan en lotes de este tamaño para reducir la sobrecarga de las llamadas a la API. Por ejemplo, 500 textos únicos con un tamaño de lote de 100 se traducen en 5 solicitudes HTTP.
+
 <div id="ai_function_max_api_calls_per_query">
   ## ai_function_max_api_calls_per_query
 </div>
@@ -222,6 +244,8 @@ Número máximo de solicitudes HTTP que las funciones de IA pueden realizar por 
 
 Número máximo total de tokens de entrada (prompt) en todas las llamadas a la API de la función de IA dentro de una sola consulta. Se contabiliza de forma acumulativa a partir de las respuestas del proveedor. Tenga en cuenta que este límite puede superarse por el equivalente a los tokens de entrada de una llamada, ya que el número de tokens de entrada de una llamada no se conoce de antemano. Establézcalo en 0 para desactivarlo.
 
+Este límite solo se aplica a los proveedores que incluyen un objeto `usage` en su respuesta (OpenAI, Anthropic, vLLM). Los proveedores que omiten el uso de tokens (en particular, HuggingFace TEI) hacen que el contador permanezca en 0; use `ai_function_max_api_calls_per_query` en su lugar para acotar esas llamadas.
+
 <div id="ai_function_max_output_tokens_per_query">
   ## ai_function_max_output_tokens_per_query
 </div>
@@ -233,6 +257,8 @@ Número máximo total de tokens de entrada (prompt) en todas las llamadas a la A
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "500000"},{"label": "Nueva configuración"}]}]} />
 
 Número máximo total de tokens de salida (completion) en todas las llamadas a la API de la función de IA dentro de una sola consulta. Se contabiliza de forma acumulativa a partir de las respuestas del proveedor. Tenga en cuenta que este límite puede superarse en el equivalente a los tokens de salida de una llamada, ya que el número de tokens de salida de una llamada no se conoce de antemano. Establezca 0 para desactivarlo.
+
+Este límite solo se aplica a los proveedores que incluyen un objeto `usage` en su respuesta (OpenAI, Anthropic, vLLM). No se aplica a las funciones de embedding (en particular aiEmbed), que nunca generan tokens de salida.
 
 <div id="ai_function_max_retries">
   ## ai_function_max_retries
@@ -726,7 +752,9 @@ Habilita las funciones experimentales de procesamiento del lenguaje natural.
   ## allow_experimental_nullable_tuple_type
 </div>
 
-<ExperimentalBadge />
+<BetaBadge />
+
+**Alias**: `enable_nullable_tuple_type`
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
@@ -795,15 +823,17 @@ Habilita el transpilador SQL polyglot: transpila SQL de más de 30 dialectos (My
 
 Activa PRQL, una alternativa a SQL.
 
-<div id="allow_experimental_query_deduplication">
-  ## allow_experimental_query_deduplication
+<div id="allow_experimental_text_index_lazy_apply">
+  ## allow_experimental_text_index_lazy_apply
 </div>
 
 <ExperimentalBadge />
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-Deduplicación experimental de datos para consultas SELECT basada en UUIDs de partes
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nueva configuración para habilitar el modo experimental diferido de aplicación de posting list"}]}]} />
+
+Si se establece en `true`, permite usar el modo diferido de aplicación de posting list en consultas de índice de texto.
 
 <div id="allow_experimental_time_series_aggregate_functions">
   ## allow_experimental_time_series_aggregate_functions
@@ -984,7 +1014,22 @@ Valores posibles:
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "Nueva configuración para reescribir predicados de la forma `coalesce(a_1, ..., a_N) <op> const` (y, de forma equivalente, `ifNull`, o con la constante a la izquierda) como una disyunción antes del análisis de índices, de modo que puedan usarse la clave primaria por columna y los skip indexes de cada `a_i`. También se admiten formas con constantes parciales como `coalesce(a, 42, b)` y `coalesce(a, b, 42)`."}]}]} />
 
-Reescribe predicados de la forma `coalesce(a_1, ..., a_N) <op> const` (y, de forma equivalente, `ifNull`, o con la constante a la izquierda) como la disyunción `(a_1 <op> const) OR (a_1 IS NULL AND a_2 <op> const) OR ... OR (a_1 IS NULL AND ... AND a_{N-1} IS NULL AND a_N <op> const)` antes del análisis de índices, de modo que puedan usarse la clave primaria por columna y los skip indexes de cada `a_i`. Se admiten formas con constantes parciales como `coalesce(a, 42, b)` y `coalesce(a, b, 42)`: la lista de argumentos se normaliza igual que el propio `coalesce` (se eliminan los literales `NULL` y se descartan los argumentos posteriores al primero que no sea `Nullable`) y, si existe, una constante final distinta de `NULL` se emite como la rama final. La reescritura es estrictamente aditiva para la poda de índices; el filtrado en tiempo de ejecución sigue usando el predicado original.
+Permite que la clave primaria de MergeTree y los skip indexes descarten gránulos en predicados `WHERE`/`PREWHERE` que incluyan `coalesce` o `ifNull`. Sin esta configuración, esos predicados son opacos al análisis de índices y no permiten descartar gránulos, por lo que se siguen leyendo gránulos que no pueden coincidir. Esto afecta únicamente a qué gránulos se leen; los resultados de la consulta no cambian, porque las filas siguen filtrándose mediante el predicado original.
+
+Se reescriben dos formas de predicados antes del análisis de índices:
+
+* Una comparación con `coalesce`/`ifNull`, como `coalesce(a, b) = 5`, se convierte en una disyunción para que un índice sobre cada argumento pueda descartar gránulos: `a = 5 OR (a IS NULL AND b = 5)`, ampliado para más argumentos.
+* Un `coalesce`/`ifNull` con una constante predeterminada falsa (cero) usada directamente como condición, como `ifNull(a = 5, 0)` o `coalesce(a = 5, 0)`, se desempaqueta hasta su predicado interno `a = 5`. Tales envoltorios reducen el resultado trivaluado del predicado interno a un booleano definido (haciendo corresponder `NULL` con `false`).
+
+<div id="allow_limit_by_partitions_independently">
+  ## allow_limit_by_partitions_independently
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nueva configuración para habilitar la evaluación independiente de `LIMIT BY` para cada partición cuando la expresión de partición es una función determinista de las columnas de `LIMIT BY`."}]}]} />
+
+Habilita la evaluación independiente de `LIMIT BY` para cada partición en hilos separados cuando la expresión de partición es una función determinista de las columnas de `LIMIT BY`.
 
 <div id="allow_materialized_view_with_bad_select">
   ## allow_materialized_view_with_bad_select
@@ -1077,7 +1122,7 @@ Controla si las subcolumnas extraídas de tipo `Tuple(...)` pueden tener el tipo
 * `true`: Devuelve `Nullable(Tuple(...))` y usa `NULL` para las filas en las que falta la subcolumna.
 
 Esta configuración solo controla el comportamiento de las subcolumnas extraídas.
-No controla si se pueden crear columnas `Nullable(Tuple(...))` en tablas; eso se controla con `allow_experimental_nullable_tuple_type`.
+No controla si se pueden crear columnas `Nullable(Tuple(...))` en tablas; eso se controla con `enable_nullable_tuple_type`.
 
 ClickHouse usa el valor de esta configuración cargado al iniciar el servidor.
 Los cambios realizados con `SET` o `SETTINGS` a nivel de consulta no modifican el comportamiento de las subcolumnas extraídas.
@@ -1381,7 +1426,7 @@ ALTER TABLE test FREEZE SETTINGS alter_partition_verbose_result = 1;
 
 <SettingsInfoBlock type="UInt64" default_value="1" />
 
-Permite especificar el comportamiento de espera para las acciones que deben ejecutarse en las réplicas mediante consultas [`ALTER`](/es/reference/statements/alter), [`OPTIMIZE`](/es/reference/statements/optimize) o [`TRUNCATE`](/es/reference/statements/truncate).
+Permite especificar el comportamiento de espera para las acciones que deben ejecutarse en las réplicas mediante consultas [`ALTER`](/es/reference/statements/alter/index), [`OPTIMIZE`](/es/reference/statements/optimize) o [`TRUNCATE`](/es/reference/statements/truncate).
 
 Valores posibles:
 
@@ -1439,6 +1484,16 @@ Permite añadir identificadores compuestos a nested. Esta es una configuración 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "0"},{"label": "Forzar la resolución del identificador en JOIN USING a partir de la proyección"}]}]} />
 
 Forzar la resolución del identificador en JOIN USING a partir de la proyección (por ejemplo, en `SELECT a + 1 AS b FROM t1 JOIN t2 USING (b)` el join se realizará mediante `t1.a + 1 = t2.b`, en lugar de `t1.b = t2.b`).
+
+<div id="analyzer_compatibility_prefer_alias_over_subcolumn">
+  ## analyzer_compatibility_prefer_alias_over_subcolumn
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nueva configuración de compatibilidad"}]}]} />
+
+Cuando un identificador de varias partes como `b.id` puede referirse tanto a la columna `id` de una tabla con alias `b` como a una subcolumna `b.id` de tipo Tuple de alguna otra columna, se prioriza la interpretación del prefijo como alias (la columna `id` de `b`). De forma predeterminada, el nuevo analizador prefiere la subcolumna. Habilítelo para que coincida con la resolución del analizador anterior.
 
 <div id="analyzer_inline_views">
   ## analyzer_inline_views
@@ -1541,19 +1596,19 @@ se pospondrá para mantener el orden de ejecución correcto (la política de fil
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "apply_row_policy_after_final se habilita de forma predeterminada, como era el caso en la 25.8 antes de #87303"}]}, {"id": "row-2","items": [{"label": "25.12"},{"label": "0"},{"label": "Nueva configuración para controlar si las políticas de fila y PREWHERE se aplican después del procesamiento FINAL en tablas *MergeTree"}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.10"},{"label": "1"},{"label": "La configuración se añadió como corrección de la regresión posterior a #87303, en la que las ROW POLICY y PREWHERE se aplicaban antes de FINAL. El PR #91065 introdujo esta configuración y el PR #97279 hizo que `true`, la opción segura desde el punto de vista de la corrección, fuera el valor predeterminado. Se registró como {true, true} para que la compatibilidad nunca revierta al comportamiento `false` anterior a la corrección."}]}]} />
 
-Cuando está habilitado, las políticas de fila y PREWHERE se aplican después del procesamiento FINAL en tablas *MergeTree. (Especialmente en ReplacingMergeTree)
-Cuando está deshabilitado, las políticas de fila se aplican antes de FINAL, lo que puede producir resultados diferentes cuando la política
+Cuando está habilitado, las ROW POLICY y PREWHERE se aplican después del procesamiento FINAL en tablas *MergeTree. (Especialmente en ReplacingMergeTree)
+Cuando está deshabilitado, las ROW POLICY se aplican antes de FINAL, lo que puede producir resultados diferentes cuando la ROW POLICY
 filtra filas que deberían usarse para la deduplicación en ReplacingMergeTree o motores similares.
 
-Si la expresión de la política de fila depende solo de columnas de ORDER BY, seguirá aplicándose antes de FINAL como optimización,
+Si la expresión de la ROW POLICY depende solo de columnas de ORDER BY, seguirá aplicándose antes de FINAL como optimización,
 ya que ese filtrado no puede afectar al resultado de la deduplicación.
 
 Valores posibles:
 
-* 0 — La política de fila y PREWHERE se aplican antes de FINAL (predeterminado).
-* 1 — La política de fila y PREWHERE se aplican después de FINAL.
+* 0 — La ROW POLICY y PREWHERE se aplican antes de FINAL (predeterminado).
+* 1 — La ROW POLICY y PREWHERE se aplican después de FINAL.
 
 <div id="apply_settings_from_server">
   ## apply_settings_from_server
@@ -4044,7 +4099,7 @@ Valores posibles:
 
 <ExperimentalBadge />
 
-<SettingsInfoBlock type="UInt64" default_value="8" />
+<SettingsInfoBlock type="NonZeroUInt64" default_value="8" />
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.5"},{"label": "8"},{"label": "Nueva configuración experimental."}]}]} />
 
@@ -4500,6 +4555,16 @@ Posibles valores:
 * 0 — Deshabilitado.
 * 1 — Habilitado.
 
+<div id="enable_identifier_resolve_cache">
+  ## enable_identifier_resolve_cache
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nueva configuración para controlar la caché de resolución de identificadores en el analizador de consultas"}]}]} />
+
+Habilita la caché de resolución de identificadores en el analizador de consultas. La caché comparte nodos de alias ya resueltos para evitar la explosión del AST cuando se hace referencia varias veces al mismo alias. Establezca este valor en false para desactivar la caché si se sospecha que hay resultados incorrectos.
+
 <div id="enable_job_stack_trace">
   ## enable_job_stack_trace
 </div>
@@ -4536,11 +4601,11 @@ Filtra el lado izquierdo usando el conjunto de claves de JOIN recopiladas del la
   ## enable_join_transitive_predicates
 </div>
 
-<ExperimentalBadge />
+<BetaBadge />
 
-<SettingsInfoBlock type="Bool" default_value="0" />
+<SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "0"},{"label": "Nueva configuración para inferir predicados transitivos de equijoin para optimizar el orden de join."}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Activar enable_join_transitive_predicates de forma predeterminada"}]}, {"id": "row-2","items": [{"label": "26.4"},{"label": "0"},{"label": "Nueva configuración para inferir predicados transitivos de equijoin para optimizar el orden de join."}]}]} />
 
 Infiere predicados transitivos de equijoin a partir de las condiciones de join existentes.
 Por ejemplo, dados `A.x = B.x` y `B.x = C.x`, se añade un predicado sintético `A.x = C.x`
@@ -4822,6 +4887,23 @@ Si está deshabilitada, las declaraciones en las cláusulas WITH de nivel superi
 
 Tenga en cuenta que esta es una configuración de compatibilidad del analizador para permitir la ejecución de algunas consultas no válidas que el analizador antiguo podía ejecutar.
 
+<div id="enable_sharding_aggregator">
+  ## enable_sharding_aggregator
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nueva configuración para habilitar la optimización de `GROUP BY` con sharding, que distribuye las filas entre hilos aplicando un hash a la clave de agrupación, de modo que cada hilo agrega un subconjunto distinto de claves sin una fase de fusión; esto es eficiente para claves de alta cardinalidad con datos distribuidos uniformemente."}]}]} />
+
+Habilita la optimización de `GROUP BY` con sharding, que distribuye las filas entre hilos aplicando un hash a la clave de agrupación, de modo que cada hilo agrega un subconjunto distinto de claves sin una fase de fusión.
+
+Esto es eficiente para claves de alta cardinalidad con datos distribuidos uniformemente, pero puede verse afectado por distribuciones de claves muy sesgadas o por consultas con muy pocas claves distintas.
+
+Valores posibles:
+
+* 0 — La optimización de agregación con sharding está deshabilitada.
+* 1 — La optimización de agregación con sharding está habilitada.
+
 <div id="enable_shared_storage_snapshot_in_query">
   ## enable_shared_storage_snapshot_in_query
 </div>
@@ -4885,6 +4967,21 @@ Habilita el uso de la precarga por software en la agregación
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "Habilita el uso de prefetch por software en la fase de sondeo de hash join."}]}]} />
 
 Habilita el uso de prefetch por software en la fase de sondeo de hash join para ocultar la latencia de acceso a memoria en tablas hash grandes.
+
+<div id="enable_streaming_queries">
+  ## enable_streaming_queries
+</div>
+
+<ExperimentalBadge />
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nueva configuración"}]}]} />
+
+Permite consultas continuas `SELECT ... FROM t STREAM [CURSOR '{...}']`.
+Cuando está desactivado, cualquier expresión de tabla que use el modificador `STREAM` se rechaza
+en tiempo de construcción del plan. Esta es la opción de control general para la
+funcionalidad de consultas de streaming; las capacidades adicionales pueden estar controladas por sus propias configuraciones.
 
 <div id="enable_time_time64_type">
   ## enable_time_time64_type
@@ -5174,6 +5271,16 @@ Se utiliza al ejecutar `SELECT` en una tabla distribuida que apunta a tablas rep
 
 De forma predeterminada, 1 (habilitado).
 
+<div id="file_like_engine_default_partition_strategy">
+  ## file_like_engine_default_partition_strategy
+</div>
+
+<SettingsInfoBlock type="FileLikeEngineDefaultPartitionStrategy" default_value="hive" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "hive"},{"label": "Cambia la estrategia de partición predeterminada de los motores de tabla de tipo archivo (S3, AzureBlobStorage, etc.) de `wildcard` a `hive` cuando no se proporciona `partition_strategy`."}]}]} />
+
+Estrategia de partición predeterminada para motores de tipo archivo.
+
 <div id="filesystem_cache_allow_background_download">
   ## filesystem_cache_allow_background_download
 </div>
@@ -5372,7 +5479,7 @@ Cuando está habilitada, las partes de proyección se finalizan de forma síncro
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-Establece el formato de datos de las columnas de tipo [nested](/es/reference/data-types/nested-data-structures).
+Establece el formato de datos de las columnas de tipo [nested](/es/reference/data-types/nested-data-structures/index).
 
 Valores posibles:
 
@@ -5628,6 +5735,16 @@ El especificador de formato &#39;%M&#39; en las funciones &#39;formatDateTime&#3
 Habilita o deshabilita [fsync](http://pubs.opengroup.org/onlinepubs/9699919799/functions/fsync.html) al escribir archivos `.sql`. Está habilitado de forma predeterminada.
 
 Tiene sentido deshabilitarlo si el server tiene millones de tablas pequeñas que se crean y destruyen constantemente.
+
+<div id="function_base58_max_input_size">
+  ## function_base58_max_input_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="10000" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "10000"},{"label": "Nueva configuración que limita el tamaño de entrada de `base58Encode`, `base58Decode` y `tryBase58Decode` (cuya conversión es cuadrática con respecto a la longitud de la entrada) a 10 KB de forma predeterminada. El valor de compatibilidad `0` desactiva el límite y restaura el comportamiento anterior, que aceptaba entradas arbitrariamente grandes."}]}]} />
+
+Tamaño máximo, en bytes, de un único valor de entrada para las funciones `base58Encode`, `base58Decode` y `tryBase58Decode`. La conversión genérica `base58` es cuadrática con respecto a la longitud de la entrada, por lo que un único valor grande puede tardar mucho tiempo en procesarse. `base58` está pensado para datos cortos (claves, hashes, direcciones), por lo que el valor predeterminado de 10 KB es un generoso umbral de seguridad. `base58Encode` y `base58Decode` lanzan `TOO_LARGE_STRING_SIZE` con entradas mayores, mientras que `tryBase58Decode` devuelve una cadena vacía. Un valor de `0` desactiva el límite (este era el comportamiento anterior a la introducción de esta configuración). Las funciones lineales `base32` y `base64` no se ven afectadas.
 
 <div id="function_date_trunc_return_type_behavior">
   ## function_date_trunc_return_type_behavior
@@ -6044,7 +6161,7 @@ La configuración `http_make_head_request` permite ejecutar una solicitud `HEAD`
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "4096"},{"label": "Reduce el valor predeterminado para limitar el uso de memoria antes de la autenticación de las conexiones HTTP."}]}]} />
 
-Longitud máxima del nombre del campo del encabezado HTTP
+Longitud máxima del nombre de un campo en los encabezados de una solicitud HTTP, los parámetros de consulta y los datos de formulario.
 
 <div id="http_max_field_value_size">
   ## http_max_field_value_size
@@ -6052,7 +6169,7 @@ Longitud máxima del nombre del campo del encabezado HTTP
 
 <SettingsInfoBlock type="UInt64" default_value="131072" />
 
-Longitud máxima del valor de un campo en el encabezado HTTP
+Longitud máxima del valor de un campo en el encabezado HTTP, los parámetros de consulta y los datos de formulario.
 
 <div id="http_max_fields">
   ## http_max_fields
@@ -6062,7 +6179,7 @@ Longitud máxima del valor de un campo en el encabezado HTTP
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "1000"},{"label": "Se reduce el valor predeterminado para limitar el uso de memoria antes de la autenticación en las conexiones HTTP."}]}]} />
 
-Número máximo de campos en el encabezado HTTP
+Número máximo de campos en los encabezados de solicitudes HTTP, parámetros de consulta y datos de formulario.
 
 <div id="http_max_multipart_form_data_size">
   ## http_max_multipart_form_data_size
@@ -7151,15 +7268,22 @@ El límite inferior del promedio de filas por clave en la tabla de la derecha pa
 
 <SettingsInfoBlock type="OverflowMode" default_value="throw" />
 
-Define qué acción realiza ClickHouse cuando se alcanza alguno de los siguientes límites de join:
+Define la acción que realiza ClickHouse cuando un join alcanza cualquiera de los siguientes límites:
 
 * [max&#95;bytes&#95;in&#95;join](/es/reference/settings/session-settings#max_bytes_in_join)
 * [max&#95;rows&#95;in&#95;join](/es/reference/settings/session-settings#max_rows_in_join)
 
-Valores posibles:
+Esta configuración solo se aplica a los valores `hash` y `parallel_hash`
+de [`join_algorithm`](/es/reference/settings/session-settings#join_algorithm). Otros
+algoritmos (por ejemplo, `partial_merge`, `grace_hash`, `auto`) gestionan estos
+límites de forma diferente: volcándolos a disco, volviendo a particionar o cambiando de
+estrategia; consulte
+[`join_algorithm`](/es/reference/settings/session-settings#join_algorithm).
 
-* `THROW` — ClickHouse genera una excepción e interrumpe la operación.
-* `BREAK` — ClickHouse interrumpe la operación y no genera una excepción.
+Posibles valores:
+
+* `THROW` — ClickHouse lanza una excepción y detiene la consulta.
+* `BREAK` — ClickHouse detiene la consulta y no lanza una excepción.
 
 Valor predeterminado: `THROW`.
 
@@ -7227,6 +7351,16 @@ Número de bloques que se omiten antes de intentar volver a habilitar dinámicam
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.10"},{"label": "10000"},{"label": "Nueva configuración"}]}]} />
 
 Número máximo de elementos del runtime filter que se almacenan tal cual en un conjunto; cuando se supera este umbral, se cambia a bloom filter.
+
+<div id="join_runtime_filter_from_fixed_hash_table">
+  ## join_runtime_filter_from_fixed_hash_table
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nueva configuración."}]}]} />
+
+Cuando el lado de construcción del hash join se haya convertido en un FixedHashMap (véase `enable_join_fixed_hash_table_conversion`), usa directamente ese mapa hash como filtro de tiempo de ejecución.
 
 <div id="join_runtime_filter_pass_ratio_threshold_for_disabling">
   ## join_runtime_filter_pass_ratio_threshold_for_disabling
@@ -7418,8 +7552,8 @@ Valores posibles:
 
 **Véase también**
 
-* [Sincronía de las consultas ALTER](/es/reference/statements/alter#synchronicity-of-alter-queries)
-* [Mutations](/es/reference/statements/alter#mutations)
+* [Sincronía de las consultas ALTER](/es/reference/statements/alter/index#synchronicity-of-alter-queries)
+* [Mutations](/es/reference/statements/alter/index#mutations)
 
 Valor predeterminado en Cloud: `1`.
 
@@ -7447,8 +7581,10 @@ Especifica el algoritmo de selección de réplicas utilizado para el procesamien
 ClickHouse admite los siguientes algoritmos de selección de réplicas:
 
 * [Random](#load_balancing-random) (de forma predeterminada)
-* [Nearest hostname](#load_balancing-nearest_hostname)
-* [Hostname levenshtein distance](#load_balancing-hostname_levenshtein_distance)
+* [Nearest nombre de host](#load_balancing-nearest_hostname)
+* [Nombre de host levenshtein distance](#load_balancing-hostname_levenshtein_distance)
+* [Nombre de host longest common prefix](#load_balancing-hostname_longest_common_prefix)
+* [Nombre de host longest common suffix](#load_balancing-hostname_longest_common_suffix)
 * [In order](#load_balancing-in_order)
 * [First or random](#load_balancing-first_or_random)
 * [Round robin](#load_balancing-round_robin)
@@ -7504,6 +7640,53 @@ example-clickhouse-0-0 example-clickhouse-1-10
 example-clickhouse-0-0 example-clickhouse-12-0
 3
 ```
+
+<div id="load_balancing-hostname_longest_common_prefix">
+  ### Prefijo común más largo del nombre de host
+</div>
+
+```sql
+load_balancing = hostname_longest_common_prefix
+```
+
+Igual que `nearest_hostname`, pero se prefiere la réplica cuyo nombre de host comparte el prefijo común más largo con el nombre de host local (cuanto más largo sea el prefijo común, mayor será la prioridad). A diferencia de `nearest_hostname`, que compara los caracteres distintos posición por posición, esta estrategia no se ve afectada por nombres de host cuyos segmentos numéricos tienen longitudes diferentes. Por ejemplo, para el nombre de host local `sfe301`:
+
+```text
+sfe301 sde301
+1
+
+sfe301 sfe10101
+3
+
+sfe301 sde505
+1
+```
+
+Aquí se prefiere `sfe10101` porque comparte con `sfe301` el prefijo común más largo (`sfe`, de longitud 3).
+
+Las réplicas con la misma longitud de prefijo común se eligen aleatoriamente. En particular, cuando ninguna réplica comparte prefijo alguno con el nombre de host local (todas las longitudes de prefijo común son cero), esta estrategia se comporta exactamente igual que `random`.
+
+<div id="load_balancing-hostname_longest_common_suffix">
+  ### Sufijo común más largo del nombre de host
+</div>
+
+```sql
+load_balancing = hostname_longest_common_suffix
+```
+
+Al igual que `hostname_longest_common_prefix`, pero se compara el *sufijo* común más largo en lugar del prefijo. Esto es útil cuando la identidad del centro de datos está codificada como sufijo del nombre de host. Por ejemplo, para el nombre de host local `et46gtghn.qc.localdomain`:
+
+```text
+et46gtghn.qc.localdomain tr676ddgh.td.localdomain
+12
+
+et46gtghn.qc.localdomain ab999.qc.localdomain
+15
+```
+
+Aquí se prefiere `ab999.qc.localdomain` porque comparte el sufijo común más largo (`.qc.localdomain`, de longitud 15) con `et46gtghn.qc.localdomain`.
+
+Las réplicas con la misma longitud de sufijo común se eligen al azar. En particular, cuando ninguna réplica comparte ningún sufijo con el hostname local (todas las longitudes de sufijo común son cero), esta estrategia se comporta exactamente igual que `random`.
 
 <div id="load_balancing-in_order">
   ### In Order
@@ -7889,7 +8072,9 @@ Aplica TTL a los datos antiguos después de la consulta ALTER MODIFY TTL
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-Permite ignorar los errores de MATERIALIZED VIEW y enviar el bloque original a la tabla independientemente de las MV
+Si está habilitada, las excepciones que se produzcan al enviar datos a una vista materializada dependiente (en su `SELECT` o en el sink de la tabla interna) se registran como advertencia y la instrucción `INSERT` se completa correctamente. Si está deshabilitada (valor predeterminado), esa excepción se propaga y la instrucción `INSERT` falla.
+
+Esta configuración solo controla cómo se notifican los errores. No revierte una escritura en la tabla de origen ni garantiza si el block original ya se ha confirmado en la tabla de origen cuando se produce un error en el pipeline de una vista dependiente. Cuando está deshabilitada (valor predeterminado), `INSERT` falla si se produce un error en una vista; vuelva a intentarlo con deduplicación de inserciones (`insert_deduplicate`, `deduplicate_blocks_in_dependent_materialized_views`) para obtener una entrega exactly-once a la tabla de origen y a todas las vistas dependientes. Cuando está habilitada, `INSERT` informa que la operación se realizó correctamente pese a una entrega parcial a las vistas que fallan y a sus cadenas descendentes; úsela solo cuando las escrituras en la tabla de origen no deban quedar bloqueadas por problemas del lado de las vistas (por ejemplo, tablas `system.*_log`). Consulte la documentación de `CREATE VIEW` para ver la semántica completa.
 
 <div id="materialized_views_squash_parallel_inserts">
   ## materialized_views_squash_parallel_inserts
@@ -8053,15 +8238,17 @@ utiliza una tabla hash al usar DISTINCT.
 
 <SettingsInfoBlock type="UInt64" default_value="0" />
 
-El tamaño máximo, en número de bytes, de la tabla hash utilizada para unir tablas.
+El tamaño máximo en bytes de la estructura de datos del lado derecho (normalmente, una
+tabla hash) utilizada al unir tablas.
 
 Esta configuración se aplica a las operaciones [SELECT ... JOIN](/es/reference/statements/select/join)
 y al [Join table engine](/es/reference/engines/table-engines/special/join).
 
-Si la consulta contiene joins, ClickHouse comprueba esta configuración para cada resultado intermedio.
-
-Cuando se alcanza el límite, ClickHouse puede realizar distintas acciones. Use
-la configuración [join&#95;overflow&#95;mode](/es/reference/settings/session-settings#join_overflow_mode) para elegir la acción.
+Si la consulta contiene varios joins, ClickHouse comprueba esta configuración para cada
+resultado intermedio. Cuando se alcanza el límite, la acción depende del
+[`join_algorithm`](/es/reference/settings/session-settings#join_algorithm) elegido; consulte
+esa configuración para conocer el comportamiento de cada algoritmo (spill, re-partition, switch, o
+throw/break según [`join_overflow_mode`](/es/reference/settings/session-settings#join_overflow_mode)).
 
 Valores posibles:
 
@@ -9111,15 +9298,17 @@ El número máximo de filas distintas al usar DISTINCT.
 
 <SettingsInfoBlock type="UInt64" default_value="0" />
 
-Limita el número de filas de la tabla hash que se utiliza al combinar tablas.
+Limita el número de filas de la estructura de datos del lado derecho (normalmente una tabla hash)
+que se utiliza al hacer join de tablas.
 
 Esta configuración se aplica a las operaciones [SELECT ... JOIN](/es/reference/statements/select/join)
 y al motor de tabla [Join](/es/reference/engines/table-engines/special/join).
 
-Si una consulta contiene varios JOIN, ClickHouse comprueba esta configuración para cada resultado intermedio.
-
-Cuando se alcanza el límite, ClickHouse puede seguir distintos cursos de acción. Use la
-configuración [`join_overflow_mode`](/es/reference/settings/session-settings#join_overflow_mode) para elegir la acción.
+Si una consulta contiene varios JOIN, ClickHouse comprueba esta configuración para cada
+resultado intermedio. Cuando se alcanza el límite, la acción depende del
+[`join_algorithm`](/es/reference/settings/session-settings#join_algorithm) elegido; consulte
+esa configuración para ver el comportamiento de cada algoritmo (spill, repartición, cambio o
+throw/break según [`join_overflow_mode`](/es/reference/settings/session-settings#join_overflow_mode)).
 
 Valores posibles:
 
@@ -9329,9 +9518,9 @@ Si no es cero, limita el número de streams de lectura para la tabla MergeTree.
 
 <SettingsInfoBlock type="UInt64" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "Nueva configuración para limitar el número de streams de datos activos simultáneamente en un paso `UNION` y reducir el uso máximo de memoria."}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "Nueva configuración para limitar el número de flujos de datos activos simultáneamente en un paso `UNION` y reducir el uso máximo de memoria."}]}]} />
 
-Limita el número de streams de datos activos simultáneamente en un paso `UNION` (se aplica tanto a `UNION ALL` como a `UNION DISTINCT`, porque `UNION DISTINCT` se implementa mediante un paso `UNION ALL` seguido de un paso `DISTINCT`). Cuando una consulta `UNION` tiene muchas subconsultas, todas abren sus búferes de lectura al mismo tiempo, lo que hace que el uso de memoria sea proporcional al número de subconsultas. Esta configuración inserta procesadores `Concat` para estrechar la canalización, de modo que como máximo este número de streams esté activo a la vez, lo que reduce drásticamente el pico de memoria. El límite real es el menor entre este valor y `max_threads * max_streams_for_union_step_to_max_threads_ratio` (si cualquiera de los dos es 0, se ignora). Cuando ambos son 0, no se aplica ningún estrechamiento.
+Limita el número de flujos de datos activos simultáneamente en un paso `UNION` (se aplica tanto a `UNION ALL` como a `UNION DISTINCT`, porque `UNION DISTINCT` se implementa mediante un paso `UNION ALL` seguido de un paso `DISTINCT`). Cuando una consulta `UNION` tiene muchas subconsultas, todas abren sus búferes de lectura al mismo tiempo, lo que hace que el uso de memoria sea proporcional al número de subconsultas. Esta configuración inserta procesadores `Concat` para estrechar la canalización, de modo que como máximo este número de flujos esté activo a la vez, lo que reduce drásticamente el pico de memoria. El límite real es el menor entre este valor y `max_threads * max_streams_for_union_step_to_max_threads_ratio` (si cualquiera de los dos es 0, se ignora). Cuando ambos son 0, no se aplica ningún estrechamiento. El límite tampoco se aplica cuando el plan de consulta requiere que cada flujo de salida del `UNION` permanezca ordenado individualmente (por ejemplo, cuando la optimización de lectura en orden se aplica en todo el `UNION`); en ese caso, la corrección del orden tiene prioridad y se omite el estrechamiento.
 
 <div id="max_streams_for_union_step_to_max_threads_ratio">
   ## max_streams_for_union_step_to_max_threads_ratio
@@ -9341,7 +9530,7 @@ Limita el número de streams de datos activos simultáneamente en un paso `UNION
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "8"},{"label": "Nueva configuración: el límite de flujos activos simultáneamente en un paso de UNION se calcula como min(max_streams_for_union_step, max_threads * max_streams_for_union_step_to_max_threads_ratio); si cualquiera de los dos es 0, ese valor se ignora."}]}]} />
 
-Esta proporción, multiplicada por `max_threads`, determina un límite de flujos activos simultáneamente en un paso `UNION` (se aplica tanto a `UNION ALL` como a `UNION DISTINCT`). El límite real es el mínimo entre este valor calculado y `max_streams_for_union_step` (si cualquiera de los dos es 0, se ignora). Por ejemplo, con `max_threads = 8` y esta proporción establecida en 1, habrá como máximo 8 flujos activos. Establézcala en 0 para desactivar este límite basado en la proporción.
+Esta proporción, multiplicada por `max_threads`, determina un límite de flujos activos simultáneamente en un paso `UNION` (se aplica tanto a `UNION ALL` como a `UNION DISTINCT`). El límite real es el mínimo entre este valor calculado y `max_streams_for_union_step` (si cualquiera de los dos es 0, se ignora). Por ejemplo, con `max_threads = 8` y esta proporción establecida en 1, habrá como máximo 8 flujos activos. Establézcala en 0 para desactivar este límite basado en la proporción. Al igual que `max_streams_for_union_step`, el límite no se aplica cuando el plan de consulta requiere que cada flujo de salida del `UNION` permanezca ordenado individualmente.
 
 <div id="max_streams_multiplier_for_merge_tables">
   ## max_streams_multiplier_for_merge_tables
@@ -10252,7 +10441,7 @@ El tamaño máximo, en bytes, del literal serializado que se puede reemplazar en
 
 <SettingsInfoBlock type="UInt64" default_value="0" />
 
-Permite ejecutar de forma síncrona las consultas `ALTER TABLE ... UPDATE|DELETE|MATERIALIZE INDEX|MATERIALIZE PROJECTION|MATERIALIZE COLUMN|MATERIALIZE STATISTICS` ([mutations](/es/reference/statements/alter#mutations)).
+Permite ejecutar de forma síncrona las consultas `ALTER TABLE ... UPDATE|DELETE|MATERIALIZE INDEX|MATERIALIZE PROJECTION|MATERIALIZE COLUMN|MATERIALIZE STATISTICS` ([mutations](/es/reference/statements/alter/index#mutations)).
 
 Valores posibles:
 
@@ -10483,7 +10672,7 @@ Recopila spans de OpenTelemetry para los procesadores.
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-Habilita la optimización de [GROUP BY](/es/reference/statements/select/group-by) en consultas [SELECT](/es/reference/statements/select) para agregar datos en el orden correspondiente en tablas [MergeTree](/es/reference/engines/table-engines/mergetree-family/mergetree).
+Habilita la optimización de [GROUP BY](/es/reference/statements/select/group-by) en consultas [SELECT](/es/reference/statements/select/index) para agregar datos en el orden correspondiente en tablas [MergeTree](/es/reference/engines/table-engines/mergetree-family/mergetree).
 
 Valores posibles:
 
@@ -10721,6 +10910,18 @@ Reemplaza por enum los argumentos de tipo String en If y Transform. Está deshab
 
 Sustituye las funciones inyectivas por sus argumentos en la cláusula GROUP BY
 
+<div id="optimize_injective_functions_in_limit_by">
+  ## optimize_injective_functions_in_limit_by
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nueva configuración que sustituye las funciones inyectivas por sus argumentos en las claves de LIMIT BY."}]}]} />
+
+Sustituye las funciones inyectivas por sus argumentos en la cláusula LIMIT BY.
+
+Ejemplo: `LIMIT 5 BY toString(x)` pasa a ser `LIMIT 5 BY x`.
+
 <div id="optimize_injective_functions_inside_uniq">
   ## optimize_injective_functions_inside_uniq
 </div>
@@ -10738,6 +10939,28 @@ Elimina las funciones inyectivas de un solo argumento dentro de las funciones un
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.12"},{"label": "1"},{"label": "Nueva configuración"}]}]} />
 
 Evita las búsquedas inversas repetidas en el diccionario mediante búsquedas más rápidas en un conjunto precalculado de posibles valores de clave.
+
+<div id="optimize_limit_by_function_keys">
+  ## optimize_limit_by_function_keys
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nueva configuración que elimina las claves de LIMIT BY que son funciones de otras claves de LIMIT BY."}]}]} />
+
+Elimina las claves de la cláusula LIMIT BY que son funciones de otras claves.
+
+Ejemplo: `LIMIT 5 BY x, f(x)` se convierte en `LIMIT 5 BY x`.
+
+<div id="optimize_limit_by_in_order">
+  ## optimize_limit_by_in_order
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nueva configuración para optimizar las consultas `LIMIT BY` cuando las columnas `BY` son un prefijo de la clave de ordenación de la tabla."}]}]} />
+
+Optimiza las consultas `SELECT ... LIMIT N BY <cols>` cuando `<cols>` (en cualquier orden) forman un prefijo de la clave de ordenación de la tabla, o pasan a formarlo cuando `WHERE col = const` fija las columnas iniciales. Con esta opción habilitada, el origen lee los datos en orden de clave primaria, de modo que las filas con los mismos valores en las columnas `BY` quedan contiguas dentro de cada stream. Cuando los datos llegan en un único stream ordenado, `LIMIT BY` los filtra en modo streaming con memoria O(1), en lugar de construir una tabla hash para cada combinación distinta de columnas `BY` encontrada. Cuando los datos ordenados llegan en varios streams y los mismos valores de `BY` pueden aparecer en más de uno, primero cada stream se prefiltra en modo streaming hasta un máximo de `LIMIT + OFFSET` filas por grupo; después, los streams se combinan y un `LIMIT BY` final basado en hash deduplica los grupos que abarcan varios streams. Ese paso final sigue manteniendo una entrada por cada combinación distinta de columnas `BY`, pero solo procesa las filas prefiltradas.
 
 <div id="optimize_min_equality_disjunction_chain_length">
   ## optimize_min_equality_disjunction_chain_length
@@ -10761,9 +10984,9 @@ La longitud mínima de la expresión `expr <> x1 AND ... expr <> xN` para la opt
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-Activa o desactiva la optimización automática de [PREWHERE](/es/reference/statements/select/prewhere) en las consultas [SELECT](/es/reference/statements/select).
+Activa o desactiva la optimización automática de [PREWHERE](/es/reference/statements/select/prewhere) en las consultas [SELECT](/es/reference/statements/select/index).
 
-Solo funciona con tablas [*MergeTree](/es/reference/engines/table-engines/mergetree-family).
+Solo funciona con tablas [*MergeTree](/es/reference/engines/table-engines/mergetree-family/index).
 
 Posibles valores:
 
@@ -10776,9 +10999,9 @@ Posibles valores:
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-Habilita o deshabilita la optimización automática de [PREWHERE](/es/reference/statements/select/prewhere) en las consultas [SELECT](/es/reference/statements/select) con el modificador [FINAL](/es/reference/statements/select/from#final-modifier).
+Habilita o deshabilita la optimización automática de [PREWHERE](/es/reference/statements/select/prewhere) en las consultas [SELECT](/es/reference/statements/select/index) con el modificador [FINAL](/es/reference/statements/select/from#final-modifier).
 
-Solo funciona con tablas [*MergeTree](/es/reference/engines/table-engines/mergetree-family).
+Solo funciona con tablas [*MergeTree](/es/reference/engines/table-engines/mergetree-family/index).
 
 Valores posibles:
 
@@ -10873,6 +11096,19 @@ Ten en cuenta que esta configuración afecta al comportamiento de la [vista mate
 
 Optimiza varias expresiones OR LIKE en multiMatchAny. Esta optimización no debería estar habilitada de forma predeterminada, porque en algunos casos dificulta el análisis de índices.
 
+<div id="optimize_prewhere_after_pushdown">
+  ## optimize_prewhere_after_pushdown
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nuevo ajuste que habilita una segunda pasada de promoción de PREWHERE para fusionar en la cadena PREWHERE existente los filtros añadidos sobre un paso de lectura de MergeTree por optimizaciones posteriores (pushdown de predicados a través de JOIN, reescrituras de proyecciones)."}]}]} />
+
+Ejecute una segunda pasada de promoción de `PREWHERE` después de que optimizaciones posteriores del plan de consulta hayan
+añadido filtros adicionales sobre un paso de lectura de `MergeTree` (p. ej., pushdown de predicados a través de
+`JOIN`, reescrituras de proyecciones). Cuando ya existe un `PREWHERE`, el nuevo
+filtro se fusiona con él mediante `AND` en lugar de mantenerse como un paso de filtro independiente.
+
 <div id="optimize_qbit_distance_function_reads">
   ## optimize_qbit_distance_function_reads
 </div>
@@ -10889,7 +11125,7 @@ Reemplaza las funciones de distancia del tipo de datos `QBit` por otras equivale
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-Habilita la optimización de [ORDER BY](/es/reference/statements/select/order-by#optimization-of-data-reading) en las consultas [SELECT](/es/reference/statements/select) para la lectura de datos de tablas [MergeTree](/es/reference/engines/table-engines/mergetree-family/mergetree).
+Habilita la optimización de [ORDER BY](/es/reference/statements/select/order-by#optimization-of-data-reading) en las consultas [SELECT](/es/reference/statements/select/index) para la lectura de datos de tablas [MergeTree](/es/reference/engines/table-engines/mergetree-family/mergetree).
 
 Valores posibles:
 
@@ -10938,6 +11174,16 @@ Por ejemplo, `avg(if(cond, col, null))` se puede reescribir como `avgOrNullIf(co
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "1"},{"label": "Habilita de forma predeterminada la optimización de reescritura de arrayExists a has, ahora que la compatibilidad de tipos se comprueba antes de reescribir."}]}]} />
 
 Reescribe las funciones arrayExists() como has() cuando sean lógicamente equivalentes. Por ejemplo, arrayExists(x -&gt; x = 1, arr) puede reescribirse como has(arr, 1)
+
+<div id="optimize_rewrite_has_to_in">
+  ## optimize_rewrite_has_to_in
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nueva configuración"}]}]} />
+
+Reescribe las funciones `has` como `IN` cuando el primer argumento es un array constante. Por ejemplo, `has([1, 2, 3], x)` puede reescribirse como `x IN [1, 2, 3]` para mejorar el rendimiento con arrays constantes
 
 <div id="optimize_rewrite_like_perfect_affix">
   ## optimize_rewrite_like_perfect_affix
@@ -10992,7 +11238,7 @@ Posibles valores:
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-Habilita o deshabilita la omisión de segmentos no utilizados para las consultas [SELECT](/es/reference/statements/select) que tienen una condición sobre la clave de segmentación en `WHERE/PREWHERE`, y activa optimizaciones relacionadas para las consultas distribuidas (por ejemplo, la agregación por clave de segmentación).
+Habilita o deshabilita la omisión de segmentos no utilizados para las consultas [SELECT](/es/reference/statements/select/index) que tienen una condición sobre la clave de segmentación en `WHERE/PREWHERE`, y activa optimizaciones relacionadas para las consultas distribuidas (por ejemplo, la agregación por clave de segmentación).
 
 <Note>
   Se asume que los datos se distribuyen por la clave de segmentación; de lo contrario, una consulta devuelve un resultado incorrecto.
@@ -12398,6 +12644,16 @@ Valores posibles:
 * 0 - Deshabilitar
 * 1 - Habilitar
 
+<div id="query_plan_max_limit_for_join_lazy_indexing">
+  ## query_plan_max_limit_for_join_lazy_indexing
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1000" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1000"},{"label": "Se agregó una nueva configuración para controlar el límite máximo que permite usar el plan de consulta para la optimización diferida de indexación en JOIN. Si es cero, no hay límite"}]}]} />
+
+Controla el límite máximo que permite usar el plan de consulta para la optimización diferida de indexación en JOIN. Si es cero, no hay límite.
+
 <div id="query_plan_max_limit_for_lazy_materialization">
   ## query_plan_max_limit_for_lazy_materialization
 </div>
@@ -12432,6 +12688,18 @@ En la ejecución normal de consultas, si el número real de optimizaciones super
 <Note>
   Esta es una configuración de nivel experto que solo deberían usar los desarrolladores para tareas de depuración. La configuración puede cambiar en el futuro de formas incompatibles con versiones anteriores o eliminarse.
 </Note>
+
+<div id="query_plan_max_set_size_for_projection_match">
+  ## query_plan_max_set_size_for_projection_match
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="10000" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "10000"},{"label": "Nueva configuración añadida que limita el coste de aplicar hash al contenido de los conjuntos de la cláusula IN en el comparador de proyecciones (actualmente: proyección de agregación). Los conjuntos que superan el límite se consideran no coincidentes. El valor cero desactiva por completo la comparación por hash de contenido (valor de compatibilidad: la coincidencia de proyección nunca se logra para nodos con conjuntos de cláusula IN)."}]}]} />
+
+Número máximo de filas de un conjunto de cláusula `IN` para el que el comparador de proyecciones calcula y compara hashes de contenido al decidir si dos conjuntos son iguales. Los conjuntos que superan este valor se consideran no coincidentes y omiten la proyección. El valor cero desactiva por completo la comparación por hash de contenido: una coincidencia de proyección nunca se logra para nodos que contienen conjuntos de cláusula `IN`.
+
+Lo utiliza el comparador de proyecciones de agregación (y cualquier comparador de proyecciones futuro que necesite comparar conjuntos de cláusula `IN`). Calcular el hash de contenido tiene una complejidad de `O(N log N)` en función del número de elementos del conjunto; esta configuración limita el coste asumido durante la planificación cuando aparecen muchas cláusulas `IN` en la consulta o en la proyección.
 
 <div id="query_plan_max_step_description_length">
   ## query_plan_max_step_description_length
@@ -12481,6 +12749,16 @@ Permite integrar el filtro en la condición de `JOIN` y convertir `CROSS JOIN` e
 
 Permite combinar filtros en el plan de consulta.
 
+<div id="query_plan_min_columns_for_join_lazy_indexing">
+  ## query_plan_min_columns_for_join_lazy_indexing
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="3" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "3"},{"label": "Controla el número mínimo de columnas de carga útil del lado izquierdo necesarias para activar la optimización de indexación diferida en JOIN"}]}]} />
+
+Controla el número mínimo de columnas de carga útil del lado izquierdo necesarias para activar la optimización de indexación diferida en JOIN. 0 significa que la optimización está desactivada.
+
 <div id="query_plan_optimize_join_order_algorithm">
   ## query_plan_optimize_join_order_algorithm
 </div>
@@ -12493,9 +12771,10 @@ Permite combinar filtros en el plan de consulta.
 
 Especifica qué algoritmos de orden de JOIN se intentan durante la optimización del plan de consulta. Están disponibles los siguientes algoritmos:
 
-* &#39;greedy&#39; - algoritmo voraz básico - funciona rápido, pero puede que no produzca el mejor orden de JOIN
-* &#39;dpsize&#39; - implementa el algoritmo DPsize, actualmente solo para Inner joins - considera todos los órdenes de JOIN posibles y encuentra el más óptimo, pero puede ser lento para consultas con muchas tablas y predicados de JOIN.
-  Se pueden especificar varios algoritmos, por ejemplo, &#39;dpsize,greedy&#39;.
+* `greedy` - algoritmo voraz básico - funciona rápido, pero puede que no produzca el mejor orden de JOIN
+* `dpsize` - implementa el algoritmo DPsize, actualmente solo para inner joins - considera todos los órdenes de JOIN posibles y encuentra el más óptimo, pero puede ser lento para consultas con muchas tablas y predicados de JOIN
+* `dphyp` - implementa el algoritmo DPhyp (programación dinámica mediante partición de hipergrafos), actualmente solo para inner joins - explora el mismo espacio de búsqueda que `dpsize`, pero enumera solo pares de subgrafos conectados, lo que genera menos JOIN intermedios en grafos de JOIN dispersos, a costa de no tener en cuenta productos cartesianos
+  Se pueden especificar varios algoritmos como una lista separada por comas, por ejemplo, `dphyp,greedy`. Se prueban en orden; si un algoritmo no puede manejar la consulta (por ejemplo, debido a outer joins o componentes desconectados), se utiliza el siguiente como alternativa.
 
 <div id="query_plan_optimize_join_order_limit">
   ## query_plan_optimize_join_order_limit
@@ -12507,6 +12786,20 @@ Especifica qué algoritmos de orden de JOIN se intentan durante la optimización
 
 Optimiza el orden de los JOIN dentro de la misma subconsulta. Actualmente, solo se admite en casos muy limitados.
 El valor es el número máximo de tablas que se pueden optimizar.
+
+<div id="query_plan_optimize_join_order_max_searched_plans">
+  ## query_plan_optimize_join_order_max_searched_plans
+</div>
+
+<ExperimentalBadge />
+
+<SettingsInfoBlock type="UInt64" default_value="100000" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "100000"},{"label": "Nueva configuración para acotar el número de planes parciales que el optimizador del orden de join enumera antes de pasar al siguiente algoritmo."}]}]} />
+
+Número máximo de planes parciales que el optimizador del orden de join puede enumerar antes de desistir y pasar al siguiente algoritmo en `query_plan_optimize_join_order_algorithm`.
+Esto acota de forma determinista el tiempo de optimización (independientemente del tiempo de reloj) en grafos de join densos, como cliques o estrellas, donde el espacio de búsqueda crece exponencialmente.
+Establézcalo en 0 para desactivar el límite. No tiene efecto sobre el valor predeterminado de `query_plan_optimize_join_order_limit`, donde la búsqueda siempre se mantiene muy por debajo de este umbral.
 
 <div id="query_plan_optimize_join_order_randomize">
   ## query_plan_optimize_join_order_randomize
@@ -12569,6 +12862,23 @@ Valores posibles:
 
 * 0 - Deshabilitar
 * 1 - Habilitar
+
+<div id="query_plan_push_limit_by_into_sort">
+  ## query_plan_push_limit_by_into_sort
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nueva configuración que introduce un LIMIT BY por flujo en el pipeline de ordenación cuando las columnas de LIMIT BY son un prefijo de ORDER BY, lo que reduce las filas que pasan por la fusión final."}]}]} />
+
+Activa o desactiva una optimización a nivel del plan de consulta para las consultas `ORDER BY ... LIMIT BY`. Cuando las columnas de `LIMIT BY` son un prefijo de la cláusula `ORDER BY`, cada flujo ordenado en paralelo aplica `LIMIT BY` antes de que los flujos se fusionen en uno solo, lo que reduce las filas procesadas por la fusión final y por las etapas posteriores del pipeline. Acelera las consultas en las que `LIMIT BY` descarta una gran proporción de filas.
+
+Solo tiene efecto si la configuración [query&#95;plan&#95;enable&#95;optimizations](#query_plan_enable_optimizations) es 1.
+
+Posibles valores:
+
+* 0 - Deshabilitado
+* 1 - Habilitado
 
 <div id="query_plan_read_in_order">
   ## query_plan_read_in_order
@@ -13149,7 +13459,7 @@ Valores posibles:
 
 <SettingsInfoBlock type="Int64" default_value="120" />
 
-Especifica cuánto tiempo (en segundos) se debe esperar para que las réplicas inactivas ejecuten consultas [`ALTER`](/es/reference/statements/alter), [`OPTIMIZE`](/es/reference/statements/optimize) o [`TRUNCATE`](/es/reference/statements/truncate).
+Especifica cuánto tiempo (en segundos) se debe esperar para que las réplicas inactivas ejecuten consultas [`ALTER`](/es/reference/statements/alter/index), [`OPTIMIZE`](/es/reference/statements/optimize) o [`TRUNCATE`](/es/reference/statements/truncate).
 
 Posibles valores:
 
@@ -13950,16 +14260,6 @@ Optimiza la evaluación de funciones que devuelven NULL cuando cualquiera de sus
 Umbral de la proporción de valores NULL para ejecutar funciones con argumentos Nullable solo en filas en las que todos los argumentos tienen valores distintos de NULL. Se aplica cuando la configuración short&#95;circuit&#95;function&#95;evaluation&#95;for&#95;nulls está habilitada.
 Cuando la proporción de filas que contienen valores NULL con respecto al número total de filas supera este umbral, esas filas con valores NULL no se evaluarán.
 
-<div id="show_data_lake_catalogs_in_system_tables">
-  ## show_data_lake_catalogs_in_system_tables
-</div>
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.8"},{"label": "1"},{"label": "Nueva configuración"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": "0"},{"label": "Deshabilita los catálogos de lago de datos en las tablas del sistema de forma predeterminada"}]}]} />
-
-Permite mostrar catálogos de lago de datos en las tablas del sistema.
-
 <div id="show_processlist_include_internal">
   ## show_processlist_include_internal
 </div>
@@ -13971,6 +14271,18 @@ Permite mostrar catálogos de lago de datos en las tablas del sistema.
 Muestra los procesos auxiliares internos en la salida de la consulta `SHOW PROCESSLIST`.
 
 Los procesos internos incluyen recargas de diccionarios, recargas de vistas materializadas actualizables, consultas `SELECT` auxiliares ejecutadas en consultas `SHOW ...`, y consultas auxiliares `CREATE DATABASE ...` ejecutadas internamente para gestionar tablas dañadas, entre otros.
+
+<div id="show_remote_databases_in_system_tables">
+  ## show_remote_databases_in_system_tables
+</div>
+
+**Alias**: `show_data_lake_catalogs_in_system_tables`
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Se renombró desde `show_data_lake_catalogs_in_system_tables` y se amplió para ocultar también de forma predeterminada las bases de datos `MySQL` y `PostgreSQL` de `system.tables`, `system.columns` y `system.completions`, ya que enumerar sus tablas requiere costosas llamadas remotas. Los usuarios que dependían del comportamiento anterior deben establecer este ajuste en `true`. El nombre anterior se conserva como alias."}]}]} />
+
+Permite mostrar bases de datos remotas (catálogos de lago de datos, MySQL, PostgreSQL) en las tablas del sistema.
 
 <div id="show_table_uuid_in_table_create_query_if_not_nil">
   ## show_table_uuid_in_table_create_query_if_not_nil
@@ -14335,6 +14647,17 @@ Valores posibles:
 * LZ4 — Se aplica compresión [LZ4](https://en.wikipedia.org/wiki/LZ4_\(compression_algorithm\)).
 * NONE — No se aplica compresión.
 
+<div id="text_index_density_threshold">
+  ## text_index_density_threshold
+</div>
+
+<SettingsInfoBlock type="Float" default_value="0.2" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0.2"},{"label": "Nueva configuración para el umbral de densidad del modo diferido de posting list"}]}]} />
+
+Umbral de densidad para la selección del algoritmo en el modo diferido de posting list.
+Por debajo del umbral: intersección leapfrog. En el umbral o por encima: bitmap por fuerza bruta.
+
 <div id="text_index_hint_max_selectivity">
   ## text_index_hint_max_selectivity
 </div>
@@ -14369,6 +14692,18 @@ Longitud mínima de la cadena alfanumérica buscada en un patrón LIKE/ILIKE nec
 Los patrones más cortos que este umbral coinciden con demasiados tokens del diccionario y se omiten para evitar escaneos costosos.
 
 Requiere que `use_text_index_like_evaluation_by_dictionary_scan` esté habilitado.
+
+<div id="text_index_posting_list_apply_mode">
+  ## text_index_posting_list_apply_mode
+</div>
+
+<SettingsInfoBlock type="TextIndexPostingListApplyMode" default_value="materialize" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "materialize"},{"label": "Nueva configuración para el modo de aplicación diferida de la posting list"}]}]} />
+
+Controla cómo se aplican las posting lists durante las consultas de índice de texto.
+&#39;materialize&#39; (predeterminado) decodifica las posting lists de forma inmediata en Roaring Bitmaps.
+&#39;lazy&#39; usa decodificación bajo demanda basada en cursores (requiere el formato de índice V2 y allow&#95;experimental&#95;text&#95;index&#95;lazy&#95;apply).
 
 <div id="throw_if_no_data_to_insert">
   ## throw_if_no_data_to_insert
@@ -14593,6 +14928,18 @@ Valores posibles:
 
 Consulte ejemplos en [UNION](/es/reference/statements/select/union).
 
+<div id="unique_key_max_encoded_size">
+  ## unique_key_max_encoded_size
+</div>
+
+<ExperimentalBadge />
+
+<SettingsInfoBlock type="UInt64" default_value="256" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "256"},{"label": "Nueva configuración: tamaño máximo (bytes) de la codificación binaria que preserva el orden de una única fila de UNIQUE KEY"}]}]} />
+
+Tamaño máximo (en bytes) de la codificación binaria que preserva el orden de una única fila de `UNIQUE KEY`.
+
 <div id="unknown_packet_in_send_data">
   ## unknown_packet_in_send_data
 </div>
@@ -14813,6 +15160,23 @@ Cuando está habilitada, permite usar la función heredada toTime, que convierte
 De lo contrario, utiliza una nueva función toTime, que convierte distintos tipos de datos al tipo Time.
 La antigua función heredada también está disponible incondicionalmente como toTimeWithFixedDate.
 
+<div id="use_lightweight_primary_key_index_analysis">
+  ## use_lightweight_primary_key_index_analysis
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Nuevo ajuste para optimizar el análisis del índice de la clave primaria en tablas con claves primarias largas"}]}]} />
+
+Optimiza el análisis del índice de la clave primaria para tablas `MergeTree` con claves primarias largas.
+
+Cuando está habilitado, el tiempo de ejecución del análisis del índice depende principalmente de la complejidad del filtro de la consulta (las columnas clave que realmente utiliza), y no de la longitud de la clave primaria; por tanto, ampliar la clave de ordenación apenas añade sobrecarga al análisis del índice en consultas que filtran solo por unas pocas de sus columnas.
+
+Valores posibles:
+
+* 0 — Deshabilitado. Todas las columnas de la clave primaria se procesan durante el análisis del índice.
+* 1 — Habilitado.
+
 <div id="use_page_cache_for_disks_without_file_cache">
   ## use_page_cache_for_disks_without_file_cache
 </div>
@@ -14941,6 +15305,18 @@ Valores posibles:
 
 * 0 - Deshabilitado
 * 1 - Habilitado
+
+<div id="use_reader_executor">
+  ## use_reader_executor
+</div>
+
+<ExperimentalBadge />
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nueva configuración experimental para enrutar las lecturas a través del nuevo pipeline `ReaderExecutor` en lugar de la matrioska heredada de búferes de lectura."}]}]} />
+
+Experimental. Enruta las lecturas a través del nuevo pipeline `ReaderExecutor` en lugar de la matrioska heredada de búferes de lectura. Recurre a la ruta heredada para las configuraciones que el ejecutor aún no admite.
 
 <div id="use_roaring_bitmap_iceberg_positional_deletes">
   ## use_roaring_bitmap_iceberg_positional_deletes
@@ -15435,6 +15811,20 @@ Si es true, espera a que se procese la inserción asíncrona
 
 Tiempo de espera para el procesamiento de la inserción asíncrona
 
+<div id="wait_for_part_commit_in_dependent_materialized_views">
+  ## wait_for_part_commit_in_dependent_materialized_views
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "Nueva configuración"}]}]} />
+
+Controla si cada sink hace commit de la parte que acaba de escribir antes de que se ejecute su propia cascada de vistas materializadas dependientes, para que una cascada que vuelva a leer desde la fuente mediante `JOIN` vea la parte escrita por ese sink.
+
+La garantía se aplica por instancia de sink: es posible que las partes escritas por otros hilos de sink del mismo `INSERT` aún no sean visibles. Esta configuración no proporciona orden de commit entre hilos.
+
+No tiene efecto en las inserciones en tablas sin vistas materializadas dependientes.
+
 <div id="wait_for_window_view_fire_signal_timeout">
   ## wait_for_window_view_fire_signal_timeout
 </div>
@@ -15455,8 +15845,7 @@ Tiempo de espera para la señal de activación de window view en el procesamient
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.3"},{"label": "100000"},{"label": "Nueva configuración para limitar las instrucciones de CPU (fuel) por ejecución de una instancia de WebAssembly UDF."}]}]} />
 
-Límite de fuel por ejecución de una instancia de WebAssembly UDF. Cada instrucción de WebAssembly consume una cierta cantidad de fuel.
-Establezca 0 para desactivar el límite.
+Límite de fuel por ejecución de una instancia de WebAssembly UDF. Cada instrucción de WebAssembly consume una cierta cantidad de fuel. El valor se escala por 1024 antes de pasarse al runtime, por lo que `webassembly_udf_max_fuel = 1` corresponde a aproximadamente 1024 unidades de fuel. Establezca 0 para no tener ningún límite finito. Se aplica solo a las funciones cuya configuración por función `webassembly_udf_enable_fuel` es `true`, que es el valor predeterminado.
 
 <div id="webassembly_udf_max_input_block_size">
   ## webassembly_udf_max_input_block_size

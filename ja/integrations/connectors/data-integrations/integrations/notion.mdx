@@ -10,13 +10,14 @@ integration:
   - category: 'data_integration'
 ---
 
-import PartnerBadge from "/snippets/components/PartnerBadge/PartnerBadge.jsx";
+import { Image } from "/snippets/ja/components/Image.jsx";
+import PartnerBadge from "/snippets/ja/components/PartnerBadge/PartnerBadge.jsx";
 
 <PartnerBadge />
 
 [Notion](https://www.notion.com/) は、メモ、ドキュメント、プロジェクト、AI を活用したカスタムエージェントを一元的に扱えるワークスペースです。
 
-ClickHouse Cloud をカスタムMCPサーバーとして Notion の [カスタムエージェント](https://www.notion.com/help/mcp-connections-for-custom-agents) に接続できます。接続すると、そのエージェントは Notion を離れることなく、データを探索し、読み取り専用の分析クエリを実行し、ClickHouse Cloud のサービス情報やコスト情報を表示できます。
+ClickHouse Cloud を Notion の [カスタムエージェント](https://www.notion.com/help/mcp-connections-for-custom-agents) に接続できます。接続すると、そのエージェントは Notion を離れることなく、データを探索し、読み取り専用の分析クエリを実行し、ClickHouse Cloud のサービス情報やコスト情報を表示できます。
 
 <div id="prerequisites">
   ## 前提条件
@@ -24,59 +25,33 @@ ClickHouse Cloud をカスタムMCPサーバーとして Notion の [カスタ�
 
 * 稼働中の[ClickHouse Cloud サービス](/ja/get-started/setup/cloud)で、[Remote MCPサーバーが有効になっている](/ja/products/cloud/features/ai-ml/mcp/remote-mcp#enable-remote-mcp-server)
 * **Business** または **Enterprise** プランの Notion ワークスペース
-* ワークスペースの管理者が **設定** &gt; **Notion AI** &gt; **AI connectors** で **Custom MCP servers** を有効にしている
 
 <div id="connect-clickhouse-to-notion">
   ## ClickHouseをNotionのカスタムエージェントに接続する
 </div>
 
-1. Notionで、拡張したいカスタムエージェントを開き、**設定**をクリックします。
-2. **Tools &amp; Access**で、**接続を追加**をクリックし、**カスタムMCPサーバー**を選択します。
+ClickHouseは、Notionで事前設定済みの接続として提供されています (現在はベータ) 。カスタムMCPサーバーの設定やURLの貼り付けは不要です。
 
-{/* TODO(screenshot): エージェントの [Tools & Access] 内の「接続を追加」メニューに「カスタムMCPサーバー」オプションが表示されている状態 */}
+1. Notionで、サイドバーの**Agents**セクションから新しいカスタムエージェントを作成します。
+2. エージェントの**Settings**で、**Tools and Access**の**Add connection**を選択し、利用可能な接続の一覧から**ClickHouse**を追加します。
 
-3. ClickHouse Cloud Remote MCPサーバーのURLを入力し、接続に `ClickHouse` などの表示名を付けます。
+<Image img="/images/integrations/tools/data-integration/notion/add-clickhouse-connection.png" size="md" alt="NotionのAdd connection pickerでClickHouseを選択している画面" />
 
-   ```text
-   https://mcp.clickhouse.cloud/mcp
-   ```
+3. **Connect**をクリックし、ClickHouse Cloudの認証情報を使ってOAuthフローを完了します。アクセス範囲は、アカウントがすでにアクセスできる組織とサービスに限定されます。
 
-{/* TODO(screenshot): サーバーURLと表示名を入力したカスタムMCPサーバーのモーダル */}
+4. エージェントの設定で新しいClickHouse接続を展開し、このエージェントで使用するツールのトグルをオンにします。各ツールについて、エージェントが自動的に実行するか、毎回承認を求めるかも選択できます。ClickHouse Remote MCPサーバーによって公開されるすべてのツールは読み取り専用です。完全かつ最新の一覧は、[利用可能なツール](/ja/products/cloud/features/ai-ml/remote-mcp#available-tools)のリファレンスを参照してください。
 
-4. Click **Save** をクリックし、OAuth フローを完了して ClickHouse Cloud の認証情報で認証します。アクセスできる範囲は、アカウントがすでにアクセス可能な organizations と service に限定されます。
-
-{/* TODO(screenshot): OAuth の同意画面 / 「Connected」確認状態 */}
-
-5. 新しい接続を展開し、[利用可能な ClickHouse ツール](/ja/products/cloud/features/ai-ml/remote-mcp#available-tools)を確認して、このエージェントで使用したいものを有効にします。ClickHouse Remote MCP ツールはすべて読み取り専用です。
-
-{/* TODO(screenshot): ツールのトグル一覧が表示された、展開済みの ClickHouse 接続 */}
+<Image img="/images/integrations/tools/data-integration/notion/clickhouse-tools-toggles.png" size="md" alt="ツールごとのトグルが表示された、Notionで展開されたClickHouse接続" />
 
 <Note>
-  各カスタムエージェントにはそれぞれ専用の ClickHouse 接続が必要です。また、接続を認証した本人のみが、そのツール設定を変更できます。詳細については、Notion の[Agent 接続のセキュリティのベストプラクティス](https://www.notion.com/help/security-best-practices-for-agent-connections)を参照してください。
+  各カスタムエージェントには専用のClickHouse接続が必要で、接続を認証した本人だけがそのツール設定を変更できます。詳しくは、Notionの[Agent接続に関するセキュリティのベストプラクティス](https://www.notion.com/help/security-best-practices-for-agent-connections)を参照してください。
 </Note>
-
-<div id="example-prompts">
-  ## プロンプトの例
-</div>
-
-接続が完了したら、カスタムエージェントに自然言語で質問できます。以下に例を示します。
-
-| プロンプト                                                 | 呼び出されるツール               |
-| ----------------------------------------------------- | ----------------------- |
-| &quot;自分の ClickHouse service で利用できるデータベースは何ですか？&quot; | `list_databases`        |
-| &quot;`hits` テーブルの先頭 10 行を表示してください&quot;              | `run_select_query`      |
-| &quot;先週の組織の ClickHouse コストはいくらでしたか？&quot;            | `get_organization_cost` |
-| &quot;この service の最近のバックアップを一覧表示してください&quot;          | `list_service_backups`  |
-
-自然言語パターンとツールの完全な一覧については、[Remote MCP の使用例](/ja/products/cloud/features/ai-ml/mcp/remote-mcp#example-usage) を参照してください。
-
-{/* TODO(screenshot): ClickHouseのクエリ結果がNotion UIに表示された、Notionのカスタムエージェントとの会話 */}
 
 <div id="related-content">
   ## 関連コンテンツ
 </div>
 
 * [ClickHouse CloudのRemote MCPサーバーを有効にして接続する](/ja/products/cloud/features/ai-ml/mcp/remote-mcp)
-* [CloudのRemote MCP — ツールリファレンス](/ja/products/cloud/features/ai-ml/remote-mcp)
+* [CloudのRemote MCP: ツールリファレンス](/ja/products/cloud/features/ai-ml/remote-mcp)
 * Notion: [カスタムエージェントのMCP接続](https://www.notion.com/help/mcp-connections-for-custom-agents)
 * Notion: [MCPインテグレーションでカスタムエージェントをツールスタックに接続する](https://www.notion.com/help/guides/connect-custom-agents-to-mcp-integrations)

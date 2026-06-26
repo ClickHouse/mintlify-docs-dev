@@ -5,10 +5,10 @@ title: 'MergeTree 테이블 설정'
 doc_type: 'reference'
 ---
 
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
-import BetaBadge from "/snippets/components/BetaBadge/BetaBadge.jsx";
-import SettingsInfoBlock from "/snippets/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
-import VersionHistory from "/snippets/components/VersionHistory/VersionHistory.jsx";
+import ExperimentalBadge from "/snippets/ko/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import BetaBadge from "/snippets/ko/components/BetaBadge/BetaBadge.jsx";
+import SettingsInfoBlock from "/snippets/ko/components/SettingsInfoBlock/SettingsInfoBlock.jsx";
+import VersionHistory from "/snippets/ko/components/VersionHistory/VersionHistory.jsx";
 
 시스템 테이블 `system.merge_tree_settings`는 전역으로 설정된 MergeTree 설정을 표시합니다.
 
@@ -169,34 +169,11 @@ true로 설정하면 CollapsingMergeTree 또는 VersionedCollapsingMergeTree 테
   ## allow_experimental_reverse_key
 </div>
 
-<ExperimentalBadge />
-
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.12"},{"label": "0"},{"label": "새로운 설정"}]}]} />
 
-MergeTree 정렬 키에서 내림차순 정렬을 지원합니다. 이 설정은 시계열 분석과 Top-N 쿼리에 특히 유용하며, 데이터를 시간 역순으로 저장해 쿼리 성능을 최적화할 수 있습니다.
-
-`allow_experimental_reverse_key`를 활성화하면 MergeTree 테이블의 `ORDER BY` 절에서 내림차순 정렬 순서를 정의할 수 있습니다. 이를 통해 내림차순 쿼리에서 `ReadInReverseOrder` 대신 더 효율적인 `ReadInOrder` 최적화를 사용할 수 있습니다.
-
-**예시**
-
-```sql
-CREATE TABLE example
-(
-time DateTime,
-key Int32,
-value String
-) ENGINE = MergeTree
-ORDER BY (time DESC, key)  -- 'time' 필드 내림차순 정렬
-SETTINGS allow_experimental_reverse_key = 1;
-
-SELECT * FROM example WHERE key = 'xxx' ORDER BY time DESC LIMIT 10;
-```
-
-쿼리에서 `ORDER BY time DESC`를 사용하면 `ReadInOrder`가 적용됩니다.
-
-**기본값:** false
+더 이상 사용되지 않는 설정으로, 아무 동작도 하지 않습니다.
 
 <div id="allow_floating_point_partition_key">
   ## allow_floating_point_partition_key
@@ -268,6 +245,16 @@ ClickHouse Cloud에서만 사용할 수 있습니다
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 표현식이 동일한 프라이머리/보조 인덱스와 정렬 키를 거부합니다
+
+<div id="allow_tuple_element_aggregation">
+  ## allow_tuple_element_aggregation
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "새로운 설정"}]}]} />
+
+활성화하면 Tuple 컬럼의 개별 요소가 SummingMergeTree, AggregatingMergeTree, CoalescingMergeTree에서 머지 시 집계에 참여합니다. 중첩된 Tuple은 재귀적으로 확장되므로 모든 리프 요소가 각각 독립적으로 집계됩니다. 이 설정은 변경할 수 없으며 테이블 생성 시 지정해야 합니다.
 
 <div id="allow_vertical_merges_from_compact_to_wide_parts">
   ## allow_vertical_merges_from_compact_to_wide_parts
@@ -361,7 +348,7 @@ true로 설정하면 INSERT 쿼리의 데이터가 큐에 저장되며, 이후 �
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "minmax, uniq"},{"label": "기본적으로 자동 통계 활성화"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": ""},{"label": "새로운 설정"}]}]} />
 
 적용 가능한 모든 컬럼에 대해 자동으로 계산할 통계 유형의 쉼표로 구분된 목록입니다.
-지원되는 통계 유형: tdigest, countmin, minmax, nullcount, uniq.
+지원되는 통계 유형: basic, tdigest, countmin, minmax, uniq.
 
 <div id="background_task_preferred_step_execution_time_ms">
   ## background_task_preferred_step_execution_time_ms
@@ -755,7 +742,7 @@ Dynamic 데이터 타입의 직렬화 버전입니다. 호환성을 위해 필�
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "기본적으로 `min_age_to_force_merge_seconds`가 설정되어 있어도 파트 크기를 제한합니다"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "`min_age_to_force_merge`의 최대 바이트를 제한하는 새로운 설정이 추가되었습니다."}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "새로운 설정"}]}]} />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "기본적으로 `min_age_to_force_merge_seconds`가 설정되어 있어도 파트 크기를 제한합니다"}]}, {"id": "row-2","items": [{"label": "25.1"},{"label": "0"},{"label": "새로운 설정"}]}, {"id": "row-3","items": [{"label": "25.1"},{"label": "0"},{"label": "`min_age_to_force_merge`의 최대 바이트를 제한하는 새로운 설정이 추가되었습니다."}]}]} />
 
 설정 `min_age_to_force_merge_seconds` 및
 `min_age_to_force_merge_on_partition_only`가
@@ -1195,6 +1182,33 @@ wide 파트와 함께 사용하는 것은 권장하지 않습니다.
 
 마크에 사용되는 압축 인코딩입니다. 마크는 충분히 작고 캐시되므로
 기본 압축은 ZSTD(3)입니다.
+
+<div id="materialize_projections_on_insert">
+  ## materialize_projections_on_insert
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "새로운 설정"}]}]} />
+
+활성화하면 INSERT 시 프로젝션이 포함된 새 파트를 생성합니다.
+그렇지 않으면 명시적인 [MATERIALIZE PROJECTION](/ko/reference/statements/alter/projection#materialize-projection)을 통해
+또는 [materialize&#95;projections&#95;on&#95;merge](/ko/reference/settings/merge-tree-settings#materialize_projections_on_merge)에 따라 머지 중에 생성할 수 있습니다.
+
+<div id="materialize_projections_on_merge">
+  ## materialize_projections_on_merge
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "새로운 설정"}]}]} />
+
+활성화되면 머지 시 모든 소스 파트에 없는 프로젝션(예를 들어 `materialize_projections_on_insert = 0`으로
+삽입된 경우)을 다시 빌드하므로, 병합된 파트에 해당 프로젝션이 포함됩니다.
+
+머지는 여전히 동일한 프로젝션 집합을 공유하는 파트만 병합합니다. 기존의 모든 파트에 프로젝션을 백필하려면
+명시적으로 [MATERIALIZE PROJECTION](/ko/reference/statements/alter/projection#materialize-projection)을 사용하십시오. 프로젝션은
+[materialize&#95;projections&#95;on&#95;insert](/ko/reference/settings/merge-tree-settings#materialize_projections_on_insert)를 사용하는 INSERT 중에도 생성됩니다.
 
 <div id="materialize_skip_indexes_on_merge">
   ## materialize_skip_indexes_on_merge
@@ -2588,6 +2602,47 @@ LZ4 또는 ZSTD의 압축률은 평균적으로 20~~40% 향상됩니다.
 이 설정은 프라이머리 키가 없거나 카디널리티가 낮은 프라이머리 키, 즉 고유한 프라이머리 키 값이 적은 테이블에서 가장 효과적입니다.
 예를 들어 `DateTime64` 유형의 timestamp 컬럼이 포함된 경우처럼 카디널리티가 높은 프라이머리 키에는 이 설정의 효과를 기대하기 어렵습니다.
 
+<div id="packed_skip_index_max_bytes">
+  ## packed_skip_index_max_bytes
+</div>
+
+<ExperimentalBadge />
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "새 설정입니다. 직렬화된 디스크 상 크기가 이 바이트 수 이하인 스키핑 인덱스 하위 스트림은 파트별로 단일 `skp_idx.packed` 아카이브에 패킹합니다. 더 큰 하위 스트림은 독립형 `skp_idx_<name>.idx2` / `.mrk2` 레이아웃으로 유지됩니다. 이 결정은 쓰기 시점에 하위 스트림별로 이루어집니다."}]}]} />
+
+스키핑 인덱스 하위 스트림이 별도의 `skp_idx_<name>.idx2` / `.mrk2`
+파일로 기록되는 대신 파트별 단일 `skp_idx.packed`
+아카이브로 묶이는 임계값입니다(직렬화된 디스크 상 바이트 수 기준, 즉 하위 스트림의 압축 및 hash
+chain 이후 크기). 이보다 큰 하위 스트림은 기존의 파일별 레이아웃을 유지합니다. 이 결정은
+쓰기 시점에 하위 스트림별로 독립적으로 이루어지므로, 하나의 파트에는 작은 인덱스
+(예: `minmax`)는 패킹되고 큰 인덱스(예: 무거운 `bloom_filter`)는 파일별로 저장될 수 있습니다. 패킹을 완전히 비활성화하려면 0으로 설정하십시오
+(기본값).
+
+각 스키핑 인덱스 하위 스트림은 실제로 데이터 파일과 마크 파일로 구성되며, spill 여부가 결정되기 전까지
+둘 다 임계값까지 메모리에 버퍼링됩니다. 따라서 기록 중 피크 메모리는
+`2 * packed_skip_index_max_bytes * (number of substreams that stay
+below the threshold)`에 비례합니다.
+
+전문 인덱스는 이 설정의 적용 대상이 아니며 절대 패킹되지 않습니다.
+
+패킹은 테이블에 많은 스키핑 인덱스가 정의되어 있을 때 inode 부담을 줄여 줍니다(예:
+`add_minmax_index_for_numeric_columns` 사용 시).
+
+디스크 상 포맷은 자체 기술형입니다. 읽기 측은 `skp_idx.packed`를 감지하고 그 내부의 패킹된
+하위 스트림을 투명하게 처리합니다. 이 설정을 변경해도 새로 기록되는 파트에만 영향을 주며,
+기존 파트는 기록 시점의 레이아웃을 유지합니다.
+
+알려진 제한 사항: `system.data_skipping_indices.data_uncompressed_bytes` 및
+`system.parts.secondary_indices_uncompressed_bytes`는 패킹된
+하위 스트림에 대해 압축된 크기를 보고합니다(아카이브 인덱스에는 압축되지 않은 크기가 저장되지 않음). 이는
+모니터링에서는 표시상의 차이일 뿐이지만, 다음과 같은 한 가지 기능적 결과가 있습니다:
+`distributed_index_analysis_min_indexes_bytes_to_activate`는
+`data_uncompressed`와 비교하므로, 잘 압축되는 패킹된 인덱스(`set` 또는 문자열에 대한 `bloom_filter`)는
+실제 압축되지 않은 크기라면 임계값을 넘을 수 있어도 활성화 임계값을 넘지 못할 수 있습니다.
+이 경우 폴백은 일반 쿼리 계획이며, 잘못된 결과가 반환되지는 않습니다.
+
 <div id="part_minmax_index_columns">
   ## part_minmax_index_columns
 </div>
@@ -3688,6 +3743,17 @@ Cloud에서만 사용할 수 있습니다.
 활성화하면 모든 레플리카가 이미 해당 데이터가 있는 다른 레플리카에서 파트의 인메모리 데이터(프라이머리
 키, 파티션 정보 등)를 가져오려고 시도합니다.
 
+<div id="shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup">
+  ## shared_merge_tree_try_fetch_part_in_memory_data_from_replicas_on_startup
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "시작 시 SMT가 S3 대신 레플리카에서 파트 데이터를 다운로드할 수 있도록 하는 새로운 설정"}]}]} />
+
+활성화하면 모든 레플리카는 시작 시 파트의 인메모리 데이터(프라이머리
+키, 파티션 정보 등)가 이미 있는 다른 레플리카로부터 이를 가져오려고 시도합니다.
+
 <div id="shared_merge_tree_update_replica_flags_delay_ms">
   ## shared_merge_tree_update_replica_flags_delay_ms
 </div>
@@ -3836,6 +3902,50 @@ true로 설정하면 테이블이 읽기 전용 모드로 전환됩니다. 데�
 
 tmp&#95; 디렉터리를 몇 초 동안 유지할지 지정합니다. 이 값은 낮추지 마십시오.
 이 설정값이 너무 낮으면 머지와 뮤테이션이 정상적으로 작동하지 않을 수 있습니다.
+
+<div id="text_index_dictionary_block_frontcoding_compression">
+  ## text_index_dictionary_block_frontcoding_compression
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "새로운 설정"}]}]} />
+
+텍스트 인덱스 딕셔너리 블록에 대한 기본 프런트 코딩 압축입니다.
+명시적으로 지정된 `dictionary_block_frontcoding_compression` 인덱스 인수로 재정의할 수 있습니다.
+
+<div id="text_index_dictionary_block_size">
+  ## text_index_dictionary_block_size
+</div>
+
+<SettingsInfoBlock type="NonZeroUInt64" default_value="512" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "512"},{"label": "새로운 설정"}]}]} />
+
+텍스트 인덱스의 기본 딕셔너리 블록 크기입니다.
+명시적으로 지정한 `dictionary_block_size` 인덱스 인수로 재정의할 수 있습니다.
+
+<div id="text_index_posting_list_block_size">
+  ## text_index_posting_list_block_size
+</div>
+
+<SettingsInfoBlock type="NonZeroUInt64" default_value="1048576" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1048576"},{"label": "새로운 설정"}]}]} />
+
+텍스트 인덱스의 기본 포스팅 리스트 블록 크기(행 수)입니다.
+명시적으로 지정한 `posting_list_block_size` 인덱스 인수로 재정의할 수 있습니다.
+
+<div id="text_index_posting_list_codec">
+  ## text_index_posting_list_codec
+</div>
+
+<SettingsInfoBlock type="TextIndexPostingListCodec" default_value="none" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "none"},{"label": "새로운 설정"}]}]} />
+
+텍스트 인덱스에 사용되는 기본 포스팅 리스트 코덱입니다.
+명시적으로 지정한 `posting_list_codec` 인덱스 인수로 재정의할 수 있습니다.
 
 <div id="try_fetch_recompressed_part_timeout">
   ## try_fetch_recompressed_part_timeout

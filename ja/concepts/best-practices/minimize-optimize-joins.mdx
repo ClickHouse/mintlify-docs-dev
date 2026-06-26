@@ -2,13 +2,13 @@
 slug: /best-practices/minimize-optimize-joins
 sidebarTitle: 'JOINを最小限に抑えて最適化する'
 title: 'JOINを最小限に抑えて最適化する'
-description: 'JOINに関するベストプラクティスを説明するページ'
+description: 'ClickHouse で JOIN を使用する際のベストプラクティスを説明するドキュメント'
 keywords: ['JOIN', 'Parallel Hash JOIN']
 show_related_blogs: true
 doc_type: 'guide'
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/ja/components/Image.jsx";
 
 ClickHouse は多種多様な JOIN タイプとアルゴリズムをサポートしており、JOIN のパフォーマンスも最近のリリースで大幅に改善されています。ただし、JOIN は本質的に、単一の非正規化されたテーブルに対するクエリよりもコストが高くなります。非正規化では、計算処理をクエリ実行時から INSERT 時または前処理時に移すため、実行時のレイテンシを大幅に低減できることがよくあります。リアルタイム処理やレイテンシに敏感な分析クエリでは、**非正規化を強く推奨します**。
 
@@ -33,9 +33,9 @@ JOIN のパフォーマンスを向上させるには、次のベストプラク
 
 * **Cartesian product を避ける**: 左側の値に対して右側で複数の値が一致すると、JOIN は複数の行を返します。これがいわゆる Cartesian product です。ユースケース上、右側のすべての一致結果ではなく、いずれか 1 件だけが必要であれば、`ANY` JOIN (例: `LEFT ANY JOIN`) を使用できます。通常の JOIN より高速で、使用メモリも少なくなります。
 * **JOIN するテーブルのサイズを小さくする**: JOIN の実行時間とメモリ消費は、左側と右側のテーブルサイズに比例して増加します。JOIN で処理するデータ量を減らすには、クエリの `WHERE` 句または `JOIN ON` 句に追加のフィルタ条件を加えてください。ClickHouse はフィルタ条件をクエリプラン内のできるだけ深い位置、通常は JOIN の前まで押し下げます。何らかの理由でフィルタが自動的に pushdown されない場合は、JOIN の片側をサブクエリに書き換えて、pushdown を強制してください。
-* **適切であれば Dictionary を使った direct JOIN を利用する**: ClickHouse の標準 JOIN は 2 つのフェーズで実行されます。まず build フェーズで右側を走査して ハッシュテーブル を構築し、続いて probe フェーズで左側を走査して、ハッシュテーブル のルックアップにより一致する結合相手を探します。右側が [dictionary](/ja/concepts/features/dictionaries) またはキー・バリュー特性を持つ別の table engine (例: [EmbeddedRocksDB](/ja/reference/engines/table-engines/integrations/embedded-rocksdb) や [Join table engine](/ja/reference/engines/table-engines/special/join)) であれば、ClickHouse は &quot;direct&quot; join algorithm を使用できます。これにより、実質的に ハッシュテーブル の構築が不要になり、クエリ処理が高速化されます。これは `INNER` および `LEFT OUTER` JOIN で機能し、real-time な分析 workload に適しています。
+* **適切であれば Dictionary を使った direct JOIN を利用する**: ClickHouse の標準 JOIN は 2 つのフェーズで実行されます。まず build フェーズで右側を走査して ハッシュテーブル を構築し、続いて probe フェーズで左側を走査して、ハッシュテーブル のルックアップにより一致する結合相手を探します。右側が [dictionary](/ja/concepts/features/dictionaries/index) またはキー・バリュー特性を持つ別の テーブルエンジン (例: [EmbeddedRocksDB](/ja/reference/engines/table-engines/integrations/embedded-rocksdb) や [Join テーブルエンジン](/ja/reference/engines/table-engines/special/join)) であれば、ClickHouse は &quot;direct&quot; JOIN アルゴリズム を使用できます。これにより、実質的に ハッシュテーブル の構築が不要になり、クエリ処理が高速化されます。これは `INNER` および `LEFT OUTER` JOIN で機能し、real-time な分析 workload に適しています。
 * **JOIN にテーブルのソート順を活用する**: ClickHouse の各テーブルは、そのテーブルの主キーカラムでソートされています。`full_sorting_merge` や `partial_merge` のようないわゆる sort-merge JOIN アルゴリズムを使うことで、このソート順を活用できます。ハッシュテーブル ベースの標準 JOIN アルゴリズム (後述の `parallel_hash`、`hash`、`grace_hash`) とは異なり、sort-merge JOIN アルゴリズムはまず両方のテーブルをソートし、その後でマージします。クエリが両方のテーブルをそれぞれの主キーカラムで JOIN している場合、sort-merge ではソート処理を省略する最適化が働き、処理時間とオーバーヘッドを削減できます。
-* **ディスクへの spilling が発生する JOIN を避ける**: JOIN の中間状態 (例: ハッシュテーブル) が非常に大きくなり、main memory に収まらなくなることがあります。この場合、ClickHouse はデフォルトで out-of-memory error を返します。一部の join algorithm (後述) 、たとえば [`grace_hash`](https://clickhouse.com/blog/clickhouse-fully-supports-joins-hash-joins-part2)、[`partial_merge`](https://clickhouse.com/blog/clickhouse-fully-supports-joins-full-sort-partial-merge-part3)、[`full_sorting_merge`](https://clickhouse.com/blog/clickhouse-fully-supports-joins-full-sort-partial-merge-part3) では、中間状態をディスクに spill してクエリ実行を継続できます。ただし、ディスクアクセスによって join processing が大幅に遅くなる可能性があるため、これらの join algorithm は注意して使用する必要があります。代わりに、中間状態のサイズを減らせるよう、別の方法で JOIN クエリを最適化することを推奨します。
+* **ディスクへの spilling が発生する JOIN を避ける**: JOIN の中間状態 (例: ハッシュテーブル) が非常に大きくなり、main memory に収まらなくなることがあります。この場合、ClickHouse はデフォルトで out-of-memory error を返します。一部の JOIN アルゴリズム (後述) 、たとえば [`grace_hash`](https://clickhouse.com/blog/clickhouse-fully-supports-joins-hash-joins-part2)、[`partial_merge`](https://clickhouse.com/blog/clickhouse-fully-supports-joins-full-sort-partial-merge-part3)、[`full_sorting_merge`](https://clickhouse.com/blog/clickhouse-fully-supports-joins-full-sort-partial-merge-part3) では、中間状態をディスクに spill してクエリ実行を継続できます。ただし、ディスクアクセスによって join processing が大幅に遅くなる可能性があるため、これらの JOIN アルゴリズム は注意して使用する必要があります。代わりに、中間状態のサイズを減らせるよう、別の方法で JOIN クエリを最適化することを推奨します。
 * **外部 JOIN で一致しなかったことを示すマーカーとしてデフォルト値を使う**: left/right/full outer join では、左側 / 右側 / 両方のテーブルのすべての値が含まれます。ある値に対して他方のテーブルに結合相手が見つからない場合、ClickHouse はその結合相手を特別なマーカーに置き換えます。SQL 標準では、このようなマーカーとして NULL を使用することが定められています。ClickHouse では、そのために結果カラムを Nullable でラップする必要があり、追加のメモリおよびパフォーマンスのオーバーヘッドが発生します。代わりに、設定 `join_use_nulls = 0` を構成し、結果カラムのデータ型のデフォルト値をマーカーとして使用することもできます。
 
 <Info>

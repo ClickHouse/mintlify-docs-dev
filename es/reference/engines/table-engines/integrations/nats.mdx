@@ -42,28 +42,28 @@ CREATE TABLE [IF NOT EXISTS] [db.]table_name [ON CLUSTER cluster]
     [nats_password = 'password',]
     [nats_token = 'clickhouse',]
     [nats_credential_file = '/var/nats_credentials',]
-    [nats_startup_connect_tries = '5']
+    [nats_startup_connect_tries = 5,]
     [nats_max_rows_per_message = 1,]
     [nats_handle_error_mode = 'default']
 ```
 
 Parámetros obligatorios:
 
-* `nats_url` – host:port (por ejemplo, `localhost:5672`)..
+* `nats_url` – host:port (por ejemplo, `localhost:4222`)..
 * `nats_subjects` – Lista de subject de la tabla NATS a los que suscribirse o en los que publicar. Admite subjects comodín como `foo.*.bar` o `baz.>`
-* `nats_format` – Formato del mensaje. Usa la misma notación que la función SQL `FORMAT`, como `JSONEachRow`. Para obtener más información, consulta la sección [Formats](/es/reference/formats).
+* `nats_format` – Formato del mensaje. Usa la misma notación que la función SQL `FORMAT`, como `JSONEachRow`. Para obtener más información, consulta la sección [Formats](/es/reference/formats/index).
 
 Parámetros opcionales:
 
 * `nats_schema` – Parámetro que debe usarse si el formato requiere una definición de schema. Por ejemplo, [Cap&#39;n Proto](https://capnproto.org/) requiere la ruta al archivo de schema y el nombre del objeto raíz `schema.capnp:Message`.
 * `nats_stream` – El nombre de un stream existente en NATS JetStream.
-* `nats_consumer` – El nombre de un consumidor pull duradero existente en NATS JetStream.
+* `nats_consumer_name` – El nombre de un consumidor pull duradero existente en NATS JetStream.
 * `nats_num_consumers` – El número de consumidores por tabla. Valor predeterminado: `1`. Especifica más consumidores si el throughput de un consumidor no es suficiente, solo para NATS core.
 * `nats_queue_group` – Nombre del queue group de los suscriptores de NATS. El valor predeterminado es el nombre de la tabla.
 * `nats_max_reconnect` – Deprecated y no tiene efecto; la reconexión se realiza permanentemente con el timeout `nats&#95;reconnect&#95;wait`.
-* `nats_reconnect_wait` – Tiempo de espera en milisegundos entre cada intento de reconexión. Valor predeterminado: `5000`.
+* `nats_reconnect_wait` – Tiempo de espera en milisegundos entre cada intento de reconexión. Valor predeterminado: `2000`.
 * `nats_server_list` - Lista de servidores para la conexión. Puede especificarse para conectarse a un cluster de NATS.
-* `nats_skip_broken_messages` - Tolerancia del parser de mensajes NATS a mensajes incompatibles con el schema por block. Valor predeterminado: `0`. Si `nats_skip_broken_messages = N`, el motor omite *N* mensajes NATS que no pueden parsearse (un mensaje equivale a una fila de datos).
+* `nats_skip_broken_messages` - Tolerancia del parser de mensajes NATS a mensajes incompatibles con el schema por bloque. Valor predeterminado: `0`. Si `nats_skip_broken_messages = N`, el motor omite *N* mensajes NATS que no pueden parsearse (un mensaje equivale a una fila de datos).
 * `nats_max_block_size` - Número de filas recopiladas por poll(s) para el flushing de datos desde NATS. Valor predeterminado: [max&#95;insert&#95;block&#95;size](/es/reference/settings/session-settings#max_insert_block_size).
 * `nats_flush_interval_ms` - Timeout para el flushing de los datos leídos desde NATS. Valor predeterminado: [stream&#95;flush&#95;interval&#95;ms](/es/reference/settings/session-settings#stream_flush_interval_ms).
 * `nats_username` - Nombre de usuario de NATS.
@@ -188,7 +188,7 @@ Nota: las columnas virtuales `_raw_message` y `_error` se rellenan solo en caso 
   ## Compatibilidad con formatos de datos
 </div>
 
-El motor NATS es compatible con todos los [formatos](/es/reference/formats) compatibles con ClickHouse.
+El motor NATS es compatible con todos los [formatos](/es/reference/formats/index) compatibles con ClickHouse.
 El número de filas en un mensaje de NATS depende de si el formato está basado en filas o en bloques:
 
 * En los formatos basados en filas, el número de filas en un mensaje de NATS puede controlarse mediante la configuración `nats_max_rows_per_message`.

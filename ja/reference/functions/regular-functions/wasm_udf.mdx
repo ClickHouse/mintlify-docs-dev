@@ -2,12 +2,16 @@
 description: 'WebAssembly ユーザー定義関数のドキュメント'
 sidebarTitle: 'WebAssembly UDF'
 slug: /sql-reference/functions/wasm_udf
-title: WebAssembly ユーザー定義関数
+title: 'WebAssembly ユーザー定義関数'
 doc_type: 'guide'
 ---
 
-import CloudNotSupportedBadge from "/snippets/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
-import ExperimentalBadge from "/snippets/components/ExperimentalBadge/ExperimentalBadge.jsx";
+import CloudNotSupportedBadge from "/snippets/ja/components/CloudNotSupportedBadge/CloudNotSupportedBadge.jsx";
+import ExperimentalBadge from "/snippets/ja/components/ExperimentalBadge/ExperimentalBadge.jsx";
+
+<div id="webassembly-user-defined-functions">
+  # WebAssembly ユーザー定義関数
+</div>
 
 ClickHouse では、WebAssembly で記述したユーザー定義関数 (UDF) を作成できます。これにより、Rust、C、C++ などの言語で実装したカスタムロジックを、WebAssembly モジュールとしてコンパイルして実行できます。
 
@@ -141,6 +145,47 @@ SELECT 'my_module', base64Decode('...'), reinterpretAsUInt256(unhex('369f...c57d
 
 指定されたハッシュ値がモジュールコードの算出済み SHA256 と一致しない場合、挿入は失敗します。これは、S3 や HTTP などの外部ソースからモジュールを読み込む際に役立ちます。
 
+<div id="distribute-a-module-across-a-cluster">
+  ### クラスター全体にモジュールを配布する
+</div>
+
+`system.webassembly_modules` はインスタンスごとのテーブルであり、`INSERT` は接続を処理しているレプリカにしか反映されません。`INSERT` ステートメントには `ON CLUSTER` 形式がないため、その後の `CREATE FUNCTION ... ON CLUSTER` は、モジュールがないレプリカでは失敗します。
+
+```text
+Code: 674. DB::Exception: WebAssembly module 'collatz' not found:
+while adding user defined function `collatz_steps`. (RESOURCE_NOT_FOUND)
+```
+
+`insert` をすべてのノードに分散するには、ローカルの `system.webassembly_modules` テーブルではなく、`cluster` テーブル関数に書き込みます。
+
+```bash
+cat collatz.wasm | clickhouse client -q "
+  INSERT INTO FUNCTION cluster('default', 'system', 'webassembly_modules') (name, code)
+  SELECT 'collatz', code FROM input('code String') FORMAT RawBlob"
+```
+
+<Note>
+  この方法は、基盤となる分散書き込み経路が各分片内のすべてのレプリカを巡回することを前提としていますが、これはクラスターが `internal_replication=false` に設定されている場合にのみ起こります。`internal_replication=true` (`ReplicatedMergeTree` を使ってレプリケーションを自前で処理するクラスターのデフォルト) では、insert は分片ごとに正常な 1 つのレプリカにのみ送られ、`system.webassembly_modules` はこの経路ではレプリケーションされません。そのため、一部のレプリカには引き続きモジュールが存在しないままになります。この構成では、各レプリカに対して個別に insert する必要があります。たとえば、`system.clusters` を順に処理してホストごとに `remote(...)` 経由で書き込むか、すべてのホストの `user_scripts/wasm/` に binary をコピーします。
+
+  クラスターの `internal_replication` は、`SELECT cluster, shard_num, internal_replication FROM system.clusters` で確認できます。
+</Note>
+
+このようにファンアウトして insert した後は、モジュールがすべてのレプリカに存在するようになり、`CREATE FUNCTION ... ON CLUSTER` が成功します:
+
+```sql
+CREATE FUNCTION collatz_steps ON CLUSTER 'default'
+LANGUAGE WASM FROM 'collatz' :: 'steps'
+ARGUMENTS (n UInt32) RETURNS UInt32;
+```
+
+`clusterAllReplicas` を使うと、すべてのレプリカでモジュールが読み込まれていることを確認できます。
+
+```sql
+SELECT hostName(), name FROM clusterAllReplicas('default', system.webassembly_modules) WHERE name = 'collatz';
+```
+
+`system.webassembly_modules` への挿入は、同じ `(name, hash)` の組み合わせに対しては冪等です。そのため、分散された insert を再実行しても安全であり、レプリカの置き換え後に状態を修復する現実的な方法でもあります。なお、新たに追加されたサーバーには既存のモジュールは自動では配布されません。更新後のクラスターに対して insert を再実行するか、新しいホストの `user_scripts/wasm/` ディレクトリにバイナリを配置する必要があります。
+
 <div id="list-modules">
   ### モジュールを一覧表示
 </div>
@@ -181,7 +226,7 @@ LANGUAGE WASM
 FROM 'module_name' [:: 'source_function_name']
 ARGUMENTS ( [name type[, ...]] | [type[, ...]] )
 RETURNS return_type
-[ABI ROW_DIRECT | ABI BUFFERED_V1]
+[ABI ROW_DIRECT | ABI BUFFERED_V1 | ABI ASSEMBLYSCRIPT]
 [DETERMINISTIC]
 [SHA256_HASH 'hex']
 [SETTINGS key = value[, ...]];
@@ -195,10 +240,12 @@ RETURNS return_type
 * `ABI`: Application Binary Interface のバージョン
   * `ROW_DIRECT`: 直接的な型マッピング、行単位の処理
   * `BUFFERED_V1`: シリアライゼーションを伴うブロックベースの処理
+  * `ASSEMBLYSCRIPT`: [AssemblyScript](https://www.assemblyscript.org) コンパイラで生成されたモジュール向けの行単位処理。数値型は AssemblyScript のプリミティブにマップされ、ClickHouse `String` は AssemblyScript `string` にマップされます。
 * `DETERMINISTIC`: 関数を決定論的として宣言します。つまり、同じ入力に対して常に同じ出力を返します。指定すると、ClickHouse はすべての引数が定数である呼び出しを定数畳み込みすることがあります。関数はクエリ解析時に一度評価され、その結果がすべての行で再利用されます。
 * `SHA256_HASH`: 検証用の想定モジュールハッシュ (省略した場合は自動入力) 。異なるレプリカ間で正しい WASM モジュールが読み込まれていることを保証するために使用できます。
 * `SETTINGS`: 関数ごとの設定
-  * `serialization_format` String — ABI で必要なシリアライゼーションフォーマット。デフォルト: `MsgPack`.
+  * `serialization_format` String — ABI で必要なシリアライゼーションフォーマット。サポートされる値: `MsgPack`, `JSONEachRow`, `CSV`, `TSV`, `TSVRaw`, `RowBinary`, `Buffers`。デフォルト: `MsgPack`。`Buffers` などのブロックベースのフォーマットでは、宣言された関数シグネチャに一致する型の単一カラムを返す必要があります。
+  * `webassembly_udf_enable_fuel` Bool — 関数の有限 fuel バジェットを有効にします。デフォルト: `true`。`false` の場合、この関数ではクエリレベルの設定 `webassembly_udf_max_fuel` は無視されます。fuel 制限を無効にすると、`wasmtime` engine の使用時にパフォーマンスが向上することがあります。ただし、信頼できない ゲストコード や不具合のある ゲストコード では、暴走実行のリスクが高まる可能性があります。
 
 <div id="abis-versions">
   ## ABI バージョン
@@ -208,6 +255,7 @@ ClickHouse と連携するには、WebAssembly モジュールがサポート対
 
 * `ROW_DIRECT`: 直接型マッピング (プリミティブ型 `Int32`、`UInt32`、`Int64`、`UInt64`、`Float32`、`Float64` のみ)
 * `BUFFERED_V1`: シリアライゼーションを伴う複合型
+* `ASSEMBLYSCRIPT`: [AssemblyScript](https://www.assemblyscript.org) モジュールとの行ごとの相互運用。数値型と `String` をサポートします。
 
 <div id="abi-row_direct">
   ### ABI ROW_DIRECT
@@ -287,6 +335,57 @@ ClickhouseBuffer * user_defined_function1(ClickhouseBuffer * span, uint32_t n) {
 ClickhouseBuffer * user_defined_function2(ClickhouseBuffer * span, uint32_t n) { /* ... */ }
 ```
 
+<div id="abi-assemblyscript">
+  ### ABI ASSEMBLYSCRIPT
+</div>
+
+[AssemblyScript](https://www.assemblyscript.org) コンパイラで生成されたモジュールを対象とします。各行につき 1 回、エクスポートされた関数が呼び出され、その際 ClickHouse の値は AssemblyScript のプリミティブ型および string オブジェクトにマッピングされます。
+
+**サポートされる型**:
+
+* 数値: `Int8`/`UInt8`、`Int16`/`UInt16` (境界では `i32` に拡張) 、`Int32`/`UInt32`、`Int64`/`UInt64`、`Float32`、`Float64`
+
+* `String` — AssemblyScript の `string` にマッピングされます (WASM メモリ内では UTF-16) 。ClickHouse が UTF-8 ↔ UTF-16 の変換を自動的に処理します。
+
+* カスタム AssemblyScript クラスは、引数型または戻り値の型としてはサポートされていません。実行時クラス ID がコンパイルごとに安定しないためです ([AssemblyScript#2982](https://github.com/AssemblyScript/assemblyscript/issues/2982) を参照) 。
+
+**モジュール要件**:
+
+モジュールは、`__new`、`__pin`、`__unpin` がエクスポートされるよう、AssemblyScript の managed runtime でコンパイルする必要があります。標準の入力/出力 string 処理はこれらを前提としています。推奨される呼び出しは次のとおりです:
+
+```bash
+asc src.ts --runtime incremental --exportRuntime -o src.wasm
+```
+
+AssemblyScript は、実行時トラップ (メモリ不足、境界チェックなど) 用に `env.abort` もインポートします。ClickHouse はこのインポートを自動的に提供します。`abort` がトリガーされると、実行中のクエリは、デコードされた AssemblyScript のメッセージとソース位置を含む `WASM_ERROR` 例外で失敗します。
+
+**例**:
+
+```typescript
+// src.ts
+export function add(a: u32, b: u32): u32 {
+  return a + b;
+}
+
+export function greet(name: string): string {
+  return "Hello, " + name + "!";
+}
+```
+
+`asc` でコンパイルし、生成された `.wasm` を `system.webassembly_modules` にロードした後、UDFs を次のように宣言します。
+
+```sql
+CREATE FUNCTION as_add
+    LANGUAGE WASM ABI ASSEMBLYSCRIPT
+    FROM 'as_example' :: 'add'
+    ARGUMENTS (a UInt32, b UInt32) RETURNS UInt32;
+
+CREATE FUNCTION as_greet
+    LANGUAGE WASM ABI ASSEMBLYSCRIPT
+    FROM 'as_example' :: 'greet'
+    ARGUMENTS (name String) RETURNS String;
+```
+
 <div id="note-for-developing-udfs-in-rust">
   ### RustでUDFを開発する際の注意
 </div>
@@ -318,6 +417,7 @@ pub fn some_udf(data: String) -> HashMap<String, String> {
 * `clickhouse_throw(ptr: i32, size: i32)` — 指定されたメッセージでエラーをスローします。エラーメッセージ文字列を含むメモリ位置へのポインタと、その文字列のサイズを受け取ります。
 * `clickhouse_log(ptr: i32, size: i32)` — ClickHouse server のテキストログにメッセージを記録します。
 * `clickhouse_random(ptr: i32, size: i32)` — メモリをランダムなバイト列で埋めます。
+* `env.abort(message: i32, fileName: i32, line: i32, column: i32)` — AssemblyScript 互換モジュール向けに提供されています。これを呼び出すと (またはそれを呼び出す AssemblyScript runtime トラップがトリガーされると) 、デコードされたメッセージとソース位置を含む `WASM_ERROR` 例外によって UDF が終了します。`env.abort` をインポートしないモジュールには影響ありません。
 
 <div id="settings">
   ## 設定
@@ -325,7 +425,7 @@ pub fn some_udf(data: String) -> HashMap<String, String> {
 
 以下のクエリレベルの設定で、WebAssembly UDF の実行を制御できます。
 
-* `webassembly_udf_max_fuel` — WebAssembly UDF インスタンスの実行ごとの fuel 上限です。各 WebAssembly 命令は一定量の fuel を消費します。制限を設けない場合は 0 に設定します。
+* `webassembly_udf_max_fuel` — WebAssembly UDF インスタンスの実行ごとの fuel 上限です。各 WebAssembly 命令は一定量の fuel を消費します。この値はランタイムに渡される前に 1024 倍されるため、`webassembly_udf_max_fuel = 1` はおよそ 1024 fuel 単位に相当します。有限の制限を設けない場合は 0 に設定します。これは、関数ごとの設定 `webassembly_udf_enable_fuel` が true の関数にのみ適用され、これがデフォルトです。
 
 * `webassembly_udf_max_memory` — WebAssembly UDF インスタンスごとのメモリ上限です (バイト単位) 。
 

@@ -8,7 +8,7 @@ title: 'AggregatingMergeTree テーブルエンジン'
 doc_type: 'reference'
 ---
 
-このエンジンは [MergeTree](/ja/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree) を継承しており、データパーツのマージロジックを変更しています。ClickHouse は、同じ主キー (より正確には、同じ[ソートキー](/ja/reference/engines/table-engines/mergetree-family/mergetree)) を持つすべての行を、集約関数の状態の組み合わせを格納する単一の行 (単一のデータパーツ内) に置き換えます。
+このエンジンは [MergeTree](/ja/reference/engines/table-engines/mergetree-family/mergetree) を継承しており、データパーツのマージロジックを変更しています。ClickHouse は、同じ主キー (より正確には、同じ[ソートキー](/ja/reference/engines/table-engines/mergetree-family/mergetree)) を持つすべての行を、集約関数の状態の組み合わせを格納する単一の行 (単一のデータパーツ内) に置き換えます。
 
 `AggregatingMergeTree` テーブルは、集計済みの materialized view を含む、インクリメンタルなデータ集計に使用できます。
 
@@ -188,6 +188,48 @@ FROM test.visits;
   各ソース行は materialized view で 1 行を生成し、実際の aggregation はその後、
   `AggregatingMergeTree` がパーツをマージする際に行われます。これは `optimize_on_insert = 0` の場合にのみ当てはまります。
 </Note>
+
+<div id="tuple-element-aggregation">
+  ## Tuple 要素の集計
+</div>
+
+`allow_tuple_element_aggregation` 設定が有効な場合、`Tuple` カラムは再帰的にフラット化され、各リーフ要素が独立して集計の対象になります。つまり、`Tuple` 内の `AggregateFunction` または `SimpleAggregateFunction` サブカラムは、それぞれの関数に従って、トップレベルのカラムと同様に集計されます。
+
+ソートキー内の `Tuple` に属するサブカラムは、集計から除外されます。非集約のサブカラムは通常のカラムとして扱われます (最初の値が保持されます) 。
+
+<Note>
+  この設定は変更不可であり、テーブル作成時に指定する必要があります。
+</Note>
+
+```sql
+CREATE TABLE agg_tuples
+(
+    key UInt32,
+    metrics Tuple(
+        total_visits SimpleAggregateFunction(sum, UInt64),
+        unique_users SimpleAggregateFunction(max, UInt64)
+    )
+) ENGINE = AggregatingMergeTree()
+ORDER BY key
+SETTINGS allow_tuple_element_aggregation = 1;
+
+INSERT INTO agg_tuples VALUES (1, (100, 5));
+INSERT INTO agg_tuples VALUES (1, (200, 8));
+INSERT INTO agg_tuples VALUES (2, (50, 3));
+
+OPTIMIZE TABLE agg_tuples FINAL;
+
+SELECT key, metrics.total_visits, metrics.unique_users FROM agg_tuples ORDER BY key;
+```
+
+```text
+┌─key─┬─metrics.total_visits─┬─metrics.unique_users─┐
+│   1 │                  300 │                    8 │
+│   2 │                   50 │                    3 │
+└─────┴──────────────────────┴──────────────────────┘
+```
+
+`total_visits` は `sum` で集計され (100 + 200 = 300) 、`unique_users` は `max` で集計されます (max(5, 8) = 8) 。
 
 <div id="related-content">
   ## 関連コンテンツ

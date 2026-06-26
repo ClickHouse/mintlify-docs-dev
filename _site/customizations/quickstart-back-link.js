@@ -10,7 +10,7 @@
   // when it unmounts the page.
 
   var CLONE_ID = 'qs-back-eyebrow';
-  var QS_PATH = /^(?:\/(?:es|ja|ko|pt-BR|ru|zh))?\/get-started\/quickstarts\/([^/]+)$/;
+  var QS_PATH = /^(?:\/docs)?(?:\/(?:es|ja|ko|pt-BR|ru|zh))?\/get-started\/quickstarts\/([^/]+)$/;
 
   function apply() {
     var clone = document.getElementById(CLONE_ID);
@@ -36,8 +36,14 @@
       src.setAttribute('aria-hidden', 'true');
     }
 
-    // Already in place for this page (href carries the locale prefix).
-    if (clone && header.contains(clone) && clone.getAttribute('href') === src.getAttribute('href')) {
+    // Build the locale- and basePath-aware destination.
+    var base = window.location.pathname.startsWith('/docs') ? '/docs' : '';
+    var localeMatch = window.location.pathname.match(/^(?:\/docs)?\/([a-z]{2}(?:-[A-Z]{2})?)(?:\/|$)/);
+    var locale = localeMatch ? '/' + localeMatch[1] : '';
+    var dest = base + locale + '/get-started/quickstarts/home';
+
+    // Already in place — compare against the rewritten dest, not the source href.
+    if (clone && header.contains(clone) && clone.getAttribute('href') === dest) {
       return;
     }
     if (clone) clone.remove();
@@ -48,6 +54,13 @@
     clone.style.width = 'fit-content';
     clone.style.marginBottom = '0.75rem';
     clone.removeAttribute('aria-hidden');
+
+    clone.setAttribute('href', dest);
+    clone.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.location.href = dest;
+    });
+
     header.insertBefore(clone, header.firstChild);
   }
 

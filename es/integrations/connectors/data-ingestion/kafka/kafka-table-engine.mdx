@@ -7,7 +7,7 @@ doc_type: 'guide'
 keywords: ['Kafka', 'motor de tabla de Kafka', 'streaming', 'tiempo real', 'cola de mensajes']
 ---
 
-import { Image } from "/snippets/components/Image.jsx";
+import { Image } from "/snippets/es/components/Image.jsx";
 
 El motor de tabla Kafka se puede utilizar para [**leer** datos de](#kafka-to-clickhouse) y [**escribir** datos en](#clickhouse-to-kafka) Apache Kafka y otros brokers compatibles con la API de Kafka (p. ej., Redpanda, Amazon MSK).
 
@@ -25,11 +25,11 @@ Para usar el motor de tabla Kafka, deberías tener conocimientos generales sobre
   #### Resumen
 </div>
 
-Inicialmente, nos centramos en el caso de uso más común: utilizar el motor de tabla de Kafka para insertar datos en ClickHouse desde Kafka.
+Inicialmente, nos centramos en el caso de uso más común: utilizar el motor de tabla Kafka para insertar datos en ClickHouse desde Kafka.
 
-El motor de tabla de Kafka permite a ClickHouse leer directamente de un Kafka topic. Aunque es útil para ver mensajes en un topic, este motor, por diseño, solo permite una única lectura; es decir, cuando se ejecuta una consulta sobre la tabla, consume datos de la cola y avanza el offset del consumer antes de devolver los resultados al cliente. En la práctica, los datos no pueden volver a leerse sin restablecer esos offsets.
+El motor de tabla Kafka permite a ClickHouse leer directamente de un Kafka topic. Aunque es útil para ver mensajes en un topic, este motor, por diseño, solo permite una única lectura; es decir, cuando se ejecuta una consulta sobre la tabla, consume datos de la cola y avanza el offset del consumer antes de devolver los resultados al cliente. En la práctica, los datos no pueden volver a leerse sin restablecer esos offsets.
 
-Para conservar estos datos a partir de una lectura del motor de tabla, necesitamos un mecanismo para capturarlos e insertarlos en otra tabla. Las vistas materializadas basadas en triggers proporcionan esta funcionalidad de forma nativa. Una vista materializada inicia una lectura del motor de tabla y recibe lotes de documentos. La cláusula TO determina el destino de los datos, normalmente una tabla de la [familia MergeTree](/es/reference/engines/table-engines/mergetree-family). Este proceso se visualiza a continuación:
+Para conservar estos datos a partir de una lectura del motor de tabla, necesitamos un mecanismo para capturarlos e insertarlos en otra tabla. Las vistas materializadas basadas en triggers proporcionan esta funcionalidad de forma nativa. Una vista materializada inicia una lectura del motor de tabla y recibe lotes de documentos. La cláusula TO determina el destino de los datos, normalmente una tabla de la [familia MergeTree](/es/reference/engines/table-engines/mergetree-family/index). Este proceso se visualiza a continuación:
 
 <Image img="/images/integrations/data-ingestion/kafka/kafka_01.png" size="lg" alt="Diagrama de arquitectura del motor de tabla de Kafka" style={{width: '80%'}} />
 
@@ -78,7 +78,7 @@ USE KafkaEngine;
   ##### 3. Cree la tabla de destino
 </div>
 
-Prepare la tabla de destino. En el ejemplo siguiente usamos el esquema reducido de GitHub por brevedad. Tenga en cuenta que, aunque usamos un motor de tabla MergeTree, este ejemplo puede adaptarse fácilmente a cualquier miembro de la [familia MergeTree](/es/reference/engines/table-engines/mergetree-family).
+Prepare la tabla de destino. En el ejemplo siguiente usamos el esquema reducido de GitHub por brevedad. Tenga en cuenta que, aunque usamos un motor de tabla MergeTree, este ejemplo puede adaptarse fácilmente a cualquier miembro de la [familia MergeTree](/es/reference/engines/table-engines/mergetree-family/index).
 
 ```sql
 CREATE TABLE github
@@ -248,7 +248,7 @@ ATTACH TABLE github_queue;
   ##### Añadir metadatos de Kafka
 </div>
 
-Puede resultar útil hacer un seguimiento de los metadatos de los mensajes originales de Kafka una vez ingeridos en ClickHouse. Por ejemplo, puede que queramos saber cuánto hemos consumido de un topic o una partición concretos. Para ello, el motor de tabla de Kafka expone varias [columnas virtuales](/es/reference/engines/table-engines#table_engines-virtual_columns). Estas pueden persistirse como columnas en nuestra tabla de destino modificando nuestro esquema y la instrucción SELECT de la vista materializada.
+Puede resultar útil hacer un seguimiento de los metadatos de los mensajes originales de Kafka una vez ingeridos en ClickHouse. Por ejemplo, puede que queramos saber cuánto hemos consumido de un topic o una partición concretos. Para ello, el motor de tabla Kafka expone varias [columnas virtuales](/es/reference/engines/table-engines/index#table_engines-virtual_columns). Estas pueden persistirse como columnas en nuestra tabla de destino modificando nuestro esquema y la instrucción SELECT de la vista materializada.
 
 Primero, realizamos la operación de detención descrita anteriormente antes de añadir columnas a nuestra tabla de destino.
 

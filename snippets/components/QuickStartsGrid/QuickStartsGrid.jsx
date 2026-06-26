@@ -1,6 +1,8 @@
 export const QuickStartsGrid = ({ quickStartsData = [], featured = [] }) => {
   const featuredIds = featured.map(f => f.id);
   const data = quickStartsData || [];
+  const assetBase = (typeof window !== 'undefined' && window.location.pathname.startsWith('/docs')) ? '/docs' : '';
+  const withBase = (p) => p && p.startsWith('/') ? assetBase + p : p;
 
   // Safely read a persisted string array from localStorage. A corrupted or
   // hand-edited value must never throw out of a useState initializer, which
@@ -135,7 +137,7 @@ export const QuickStartsGrid = ({ quickStartsData = [], featured = [] }) => {
     if (e.defaultPrevented) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
     e.preventDefault();
-    window.location.assign(href);
+    window.location.assign(withBase(href));
   };
 
   // Featured quickstarts, in the order listed in `featured`. Each keeps its banner
@@ -213,7 +215,7 @@ export const QuickStartsGrid = ({ quickStartsData = [], featured = [] }) => {
                       role="img"
                       aria-label={quickStart.title}
                       className="w-full aspect-[16/9] bg-cover bg-center transition-transform duration-200 group-hover:scale-[1.02]"
-                      style={{ backgroundImage: `url(${quickStart.image})` }}
+                      style={{ backgroundImage: `url(${withBase(quickStart.image)})` }}
                     />
                   </a>
                 ))}

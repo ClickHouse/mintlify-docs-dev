@@ -9,7 +9,7 @@ title: 'Движок таблицы AggregatingMergeTree'
 doc_type: 'reference'
 ---
 
-Этот движок наследуется от [MergeTree](/ru/reference/engines/table-engines/mergetree-family/versionedcollapsingmergetree), изменяя логику слияния частей данных. ClickHouse заменяет все строки с одинаковым первичным ключом (или, точнее, с одинаковым [ключом сортировки](/ru/reference/engines/table-engines/mergetree-family/mergetree)) одной строкой (в пределах одной части данных), которая хранит комбинацию состояний агрегатных функций.
+Этот движок наследуется от [MergeTree](/ru/reference/engines/table-engines/mergetree-family/mergetree), изменяя логику слияния частей данных. ClickHouse заменяет все строки с одинаковым первичным ключом (или, точнее, с одинаковым [ключом сортировки](/ru/reference/engines/table-engines/mergetree-family/mergetree)) одной строкой (в пределах одной части данных), которая хранит комбинацию состояний агрегатных функций.
 
 Таблицы `AggregatingMergeTree` можно использовать для инкрементальной агрегации данных, в том числе для агрегированных materialized view.
 
@@ -189,6 +189,48 @@ FROM test.visits;
   Каждая исходная строка создаёт одну строку в materialized view, а фактическая агрегация происходит позже — при
   слиянии частей в `AggregatingMergeTree`. Это верно только при `optimize_on_insert = 0`.
 </Note>
+
+<div id="tuple-element-aggregation">
+  ## Агрегация элементов Tuple
+</div>
+
+Когда включена настройка `allow_tuple_element_aggregation`, столбцы `Tuple` рекурсивно разворачиваются в плоскую структуру, так что каждый конечный элемент независимо участвует в агрегации. Это означает, что подстолбцы `AggregateFunction` или `SimpleAggregateFunction` внутри `Tuple` агрегируются в соответствии со своими функциями, как если бы они были столбцами верхнего уровня.
+
+Подстолбцы, входящие в `Tuple` в ключе сортировки, исключаются из агрегации. Неагрегатные подстолбцы обрабатываются как обычные столбцы (сохраняется их первое значение).
+
+<Note>
+  Эта настройка неизменяема и должна быть указана при создании таблицы.
+</Note>
+
+```sql
+CREATE TABLE agg_tuples
+(
+    key UInt32,
+    metrics Tuple(
+        total_visits SimpleAggregateFunction(sum, UInt64),
+        unique_users SimpleAggregateFunction(max, UInt64)
+    )
+) ENGINE = AggregatingMergeTree()
+ORDER BY key
+SETTINGS allow_tuple_element_aggregation = 1;
+
+INSERT INTO agg_tuples VALUES (1, (100, 5));
+INSERT INTO agg_tuples VALUES (1, (200, 8));
+INSERT INTO agg_tuples VALUES (2, (50, 3));
+
+OPTIMIZE TABLE agg_tuples FINAL;
+
+SELECT key, metrics.total_visits, metrics.unique_users FROM agg_tuples ORDER BY key;
+```
+
+```text
+┌─key─┬─metrics.total_visits─┬─metrics.unique_users─┐
+│   1 │                  300 │                    8 │
+│   2 │                   50 │                    3 │
+└─────┴──────────────────────┴──────────────────────┘
+```
+
+`total_visits` агрегируется функцией `sum` (100 + 200 = 300), а `unique_users` — функцией `max` (max(5, 8) = 8).
 
 <div id="related-content">
   ## Материалы по теме

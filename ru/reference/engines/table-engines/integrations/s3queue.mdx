@@ -8,7 +8,7 @@ title: 'движок таблицы S3Queue'
 doc_type: 'reference'
 ---
 
-import ScalePlanFeatureBadge from "/snippets/components/ScalePlanFeatureBadge/ScalePlanFeatureBadge.jsx";
+import ScalePlanFeatureBadge from "/snippets/ru/components/ScalePlanFeatureBadge/ScalePlanFeatureBadge.jsx";
 
 Этот движок обеспечивает интеграцию с экосистемой [Amazon S3](https://aws.amazon.com/s3/) и позволяет выполнять потоковый импорт. Этот движок похож на движки [Kafka](/ru/reference/engines/table-engines/integrations/kafka), [RabbitMQ](/ru/reference/engines/table-engines/integrations/rabbitmq), но предоставляет возможности, характерные именно для S3.
 
@@ -25,7 +25,7 @@ CREATE TABLE s3_queue_engine_table (name String, value UInt32)
     [mode = '',]
     [after_processing = 'keep',]
     [keeper_path = '',]
-    [loading_retries = 0,]
+    [loading_retries = 10,]
     [processing_threads_num = 16,]
     [parallel_inserts = false,]
     [enable_logging_to_queue_log = true,]
@@ -33,10 +33,10 @@ CREATE TABLE s3_queue_engine_table (name String, value UInt32)
     [tracked_files_limit = 1000,]
     [tracked_file_ttl_sec = 0,]
     [polling_min_timeout_ms = 1000,]
-    [polling_max_timeout_ms = 10000,]
-    [polling_backoff_ms = 0,]
-    [cleanup_interval_min_ms = 10000,]
-    [cleanup_interval_max_ms = 30000,]
+    [polling_max_timeout_ms = 600000,]
+    [polling_backoff_ms = 30000,]
+    [cleanup_interval_min_ms = 60000,]
+    [cleanup_interval_max_ms = 60000,]
     [buckets = 0,]
     [list_objects_batch_size = 1000,]
     [enable_hash_ring_filtering = 0,]
@@ -69,8 +69,8 @@ SETTINGS
 <clickhouse>
     <named_collections>
         <s3queue_conf>
-            <url>'https://clickhouse-public-datasets.s3.amazonaws.com/my-test-bucket-768/*</url>
-            <access_key_id>test<access_key_id>
+            <url>https://clickhouse-public-datasets.s3.amazonaws.com/my-test-bucket-768/*</url>
+            <access_key_id>test</access_key_id>
             <secret_access_key>test</secret_access_key>
         </s3queue_conf>
     </named_collections>
@@ -186,6 +186,18 @@ SETTINGS
 
 Значение по умолчанию: пустая строка.
 
+<div id="after_processing_move_preserve_path">
+  ### `after_processing_move_preserve_path`
+</div>
+
+Если `true`, при перемещении успешно обработанного файла к `after_processing_move_prefix` добавляется полный путь к исходному объекту, поэтому исходная структура каталогов в бакете сохраняется в пункте назначения. Если `false`, используется только имя файла, а исходная структура каталогов становится плоской.
+
+Возможные значения:
+
+* `true` / `false`.
+
+Значение по умолчанию: `false`.
+
 <div id="after_processing_move_secret_access_key">
   ### `after_processing_move_secret_access_key`
 </div>
@@ -252,12 +264,12 @@ URI S3 бакета, в который перемещаются успешно �
   ### `loading_retries`
 </div>
 
-Повторять попытку загрузки файла указанное количество раз. По умолчанию повторные попытки не выполняются.
+Повторять попытку загрузки файла указанное количество раз.
 Возможные значения:
 
-* Положительное целое число.
+* Неотрицательное целое число.
 
-Значение по умолчанию: `0`.
+Значение по умолчанию: `10`.
 
 <div id="processing_threads_num">
   ### `processing_threads_num`
@@ -280,13 +292,13 @@ URI S3 бакета, в который перемещаются успешно �
 
 Значение по умолчанию: `false`.
 
-<div id="enable_logging_to_s3queue_log">
-  ### `enable_logging_to_s3queue_log`
+<div id="enable_logging_to_queue_log">
+  ### `enable_logging_to_queue_log`
 </div>
 
 Включает запись в журнал `system.s3queue_log`.
 
-Значение по умолчанию: `0`.
+Значение по умолчанию: `1`.
 
 <div id="polling_min_timeout_ms">
   ### `polling_min_timeout_ms`
@@ -310,7 +322,7 @@ URI S3 бакета, в который перемещаются успешно �
 
 * Положительное целое число.
 
-Значение по умолчанию: `10000`.
+Значение по умолчанию: `600000`.
 
 <div id="polling_backoff_ms">
   ### `polling_backoff_ms`
@@ -322,7 +334,7 @@ URI S3 бакета, в который перемещаются успешно �
 
 * Положительное целое число.
 
-Значение по умолчанию: `0`.
+Значение по умолчанию: `30000`.
 
 <div id="tracked_files_limit">
   ### `tracked_files_limit`
@@ -356,7 +368,7 @@ URI S3 бакета, в который перемещаются успешно �
 
 Для режима &#39;Ordered&#39;. Определяет минимальное значение интервала повторного планирования для фоновой задачи, отвечающей за поддержание TTL отслеживаемых файлов и максимального количества отслеживаемых файлов.
 
-Значение по умолчанию: `10000`.
+Значение по умолчанию: `60000`.
 
 <div id="cleanup_interval_max_ms">
   ### `cleanup_interval_max_ms`
@@ -364,7 +376,7 @@ URI S3 бакета, в который перемещаются успешно �
 
 Для режима `Ordered`. Определяет максимальный интервал перепланирования фоновой задачи, отвечающей за поддержание TTL отслеживаемых файлов и максимального количества отслеживаемых файлов.
 
-Значение по умолчанию: `30000`.
+Значение по умолчанию: `60000`.
 
 <div id="buckets">
   ### `buckets`
@@ -378,13 +390,13 @@ URI S3 бакета, в который перемещаются успешно �
 
 По умолчанию таблица S3Queue всегда использовала эфемерные узлы обработки, из-за чего могли возникать дубликаты данных, если сеанс ZooKeeper истекал до того, как S3Queue выполняла коммит обработанных файлов в ZooKeeper, но уже после начала их обработки. Эта настройка заставляет сервер исключить возможность появления дубликатов при истечении сеанса Keeper.
 
-<div id="persistent_processing_nodes_ttl_seconds">
-  ### `persistent_processing_nodes_ttl_seconds`
+<div id="persistent_processing_node_ttl_seconds">
+  ### `persistent_processing_node_ttl_seconds`
 </div>
 
-В случае нештатного завершения работы сервера, если включён параметр `use_persistent_processing_nodes`, может оказаться, что узлы обработки не были удалены. Этот параметр задаёт период времени, по истечении которого такие узлы обработки можно безопасно удалить.
+В случае нештатного завершения работы сервера, если включён параметр `use_persistent_processing_nodes`, может оказаться, что узлы обработки не были удалены. Этот параметр задаёт период времени, по истечении которого такие узлы обработки можно безопасно удалить. Этот же TTL также используется для блокировки бакета в режиме `Ordered`, которая может удерживаться дольше, чем отдельный узел обработки, поэтому значение должно учитывать и это.
 
-Значение по умолчанию: `3600` (1 час).
+Значение по умолчанию: `21600` (6 часов).
 
 <div id="s3-settings">
   ## Настройки, связанные с S3
@@ -477,7 +489,7 @@ SETTINGS
 * `_size` — Размер файла.
 * `_time` — Время создания файла.
 
-Подробнее о виртуальных столбцах см. [здесь](/ru/reference/engines/table-engines#table_engines-virtual_columns).
+Подробнее о виртуальных столбцах см. [здесь](/ru/reference/engines/table-engines/index#table_engines-virtual_columns).
 
 <div id="wildcards-in-path">
   ## Подстановочные шаблоны в path

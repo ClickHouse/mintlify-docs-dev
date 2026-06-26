@@ -40,6 +40,72 @@ doc_type: 'guide'
   ## 예시 사용
 </div>
 
+<div id="inserting-data">
+  ### 데이터 삽입
+</div>
+
+`Values 형식`은 `INSERT`에서 사용되므로 `INSERT ... VALUES` 구문은 모두
+이미 이 포맷을 사용합니다. `FORMAT Values` 절을 명시적으로 지정할 수도 있으며,
+행은 스트림이나 파일에서 제공할 수 있습니다. 각 행은 괄호로 묶인
+쉼표로 구분된 튜플이고, 각 튜플도 쉼표로 구분됩니다:
+
+```sql title="Query"
+CREATE TABLE t (id UInt32, name String, values Array(UInt32)) ENGINE = Memory;
+
+INSERT INTO t FORMAT Values (1, 'a', [10, 20]), (2, 'b', [30]);
+
+SELECT * FROM t ORDER BY id;
+```
+
+```response title="Response"
+┌─id─┬─name─┬─values──┐
+│  1 │ a    │ [10,20] │
+│  2 │ b    │ [30]    │
+└────┴──────┴─────────┘
+```
+
+<div id="using-expressions">
+  ### 입력 시 표현식 사용
+</div>
+
+대부분의 입력 형식과 달리, `Values`는 리터럴만 허용하는 것이 아니라 각 필드에서 SQL 표현식을 평가할 수
+있습니다. 이는
+[`input_format_values_interpret_expressions`](#format-settings)로 제어되며(기본적으로
+활성화됨), 필드를 빠른 스트리밍 파서로 읽을 수 없으면 ClickHouse는
+SQL 파서로 전환하여 해당 필드를 표현식으로 해석합니다.
+
+```sql title="Query"
+CREATE TABLE prices (item String, total UInt32) ENGINE = Memory;
+
+INSERT INTO prices FORMAT Values ('apple', 3 * 4), ('pear', length('hello') + 10);
+
+SELECT * FROM prices ORDER BY total;
+```
+
+```response title="Response"
+┌─item──┬─total─┐
+│ apple │    12 │
+│ pear  │    15 │
+└───────┴───────┘
+```
+
+<div id="selecting-data">
+  ### 데이터 선택
+</div>
+
+`Values 형식`은 쿼리 결과의 포맷을 지정하는 데에도 사용할 수 있습니다. 숫자는
+따옴표 없이 작성하고, 배열은 `[]`로, 문자열과 날짜는 작은따옴표로 작성합니다.
+문자열 안의 작은따옴표와 백슬래시는 백슬래시로 이스케이프하며,
+[`NULL`](/ko/reference/syntax)은 `NULL`로 작성합니다:
+
+```sql title="Query"
+SELECT 1 AS a, 'O''Reilly' AS b, NULL::Nullable(String) AS c FORMAT Values;
+```
+
+```response title="Response"
+(1,'O\'Reilly',NULL)
+```
+
 <div id="format-settings">
   ## 포맷 설정
 </div>
