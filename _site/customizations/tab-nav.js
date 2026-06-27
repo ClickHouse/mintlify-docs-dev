@@ -239,8 +239,13 @@
 
     // Failsafe: never leave the navbar hidden. If an injection never completes
     // (so markNavbarReady never latches the reveal), force-reveal after a
-    // generous delay so the first-load hide guard can't strand the navbar.
-    setTimeout(function () {
+    // generous delay — but only once the navbar actually exists, so a late
+    // mount still gets the initial opacity hide instead of flashing in.
+    setTimeout(function retryNavbarReveal() {
+      if (!document.getElementById('navbar-transition-maple')) {
+        setTimeout(retryNavbarReveal, 100);
+        return;
+      }
       document.documentElement.classList.add('ch-navbar-revealed');
     }, 2000);
   }
