@@ -218,8 +218,8 @@ export const kbIndex = {
       description:
         "В этой статье описывается, как устранить ошибку DB::Exception, связанную с пересечением частей в ClickHouse. Как правило, она возникает из-за состояния гонки или ручного вмешательства в данные ZooKeeper.",
       href: "/resources/support-center/knowledge-base/troubleshooting/part-intersects-previous-part",
-      category: "Устранение неполадок и ошибки",
-      tags: ["Ошибки и исключения", "Системные таблицы"]
+      category: "Troubleshooting & errors",
+      tags: ["Errors and Exceptions", "System Tables"]
     },
     {
       id: "setup-installation/difference-between-official-builds-and-3rd-party",
@@ -346,88 +346,88 @@ export const kbIndex = {
       title: "How do I contribute code to ClickHouse?",
       description: "ClickHouse — проект с открытым исходным кодом, разрабатываемый на GitHub. По традиции инструкции по участию в разработке публикуются в файле CONTRIBUTING в корне репозитория с исходным кодом.",
       href: "/resources/support-center/knowledge-base/general-faqs/how-do-i-contribute-code-to-clickhouse",
-      category: "Общие вопросы и FAQ",
+      category: "General & FAQs",
       tags: ["Community"]
     },
     {
       id: "data-import-export/parquet-to-csv-json",
       title: "Как конвертировать файлы из Parquet в CSV или JSON?",
-      description: "Узнайте, как с помощью инструмента `clickhouse-local` из состава ClickHouse конвертировать файлы Parquet в форматы CSV или JSON.",
+      description: "Узнайте, как использовать инструмент `clickhouse-local` ClickHouse для простого преобразования файлов Parquet в форматы CSV или JSON.",
       href: "/resources/support-center/knowledge-base/data-import-export/parquet-to-csv-json",
-      category: "Импорт и экспорт данных",
+      category: "Data import & export",
       tags: ["Data Sources", "Data Formats"]
     },
     {
       id: "data-import-export/mysql-to-parquet-csv-json",
-      title: "Как экспортировать данные из MySQL в Parquet, CSV или JSON с помощью ClickHouse",
-      description: "Узнайте, как с помощью инструмента `clickhouse-local` быстро и эффективно экспортировать данные из MySQL в форматы Parquet, CSV или JSON.",
+      title: "Как экспортировать данные MySQL в Parquet, CSV или JSON с помощью ClickHouse",
+      description: "Узнайте, как использовать инструмент `clickhouse-local` для быстрого и эффективного экспорта данных MySQL в форматы Parquet, CSV или JSON.",
       href: "/resources/support-center/knowledge-base/data-import-export/mysql-to-parquet-csv-json",
-      category: "Импорт и экспорт данных",
+      category: "Data import & export",
       tags: ["Data Formats", "Data Export"]
     },
     {
       id: "data-import-export/postgresql-to-parquet-csv-json",
-      title: "Как экспортировать данные из PostgreSQL в Parquet, CSV или JSON?",
-      description: "Узнайте, как экспортировать данные из PostgreSQL в форматы Parquet, CSV или JSON с помощью `clickhouse-local` — с разбором различных примеров.",
+      title: "Как экспортировать данные PostgreSQL в Parquet, CSV или JSON?",
+      description: "Узнайте, как экспортировать данные PostgreSQL в форматы Parquet, CSV или JSON с помощью `clickhouse-local` на различных примерах.",
       href: "/resources/support-center/knowledge-base/data-import-export/postgresql-to-parquet-csv-json",
-      category: "Импорт и экспорт данных",
+      category: "Data import & export",
       tags: ["Data Export", "Data Formats"]
     },
     {
       id: "setup-installation/install-clickhouse-windows10",
       title: "Как установить ClickHouse на Windows 10?",
-      description: "Узнайте, как установить и протестировать ClickHouse на Windows 10 с помощью WSL 2. Охватывает настройку, устранение неполадок и запуск тестовой среды.",
+      description: "Узнайте, как установить и протестировать ClickHouse на Windows 10 с помощью WSL 2. Включает настройку, устранение неполадок и запуск тестовой среды.",
       href: "/resources/support-center/knowledge-base/setup-installation/install-clickhouse-windows10",
-      category: "Установка и настройка",
+      category: "Setup & installation",
       tags: ["Tools and Utilities"]
     },
     {
       id: "security/remove-default-user",
       title: "Как удалить пользователя по умолчанию?",
-      description: "Узнайте, как удалить пользователя по умолчанию при работающем ClickHouse Server.",
+      description: "Узнайте, как удалить пользователя по умолчанию при запуске ClickHouse Server.",
       href: "/resources/support-center/knowledge-base/security/remove-default-user",
-      category: "Безопасность и управление доступом",
+      category: "Security & access control",
       tags: ["Server Admin"]
     },
     {
       id: "cloud-services/ingest-failures-23-9-release",
-      title: "Как устранить сбои приёма данных после выхода ClickHouse 23.9?",
+      title: "Как устранить сбои приёма данных после выпуска ClickHouse 23.9?",
       description: "Узнайте, как устранить сбои приёма данных, вызванные более строгой проверкой прав, введённой в ClickHouse 23.9 для таблиц с `async_inserts`. Обновите права для исправления ошибок.",
       href: "/resources/support-center/knowledge-base/cloud-services/ingest-failures-23-9-release",
       category: "Cloud",
-      tags: ["Ошибки и исключения"]
+      tags: ["Errors and Exceptions"]
     },
     {
       id: "performance-optimization/insert-select-settings-tuning",
       title: "Как устранить ошибку TOO MANY PARTS при выполнении INSERT...SELECT?",
-      description: "Устраните ошибку TOO_MANY_PARTS в ClickHouse при выполнении `INSERT...SELECT`, настроив параметры для увеличения размера блоков и повышения пороговых значений партиций.",
+      description: "Устраните ошибку TOO_MANY_PARTS в ClickHouse при выполнении `INSERT...SELECT`, настроив параметры для увеличения блоков и повышения пороговых значений партиций.",
       href: "/resources/support-center/knowledge-base/performance-optimization/insert-select-settings-tuning",
-      category: "Производительность и оптимизация",
-      tags: ["Settings", "Ошибки и исключения"]
+      category: "Performance & optimization",
+      tags: ["Settings", "Errors and Exceptions"]
     },
     {
       id: "integrations/node-js-example",
       title: "Как использовать NodeJS с @clickhouse/client",
       description: "Узнайте, как использовать @clickhouse/client в приложении Node.js для взаимодействия с ClickHouse и выполнения запросов.",
       href: "/resources/support-center/knowledge-base/integrations/node-js-example",
-      category: "Интеграции и клиентские библиотеки",
+      category: "Integrations & client libraries",
       tags: ["Language Clients"]
     },
     {
       id: "monitoring-debugging/view-number-of-active-mutations",
       title: "Как просмотреть количество активных или поставленных в очередь мутаций?",
       description:
-        "Отслеживайте количество активных или поставленных в очередь мутаций в ClickHouse, особенно при выполнении операций `ALTER` или `UPDATE`. Используйте таблицу `system.mutations` для мониторинга мутаций.",
+        "Отслеживайте количество активных или поставленных в очередь мутаций в ClickHouse, особенно при выполнении операций `ALTER` или `UPDATE`. Используйте таблицу `system.mutations` для отслеживания мутаций.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/view-number-of-active-mutations",
-      category: "Мониторинг и отладка",
+      category: "Monitoring & debugging",
       tags: ["System Tables"]
     },
     {
       id: "data-management/read-consistency",
       title: "Как обеспечить согласованность чтения данных в ClickHouse?",
-      description: "Узнайте, как обеспечить согласованность данных при чтении из ClickHouse — независимо от того, подключены ли вы к фиксированному узлу или к случайному.",
+      description: "Узнайте, как обеспечить согласованность данных при чтении из ClickHouse, независимо от того, подключены ли вы к одному и тому же узлу или к случайному.",
       href: "/resources/support-center/knowledge-base/data-management/read-consistency",
-      category: "Управление данными",
+      category: "Data management",
       tags: ["Performance and Optimizations"]
     },
     {
@@ -435,38 +435,38 @@ export const kbIndex = {
       title: "Как собрать LLVM и clang на Linux",
       description: "Команды для сборки LLVM и clang на Linux.",
       href: "/resources/support-center/knowledge-base/setup-installation/llvm-clang-up-to-date",
-      category: "Установка и настройка",
+      category: "Setup & installation",
       tags: ["Community", "Tools and Utilities"]
     },
     {
       id: "data-management/calculate-ratio-of-zero-sparse-serialization",
       title: "Как вычислить долю пустых/нулевых значений в каждом столбце таблицы",
-      description: "Узнайте, как вычислить долю пустых или нулевых значений в каждом столбце таблицы ClickHouse для оптимизации разреженной сериализации столбцов.",
+      description: "Узнайте, как вычислить долю пустых или нулевых значений в каждом столбце таблицы ClickHouse для оптимизации сериализации разреженных столбцов.",
       href: "/resources/support-center/knowledge-base/data-management/calculate-ratio-of-zero-sparse-serialization",
-      category: "Управление данными",
+      category: "Data management",
       tags: ["Performance and Optimizations"]
     },
     {
       id: "security/check-users-roles",
-      title: "Как проверить, какие пользователи назначены на роли, и наоборот",
-      description: "Узнайте, как обращаться к `system.role_grants` в ClickHouse для поиска пользователей, назначенных на роли, и ролей, назначенных конкретным пользователям.",
+      title: "Как проверить пользователей, назначенных на роли, и наоборот",
+      description: "Узнайте, как запрашивать `system.role_grants` в ClickHouse для поиска пользователей, назначенных на роли, и ролей, назначенных конкретным пользователям.",
       href: "/resources/support-center/knowledge-base/security/check-users-roles",
-      category: "Безопасность и управление доступом",
+      category: "Security & access control",
       tags: ["Server Admin", "System Tables", "Managing Cloud"]
     },
     {
       id: "monitoring-debugging/which-processes-are-currently-running",
-      title: "Как проверить, какой код выполняется на сервере в данный момент?",
+      title: "Как проверить, какой код в данный момент выполняется на сервере?",
       description:
-        "ClickHouse предоставляет инструменты интроспекции, такие как `system.stack_trace`, для проверки кода, выполняемого в каждом потоке сервера в данный момент, что помогает при отладке и мониторинге производительности.",
+        "ClickHouse предоставляет инструменты интроспекции, такие как `system.stack_trace`, для проверки того, какой код в данный момент выполняется в каждом потоке сервера, что помогает при отладке и мониторинге производительности.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/which-processes-are-currently-running",
-      category: "Мониторинг и отладка",
+      category: "Monitoring & debugging",
       tags: ["Server Admin"]
     },
     {
       id: "cloud-services/how-to-check-my-clickhouse-cloud-sevice-state",
       title: "Как проверить состояние сервиса ClickHouse Cloud",
-      description: "Узнайте, как использовать API ClickHouse Cloud для проверки состояния сервиса — остановлен, простаивает или работает — без его пробуждения.",
+      description: "Узнайте, как использовать API ClickHouse Cloud для проверки состояния сервиса: остановлен, простаивает или работает — без его пробуждения.",
       href: "/resources/support-center/knowledge-base/cloud-services/how-to-check-my-clickhouse-cloud-sevice-state",
       category: "Cloud",
       tags: ["Managing Cloud"]
@@ -476,15 +476,15 @@ export const kbIndex = {
       title: "Как настроить параметры для пользователя в ClickHouse",
       description: "Узнайте, как задавать параметры в ClickHouse для отдельных запросов, клиентских сессий или конкретных пользователей с помощью команд `SET` и `ALTER USER`.",
       href: "/resources/support-center/knowledge-base/configuration-settings/configure-a-user-setting",
-      category: "Конфигурация и настройки",
+      category: "Configuration & settings",
       tags: ["Settings"]
     },
     {
       id: "materialized-views/projection-example",
-      title: "Как проверить, используется ли проекция в запросе?",
-      description: "Узнайте, как проверить, используется ли проекция в запросах ClickHouse, тестируя на примере данных и применяя EXPLAIN для подтверждения использования проекции.",
+      title: "Как убедиться, что проекция используется запросом?",
+      description: "Узнайте, как проверить, используется ли проекция в запросах ClickHouse, тестируя на примерных данных и используя EXPLAIN для подтверждения использования проекции.",
       href: "/resources/support-center/knowledge-base/materialized-views/projection-example",
-      category: "Materialized views и проекции",
+      category: "Materialized views & projections",
       tags: ["Data Modelling"]
     },
     {
@@ -500,7 +500,7 @@ export const kbIndex = {
       title: "Как создать словарь ClickHouse со строковыми ключами и значениями",
       description: "Узнайте, как создать словарь ClickHouse, используя строковые ключи и значения из таблицы MergeTree в качестве источника, с примерами настройки и использования.",
       href: "/resources/support-center/knowledge-base/data-management/dictionary-using-strings",
-      category: "Управление данными",
+      category: "Data management",
       tags: ["Data Modelling"]
     },
     {
@@ -508,7 +508,7 @@ export const kbIndex = {
       title: "Как создать таблицу для выполнения запросов к нескольким удалённым кластерам",
       description: "Как создать таблицу для выполнения запросов к нескольким удалённым кластерам",
       href: "/resources/support-center/knowledge-base/tables-schema/how-to-create-table-to-query-multiple-remote-clusters",
-      category: "Таблицы и схема",
+      category: "Tables & schema",
       tags: ["Deployments and Scaling"]
     },
     {
@@ -516,7 +516,7 @@ export const kbIndex = {
       title: "Как включить SSL с помощью Let's Encrypt на одном сервере ClickHouse",
       description: "Узнайте, как настроить SSL для одного сервера ClickHouse с использованием Let's Encrypt, включая выпуск сертификата, настройку и проверку.",
       href: "/resources/support-center/knowledge-base/setup-installation/enabling-ssl-with-lets-encrypt",
-      category: "Установка и настройка",
+      category: "Setup & installation",
       tags: ["Security and Authentication"]
     },
     {
@@ -524,7 +524,7 @@ export const kbIndex = {
       title: "Как экспортировать данные из ClickHouse в файл",
       description: "Ознакомьтесь с различными способами экспорта данных из ClickHouse, включая `INTO OUTFILE`, табличный движок File и перенаправление в командной строке.",
       href: "/resources/support-center/knowledge-base/data-import-export/file-export",
-      category: "Импорт и экспорт данных",
+      category: "Data import & export",
       tags: ["Data Export"]
     },
     {
@@ -532,7 +532,7 @@ export const kbIndex = {
       title: "Как фильтровать таблицу ClickHouse по столбцу типа Array?",
       description: "Статья базы знаний о том, как фильтровать таблицу ClickHouse по столбцу типа Array.",
       href: "/resources/support-center/knowledge-base/queries-sql/how-to-filter-a-clickhouse-table-by-an-array-column",
-      category: "Запросы и SQL",
+      category: "Queries & SQL",
       tags: ["Data Modelling", "Functions"]
     },
     {
@@ -540,7 +540,7 @@ export const kbIndex = {
       title: "Как сгенерировать HAR-файл для службы поддержки",
       description: "HAR-файл (HTTP Archive) фиксирует сетевую активность в браузере. Он помогает нашей службе поддержки диагностировать медленную загрузку страниц, неудавшиеся запросы и другие сетевые проблемы.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/generate-har-file",
-      category: "Мониторинг и отладка",
+      category: "Monitoring & debugging",
       tags: ["Tools and Utilities"]
     },
     {
@@ -548,7 +548,7 @@ export const kbIndex = {
       title: "Как определить запросы, использующие materialized view в ClickHouse",
       description: "Узнайте, как обращаться к журналам ClickHouse для выявления всех запросов, связанных с materialized view, в заданном временном диапазоне.",
       href: "/resources/support-center/knowledge-base/materialized-views/how-to-display-queries-using-mv",
-      category: "Materialized view и проекции",
+      category: "Materialized views & projections",
       tags: ["System Tables"]
     },
     {
@@ -556,7 +556,7 @@ export const kbIndex = {
       title: "Как определить наиболее ресурсоёмкие запросы в ClickHouse",
       description: "Узнайте, как использовать таблицу `query_log` в ClickHouse для выявления наиболее ресурсоёмких по памяти и CPU запросов на распределённых узлах.",
       href: "/resources/support-center/knowledge-base/performance-optimization/find-expensive-queries",
-      category: "Производительность и оптимизация",
+      category: "Performance & optimization",
       tags: ["Performance and Optimizations"]
     },
     {
@@ -564,7 +564,7 @@ export const kbIndex = {
       title: "Как игнорировать некорректные настройки в ClickHouse",
       description: "Узнайте, как использовать параметр `skip_check_for_incorrect_settings`, чтобы ClickHouse запускался даже при некорректно заданных пользовательских настройках.",
       href: "/resources/support-center/knowledge-base/configuration-settings/ignoring-incorrect-settings",
-      category: "Конфигурация и настройки",
+      category: "Configuration & settings",
       tags: ["Settings"]
     },
     {
@@ -572,7 +572,7 @@ export const kbIndex = {
       title: "Как импортировать JSON в ClickHouse?",
       description: "На этой странице показано, как импортировать JSON в ClickHouse",
       href: "/resources/support-center/knowledge-base/data-import-export/json-import",
-      category: "Импорт и экспорт данных",
+      category: "Data import & export",
       tags: []
     },
     {
@@ -580,7 +580,7 @@ export const kbIndex = {
       title: "Как увеличить количество потоков в ClickHouse",
       description: "Узнайте, как настроить глобальный пул потоков в ClickHouse, изменяя параметры `max_thread_pool_size`, `thread_pool_queue_size` и `max_thread_pool_free_size`.",
       href: "/resources/support-center/knowledge-base/setup-installation/how-to-increase-thread-pool-size",
-      category: "Установка и настройка",
+      category: "Setup & installation",
       tags: ["Performance and Optimizations"]
     },
     {
@@ -588,7 +588,7 @@ export const kbIndex = {
       title: "Как настроить приём данных из Kafka в ClickHouse",
       description: "Узнайте, как настроить приём данных из топика Kafka в ClickHouse с помощью табличного движка Kafka, materialized view и таблиц MergeTree.",
       href: "/resources/support-center/knowledge-base/data-import-export/kafka-to-clickhouse-setup",
-      category: "Импорт и экспорт данных",
+      category: "Data import & export",
       tags: ["Data Ingestion"]
     },
     {
@@ -596,7 +596,7 @@ export const kbIndex = {
       title: "Как загружать файлы Parquet из бакета S3",
       description: "Ознакомьтесь с основами использования табличного движка S3 в ClickHouse для загрузки и запроса файлов Parquet из бакета S3, включая настройку, права доступа и примеры импорта данных.",
       href: "/resources/support-center/knowledge-base/data-import-export/ingest-parquet-files-in-s3",
-      category: "Импорт и экспорт данных",
+      category: "Data import & export",
       tags: ["Data Ingestion"]
     },
     {
@@ -604,7 +604,7 @@ export const kbIndex = {
       title: "Как вставить все строки из одной таблицы в другую?",
       description: "Статья базы знаний о том, как вставить все строки из одной таблицы в другую.",
       href: "/resources/support-center/knowledge-base/queries-sql/how-to-insert-all-rows-from-another-table",
-      category: "Запросы и SQL",
+      category: "Queries & SQL",
       tags: ["Data Ingestion"]
     },
     {
@@ -612,7 +612,7 @@ export const kbIndex = {
       title: "Как измерить время обработки запроса без возврата строк",
       description: "Узнайте, как использовать параметр `FORMAT Null` в ClickHouse для измерения времени обработки запроса без возврата каких-либо строк клиенту.",
       href: "/resources/support-center/knowledge-base/performance-optimization/check-query-processing-time-only",
-      category: "Производительность и оптимизация",
+      category: "Performance & optimization",
       tags: ["Performance and Optimizations"]
     },
     {
@@ -620,7 +620,7 @@ export const kbIndex = {
       title: "Как выводить трассировки уровня журнала в файл с помощью clickhouse-client",
       description: "Как выводить трассировки уровня журнала в файл с помощью clickhouse-client",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/outputSendLogsLevelTracesToFile",
-      category: "Мониторинг и отладка",
+      category: "Monitoring & debugging",
       tags: ["Data Export"]
     },
     {
@@ -628,7 +628,7 @@ export const kbIndex = {
       title: "Как быстро воссоздать небольшую таблицу в разных терминалах",
       description: "Узнайте, как быстро воссоздать небольшую таблицу и её данные в разных терминалах с помощью копирования и вставки для сред разработки.",
       href: "/resources/support-center/knowledge-base/tables-schema/recreate-table-across-terminals",
-      category: "Таблицы и схема",
+      category: "Tables & schema",
       tags: ["Tools and Utilities"]
     },
     {
@@ -636,167 +636,167 @@ export const kbIndex = {
       title: "Как настроить ClickHouse на Docker с ODBC для подключения к базе данных Microsoft SQL Server (MSSQL)",
       description: "Как настроить ClickHouse на Docker с ODBC для подключения к базе данных Microsoft SQL Server (MSSQL)",
       href: "/resources/support-center/knowledge-base/integrations/how-to-set-up-ch-on-docker-odbc-connect-mssql",
-      category: "Интеграции и клиентские библиотеки",
+      category: "Integrations & client libraries",
       tags: ["Native Clients and Interfaces"]
     },
     {
       id: "queries-sql/using-array-join-to-extract-and-query-attributes",
       title: "Как использовать array join для извлечения и запроса переменных атрибутов с помощью ключей и значений map",
-      description: "Простой пример использования array join для извлечения и запроса переменных атрибутов с помощью ключей и значений map",
+      description: "Simple example to illustrate how to use array join to extract and query varying attributes using map keys and values",
       href: "/resources/support-center/knowledge-base/queries-sql/using-array-join-to-extract-and-query-attributes",
       category: "Queries & SQL",
       tags: ["Functions"]
     },
     {
       id: "materialized-views/how-to-use-parametrised-views",
-      title: "Использование параметризованных представлений в ClickHouse",
-      description: "Узнайте, как создавать параметризованные представления в ClickHouse и выполнять к ним запросы для динамической фильтрации данных на основе параметров времени выполнения.",
+      title: "How to Use Parameterized Views in ClickHouse",
+      description: "Learn how to create and query parameterized views in ClickHouse for dynamic data slicing based on query-time parameters.",
       href: "/resources/support-center/knowledge-base/materialized-views/how-to-use-parametrised-views",
-      category: "Materialized view и проекции",
+      category: "Materialized views & projections",
       tags: ["Use Cases"]
     },
     {
       id: "tables-schema/exchangeStatementToSwitchTables",
-      title: "Использование команды exchange для переключения таблиц",
-      description: "Использование команды exchange для переключения таблиц",
+      title: "How to use the exchange command to switch tables",
+      description: "How to use the exchange command to switch tables",
       href: "/resources/support-center/knowledge-base/tables-schema/exchangeStatementToSwitchTables",
-      category: "Таблицы и схема",
+      category: "Tables & schema",
       tags: ["Managing Data"]
     },
     {
       id: "queries-sql/compare-resultsets",
-      title: "Проверка идентичности результирующих наборов двух запросов",
-      description: "Узнайте, как убедиться, что два запроса ClickHouse возвращают идентичные результирующие наборы, используя хеш-функции и методы сравнения.",
+      title: "How to Validate if Two Queries Return the Same Result-sets",
+      description: "Learn how to validate that two ClickHouse queries produce identical result-sets using hash functions and comparison techniques.",
       href: "/resources/support-center/knowledge-base/queries-sql/compare-resultsets",
       category: "Queries & SQL",
       tags: ["Functions"]
     },
     {
       id: "monitoring-debugging/check-query-cache-in-use",
-      title: "Проверка использования кэша запросов в ClickHouse",
-      description: "Узнайте, как проверить, используется ли кэш запросов в ClickHouse, с помощью трассировочных журналов `clickhouse-client` или SQL-команд.",
+      title: "How to Verify Query Cache Usage in ClickHouse",
+      description: "Learn how to check if query cache is being utilized in ClickHouse using `clickhouse-client` trace logs or SQL commands.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/check-query-cache-in-use",
-      category: "Мониторинг и отладка",
+      category: "Monitoring & debugging",
       tags: ["Performance and Optimizations"]
     },
     {
       id: "cloud-services/unable-to-access-cloud-service",
-      title: "Нет доступа к сервису ClickHouse Cloud",
-      description: "Устранение проблем с доступом к сервисам ClickHouse Cloud, включая настройку списка разрешённых IP-адресов",
+      title: "I am unable to access a ClickHouse Cloud service",
+      description: "Troubleshooting access issues with ClickHouse Cloud services, including IP Access List configuration",
       href: "/resources/support-center/knowledge-base/cloud-services/unable-to-access-cloud-service",
       category: "Cloud",
       tags: ["Errors and Exceptions", "Managing Cloud"]
     },
     {
       id: "performance-optimization/finding-expensive-queries-by-memory-usage",
-      title: "Выявление ресурсоёмких запросов по потреблению памяти в ClickHouse",
-      description: "Узнайте, как использовать таблицу `system.query_log` для поиска наиболее требовательных к памяти запросов в ClickHouse — с примерами для кластерных и автономных конфигураций.",
+      title: "Identifying Expensive Queries by Memory Usage in ClickHouse",
+      description: "Learn how to use the `system.query_log` table to find the most memory-intensive queries in ClickHouse, with examples for clustered and standalone setups.",
       href: "/resources/support-center/knowledge-base/performance-optimization/finding-expensive-queries-by-memory-usage",
-      category: "Производительность и оптимизация",
+      category: "Performance & optimization",
       tags: ["Performance and Optimizations"]
     },
     {
       id: "data-import-export/importing-and-working-with-json-array-objects",
-      title: "Импорт массивов объектов JSON в ClickHouse и работа с ними",
-      description: "Узнайте, как импортировать массивы объектов JSON в ClickHouse и выполнять сложные запросы с использованием JSON-функций и операций с массивами.",
+      title: "Importing and Querying JSON Array Objects in ClickHouse",
+      description: "Learn how to import JSON array objects into ClickHouse and perform advanced queries using JSON functions and array operations.",
       href: "/resources/support-center/knowledge-base/data-import-export/importing-and-working-with-json-array-objects",
-      category: "Импорт и экспорт данных",
+      category: "Data import & export",
       tags: ["Data Formats"]
     },
     {
       id: "data-import-export/importing-geojason-with-nested-object-array",
-      title: "Импорт GeoJSON с глубоко вложенным массивом объектов",
-      description: "«Импорт GeoJSON с глубоко вложенным массивом объектов»",
+      title: "Importing GeoJSON with a deeply nested object array",
+      description: "Узнайте, как импортировать файлы GeoJSON с глубоко вложенными массивами объектов в ClickHouse и выполнять запросы к вложенным данным объектов.",
       href: "/resources/support-center/knowledge-base/data-import-export/importing-geojason-with-nested-object-array",
       category: "Data import & export",
       tags: ["Data Formats"]
     },
     {
       id: "performance-optimization/improve-map-performance",
-      title: "Повышение производительности поиска по Map в ClickHouse",
-      description: "Узнайте, как оптимизировать поиск по столбцам типа Map в ClickHouse для ускорения запросов путём материализации отдельных ключей в самостоятельные столбцы.",
+      title: "Improving Map Lookup Performance in ClickHouse",
+      description: "Learn how to optimize Map column lookups in ClickHouse for better query performance by materializing specific keys as standalone columns.",
       href: "/resources/support-center/knowledge-base/performance-optimization/improve-map-performance",
       category: "Performance & optimization",
       tags: ["Performance and Optimizations"]
     },
     {
       id: "tables-schema/delete-old-data",
-      title: "Можно ли удалить старые записи из таблицы ClickHouse?",
-      description: "На этой странице даётся ответ на вопрос о возможности удаления старых записей из таблицы ClickHouse",
+      title: "Is it possible to delete old records from a ClickHouse table?",
+      description: "This page answers the question of whether it is possible to delete old records from a ClickHouse table",
       href: "/resources/support-center/knowledge-base/tables-schema/delete-old-data",
-      category: "Таблицы и схема",
+      category: "Tables & schema",
       tags: []
     },
     {
       id: "general-faqs/separate-storage",
-      title: "Можно ли развернуть ClickHouse с раздельным хранилищем и вычислениями?",
-      description: "На этой странице даётся ответ на вопрос о возможности развёртывания ClickHouse с раздельным хранилищем и вычислениями",
+      title: "Is it possible to deploy ClickHouse with separate storage and compute?",
+      description: "This page provides an answer as to whether it is possible to deploy ClickHouse with separate storage and compute",
       href: "/resources/support-center/knowledge-base/general-faqs/separate-storage",
-      category: "Общие вопросы и FAQ",
+      category: "General & FAQs",
       tags: []
     },
     {
       id: "data-import-export/json-extract-example",
-      title: "Пример извлечения данных из JSON",
-      description: "Краткий пример извлечения базовых типов из JSON",
+      title: "JSON Extract example",
+      description: "A short example on how to extract base types from JSON",
       href: "/resources/support-center/knowledge-base/data-import-export/json-extract-example",
       category: "Data import & export",
       tags: ["Data Formats"]
     },
     {
       id: "queries-sql/calculate-pi-using-sql",
-      title: "Вычисляем число пи с помощью SQL",
-      description: "День числа пи! Вычислим пи с помощью ClickHouse SQL",
+      title: "Let's calculate pi using SQL",
+      description: "It's Pi Day! Let's calculate pi using ClickHouse SQL",
       href: "/resources/support-center/knowledge-base/queries-sql/calculate-pi-using-sql",
       category: "Queries & SQL",
       tags: ["Use Cases"]
     },
     {
       id: "cloud-services/clickhouse-cloud-api-usage",
-      title: "Управление сервисом ClickHouse Cloud через API и cURL",
-      description: "Узнайте, как запускать, останавливать и возобновлять работу сервиса ClickHouse Cloud с помощью API-эндпоинтов и команд cURL.",
+      title: "Managing ClickHouse Cloud Service with API and cURL",
+      description: "Learn how to start, stop, and resume a ClickHouse Cloud service using API endpoints and cURL commands.",
       href: "/resources/support-center/knowledge-base/cloud-services/clickhouse-cloud-api-usage",
       category: "Cloud",
       tags: ["Managing Cloud", "Tools and Utilities"]
     },
     {
       id: "monitoring-debugging/mapping-of-system-metrics-to-prometheus-metrics",
-      title: "Сопоставление метрик из system.dashboards с метриками Prometheus в `system.custom_metrics`",
-      description: "Сопоставление метрик из system.dashboards с метриками Prometheus в system.custom_metrics",
+      title: "Mapping of metrics used in system.dashboards to Prometheus metrics in `system.custom_metrics`",
+      description: "Mapping of metrics used in system.dashboards to Prometheus metrics in system.custom_metrics",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/mapping-of-system-metrics-to-prometheus-metrics",
-      category: "Мониторинг и отладка",
+      category: "Monitoring & debugging",
       tags: ["System Tables"]
     },
     {
       id: "security/windows-active-directory-to-ch-roles",
-      title: "Сопоставление групп безопасности Windows Active Directory с ролями ClickHouse",
-      description: "Пример сопоставления групп безопасности Windows Active Directory с ролями ClickHouse",
+      title: "Mapping Windows Active Directory security groups to ClickHouse roles",
+      description: "Example of mapping Windows Active Directory security groups to ClickHouse roles",
       href: "/resources/support-center/knowledge-base/security/windows-active-directory-to-ch-roles",
-      category: "Безопасность и управление доступом",
+      category: "Security & access control",
       tags: ["Tools and Utilities"]
     },
     {
       id: "performance-optimization/memory-limit-exceeded-for-query",
-      title: "Превышен лимит памяти для запроса",
-      description: "Устранение ошибок превышения лимита памяти для запроса",
+      title: "Memory limit exceeded for query",
+      description: "Troubleshooting memory limit exceeded errors for a query",
       href: "/resources/support-center/knowledge-base/performance-optimization/memory-limit-exceeded-for-query",
-      category: "Производительность и оптимизация",
+      category: "Performance & optimization",
       tags: ["Errors and Exceptions"]
     },
     {
       id: "integrations/ODBC-authentication-failed-error-using-PowerBI-CH-connector",
-      title: "Ошибка аутентификации ODBC при использовании коннектора Power BI для ClickHouse",
-      description: "Ошибка аутентификации ODBC при использовании коннектора Power BI для ClickHouse",
+      title: "ODBC authentication failed error when using the Power BI ClickHouse connector",
+      description: "ODBC authentication failed error when using the Power BI ClickHouse connector",
       href: "/resources/support-center/knowledge-base/integrations/ODBC-authentication-failed-error-using-PowerBI-CH-connector",
-      category: "Интеграции и клиентские библиотеки",
+      category: "Integrations & client libraries",
       tags: ["Native Clients and Interfaces", "Errors and Exceptions"]
     },
     {
       id: "monitoring-debugging/profiling-clickhouse-with-llvm-xray",
-      title: "Профилирование ClickHouse с помощью XRay от LLVM",
-      description: "Узнайте, как профилировать ClickHouse с помощью инструментального профилировщика XRay от LLVM, визуализировать трассировки и анализировать производительность.",
+      title: "Profiling ClickHouse with LLVM's XRay",
+      description: "Learn how to profile ClickHouse using LLVM's XRay instrumentation profiler, visualize traces, and analyze performance.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/profiling-clickhouse-with-llvm-xray",
-      category: "Мониторинг и отладка",
+      category: "Monitoring & debugging",
       tags: ["Performance and Optimizations", "Tools and Utilities"]
     },
     {
@@ -965,7 +965,7 @@ export const kbIndex = {
       title: "Что такое OLAP?",
       description: "Объяснение того, что такое оперативная аналитическая обработка данных",
       href: "/resources/support-center/knowledge-base/general-faqs/olap",
-      category: "Общие вопросы и FAQ",
+      category: "General & FAQs",
       tags: []
     },
     {
@@ -973,7 +973,7 @@ export const kbIndex = {
       title: "В чём разница между OPTIMIZE FINAL и FINAL?",
       description: "Рассматриваются различия между OPTIMIZE FINAL и FINAL, а также случаи, когда их следует и не следует применять.",
       href: "/resources/support-center/knowledge-base/performance-optimization/optimize-final-vs-final",
-      category: "Производительность и оптимизация",
+      category: "Performance & optimization",
       tags: ["Core Data Concepts"]
     },
     {
@@ -981,7 +981,7 @@ export const kbIndex = {
       title: "Какой синтаксис SQL поддерживает ClickHouse?",
       description: "ClickHouse поддерживает 100% синтаксиса SQL",
       href: "/resources/support-center/knowledge-base/general-faqs/sql",
-      category: "Общие вопросы и FAQ",
+      category: "General & FAQs",
       tags: []
     },
     {
@@ -990,7 +990,7 @@ export const kbIndex = {
       description:
         "Правила TTL в ClickHouse применяются отложенно, и вы можете управлять временем их выполнения с помощью настройки `merge_with_ttl_timeout`. Узнайте, как принудительно применить TTL и управлять фоновыми потоками для его выполнения.",
       href: "/resources/support-center/knowledge-base/data-management/when-is-ttl-applied",
-      category: "Управление данными",
+      category: "Data management",
       tags: ["Core Data Concepts"]
     },
     {
@@ -998,7 +998,7 @@ export const kbIndex = {
       title: "Какую версию ClickHouse использовать в production?",
       description: "На этой странице представлены рекомендации по выбору версии ClickHouse для production-среды",
       href: "/resources/support-center/knowledge-base/setup-installation/production",
-      category: "Установка и настройка",
+      category: "Setup & installation",
       tags: []
     },
     {
@@ -1006,7 +1006,7 @@ export const kbIndex = {
       title: "Кто использует ClickHouse?",
       description: "Описание того, кто использует ClickHouse",
       href: "/resources/support-center/knowledge-base/general-faqs/who-is-using-clickhouse",
-      category: "Общие вопросы и FAQ",
+      category: "General & FAQs",
       tags: []
     },
     {
@@ -1014,7 +1014,7 @@ export const kbIndex = {
       title: "Почему данные в словаре в ClickHouse Cloud не отображаются?",
       description: "Существует проблема, при которой данные в словарях могут быть недоступны сразу после создания.",
       href: "/resources/support-center/knowledge-base/data-management/dictionaries-consistent-state",
-      category: "Управление данными",
+      category: "Data management",
       tags: ["Managing Cloud", "Data Modelling"]
     },
     {
@@ -1023,7 +1023,7 @@ export const kbIndex = {
       description:
         "ClickHouse Keeper превосходит ZooKeeper благодаря меньшему потреблению дискового пространства, более быстрому восстановлению и сниженному потреблению памяти, обеспечивая более высокую производительность для кластеров ClickHouse.",
       href: "/resources/support-center/knowledge-base/general-faqs/why-recommend-clickhouse-keeper-over-zookeeper",
-      category: "Общие вопросы и FAQ",
+      category: "General & FAQs",
       tags: ["Core Data Concepts"]
     },
     {
@@ -1031,7 +1031,7 @@ export const kbIndex = {
       title: "Почему журналирование в ClickHouse по умолчанию такое подробное?",
       description: "Узнайте, почему разработчики ClickHouse выбрали подробный уровень журналирования по умолчанию.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/why-default-logging-verbose",
-      category: "Мониторинг и отладка",
+      category: "Monitoring & debugging",
       tags: ["Settings"]
     },
     {
@@ -1039,7 +1039,7 @@ export const kbIndex = {
       title: "Почему первичный ключ не используется? Как это проверить?",
       description: "Рассматривается распространённая причина, по которой первичный ключ не используется при сортировке, и способы её подтверждения",
       href: "/resources/support-center/knowledge-base/performance-optimization/why-is-my-primary-key-not-used",
-      category: "Производительность и оптимизация",
+      category: "Performance & optimization",
       tags: ["Performance and Optimizations"]
     },
     {
@@ -1047,7 +1047,7 @@ export const kbIndex = {
       title: "Почему не использовать что-то вроде MapReduce?",
       description: "На этой странице объясняется, почему стоит выбрать ClickHouse вместо MapReduce",
       href: "/resources/support-center/knowledge-base/general-faqs/mapreduce",
-      category: "Общие вопросы и FAQ",
+      category: "General & FAQs",
       tags: []
     }
   ]

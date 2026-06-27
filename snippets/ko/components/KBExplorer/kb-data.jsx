@@ -48,7 +48,7 @@ export const kbIndex = {
       description: "clickhouse-connect 드라이버를 사용하여 Python으로 ClickHouse Cloud Service에 연결하는 방법을 단계별 예시로 알아보세요.",
       href: "/resources/support-center/knowledge-base/integrations/python-clickhouse-connect-example",
       category: "통합 및 클라이언트 라이브러리",
-      tags: ["언어 클라이언트"]
+      tags: ["Language Clients"]
     },
     {
       id: "configuration-settings/about-quotas-and-query-complexity",
@@ -57,7 +57,7 @@ export const kbIndex = {
         "쿼터(Quota)와 쿼리 복잡도(Query Complexity)는 ClickHouse에서 사용자 작업을 제한하는 강력한 수단입니다. 이 KB 문서에서는 두 가지 접근 방식을 적용하는 예시를 소개합니다.",
       href: "/resources/support-center/knowledge-base/configuration-settings/about-quotas-and-query-complexity",
       category: "구성 및 설정",
-      tags: ["Cloud 관리"]
+      tags: ["Managing Cloud"]
     },
     {
       id: "data-import-export/achieving-atomic-inserts",
@@ -65,7 +65,7 @@ export const kbIndex = {
       description: "스테이징 테이블과 파티션 수준 작업을 활용하여 멀티 구문 트랜잭션 없이 ClickHouse Cloud에서 데이터를 원자적으로 로드하고 여러 테이블의 일관성을 유지하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/data-import-export/achieving-atomic-inserts",
       category: "데이터 가져오기 및 내보내기",
-      tags: ["데이터 수집", "모범 사례"]
+      tags: ["데이터 수집", "Best Practices"]
     },
     {
       id: "tables-schema/add-column",
@@ -73,7 +73,7 @@ export const kbIndex = {
       description: "이 가이드에서는 기존 테이블에 컬럼을 추가하는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/tables-schema/add-column",
       category: "테이블 및 스키마",
-      tags: ["데이터 모델링"]
+      tags: ["Data Modelling"]
     },
     {
       id: "configuration-settings/alter-user-settings-exception",
@@ -81,7 +81,7 @@ export const kbIndex = {
       description: "사용자 설정 변경 시 발생하는 예외를 처리하는 방법",
       href: "/resources/support-center/knowledge-base/configuration-settings/alter-user-settings-exception",
       category: "구성 및 설정",
-      tags: ["설정", "오류 및 예외"]
+      tags: ["설정", "Errors and Exceptions"]
     },
     {
       id: "materialized-views/are-materialized-views-inserted-asynchronously",
@@ -89,7 +89,7 @@ export const kbIndex = {
       description: "이 KB 문서에서는 Materialized View가 동기적으로 삽입되는지 여부를 살펴봅니다.",
       href: "/resources/support-center/knowledge-base/materialized-views/are-materialized-views-inserted-asynchronously",
       category: "Materialized view 및 프로젝션",
-      tags: ["데이터 모델링"]
+      tags: ["Data Modelling"]
     },
     {
       id: "tables-schema/schema-migration-tools",
@@ -97,7 +97,7 @@ export const kbIndex = {
       description: "ClickHouse용 자동 스키마 마이그레이션 도구와 시간이 지남에 따라 변화하는 데이터베이스 스키마를 관리하는 방법을 알아보세요.",
       href: "/resources/support-center/knowledge-base/tables-schema/schema-migration-tools",
       category: "테이블 및 스키마",
-      tags: ["도구 및 유틸리티"]
+      tags: ["Tools and Utilities"]
     },
     {
       id: "cloud-services/aws-privatelink-setup-for-msk-clickpipes",
@@ -105,7 +105,7 @@ export const kbIndex = {
       description: "MSK 멀티-VPC 연결을 통해 프라이빗 MSK를 ClickPipes에 노출하는 설정 단계입니다.",
       href: "/resources/support-center/knowledge-base/cloud-services/aws-privatelink-setup-for-msk-clickpipes",
       category: "Cloud",
-      tags: ["보안 및 인증", "Cloud 관리"]
+      tags: ["보안 및 인증", "Managing Cloud"]
     },
     {
       id: "cloud-services/aws-privatelink-setup-for-clickpipes",
@@ -113,7 +113,7 @@ export const kbIndex = {
       description: "AWS PrivateLink를 통해 프라이빗 RDS를 ClickPipes에 노출하는 설정 단계입니다.",
       href: "/resources/support-center/knowledge-base/cloud-services/aws-privatelink-setup-for-clickpipes",
       category: "Cloud",
-      tags: ["보안 및 인증", "Cloud 관리"]
+      tags: ["보안 및 인증", "Managing Cloud"]
     },
     {
       id: "data-management/backing-up-a-specific-partition",
@@ -121,7 +121,7 @@ export const kbIndex = {
       description: "ClickHouse에서 특정 파티션을 백업하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/data-management/backing-up-a-specific-partition",
       category: "데이터 관리",
-      tags: ["데이터 관리"]
+      tags: ["Managing Data"]
     },
     {
       id: "general-faqs/key-value",
@@ -146,7 +146,7 @@ export const kbIndex = {
         "ClickHouse에는 PIVOT 절이 없지만, 집계 함수 컴비네이터를 사용하여 유사한 기능을 구현할 수 있습니다. 영국 주택 가격 데이터셋을 활용하여 구현하는 방법을 알아보겠습니다.",
       href: "/resources/support-center/knowledge-base/queries-sql/pivot",
       category: "쿼리 및 SQL",
-      tags: ["데이터 모델링", "핵심 데이터 개념"]
+      tags: ["데이터 모델링", "Core Data Concepts"]
     },
     {
       id: "general-faqs/vector-search",
@@ -154,7 +154,7 @@ export const kbIndex = {
       description: "임베딩 저장 및 코사인 유사도와 같은 거리 함수를 활용한 검색 등 ClickHouse를 벡터 검색에 활용하는 방법을 알아보세요.",
       href: "/resources/support-center/knowledge-base/general-faqs/vector-search",
       category: "일반 및 FAQ",
-      tags: ["활용 사례", "개념"]
+      tags: ["활용 사례", "Concepts"]
     },
     {
       id: "monitoring-debugging/send-logs-level",
@@ -162,7 +162,7 @@ export const kbIndex = {
       description: "`send_logs_level` 클라이언트 설정을 사용하여 로그 설정이 다른 환경에서도 클라이언트 수준에서 서버 로그를 캡처하는 방법을 알아보세요.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/send-logs-level",
       category: "모니터링 및 디버깅",
-      tags: ["서버 관리"]
+      tags: ["Server Admin"]
     },
     {
       id: "configuration-settings/change-the-prompt-in-clickhouse-client",
@@ -170,7 +170,7 @@ export const kbIndex = {
       description: "이 문서에서는 ClickHouse 클라이언트 및 clickhouse-local 터미널 창의 프롬프트를 :)에서 접두사가 붙은 :)로 변경하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/configuration-settings/change-the-prompt-in-clickhouse-client",
       category: "구성 및 설정",
-      tags: ["설정", "네이티브 클라이언트 및 인터페이스"]
+      tags: ["설정", "Native Clients and Interfaces"]
     },
     {
       id: "security/common-rbac-queries",
@@ -178,7 +178,7 @@ export const kbIndex = {
       description: "사용자에게 특정 권한을 부여하는 데 활용할 수 있는 쿼리 모음입니다.",
       href: "/resources/support-center/knowledge-base/security/common-rbac-queries",
       category: "보안 및 접근 제어",
-      tags: ["보안 및 인증", "Cloud 관리"]
+      tags: ["보안 및 인증", "Managing Cloud"]
     },
     {
       id: "queries-sql/comparing-metrics-between-queries",
@@ -346,48 +346,48 @@ export const kbIndex = {
       title: "ClickHouse에 코드를 기여하려면 어떻게 해야 하나요?",
       description: "ClickHouse는 GitHub에서 개발 중인 오픈 소스 프로젝트입니다. 관례에 따라 기여 지침은 소스 코드 리포지토리의 루트에 있는 CONTRIBUTING 파일에 명시되어 있습니다.",
       href: "/resources/support-center/knowledge-base/general-faqs/how-do-i-contribute-code-to-clickhouse",
-      category: "일반 및 FAQ",
-      tags: ["커뮤니티"]
+      category: "General & FAQs",
+      tags: ["Community"]
     },
     {
       id: "data-import-export/parquet-to-csv-json",
       title: "Parquet 파일을 CSV 또는 JSON으로 변환하는 방법",
       description: "ClickHouse의 `clickhouse-local` 도구를 사용하여 Parquet 파일을 CSV 또는 JSON 포맷으로 쉽게 변환하는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/data-import-export/parquet-to-csv-json",
-      category: "데이터 가져오기 및 내보내기",
-      tags: ["데이터 소스", "데이터 포맷"]
+      category: "Data import & export",
+      tags: ["Data Sources", "Data Formats"]
     },
     {
       id: "data-import-export/mysql-to-parquet-csv-json",
       title: "ClickHouse를 사용하여 MySQL 데이터를 Parquet, CSV 또는 JSON으로 내보내는 방법",
       description: "`clickhouse-local` 도구를 사용하여 MySQL 데이터를 Parquet, CSV 또는 JSON과 같은 포맷으로 빠르고 효율적으로 내보내는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/data-import-export/mysql-to-parquet-csv-json",
-      category: "데이터 가져오기 및 내보내기",
-      tags: ["데이터 포맷", "데이터 내보내기"]
+      category: "Data import & export",
+      tags: ["Data Formats", "Data Export"]
     },
     {
       id: "data-import-export/postgresql-to-parquet-csv-json",
       title: "PostgreSQL 데이터를 Parquet, CSV 또는 JSON으로 내보내는 방법",
       description: "다양한 예시와 함께 `clickhouse-local`을 사용하여 PostgreSQL 데이터를 Parquet, CSV 또는 JSON 포맷으로 내보내는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/data-import-export/postgresql-to-parquet-csv-json",
-      category: "데이터 가져오기 및 내보내기",
-      tags: ["데이터 내보내기", "데이터 포맷"]
+      category: "Data import & export",
+      tags: ["Data Export", "Data Formats"]
     },
     {
       id: "setup-installation/install-clickhouse-windows10",
       title: "Windows 10에 ClickHouse를 설치하는 방법",
       description: "WSL 2를 사용하여 Windows 10에 ClickHouse를 설치하고 테스트하는 방법을 알아봅니다. 설정, 문제 해결 및 테스트 환경 실행이 포함됩니다.",
       href: "/resources/support-center/knowledge-base/setup-installation/install-clickhouse-windows10",
-      category: "설정 및 설치",
-      tags: ["도구 및 유틸리티"]
+      category: "Setup & installation",
+      tags: ["Tools and Utilities"]
     },
     {
       id: "security/remove-default-user",
       title: "기본 사용자를 제거하는 방법",
       description: "ClickHouse 서버를 실행할 때 기본 사용자를 제거하는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/security/remove-default-user",
-      category: "보안 및 접근 제어",
-      tags: ["서버 관리"]
+      category: "Security & access control",
+      tags: ["Server Admin"]
     },
     {
       id: "cloud-services/ingest-failures-23-9-release",
@@ -395,23 +395,23 @@ export const kbIndex = {
       description: "ClickHouse 23.9에서 `async_inserts`를 사용하는 테이블에 도입된 더 엄격한 권한 확인으로 인해 발생하는 수집 실패를 해결하는 방법을 알아봅니다. 오류를 수정하려면 권한을 업데이트하십시오.",
       href: "/resources/support-center/knowledge-base/cloud-services/ingest-failures-23-9-release",
       category: "Cloud",
-      tags: ["오류 및 예외"]
+      tags: ["Errors and Exceptions"]
     },
     {
       id: "performance-optimization/insert-select-settings-tuning",
       title: "INSERT...SELECT 중 TOO MANY PARTS 오류를 해결하는 방법",
       description: "더 큰 블록을 처리하도록 전문가 수준의 설정을 조정하고 파티션 임계값을 늘려 `INSERT...SELECT` 실행 중 발생하는 ClickHouse의 TOO_MANY_PARTS 오류를 해결하십시오.",
       href: "/resources/support-center/knowledge-base/performance-optimization/insert-select-settings-tuning",
-      category: "성능 및 최적화",
-      tags: ["설정", "오류 및 예외"]
+      category: "Performance & optimization",
+      tags: ["Settings", "Errors and Exceptions"]
     },
     {
       id: "integrations/node-js-example",
       title: "NodeJS에서 @clickhouse/client를 사용하는 방법",
       description: "Node.js 애플리케이션에서 @clickhouse/client를 사용하여 ClickHouse와 상호 작용하고 쿼리를 수행하는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/integrations/node-js-example",
-      category: "통합 및 클라이언트 라이브러리",
-      tags: ["언어 클라이언트"]
+      category: "Integrations & client libraries",
+      tags: ["Language Clients"]
     },
     {
       id: "monitoring-debugging/view-number-of-active-mutations",
@@ -419,40 +419,40 @@ export const kbIndex = {
       description:
         "특히 `ALTER` 또는 `UPDATE` 작업을 수행할 때 ClickHouse에서 활성 또는 대기 중인 뮤테이션 수를 모니터링하십시오. 뮤테이션을 추적하려면 `system.mutations` 테이블을 사용하십시오.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/view-number-of-active-mutations",
-      category: "모니터링 및 디버깅",
-      tags: ["시스템 테이블"]
+      category: "Monitoring & debugging",
+      tags: ["System Tables"]
     },
     {
       id: "data-management/read-consistency",
       title: "ClickHouse에서 데이터 읽기 일관성을 달성하는 방법",
       description: "ClickHouse에서 데이터를 읽을 때 동일한 노드에 연결되어 있든 임의의 노드에 연결되어 있든 데이터 일관성을 보장하는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/data-management/read-consistency",
-      category: "데이터 관리",
-      tags: ["성능 및 최적화"]
+      category: "Data management",
+      tags: ["Performance and Optimizations"]
     },
     {
       id: "setup-installation/llvm-clang-up-to-date",
       title: "Linux에서 LLVM 및 clang을 빌드하는 방법",
       description: "Linux에서 LLVM 및 clang을 빌드하는 명령어입니다.",
       href: "/resources/support-center/knowledge-base/setup-installation/llvm-clang-up-to-date",
-      category: "설정 및 설치",
-      tags: ["커뮤니티", "도구 및 유틸리티"]
+      category: "Setup & installation",
+      tags: ["Community", "Tools and Utilities"]
     },
     {
       id: "data-management/calculate-ratio-of-zero-sparse-serialization",
       title: "테이블의 모든 컬럼에서 빈 값 또는 0 값의 비율을 계산하는 방법",
       description: "희소 컬럼 직렬화를 최적화하기 위해 ClickHouse 테이블의 모든 컬럼에서 빈 값 또는 0 값의 비율을 계산하는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/data-management/calculate-ratio-of-zero-sparse-serialization",
-      category: "데이터 관리",
-      tags: ["성능 및 최적화"]
+      category: "Data management",
+      tags: ["Performance and Optimizations"]
     },
     {
       id: "security/check-users-roles",
       title: "역할에 할당된 사용자 및 반대의 경우를 확인하는 방법",
       description: "ClickHouse의 `system.role_grants`를 쿼리하여 역할에 할당된 사용자와 특정 사용자에게 할당된 역할을 찾는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/security/check-users-roles",
-      category: "보안 및 접근 제어",
-      tags: ["서버 관리", "시스템 테이블", "Cloud 관리"]
+      category: "Security & access control",
+      tags: ["Server Admin", "System Tables", "Managing Cloud"]
     },
     {
       id: "monitoring-debugging/which-processes-are-currently-running",
@@ -460,8 +460,8 @@ export const kbIndex = {
       description:
         "ClickHouse는 각 서버 스레드에서 현재 실행 중인 코드를 검사하기 위한 `system.stack_trace`와 같은 인트로스펙션(introspection) 도구를 제공하여 디버깅 및 성능 모니터링을 돕습니다.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/which-processes-are-currently-running",
-      category: "모니터링 및 디버깅",
-      tags: ["서버 관리"]
+      category: "Monitoring & debugging",
+      tags: ["Server Admin"]
     },
     {
       id: "cloud-services/how-to-check-my-clickhouse-cloud-sevice-state",
@@ -469,23 +469,23 @@ export const kbIndex = {
       description: "ClickHouse Cloud API를 사용하여 서비스를 활성화하지 않고 서비스가 중지되었는지, 유휴 상태인지 또는 실행 중인지 확인하는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/cloud-services/how-to-check-my-clickhouse-cloud-sevice-state",
       category: "Cloud",
-      tags: ["Cloud 관리"]
+      tags: ["Managing Cloud"]
     },
     {
       id: "configuration-settings/configure-a-user-setting",
       title: "ClickHouse에서 사용자 설정을 구성하는 방법",
       description: "`SET` 및 `ALTER USER` 명령을 사용하여 개별 쿼리, 클라이언트 세션 또는 특정 사용자에 대한 ClickHouse의 설정을 정의하는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/configuration-settings/configure-a-user-setting",
-      category: "구성 및 설정",
-      tags: ["설정"]
+      category: "Configuration & settings",
+      tags: ["Settings"]
     },
     {
       id: "materialized-views/projection-example",
       title: "쿼리에서 프로젝션이 사용되는지 확인하는 방법",
       description: "샘플 데이터로 테스트하고 EXPLAIN을 사용하여 ClickHouse 쿼리에서 프로젝션이 사용되는지 확인하는 방법을 알아봅니다.",
       href: "/resources/support-center/knowledge-base/materialized-views/projection-example",
-      category: "구체화된 뷰(Materialized View) 및 프로젝션",
-      tags: ["데이터 모델링"]
+      category: "Materialized views & projections",
+      tags: ["Data Modelling"]
     },
     {
       id: "cloud-services/how-to-connect-to-ch-cloud-using-ssh-keys",
@@ -493,7 +493,7 @@ export const kbIndex = {
       description: "SSH 키를 사용하여 ClickHouse 및 ClickHouse Cloud에 연결하는 방법",
       href: "/resources/support-center/knowledge-base/cloud-services/how-to-connect-to-ch-cloud-using-ssh-keys",
       category: "Cloud",
-      tags: ["Managing Cloud", "Security and Authentication"]
+      tags: ["Cloud 관리", "보안 및 인증"]
     },
     {
       id: "data-management/dictionary-using-strings",
@@ -501,7 +501,7 @@ export const kbIndex = {
       description: "MergeTree 테이블을 소스로 사용하여 문자열 키와 값으로 ClickHouse 딕셔너리를 생성하는 방법을 설명합니다. 설정 및 사용 예시를 포함합니다.",
       href: "/resources/support-center/knowledge-base/data-management/dictionary-using-strings",
       category: "데이터 관리",
-      tags: ["Data Modelling"]
+      tags: ["데이터 모델링"]
     },
     {
       id: "tables-schema/how-to-create-table-to-query-multiple-remote-clusters",
@@ -509,15 +509,15 @@ export const kbIndex = {
       description: "여러 원격 클러스터를 쿼리할 수 있는 테이블을 생성하는 방법",
       href: "/resources/support-center/knowledge-base/tables-schema/how-to-create-table-to-query-multiple-remote-clusters",
       category: "테이블 및 스키마",
-      tags: ["Deployments and Scaling"]
+      tags: ["배포 및 확장"]
     },
     {
       id: "setup-installation/enabling-ssl-with-lets-encrypt",
       title: "단일 ClickHouse 서버에서 Let's Encrypt로 SSL을 활성화하는 방법",
       description: "Let's Encrypt를 사용하여 단일 ClickHouse 서버에 SSL을 설정하는 방법을 설명합니다. 인증서 발급, 구성 및 검증 과정을 포함합니다.",
       href: "/resources/support-center/knowledge-base/setup-installation/enabling-ssl-with-lets-encrypt",
-      category: "설정 및 설치",
-      tags: ["Security and Authentication"]
+      category: "Setup 및 설치",
+      tags: ["보안 및 인증"]
     },
     {
       id: "data-import-export/file-export",
@@ -525,7 +525,7 @@ export const kbIndex = {
       description: "ClickHouse에서 데이터를 내보내는 다양한 방법을 설명합니다. `INTO OUTFILE`, File 테이블 엔진, 커맨드라인 리디렉션 등을 포함합니다.",
       href: "/resources/support-center/knowledge-base/data-import-export/file-export",
       category: "데이터 가져오기 및 내보내기",
-      tags: ["Data Export"]
+      tags: ["데이터 내보내기"]
     },
     {
       id: "queries-sql/how-to-filter-a-clickhouse-table-by-an-array-column",
@@ -533,7 +533,7 @@ export const kbIndex = {
       description: "배열 컬럼으로 ClickHouse 테이블을 필터링하는 방법에 대한 기술 자료 문서입니다.",
       href: "/resources/support-center/knowledge-base/queries-sql/how-to-filter-a-clickhouse-table-by-an-array-column",
       category: "쿼리 및 SQL",
-      tags: ["Data Modelling", "Functions"]
+      tags: ["데이터 모델링", "함수"]
     },
     {
       id: "monitoring-debugging/generate-har-file",
@@ -541,7 +541,7 @@ export const kbIndex = {
       description: "HAR(HTTP Archive) 파일은 브라우저의 네트워크 활동을 캡처합니다. 페이지 로딩 지연, 요청 실패 또는 기타 네트워크 문제를 진단하는 데 지원팀에 도움이 됩니다.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/generate-har-file",
       category: "모니터링 및 디버깅",
-      tags: ["Tools and Utilities"]
+      tags: ["도구 및 유틸리티"]
     },
     {
       id: "materialized-views/how-to-display-queries-using-mv",
@@ -549,7 +549,7 @@ export const kbIndex = {
       description: "ClickHouse 로그를 쿼리하여 지정된 시간 범위 내에서 Materialized View와 관련된 모든 쿼리를 식별하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/materialized-views/how-to-display-queries-using-mv",
       category: "Materialized view 및 프로젝션",
-      tags: ["System Tables"]
+      tags: ["시스템 테이블"]
     },
     {
       id: "performance-optimization/find-expensive-queries",
@@ -557,7 +557,7 @@ export const kbIndex = {
       description: "ClickHouse의 `query_log` 테이블을 사용하여 분산 노드 전반에서 메모리 및 CPU 사용량이 가장 높은 쿼리를 식별하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/performance-optimization/find-expensive-queries",
       category: "성능 및 최적화",
-      tags: ["Performance and Optimizations"]
+      tags: ["성능 및 최적화"]
     },
     {
       id: "configuration-settings/ignoring-incorrect-settings",
@@ -565,7 +565,7 @@ export const kbIndex = {
       description: "`skip_check_for_incorrect_settings` 옵션을 사용하여 사용자 수준 설정이 잘못 지정된 경우에도 ClickHouse가 정상적으로 시작되도록 하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/configuration-settings/ignoring-incorrect-settings",
       category: "구성 및 설정",
-      tags: ["Settings"]
+      tags: ["설정"]
     },
     {
       id: "data-import-export/json-import",
@@ -580,8 +580,8 @@ export const kbIndex = {
       title: "ClickHouse에서 스레드 수를 늘리는 방법",
       description: "`max_thread_pool_size`, `thread_pool_queue_size`, `max_thread_pool_free_size` 등의 설정을 조정하여 ClickHouse의 글로벌 스레드 풀을 구성하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/setup-installation/how-to-increase-thread-pool-size",
-      category: "설정 및 설치",
-      tags: ["Performance and Optimizations"]
+      category: "Setup 및 설치",
+      tags: ["성능 및 최적화"]
     },
     {
       id: "data-import-export/kafka-to-clickhouse-setup",
@@ -589,7 +589,7 @@ export const kbIndex = {
       description: "Kafka 테이블 엔진, materialized view, MergeTree 테이블을 사용하여 Kafka 토픽에서 ClickHouse로 데이터를 수집하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/data-import-export/kafka-to-clickhouse-setup",
       category: "데이터 가져오기 및 내보내기",
-      tags: ["Data Ingestion"]
+      tags: ["데이터 수집"]
     },
     {
       id: "data-import-export/ingest-parquet-files-in-s3",
@@ -597,7 +597,7 @@ export const kbIndex = {
       description: "ClickHouse의 S3 테이블 엔진을 사용하여 S3 버킷에서 Parquet 파일을 수집하고 쿼리하는 기본 방법을 설명합니다. 설정, 접근 권한, 데이터 가져오기 예시를 포함합니다.",
       href: "/resources/support-center/knowledge-base/data-import-export/ingest-parquet-files-in-s3",
       category: "데이터 가져오기 및 내보내기",
-      tags: ["Data Ingestion"]
+      tags: ["데이터 수집"]
     },
     {
       id: "queries-sql/how-to-insert-all-rows-from-another-table",
@@ -605,7 +605,7 @@ export const kbIndex = {
       description: "한 테이블의 모든 행을 다른 테이블에 삽입하는 방법에 대한 기술 자료 문서입니다.",
       href: "/resources/support-center/knowledge-base/queries-sql/how-to-insert-all-rows-from-another-table",
       category: "쿼리 및 SQL",
-      tags: ["Data Ingestion"]
+      tags: ["데이터 수집"]
     },
     {
       id: "performance-optimization/check-query-processing-time-only",
@@ -613,7 +613,7 @@ export const kbIndex = {
       description: "ClickHouse의 `FORMAT Null` 옵션을 사용하여 클라이언트에 행을 반환하지 않고 쿼리 처리 시간을 측정하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/performance-optimization/check-query-processing-time-only",
       category: "성능 및 최적화",
-      tags: ["Performance and Optimizations"]
+      tags: ["성능 및 최적화"]
     },
     {
       id: "monitoring-debugging/outputSendLogsLevelTracesToFile",
@@ -621,7 +621,7 @@ export const kbIndex = {
       description: "clickhouse-client를 사용하여 로그 수준 트레이스를 파일로 출력하는 방법",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/outputSendLogsLevelTracesToFile",
       category: "모니터링 및 디버깅",
-      tags: ["Data Export"]
+      tags: ["데이터 내보내기"]
     },
     {
       id: "tables-schema/recreate-table-across-terminals",
@@ -629,7 +629,7 @@ export const kbIndex = {
       description: "개발 환경에서 복사/붙여넣기를 사용하여 서로 다른 터미널에서 소규모 테이블과 데이터를 빠르게 재생성하는 방법을 설명합니다.",
       href: "/resources/support-center/knowledge-base/tables-schema/recreate-table-across-terminals",
       category: "테이블 및 스키마",
-      tags: ["Tools and Utilities"]
+      tags: ["도구 및 유틸리티"]
     },
     {
       id: "integrations/how-to-set-up-ch-on-docker-odbc-connect-mssql",
@@ -637,7 +637,7 @@ export const kbIndex = {
       description: "Docker에서 ODBC를 사용하여 Microsoft SQL Server(MSSQL) 데이터베이스에 연결하도록 ClickHouse를 설정하는 방법",
       href: "/resources/support-center/knowledge-base/integrations/how-to-set-up-ch-on-docker-odbc-connect-mssql",
       category: "통합 및 클라이언트 라이브러리",
-      tags: ["Native Clients and Interfaces"]
+      tags: ["네이티브 클라이언트 및 인터페이스"]
     },
     {
       id: "queries-sql/using-array-join-to-extract-and-query-attributes",
@@ -706,7 +706,7 @@ export const kbIndex = {
     {
       id: "data-import-export/importing-geojason-with-nested-object-array",
       title: "깊게 중첩된 객체 배열이 포함된 GeoJSON 가져오기",
-      description: "깊게 중첩된 객체 배열이 포함된 GeoJSON 가져오기",
+      description: "깊게 중첩된 객체 배열이 포함된 GeoJSON 파일을 ClickHouse에 가져오고 중첩된 피처 데이터를 쿼리하는 방법을 알아보세요.",
       href: "/resources/support-center/knowledge-base/data-import-export/importing-geojason-with-nested-object-array",
       category: "데이터 가져오기 & 내보내기",
       tags: ["Data Formats"]

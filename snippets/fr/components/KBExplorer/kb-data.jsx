@@ -47,7 +47,7 @@ export const kbIndex = {
       title: "Exemple fonctionnel de client Python pour se connecter à ClickHouse Cloud Service",
       description: "Apprenez à vous connecter à ClickHouse Cloud Service en Python grâce à un exemple pas à pas utilisant le pilote clickhouse-connect.",
       href: "/resources/support-center/knowledge-base/integrations/python-clickhouse-connect-example",
-      category: "Integrations & client libraries",
+      category: "Intégrations et bibliothèques clientes",
       tags: ["Language Clients"]
     },
     {
@@ -56,7 +56,7 @@ export const kbIndex = {
       description:
         "Les quotas et la complexité des requêtes sont des moyens efficaces de limiter et de restreindre ce que les utilisateurs peuvent faire dans ClickHouse. Cet article de la base de connaissances présente des exemples d'application de ces deux approches.",
       href: "/resources/support-center/knowledge-base/configuration-settings/about-quotas-and-query-complexity",
-      category: "Configuration & settings",
+      category: "Configuration et paramètres",
       tags: ["Managing Cloud"]
     },
     {
@@ -64,15 +64,15 @@ export const kbIndex = {
       title: "Insertions atomiques et cohérence multi-tables dans ClickHouse Cloud",
       description: "Comment charger des données de manière atomique et maintenir la cohérence entre plusieurs tables dans ClickHouse Cloud sans transactions multi-instructions, en utilisant des tables de transit et des opérations au niveau des partitions.",
       href: "/resources/support-center/knowledge-base/data-import-export/achieving-atomic-inserts",
-      category: "Data import & export",
-      tags: ["Data Ingestion", "Best Practices"]
+      category: "Import et export de données",
+      tags: ["Ingestion de données", "Best Practices"]
     },
     {
       id: "tables-schema/add-column",
       title: "Ajouter une colonne à une table",
       description: "Dans ce guide, nous allons apprendre à ajouter une colonne à une table existante.",
       href: "/resources/support-center/knowledge-base/tables-schema/add-column",
-      category: "Tables & schema",
+      category: "Tables et schéma",
       tags: ["Data Modelling"]
     },
     {
@@ -80,15 +80,15 @@ export const kbIndex = {
       title: "Exception lors de la modification des paramètres utilisateur",
       description: "Gestion de l'exception levée lors de la modification des paramètres utilisateur",
       href: "/resources/support-center/knowledge-base/configuration-settings/alter-user-settings-exception",
-      category: "Configuration & settings",
-      tags: ["Settings", "Errors and Exceptions"]
+      category: "Configuration et paramètres",
+      tags: ["Paramètres", "Errors and Exceptions"]
     },
     {
       id: "materialized-views/are-materialized-views-inserted-asynchronously",
       title: "Les vues matérialisées sont-elles alimentées de manière synchrone ?",
       description: "Cet article de la base de connaissances examine si les vues matérialisées sont alimentées de manière synchrone",
       href: "/resources/support-center/knowledge-base/materialized-views/are-materialized-views-inserted-asynchronously",
-      category: "Materialized views & projections",
+      category: "Vues matérialisées et projections",
       tags: ["Data Modelling"]
     },
     {
@@ -96,7 +96,7 @@ export const kbIndex = {
       title: "Outils de migration de schéma automatisée pour ClickHouse",
       description: "Découvrez les outils de migration de schéma automatisée pour ClickHouse et comment gérer l'évolution des schémas de base de données au fil du temps.",
       href: "/resources/support-center/knowledge-base/tables-schema/schema-migration-tools",
-      category: "Tables & schema",
+      category: "Tables et schéma",
       tags: ["Tools and Utilities"]
     },
     {
@@ -105,7 +105,7 @@ export const kbIndex = {
       description: "Étapes de configuration pour exposer un MSK privé via la connectivité multi-VPC MSK à ClickPipes.",
       href: "/resources/support-center/knowledge-base/cloud-services/aws-privatelink-setup-for-msk-clickpipes",
       category: "Cloud",
-      tags: ["Security and Authentication", "Managing Cloud"]
+      tags: ["Sécurité et authentification", "Managing Cloud"]
     },
     {
       id: "cloud-services/aws-privatelink-setup-for-clickpipes",
@@ -113,14 +113,14 @@ export const kbIndex = {
       description: "Étapes de configuration pour exposer un RDS privé via AWS PrivateLink à ClickPipes.",
       href: "/resources/support-center/knowledge-base/cloud-services/aws-privatelink-setup-for-clickpipes",
       category: "Cloud",
-      tags: ["Security and Authentication", "Managing Cloud"]
+      tags: ["Sécurité et authentification", "Managing Cloud"]
     },
     {
       id: "data-management/backing-up-a-specific-partition",
       title: "Sauvegarder une partition spécifique",
       description: "Comment sauvegarder une partition spécifique dans ClickHouse ?",
       href: "/resources/support-center/knowledge-base/data-management/backing-up-a-specific-partition",
-      category: "Data management",
+      category: "Gestion des données",
       tags: ["Managing Data"]
     },
     {
@@ -128,7 +128,7 @@ export const kbIndex = {
       title: "Puis-je utiliser ClickHouse comme stockage clé-valeur ?",
       description: "Répond à la question fréquemment posée de savoir si ClickHouse peut être utilisé comme stockage clé-valeur.",
       href: "/resources/support-center/knowledge-base/general-faqs/key-value",
-      category: "General & FAQs",
+      category: "Général et FAQ",
       tags: []
     },
     {
@@ -136,7 +136,7 @@ export const kbIndex = {
       title: "Puis-je utiliser ClickHouse comme base de données de séries temporelles ?",
       description: "Page décrivant comment utiliser ClickHouse comme base de données de séries temporelles",
       href: "/resources/support-center/knowledge-base/general-faqs/time-series",
-      category: "General & FAQs",
+      category: "Général et FAQ",
       tags: []
     },
     {
@@ -145,23 +145,23 @@ export const kbIndex = {
       description:
         "ClickHouse ne dispose pas d'une clause PIVOT, mais il est possible d'approcher cette fonctionnalité à l'aide de combinateurs de fonctions d'agrégation. Voyons comment procéder avec le jeu de données des prix de l'immobilier au Royaume-Uni.",
       href: "/resources/support-center/knowledge-base/queries-sql/pivot",
-      category: "Queries & SQL",
-      tags: ["Data Modelling", "Core Data Concepts"]
+      category: "Requêtes et SQL",
+      tags: ["Modélisation des données", "Core Data Concepts"]
     },
     {
       id: "general-faqs/vector-search",
       title: "Peut-on utiliser ClickHouse pour la recherche vectorielle ?",
       description: "Apprenez à utiliser ClickHouse pour la recherche vectorielle, notamment pour stocker des embeddings et effectuer des recherches avec des fonctions de distance telles que la similarité cosinus.",
       href: "/resources/support-center/knowledge-base/general-faqs/vector-search",
-      category: "General & FAQs",
-      tags: ["Use Cases", "Concepts"]
+      category: "Général et FAQ",
+      tags: ["Cas d'usage", "Concepts"]
     },
     {
       id: "monitoring-debugging/send-logs-level",
       title: "Capturer les journaux serveur des requêtes côté client",
       description: "Apprenez à capturer les journaux serveur au niveau du client, même avec des paramètres de journalisation différents, en utilisant le paramètre client `send_logs_level`.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/send-logs-level",
-      category: "Monitoring & debugging",
+      category: "Surveillance et débogage",
       tags: ["Server Admin"]
     },
     {
@@ -169,16 +169,16 @@ export const kbIndex = {
       title: "Modifier l'invite dans clickhouse-client",
       description: "Cet article explique comment modifier l'invite dans votre client ClickHouse et dans la fenêtre de terminal clickhouse-local, en remplaçant :) par un préfixe suivi de :)",
       href: "/resources/support-center/knowledge-base/configuration-settings/change-the-prompt-in-clickhouse-client",
-      category: "Configuration & settings",
-      tags: ["Settings", "Native Clients and Interfaces"]
+      category: "Configuration et paramètres",
+      tags: ["Paramètres", "Native Clients and Interfaces"]
     },
     {
       id: "security/common-rbac-queries",
       title: "Requêtes RBAC courantes",
       description: "Requêtes permettant d'accorder des permissions spécifiques aux utilisateurs.",
       href: "/resources/support-center/knowledge-base/security/common-rbac-queries",
-      category: "Security & access control",
-      tags: ["Security and Authentication", "Managing Cloud"]
+      category: "Sécurité et contrôle d'accès",
+      tags: ["Sécurité et authentification", "Managing Cloud"]
     },
     {
       id: "queries-sql/comparing-metrics-between-queries",
@@ -190,153 +190,153 @@ export const kbIndex = {
     },
     {
       id: "configuration-settings/configure-cap-ipc-lock-and-cap-sys-nice-in-docker",
-      title: "Configuring CAP_IPC_LOCK and CAP_SYS_NICE Capabilities in Docker",
-      description: "Learn how to resolve Docker capability warnings for `CAP_IPC_LOCK` and `CAP_SYS_NICE` when running ClickHouse in a container.",
+      title: "Configuration des capacités CAP_IPC_LOCK et CAP_SYS_NICE dans Docker",
+      description: "Apprenez à résoudre les avertissements de capacité Docker pour `CAP_IPC_LOCK` et `CAP_SYS_NICE` lors de l'exécution de ClickHouse dans un conteneur.",
       href: "/resources/support-center/knowledge-base/configuration-settings/configure-cap-ipc-lock-and-cap-sys-nice-in-docker",
-      category: "Configuration & settings",
+      category: "Configuration & paramètres",
       tags: ["Errors and Exceptions"]
     },
     {
       id: "troubleshooting/configure-cap-ipc-lock-and-cap-sys-nice-in-docker",
-      title: "Configuring CAP_IPC_LOCK and CAP_SYS_NICE Capabilities in Docker",
-      description: "Learn how to resolve Docker capability warnings for `CAP_IPC_LOCK` and `CAP_SYS_NICE` when running ClickHouse in a container.",
+      title: "Configuration des capacités CAP_IPC_LOCK et CAP_SYS_NICE dans Docker",
+      description: "Apprenez à résoudre les avertissements de capacité Docker pour `CAP_IPC_LOCK` et `CAP_SYS_NICE` lors de l'exécution de ClickHouse dans un conteneur.",
       href: "/resources/support-center/knowledge-base/troubleshooting/configure-cap-ipc-lock-and-cap-sys-nice-in-docker",
-      category: "Troubleshooting & errors",
+      category: "Dépannage & erreurs",
       tags: ["Errors and Exceptions"]
     },
     {
       id: "cloud-services/custom-dns-alias-for-instance",
-      title: "Create a custom DNS alias by setting up a reverse proxy",
-      description: "Learn how to set up a custom DNS alias for your instance using a reverse proxy",
+      title: "Créer un alias DNS personnalisé en configurant un proxy inverse",
+      description: "Apprenez à configurer un alias DNS personnalisé pour votre instance à l'aide d'un proxy inverse",
       href: "/resources/support-center/knowledge-base/cloud-services/custom-dns-alias-for-instance",
       category: "Cloud",
       tags: ["Server Admin", "Security and Authentication"]
     },
     {
       id: "troubleshooting/part-intersects-previous-part",
-      title: "DB::Exception: Part XXXXX intersects previous part YYYYY. It is a bug or a result of manual intervention in the ZooKeeper data.",
+      title: "DB::Exception : La partie XXXXX intersecte la partie précédente YYYYY. Il s'agit d'un bug ou du résultat d'une intervention manuelle dans les données ZooKeeper.",
       description:
-        "Cet article explique comment résoudre l'erreur DB::Exception liée à l'intersection de parts dans ClickHouse, souvent causée par une condition de concurrence ou une intervention manuelle dans les données ZooKeeper.",
+        "Cet article explique comment résoudre l'erreur DB::Exception liée aux parties qui se croisent dans ClickHouse, souvent causée par une condition de concurrence ou une intervention manuelle dans les données ZooKeeper.",
       href: "/resources/support-center/knowledge-base/troubleshooting/part-intersects-previous-part",
-      category: "Dépannage & erreurs",
+      category: "Troubleshooting & errors",
       tags: ["Errors and Exceptions", "System Tables"]
     },
     {
       id: "setup-installation/difference-between-official-builds-and-3rd-party",
-      title: "Differences Between Official and 3rd-Party ClickHouse Builds",
-      description: "Understand the key differences between official ClickHouse builds and 3rd-party builds, including updates, compatibility, and security considerations.",
+      title: "Différences entre les versions officielles et tierces de ClickHouse",
+      description: "Comprenez les principales différences entre les versions officielles de ClickHouse et les versions tierces, notamment en ce qui concerne les mises à jour, la compatibilité et les considérations de sécurité.",
       href: "/resources/support-center/knowledge-base/setup-installation/difference-between-official-builds-and-3rd-party",
       category: "Setup & installation",
       tags: ["Concepts"]
     },
     {
       id: "general-faqs/cost-based",
-      title: "Does ClickHouse have a cost-based optimizer",
-      description: "ClickHouse has certain cost-based optimization mechanics",
+      title: "ClickHouse dispose-t-il d'un optimiseur basé sur les coûts ?",
+      description: "ClickHouse dispose de certains mécanismes d'optimisation basés sur les coûts",
       href: "/resources/support-center/knowledge-base/general-faqs/cost-based",
       category: "General & FAQs",
       tags: []
     },
     {
       id: "general-faqs/datalake",
-      title: "Does ClickHouse support data lakes?",
-      description: "ClickHouse supports data lakes, including Iceberg, Delta Lake, Apache Hudi, Apache Paimon, Hive",
+      title: "ClickHouse prend-il en charge les lacs de données ?",
+      description: "ClickHouse prend en charge les lacs de données, notamment Iceberg, Delta Lake, Apache Hudi, Apache Paimon, Hive",
       href: "/resources/support-center/knowledge-base/general-faqs/datalake",
       category: "General & FAQs",
       tags: []
     },
     {
       id: "general-faqs/distributed-join",
-      title: "Does ClickHouse support distributed JOIN?",
-      description: "ClickHouse supports distributed JOIN",
+      title: "ClickHouse prend-il en charge les JOIN distribués ?",
+      description: "ClickHouse prend en charge les JOIN distribués",
       href: "/resources/support-center/knowledge-base/general-faqs/distributed-join",
       category: "General & FAQs",
       tags: []
     },
     {
       id: "general-faqs/federated",
-      title: "Does ClickHouse support federated queries?",
-      description: "ClickHouse supports a wide range for federated and hybrid queries",
+      title: "ClickHouse prend-il en charge les requêtes fédérées ?",
+      description: "ClickHouse prend en charge une large gamme de requêtes fédérées et hybrides",
       href: "/resources/support-center/knowledge-base/general-faqs/federated",
       category: "General & FAQs",
       tags: []
     },
     {
       id: "general-faqs/concurrency",
-      title: "Does ClickHouse support frequent, concurrent queries?",
-      description: "ClickHouse supports high QPS and high concurrency",
+      title: "ClickHouse prend-il en charge les requêtes fréquentes et simultanées ?",
+      description: "ClickHouse prend en charge un QPS élevé et une haute concurrence",
       href: "/resources/support-center/knowledge-base/general-faqs/concurrency",
       category: "General & FAQs",
       tags: []
     },
     {
       id: "cloud-services/multi-region-replication",
-      title: "Does ClickHouse support multi-region replication?",
-      description: "This page answers whether ClickHouse supports multi-region replication",
+      title: "ClickHouse prend-il en charge la réplication multi-région ?",
+      description: "Cette page répond à la question de savoir si ClickHouse prend en charge la réplication multi-région",
       href: "/resources/support-center/knowledge-base/cloud-services/multi-region-replication",
       category: "Cloud",
       tags: []
     },
     {
       id: "general-faqs/updates",
-      title: "Does ClickHouse support real-time updates?",
-      description: "ClickHouse supports lightweight real-time updates",
+      title: "ClickHouse prend-il en charge les mises à jour en temps réel ?",
+      description: "ClickHouse prend en charge les mises à jour légères en temps réel",
       href: "/resources/support-center/knowledge-base/general-faqs/updates",
       category: "General & FAQs",
       tags: []
     },
     {
       id: "security/row-column-policy",
-      title: "Does ClickHouse support row-level and column-level security?",
-      description: "Learn about row-level and column-level access restrictions in ClickHouse and ClickHouse Cloud, and how to implement role-based access control (RBAC) with policies.",
+      title: "ClickHouse prend-il en charge la sécurité au niveau des lignes et des colonnes ?",
+      description: "Découvrez les restrictions d'accès au niveau des lignes et des colonnes dans ClickHouse et ClickHouse Cloud, et comment mettre en œuvre le contrôle d'accès basé sur les rôles (RBAC) avec des politiques.",
       href: "/resources/support-center/knowledge-base/security/row-column-policy",
       category: "Security & access control",
       tags: ["Security and Authentication"]
     },
     {
       id: "cloud-services/execute-system-queries-in-cloud",
-      title: "Execute SYSTEM Statements on All Nodes in ClickHouse Cloud",
-      description: "Learn how to use `ON CLUSTER` and `clusterAllReplicas` to execute SYSTEM statements and queries across all nodes in a ClickHouse Cloud service.",
+      title: "Exécuter des instructions SYSTEM sur tous les nœuds dans ClickHouse Cloud",
+      description: "Apprenez à utiliser `ON CLUSTER` et `clusterAllReplicas` pour exécuter des instructions et des requêtes SYSTEM sur tous les nœuds d'un service ClickHouse Cloud.",
       href: "/resources/support-center/knowledge-base/cloud-services/execute-system-queries-in-cloud",
       category: "Cloud",
       tags: ["Deployments and Scaling"]
     },
     {
       id: "troubleshooting/count-parts-by-type",
-      title: "Find counts and sizes of wide or compact parts",
-      description: "This knowledgebase article shows you how to find part counts by the type of part - wide or compact.",
+      title: "Trouver les nombres et les tailles des parties larges ou compactes",
+      description: "Cet article de la base de connaissances vous montre comment trouver le nombre de parties par type de partie - large ou compacte.",
       href: "/resources/support-center/knowledge-base/troubleshooting/count-parts-by-type",
       category: "Troubleshooting & errors",
       tags: ["Troubleshooting"]
     },
     {
       id: "troubleshooting/fix-developer-verification-error-in-macos",
-      title: "Fix the Developer Verification Error in MacOS",
-      description: "Learn how to resolve the MacOS developer verification error when running ClickHouse commands, using either System Settings or the terminal.",
+      title: "Corriger l'erreur de vérification du développeur dans MacOS",
+      description: "Apprenez à résoudre l'erreur de vérification du développeur MacOS lors de l'exécution de commandes ClickHouse, en utilisant les Paramètres système ou le terminal.",
       href: "/resources/support-center/knowledge-base/troubleshooting/fix-developer-verification-error-in-macos",
       category: "Troubleshooting & errors",
       tags: ["Errors and Exceptions"]
     },
     {
       id: "data-import-export/s3-export-data-year-month-folders",
-      title: "How can I do partitioned writes by year and month on S3?",
-      description: "Learn how to write partitioned data by year and month to an S3 bucket in ClickHouse, using a custom path structure for organizing the data.",
+      title: "Comment effectuer des écritures partitionnées par année et par mois sur S3 ?",
+      description: "Apprenez à écrire des données partitionnées par année et par mois dans un bucket S3 dans ClickHouse, en utilisant une structure de chemin personnalisée pour organiser les données.",
       href: "/resources/support-center/knowledge-base/data-import-export/s3-export-data-year-month-folders",
       category: "Data import & export",
       tags: ["Data Export", "Native Clients and Interfaces"]
     },
     {
       id: "data-import-export/kafka-clickhouse-json",
-      title: "How can I use the new JSON Data Type with Kafka?",
-      description: "Learn how to load JSON messages from Apache Kafka directly into a single JSON column in ClickHouse using the Kafka table engine and JSON data type.",
+      title: "Comment utiliser le nouveau type de données JSON avec Kafka ?",
+      description: "Apprenez à charger des messages JSON depuis Apache Kafka directement dans une seule colonne JSON dans ClickHouse en utilisant le moteur de table Kafka et le type de données JSON.",
       href: "/resources/support-center/knowledge-base/data-import-export/kafka-clickhouse-json",
       category: "Data import & export",
       tags: ["Data Formats", "Data Ingestion"]
     },
     {
       id: "cloud-services/change-billing-email",
-      title: "How do I change my Billing Contact in ClickHouse Cloud?",
-      description: "Let's learn how to change your billing address in ClickHouse Cloud.",
+      title: "Comment modifier mon contact de facturation dans ClickHouse Cloud ?",
+      description: "Apprenons comment modifier votre adresse de facturation dans ClickHouse Cloud.",
       href: "/resources/support-center/knowledge-base/cloud-services/change-billing-email",
       category: "Cloud",
       tags: ["Managing Cloud"]
@@ -346,31 +346,31 @@ export const kbIndex = {
       title: "How do I contribute code to ClickHouse?",
       description: "ClickHouse est un projet open source développé sur GitHub. Comme il est d'usage, les instructions de contribution sont publiées dans le fichier CONTRIBUTING à la racine du dépôt de code source.",
       href: "/resources/support-center/knowledge-base/general-faqs/how-do-i-contribute-code-to-clickhouse",
-      category: "Général & FAQ",
+      category: "General & FAQs",
       tags: ["Community"]
     },
     {
       id: "data-import-export/parquet-to-csv-json",
       title: "Comment convertir des fichiers Parquet en CSV ou JSON ?",
-      description: "Apprenez à utiliser l'outil `clickhouse-local` de ClickHouse pour convertir facilement des fichiers Parquet aux formats CSV ou JSON.",
+      description: "Apprenez à utiliser l'outil `clickhouse-local` de ClickHouse pour convertir facilement des fichiers Parquet en formats CSV ou JSON.",
       href: "/resources/support-center/knowledge-base/data-import-export/parquet-to-csv-json",
-      category: "Import et export de données",
+      category: "Data import & export",
       tags: ["Data Sources", "Data Formats"]
     },
     {
       id: "data-import-export/mysql-to-parquet-csv-json",
       title: "Comment exporter des données MySQL vers Parquet, CSV ou JSON avec ClickHouse",
-      description: "Apprenez à utiliser l'outil `clickhouse-local` pour exporter des données MySQL vers des formats tels que Parquet, CSV ou JSON, rapidement et efficacement.",
+      description: "Apprenez à utiliser l'outil `clickhouse-local` pour exporter des données MySQL vers des formats tels que Parquet, CSV ou JSON rapidement et efficacement.",
       href: "/resources/support-center/knowledge-base/data-import-export/mysql-to-parquet-csv-json",
-      category: "Import et export de données",
+      category: "Data import & export",
       tags: ["Data Formats", "Data Export"]
     },
     {
       id: "data-import-export/postgresql-to-parquet-csv-json",
       title: "Comment exporter des données PostgreSQL vers Parquet, CSV ou JSON ?",
-      description: "Apprenez à exporter des données PostgreSQL vers les formats Parquet, CSV ou JSON à l'aide de `clickhouse-local`, avec divers exemples.",
+      description: "Apprenez à exporter des données PostgreSQL vers les formats Parquet, CSV ou JSON en utilisant `clickhouse-local` avec divers exemples.",
       href: "/resources/support-center/knowledge-base/data-import-export/postgresql-to-parquet-csv-json",
-      category: "Import et export de données",
+      category: "Data import & export",
       tags: ["Data Export", "Data Formats"]
     },
     {
@@ -378,7 +378,7 @@ export const kbIndex = {
       title: "Comment installer ClickHouse sur Windows 10 ?",
       description: "Apprenez à installer et tester ClickHouse sur Windows 10 avec WSL 2. Inclut la configuration, le dépannage et l'exécution d'un environnement de test.",
       href: "/resources/support-center/knowledge-base/setup-installation/install-clickhouse-windows10",
-      category: "Configuration et installation",
+      category: "Setup & installation",
       tags: ["Tools and Utilities"]
     },
     {
@@ -386,12 +386,12 @@ export const kbIndex = {
       title: "Comment supprimer l'utilisateur par défaut ?",
       description: "Apprenez à supprimer l'utilisateur par défaut lors de l'exécution du serveur ClickHouse.",
       href: "/resources/support-center/knowledge-base/security/remove-default-user",
-      category: "Sécurité et contrôle d'accès",
+      category: "Security & access control",
       tags: ["Server Admin"]
     },
     {
       id: "cloud-services/ingest-failures-23-9-release",
-      title: "Comment résoudre les échecs d'ingestion après la version ClickHouse 23.9 ?",
+      title: "Comment résoudre les échecs d'ingestion après la version 23.9 de ClickHouse ?",
       description: "Apprenez à résoudre les échecs d'ingestion causés par une vérification plus stricte des droits introduite dans ClickHouse 23.9 pour les tables utilisant `async_inserts`. Mettez à jour les droits pour corriger les erreurs.",
       href: "/resources/support-center/knowledge-base/cloud-services/ingest-failures-23-9-release",
       category: "Cloud",
@@ -402,32 +402,32 @@ export const kbIndex = {
       title: "Comment résoudre l'erreur TOO MANY PARTS lors d'un INSERT...SELECT ?",
       description: "Résolvez l'erreur TOO_MANY_PARTS dans ClickHouse lors d'un `INSERT...SELECT` en ajustant des paramètres avancés pour des blocs plus grands et en augmentant les seuils de partition.",
       href: "/resources/support-center/knowledge-base/performance-optimization/insert-select-settings-tuning",
-      category: "Performance et optimisation",
+      category: "Performance & optimization",
       tags: ["Settings", "Errors and Exceptions"]
     },
     {
       id: "integrations/node-js-example",
       title: "Comment utiliser NodeJS avec @clickhouse/client",
-      description: "Apprenez à utiliser @clickhouse/client dans une application Node.js pour interagir avec ClickHouse et exécuter des requêtes.",
+      description: "Apprenez à utiliser @clickhouse/client dans une application Node.js pour interagir avec ClickHouse et effectuer des requêtes.",
       href: "/resources/support-center/knowledge-base/integrations/node-js-example",
-      category: "Intégrations et bibliothèques clientes",
+      category: "Integrations & client libraries",
       tags: ["Language Clients"]
     },
     {
       id: "monitoring-debugging/view-number-of-active-mutations",
       title: "Comment afficher le nombre de mutations actives ou en file d'attente ?",
       description:
-        "Surveillez le nombre de mutations actives ou en file d'attente dans ClickHouse, notamment lors d'opérations `ALTER` ou `UPDATE`. Utilisez la table `system.mutations` pour le suivi des mutations.",
+        "Surveillez le nombre de mutations actives ou en file d'attente dans ClickHouse, notamment lors d'opérations `ALTER` ou `UPDATE`. Utilisez la table `system.mutations` pour suivre les mutations.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/view-number-of-active-mutations",
-      category: "Surveillance et débogage",
+      category: "Monitoring & debugging",
       tags: ["System Tables"]
     },
     {
       id: "data-management/read-consistency",
-      title: "Comment garantir la cohérence de lecture des données dans ClickHouse ?",
-      description: "Apprenez à assurer la cohérence des données lors de la lecture depuis ClickHouse, que vous soyez connecté au même nœud ou à un nœud quelconque.",
+      title: "Comment assurer la cohérence de lecture des données dans ClickHouse ?",
+      description: "Apprenez à garantir la cohérence des données lors de la lecture depuis ClickHouse, que vous soyez connecté au même nœud ou à un nœud aléatoire.",
       href: "/resources/support-center/knowledge-base/data-management/read-consistency",
-      category: "Gestion des données",
+      category: "Data management",
       tags: ["Performance and Optimizations"]
     },
     {
@@ -435,38 +435,38 @@ export const kbIndex = {
       title: "Comment compiler LLVM et clang sur Linux",
       description: "Commandes pour compiler LLVM et clang sur Linux.",
       href: "/resources/support-center/knowledge-base/setup-installation/llvm-clang-up-to-date",
-      category: "Configuration et installation",
+      category: "Setup & installation",
       tags: ["Community", "Tools and Utilities"]
     },
     {
       id: "data-management/calculate-ratio-of-zero-sparse-serialization",
       title: "Comment calculer le ratio de valeurs vides/nulles dans chaque colonne d'une table",
-      description: "Apprenez à calculer le ratio de valeurs vides ou nulles dans chaque colonne d'une table ClickHouse afin d'optimiser la sérialisation des colonnes creuses.",
+      description: "Apprenez à calculer le ratio de valeurs vides ou nulles dans chaque colonne d'une table ClickHouse pour optimiser la sérialisation des colonnes creuses.",
       href: "/resources/support-center/knowledge-base/data-management/calculate-ratio-of-zero-sparse-serialization",
-      category: "Gestion des données",
+      category: "Data management",
       tags: ["Performance and Optimizations"]
     },
     {
       id: "security/check-users-roles",
-      title: "Comment vérifier les utilisateurs assignés aux rôles et inversement",
-      description: "Apprenez à interroger `system.role_grants` de ClickHouse pour identifier les utilisateurs assignés à des rôles et les rôles assignés à des utilisateurs spécifiques.",
+      title: "Comment vérifier les utilisateurs assignés aux rôles et vice versa",
+      description: "Apprenez à interroger `system.role_grants` de ClickHouse pour trouver les utilisateurs assignés aux rôles et les rôles assignés à des utilisateurs spécifiques.",
       href: "/resources/support-center/knowledge-base/security/check-users-roles",
-      category: "Sécurité et contrôle d'accès",
+      category: "Security & access control",
       tags: ["Server Admin", "System Tables", "Managing Cloud"]
     },
     {
       id: "monitoring-debugging/which-processes-are-currently-running",
-      title: "Comment vérifier le code en cours d'exécution sur un serveur ?",
+      title: "Comment vérifier quel code s'exécute actuellement sur un serveur ?",
       description:
-        "ClickHouse fournit des outils d'introspection tels que `system.stack_trace` pour inspecter le code en cours d'exécution sur chaque thread du serveur, facilitant le débogage et la surveillance des performances.",
+        "ClickHouse fournit des outils d'introspection comme `system.stack_trace` pour inspecter le code en cours d'exécution sur chaque thread du serveur, facilitant le débogage et la surveillance des performances.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/which-processes-are-currently-running",
-      category: "Surveillance et débogage",
+      category: "Monitoring & debugging",
       tags: ["Server Admin"]
     },
     {
       id: "cloud-services/how-to-check-my-clickhouse-cloud-sevice-state",
       title: "Comment vérifier l'état de votre service ClickHouse Cloud",
-      description: "Apprenez à utiliser l'API ClickHouse Cloud pour vérifier si votre service est arrêté, inactif ou en cours d'exécution, sans le réveiller.",
+      description: "Apprenez à utiliser l'API ClickHouse Cloud pour vérifier si votre service est arrêté, inactif ou en cours d'exécution sans le réveiller.",
       href: "/resources/support-center/knowledge-base/cloud-services/how-to-check-my-clickhouse-cloud-sevice-state",
       category: "Cloud",
       tags: ["Managing Cloud"]
@@ -476,167 +476,167 @@ export const kbIndex = {
       title: "Comment configurer les paramètres d'un utilisateur dans ClickHouse",
       description: "Apprenez à définir des paramètres dans ClickHouse pour des requêtes individuelles, des sessions client ou des utilisateurs spécifiques à l'aide des commandes `SET` et `ALTER USER`.",
       href: "/resources/support-center/knowledge-base/configuration-settings/configure-a-user-setting",
-      category: "Configuration et paramètres",
+      category: "Configuration & settings",
       tags: ["Settings"]
     },
     {
       id: "materialized-views/projection-example",
-      title: "Comment vérifier si une projection est utilisée par la requête ?",
+      title: "Comment confirmer si une projection est utilisée par la requête ?",
       description: "Apprenez à vérifier si une projection est utilisée dans les requêtes ClickHouse en testant avec des données d'exemple et en utilisant EXPLAIN pour confirmer l'utilisation de la projection.",
       href: "/resources/support-center/knowledge-base/materialized-views/projection-example",
-      category: "Vues matérialisées et projections",
+      category: "Materialized views & projections",
       tags: ["Data Modelling"]
     },
     {
       id: "cloud-services/how-to-connect-to-ch-cloud-using-ssh-keys",
       title: "Comment se connecter à ClickHouse avec des clés SSH",
-      description: "Comment se connecter à ClickHouse et ClickHouse Cloud à l'aide de clés SSH",
+      description: "Comment se connecter à ClickHouse et ClickHouse Cloud avec des clés SSH",
       href: "/resources/support-center/knowledge-base/cloud-services/how-to-connect-to-ch-cloud-using-ssh-keys",
       category: "Cloud",
       tags: ["Managing Cloud", "Security and Authentication"]
     },
     {
       id: "data-management/dictionary-using-strings",
-      title: "Comment créer un dictionnaire ClickHouse avec des clés et des valeurs de type chaîne",
-      description: "Apprenez à créer un dictionnaire ClickHouse à partir de clés et de valeurs de type chaîne issues d'une table MergeTree, avec des exemples de configuration et d'utilisation.",
+      title: "How to Create a ClickHouse Dictionary with String Keys and Values",
+      description: "Learn how to create a ClickHouse dictionary using string keys and values from a MergeTree table as the source, with examples of setup and usage.",
       href: "/resources/support-center/knowledge-base/data-management/dictionary-using-strings",
-      category: "Gestion des données",
+      category: "Data management",
       tags: ["Data Modelling"]
     },
     {
       id: "tables-schema/how-to-create-table-to-query-multiple-remote-clusters",
-      title: "Comment créer une table capable d'interroger plusieurs clusters distants",
-      description: "Comment créer une table capable d'interroger plusieurs clusters distants",
+      title: "How to create a table that can query multiple remote clusters",
+      description: "How to create a table that can query multiple remote clusters",
       href: "/resources/support-center/knowledge-base/tables-schema/how-to-create-table-to-query-multiple-remote-clusters",
-      category: "Tables et schéma",
+      category: "Tables & schema",
       tags: ["Deployments and Scaling"]
     },
     {
       id: "setup-installation/enabling-ssl-with-lets-encrypt",
-      title: "Comment activer SSL avec Let's Encrypt sur un serveur ClickHouse unique",
-      description: "Apprenez à configurer SSL pour un serveur ClickHouse unique à l'aide de Let's Encrypt, notamment l'émission de certificats, la configuration et la validation.",
+      title: "How to Enable SSL with Let's Encrypt on a Single ClickHouse Server",
+      description: "Learn how to set up SSL for a single ClickHouse server using Let's Encrypt, including certificate issuance, configuration, and validation.",
       href: "/resources/support-center/knowledge-base/setup-installation/enabling-ssl-with-lets-encrypt",
-      category: "Configuration et installation",
+      category: "Setup & installation",
       tags: ["Security and Authentication"]
     },
     {
       id: "data-import-export/file-export",
-      title: "Comment exporter des données de ClickHouse vers un fichier",
-      description: "Découvrez différentes méthodes pour exporter des données depuis ClickHouse, notamment `INTO OUTFILE`, le moteur de table File et la redirection en ligne de commande.",
+      title: "How to Export Data from ClickHouse to a File",
+      description: "Learn various methods to export data from ClickHouse, including `INTO OUTFILE`, the File table engine, and command-line redirection.",
       href: "/resources/support-center/knowledge-base/data-import-export/file-export",
-      category: "Import et export de données",
+      category: "Data import & export",
       tags: ["Data Export"]
     },
     {
       id: "queries-sql/how-to-filter-a-clickhouse-table-by-an-array-column",
-      title: "Comment filtrer une table ClickHouse par une colonne de type tableau ?",
-      description: "Article de la base de connaissances sur le filtrage d'une table ClickHouse par une colonne de type tableau.",
+      title: "How to filter a ClickHouse table by an array-column?",
+      description: "Knowledgebase article on how to filter a ClickHouse table by an array-column.",
       href: "/resources/support-center/knowledge-base/queries-sql/how-to-filter-a-clickhouse-table-by-an-array-column",
-      category: "Requêtes et SQL",
+      category: "Queries & SQL",
       tags: ["Data Modelling", "Functions"]
     },
     {
       id: "monitoring-debugging/generate-har-file",
-      title: "Comment générer un fichier HAR pour le support",
-      description: "Un fichier HAR (HTTP Archive) capture l'activité réseau de votre navigateur. Il peut aider notre équipe de support à diagnostiquer les chargements de page lents, les requêtes échouées ou d'autres problèmes réseau.",
+      title: "How to Generate a HAR file for support",
+      description: "A HAR (HTTP Archive) file captures the network activity in your browser. It can help our support team diagnose slow page loads, failed requests, or other network issues.",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/generate-har-file",
-      category: "Surveillance et débogage",
+      category: "Monitoring & debugging",
       tags: ["Tools and Utilities"]
     },
     {
       id: "materialized-views/how-to-display-queries-using-mv",
-      title: "Comment identifier les requêtes utilisant des vues matérialisées dans ClickHouse",
-      description: "Apprenez à interroger les journaux ClickHouse pour identifier toutes les requêtes impliquant des vues matérialisées dans un intervalle de temps donné.",
+      title: "How to Identify Queries Using Materialized Views in ClickHouse",
+      description: "Learn how to query ClickHouse logs to identify all queries involving Materialized Views within a specified time range.",
       href: "/resources/support-center/knowledge-base/materialized-views/how-to-display-queries-using-mv",
-      category: "Vues matérialisées et projections",
+      category: "Materialized views & projections",
       tags: ["System Tables"]
     },
     {
       id: "performance-optimization/find-expensive-queries",
-      title: "Comment identifier les requêtes les plus coûteuses dans ClickHouse",
-      description: "Apprenez à utiliser la table `query_log` dans ClickHouse pour identifier les requêtes les plus gourmandes en mémoire et en CPU sur les nœuds distribués.",
+      title: "How to Identify the Most Expensive Queries in ClickHouse",
+      description: "Learn how to use the `query_log` table in ClickHouse to identify the most memory and CPU-intensive queries across distributed nodes.",
       href: "/resources/support-center/knowledge-base/performance-optimization/find-expensive-queries",
-      category: "Performance et optimisation",
+      category: "Performance & optimization",
       tags: ["Performance and Optimizations"]
     },
     {
       id: "configuration-settings/ignoring-incorrect-settings",
-      title: "Comment ignorer les paramètres incorrects dans ClickHouse",
-      description: "Apprenez à utiliser l'option `skip_check_for_incorrect_settings` pour permettre à ClickHouse de démarrer même lorsque des paramètres au niveau utilisateur sont mal configurés.",
+      title: "How to Ignore Incorrect Settings in ClickHouse",
+      description: "Learn how to use the `skip_check_for_incorrect_settings` option to allow ClickHouse to start even when user-level settings are specified incorrectly.",
       href: "/resources/support-center/knowledge-base/configuration-settings/ignoring-incorrect-settings",
-      category: "Configuration et paramètres",
+      category: "Configuration & settings",
       tags: ["Settings"]
     },
     {
       id: "data-import-export/json-import",
-      title: "Comment importer du JSON dans ClickHouse ?",
-      description: "Cette page vous explique comment importer du JSON dans ClickHouse",
+      title: "How to import JSON into ClickHouse?",
+      description: "This page shows you how to import JSON into ClickHouse",
       href: "/resources/support-center/knowledge-base/data-import-export/json-import",
-      category: "Import et export de données",
+      category: "Data import & export",
       tags: []
     },
     {
       id: "setup-installation/how-to-increase-thread-pool-size",
-      title: "Comment augmenter le nombre de threads dans ClickHouse",
-      description: "Apprenez à configurer le pool de threads global dans ClickHouse en ajustant des paramètres tels que `max_thread_pool_size`, `thread_pool_queue_size` et `max_thread_pool_free_size`.",
+      title: "How to Increase the Number of Threads in ClickHouse",
+      description: "Learn how to configure the Global Thread pool in ClickHouse by adjusting settings like `max_thread_pool_size`, `thread_pool_queue_size`, and `max_thread_pool_free_size`.",
       href: "/resources/support-center/knowledge-base/setup-installation/how-to-increase-thread-pool-size",
-      category: "Configuration et installation",
+      category: "Setup & installation",
       tags: ["Performance and Optimizations"]
     },
     {
       id: "data-import-export/kafka-to-clickhouse-setup",
-      title: "Comment ingérer des données depuis Kafka dans ClickHouse",
-      description: "Apprenez à ingérer des données depuis un topic Kafka dans ClickHouse à l'aide du moteur de table Kafka, des vues matérialisées et des tables MergeTree.",
+      title: "How to Ingest Data from Kafka into ClickHouse",
+      description: "Learn how to ingest data from a Kafka topic into ClickHouse using the Kafka table engine, materialized views, and MergeTree tables.",
       href: "/resources/support-center/knowledge-base/data-import-export/kafka-to-clickhouse-setup",
-      category: "Import et export de données",
+      category: "Data import & export",
       tags: ["Data Ingestion"]
     },
     {
       id: "data-import-export/ingest-parquet-files-in-s3",
-      title: "Comment ingérer des fichiers Parquet depuis un bucket S3",
-      description: "Découvrez les bases de l'utilisation du moteur de table S3 dans ClickHouse pour ingérer et interroger des fichiers Parquet depuis un bucket S3, notamment la configuration, les permissions d'accès et des exemples d'import de données.",
+      title: "How to ingest Parquet files from an S3 bucket",
+      description: "Learn the basics of using the S3 table engine in ClickHouse to ingest and query Parquet files from an S3 bucket, including setup, access permissions, and data import examples.",
       href: "/resources/support-center/knowledge-base/data-import-export/ingest-parquet-files-in-s3",
-      category: "Import et export de données",
+      category: "Data import & export",
       tags: ["Data Ingestion"]
     },
     {
       id: "queries-sql/how-to-insert-all-rows-from-another-table",
-      title: "Comment insérer toutes les lignes d'une table dans une autre ?",
-      description: "Article de la base de connaissances sur l'insertion de toutes les lignes d'une table dans une autre.",
+      title: "How to insert all rows from one table to another?",
+      description: "Knowledgebase article on how to insert all rows from one table to another.",
       href: "/resources/support-center/knowledge-base/queries-sql/how-to-insert-all-rows-from-another-table",
-      category: "Requêtes et SQL",
+      category: "Queries & SQL",
       tags: ["Data Ingestion"]
     },
     {
       id: "performance-optimization/check-query-processing-time-only",
-      title: "Comment mesurer le temps de traitement d'une requête sans retourner de lignes",
-      description: "Apprenez à utiliser l'option `FORMAT Null` dans ClickHouse pour mesurer le temps de traitement d'une requête sans renvoyer aucune ligne au client.",
+      title: "How to Measure Query Processing Time Without Returning Rows",
+      description: "Learn how to use the `FORMAT Null` option in ClickHouse to measure query processing time without returning any rows to the client.",
       href: "/resources/support-center/knowledge-base/performance-optimization/check-query-processing-time-only",
-      category: "Performance et optimisation",
+      category: "Performance & optimization",
       tags: ["Performance and Optimizations"]
     },
     {
       id: "monitoring-debugging/outputSendLogsLevelTracesToFile",
-      title: "Comment exporter les traces de niveau de journalisation vers un fichier avec le clickhouse-client",
-      description: "Comment exporter les traces de niveau de journalisation vers un fichier avec le clickhouse-client",
+      title: "How to output send logs level traces to file using the clickhouse-client",
+      description: "How to output send logs level traces to file using the clickhouse-client",
       href: "/resources/support-center/knowledge-base/monitoring-debugging/outputSendLogsLevelTracesToFile",
-      category: "Surveillance et débogage",
+      category: "Monitoring & debugging",
       tags: ["Data Export"]
     },
     {
       id: "tables-schema/recreate-table-across-terminals",
-      title: "Comment recréer rapidement une petite table dans différents terminaux",
-      description: "Apprenez à recréer rapidement une petite table et ses données dans différents terminaux par copier-coller, pour les environnements de développement.",
+      title: "How to quickly recreate a small table across different terminals",
+      description: "Learn how to quickly recreate a small table and its data across different terminals using copy/paste for development environments.",
       href: "/resources/support-center/knowledge-base/tables-schema/recreate-table-across-terminals",
-      category: "Tables et schéma",
+      category: "Tables & schema",
       tags: ["Tools and Utilities"]
     },
     {
       id: "integrations/how-to-set-up-ch-on-docker-odbc-connect-mssql",
-      title: "Comment configurer ClickHouse sur Docker avec ODBC pour se connecter à une base de données Microsoft SQL Server (MSSQL)",
-      description: "Comment configurer ClickHouse sur Docker avec ODBC pour se connecter à une base de données Microsoft SQL Server (MSSQL)",
+      title: "How to set up ClickHouse on Docker with ODBC to connect to a Microsoft SQL Server (MSSQL) database",
+      description: "How to set up ClickHouse on Docker with ODBC to connect to a Microsoft SQL Server (MSSQL) database",
       href: "/resources/support-center/knowledge-base/integrations/how-to-set-up-ch-on-docker-odbc-connect-mssql",
-      category: "Intégrations et bibliothèques clientes",
+      category: "Integrations & client libraries",
       tags: ["Native Clients and Interfaces"]
     },
     {
@@ -689,8 +689,8 @@ export const kbIndex = {
     },
     {
       id: "performance-optimization/finding-expensive-queries-by-memory-usage",
-      title: "Identification des requêtes coûteuses par consommation mémoire dans ClickHouse",
-      description: "Apprenez à utiliser la table `system.query_log` pour identifier les requêtes les plus gourmandes en mémoire dans ClickHouse, avec des exemples pour les configurations en cluster et en mode autonome.",
+      title: "Identifying Expensive Queries by Memory Usage in ClickHouse",
+      description: "Learn how to use the `system.query_log` table to find the most memory-intensive queries in ClickHouse, with examples for clustered and standalone setups.",
       href: "/resources/support-center/knowledge-base/performance-optimization/finding-expensive-queries-by-memory-usage",
       category: "Performance & optimization",
       tags: ["Performance and Optimizations"]
@@ -706,7 +706,7 @@ export const kbIndex = {
     {
       id: "data-import-export/importing-geojason-with-nested-object-array",
       title: "Importing GeoJSON with a deeply nested object array",
-      description: "“Importing GeoJSON with a deeply nested object array“",
+      description: "Apprenez à importer des fichiers GeoJSON avec des tableaux d'objets profondément imbriqués dans ClickHouse et à interroger les données de fonctionnalités imbriquées.",
       href: "/resources/support-center/knowledge-base/data-import-export/importing-geojason-with-nested-object-array",
       category: "Data import & export",
       tags: ["Data Formats"]
@@ -804,160 +804,160 @@ export const kbIndex = {
       title: "Exemple rapide en Python avec le module requests",
       description: "Un exemple utilisant Python et le module requests pour écrire dans ClickHouse et lire des données",
       href: "/resources/support-center/knowledge-base/integrations/python-http-requests",
-      category: "Intégrations et bibliothèques clientes",
-      tags: ["Clients natifs et interfaces"]
+      category: "Integrations & client libraries",
+      tags: ["Native Clients and Interfaces"]
     },
     {
       id: "configuration-settings/maximum-number-of-tables-and-databases",
       title: "Nombre maximal recommandé de bases de données, de tables, de partitions et de parts dans ClickHouse",
       description: "Découvrez les limites maximales recommandées pour les bases de données, les tables, les partitions et les parts dans un cluster ClickHouse afin de garantir des performances optimales.",
       href: "/resources/support-center/knowledge-base/configuration-settings/maximum-number-of-tables-and-databases",
-      category: "Configuration et paramètres",
-      tags: ["Performances et optimisations", "Déploiements et mise à l’échelle"]
+      category: "Configuration & settings",
+      tags: ["Performance and Optimizations", "Deployments and Scaling"]
     },
     {
       id: "data-import-export/cannot-append-data-to-parquet-format",
-      title: 'Résolution de l’erreur « Cannot Append Data in Parquet Format » dans ClickHouse',
-      description: 'Vous obtenez l’erreur « Cannot append data in format Parquet to file » dans ClickHouse ? Voyons comment la résoudre.',
+      title: 'Résolution de l\'erreur « Cannot Append Data in Parquet Format » dans ClickHouse',
+      description: 'Vous obtenez l\'erreur « Cannot append data in format Parquet to file » dans ClickHouse ? Voyons comment la résoudre.',
       href: "/resources/support-center/knowledge-base/data-import-export/cannot-append-data-to-parquet-format",
-      category: "Importation et exportation de données",
-      tags: ["Erreurs et exceptions", "Formats de données"]
+      category: "Data import & export",
+      tags: ["Errors and Exceptions", "Data Formats"]
     },
     {
       id: "troubleshooting/exception-too-many-parts",
-      title: 'Résolution de l’erreur « Too Many Parts » dans ClickHouse',
-      description: 'Apprenez à résoudre l’erreur « Too many parts » dans ClickHouse en optimisant les taux d’insertion, en configurant les paramètres MergeTree et en gérant efficacement les partitions.',
+      title: 'Résolution de l\'erreur « Too Many Parts » dans ClickHouse',
+      description: 'Apprenez à résoudre l\'erreur « Too many parts » dans ClickHouse en optimisant les taux d\'insertion, en configurant les paramètres MergeTree et en gérant efficacement les partitions.',
       href: "/resources/support-center/knowledge-base/troubleshooting/exception-too-many-parts",
-      category: "Dépannage et erreurs",
-      tags: ["Erreurs et exceptions"]
+      category: "Troubleshooting & errors",
+      tags: ["Errors and Exceptions"]
     },
     {
       id: "troubleshooting/certificate-verify-failed-error",
-      title: "Résolution de l’erreur de vérification du certificat SSL dans ClickHouse",
-      description: "Découvrez comment résoudre l’erreur SSL Exception CERTIFICATE_VERIFY_FAILED.",
+      title: "Résolution de l'erreur de vérification du certificat SSL dans ClickHouse",
+      description: "Découvrez comment résoudre l'erreur SSL Exception CERTIFICATE_VERIFY_FAILED.",
       href: "/resources/support-center/knowledge-base/troubleshooting/certificate-verify-failed-error",
-      category: "Dépannage et erreurs",
-      tags: ["Sécurité et authentification", "Erreurs et exceptions"]
+      category: "Troubleshooting & errors",
+      tags: ["Security and Authentication", "Errors and Exceptions"]
     },
     {
       id: "troubleshooting/connection-timeout-remote-remoteSecure",
-      title: "Résolution des erreurs de délai d’attente avec les fonctions de table `remote` et `remoteSecure`",
-      description: "Apprenez à corriger les erreurs de délai d’attente lors de l’utilisation des fonctions de table `remote` ou `remoteSecure` dans ClickHouse en ajustant les paramètres de délai d’attente de connexion.",
+      title: "Résolution des erreurs de délai d'attente avec les fonctions de table `remote` et `remoteSecure`",
+      description: "Apprenez à corriger les erreurs de délai d'attente lors de l'utilisation des fonctions de table `remote` ou `remoteSecure` dans ClickHouse en ajustant les paramètres de délai d'attente de connexion.",
       href: "/resources/support-center/knowledge-base/troubleshooting/connection-timeout-remote-remoteSecure",
-      category: "Dépannage et erreurs",
-      tags: ["Erreurs et exceptions"]
+      category: "Troubleshooting & errors",
+      tags: ["Errors and Exceptions"]
     },
     {
       id: "tables-schema/search-across-node-for-tables-with-a-wildcard",
       title: "Recherche de tables sur plusieurs nœuds avec un caractère générique",
       description: "Apprenez à rechercher des tables sur plusieurs nœuds avec un caractère générique.",
       href: "/resources/support-center/knowledge-base/tables-schema/search-across-node-for-tables-with-a-wildcard",
-      category: "Tables et schéma",
-      tags: ["Déploiements et mise à l’échelle"]
+      category: "Tables & schema",
+      tags: ["Deployments and Scaling"]
     },
     {
       id: "performance-optimization/query-max-execution-time",
-      title: "Définir une limite de temps d’exécution des requêtes",
-      description: "Comment imposer une limite au temps d’exécution maximal des requêtes",
+      title: "Définir une limite de temps d'exécution des requêtes",
+      description: "Comment imposer une limite au temps d'exécution maximal des requêtes",
       href: "/resources/support-center/knowledge-base/performance-optimization/query-max-execution-time",
-      category: "Performances et optimisation",
-      tags: ["Gestion du Cloud", "Paramètres"]
+      category: "Performance & optimization",
+      tags: ["Managing Cloud", "Settings"]
     },
     {
       id: "data-import-export/json-simple-example",
-      title: "Exemple simple de workflow pour extraire des données JSON à l’aide d’une table d’atterrissage avec une vue matérialisée",
-      description: "Exemple simple de workflow pour extraire des données JSON à l’aide d’une table d’atterrissage avec une vue matérialisée",
+      title: "Exemple simple de workflow pour extraire des données JSON à l'aide d'une table d'atterrissage avec une vue matérialisée",
+      description: "Exemple simple de workflow pour extraire des données JSON à l'aide d'une table d'atterrissage avec une vue matérialisée",
       href: "/resources/support-center/knowledge-base/data-import-export/json-simple-example",
-      category: "Importation et exportation de données",
-      tags: ["Formats de données"]
+      category: "Data import & export",
+      tags: ["Data Formats"]
     },
     {
       id: "performance-optimization/async-vs-optimize-read-in-order",
       title: "Lecture synchrone des données",
       description:
-        "Le nouveau paramètre `allow_asynchronous_read_from_io_pool_for_merge_tree` permet au nombre de threads de lecture (flux) d’être supérieur à celui des threads dans le reste du pipeline d’exécution de la requête.",
+        "Le nouveau paramètre `allow_asynchronous_read_from_io_pool_for_merge_tree` permet au nombre de threads de lecture (flux) d'être supérieur à celui des threads dans le reste du pipeline d'exécution de la requête.",
       href: "/resources/support-center/knowledge-base/performance-optimization/async-vs-optimize-read-in-order",
-      category: "Performances et optimisation",
-      tags: ["Paramètres", "Performances et optimisations"]
+      category: "Performance & optimization",
+      tags: ["Settings", "Performance and Optimizations"]
     },
     {
       id: "integrations/terraform-example",
-      title: "Exemple Terraform montrant comment utiliser l’API Cloud",
-      description: "Cet exemple montre comment utiliser Terraform pour créer et supprimer des clusters à l’aide de l’API",
+      title: "Exemple Terraform montrant comment utiliser l'API Cloud",
+      description: "Cet exemple montre comment utiliser Terraform pour créer et supprimer des clusters à l'aide de l'API",
       href: "/resources/support-center/knowledge-base/integrations/terraform-example",
-      category: "Intégrations et bibliothèques clientes",
-      tags: ["Clients natifs et interfaces"]
+      category: "Integrations & client libraries",
+      tags: ["Native Clients and Interfaces"]
     },
     {
       id: "performance-optimization/tips-tricks-optimizing-basic-data-types-in-clickhouse",
       title: "Conseils et astuces pour optimiser les types de données de base dans ClickHouse",
       description: "Conseils et astuces pour optimiser les types de données de base dans ClickHouse",
       href: "/resources/support-center/knowledge-base/performance-optimization/tips-tricks-optimizing-basic-data-types-in-clickhouse",
-      category: "Performances et optimisation",
-      tags: ["Performances et optimisations"]
+      category: "Performance & optimization",
+      tags: ["Performance and Optimizations"]
     },
     {
       id: "queries-sql/useful-queries-for-troubleshooting",
       title: "Requêtes utiles pour le dépannage",
       description: "Une collection de requêtes pratiques pour dépanner ClickHouse, notamment pour surveiller la taille des tables, les requêtes longues et les erreurs.",
       href: "/resources/support-center/knowledge-base/queries-sql/useful-queries-for-troubleshooting",
-      category: "Requêtes et SQL",
-      tags: ["Paramètres"]
+      category: "Queries & SQL",
+      tags: ["Settings"]
     },
     {
       id: "general-faqs/use-clickhouse-for-log-analytics",
-      title: "Utiliser ClickHouse pour l’analyse de logs",
-      description: "ClickHouse est populaire pour l’analyse des logs et des métriques grâce à ses capacités d’analyse en temps réel. Envie d’en savoir plus ?",
+      title: "Utiliser ClickHouse pour l'analyse de logs",
+      description: "ClickHouse est populaire pour l'analyse des logs et des métriques grâce à ses capacités d'analyse en temps réel. Envie d'en savoir plus ?",
       href: "/resources/support-center/knowledge-base/general-faqs/use-clickhouse-for-log-analytics",
-      category: "Général et FAQ",
-      tags: ["Cas d’utilisation"]
+      category: "General & FAQs",
+      tags: ["Use Cases"]
     },
     {
       id: "queries-sql/filtered-aggregates",
       title: "Utiliser les agrégats filtrés dans ClickHouse",
-      description: "Apprenez à utiliser les agrégats filtrés dans ClickHouse avec les combinateurs d’agrégats `-If` et `-Distinct` pour simplifier la syntaxe des requêtes et améliorer l’analyse.",
+      description: "Apprenez à utiliser les agrégats filtrés dans ClickHouse avec les combinateurs d'agrégats `-If` et `-Distinct` pour simplifier la syntaxe des requêtes et améliorer l'analyse.",
       href: "/resources/support-center/knowledge-base/queries-sql/filtered-aggregates",
-      category: "Requêtes et SQL",
-      tags: ["Fonctions"]
+      category: "Queries & SQL",
+      tags: ["Functions"]
     },
     {
       id: "general-faqs/dependencies",
-      title: "Quelles sont les dépendances tierces nécessaires pour exécuter ClickHouse ?",
-      description: "ClickHouse est autonome et n’a aucune dépendance à l’exécution",
+      title: "Quelles sont les dépendances tierces nécessaires pour exécuter ClickHouse ?",
+      description: "ClickHouse est autonome et n'a aucune dépendance à l'exécution",
       href: "/resources/support-center/knowledge-base/general-faqs/dependencies",
-      category: "Général et FAQ",
+      category: "General & FAQs",
       tags: []
     },
     {
       id: "general-faqs/dbms-naming",
-      title: 'Que signifie « ClickHouse » ?',
-      description: 'Découvrez ce que signifie « ClickHouse »',
+      title: 'Que signifie « ClickHouse » ?',
+      description: 'Découvrez ce que signifie « ClickHouse »',
       href: "/resources/support-center/knowledge-base/general-faqs/dbms-naming",
-      category: "Général et FAQ",
+      category: "General & FAQs",
       tags: []
     },
     {
       id: "general-faqs/ne-tormozit",
-      title: "Que signifie « не тормозит » ?",
-      description: 'Cette page explique ce que signifie « Не тормозит »',
+      title: "Que signifie « не тормозит » ?",
+      description: 'Cette page explique ce que signifie « Не тормозит »',
       href: "/resources/support-center/knowledge-base/general-faqs/ne-tormozit",
-      category: "Général et FAQ",
+      category: "General & FAQs",
       tags: []
     },
     {
       id: "integrations/oracle-odbc",
-      title: "Que faire si j’ai un problème d’encodage lors de l’utilisation d’Oracle via ODBC ?",
-      description: "Cette page explique quoi faire si vous rencontrez un problème d’encodage lors de l’utilisation d’Oracle via ODBC",
+      title: "Que faire si j'ai un problème d'encodage lors de l'utilisation d'Oracle via ODBC ?",
+      description: "Cette page explique quoi faire si vous rencontrez un problème d'encodage lors de l'utilisation d'Oracle via ODBC",
       href: "/resources/support-center/knowledge-base/integrations/oracle-odbc",
-      category: "Intégrations et bibliothèques clientes",
+      category: "Integrations & client libraries",
       tags: []
     },
     {
       id: "general-faqs/columnar-database",
-      title: "Qu’est-ce qu’une base de données en colonnes ?",
-      description: "Cette page explique ce qu’est une base de données en colonnes",
+      title: "Qu'est-ce qu'une base de données en colonnes ?",
+      description: "Cette page explique ce qu'est une base de données en colonnes",
       href: "/resources/support-center/knowledge-base/general-faqs/columnar-database",
-      category: "Général et FAQ",
+      category: "General & FAQs",
       tags: []
     },
     {
