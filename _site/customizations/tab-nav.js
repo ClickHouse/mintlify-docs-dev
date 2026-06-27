@@ -199,6 +199,10 @@
     if (!document.getElementById('ch-navbar-cta')) return;
     if (isHomePath() && !document.getElementById(LOGO_ID)) return;
     navbar.classList.add('ch-navbar-ready');
+    // Latch the reveal on <html> (which survives SPA navigations) so the
+    // first-load hide guard in CSS never re-applies on subsequent in-app
+    // navigations — preventing a fade on every page change.
+    document.documentElement.classList.add('ch-navbar-revealed');
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -232,6 +236,13 @@
       applyHomepageClass();
       setupHomepageNavbar();
     });
+
+    // Failsafe: never leave the navbar hidden. If an injection never completes
+    // (so markNavbarReady never latches the reveal), force-reveal after a
+    // generous delay so the first-load hide guard can't strand the navbar.
+    setTimeout(function () {
+      document.documentElement.classList.add('ch-navbar-revealed');
+    }, 2000);
   }
 
   // Apply the homepage class immediately at script evaluation time — before the

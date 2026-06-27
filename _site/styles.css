@@ -144,14 +144,20 @@ body[data-scroll-locked] {
     padding-right: calc(48px + 206px) !important;
 }
 
-/* Navbar hidden only on the homepage initial paint to prevent a visible
-   layout shift when the logo + CTA are injected. On all other pages the
-   navbar is already visible so no hiding is needed, and scoping to
-   .ch-homepage prevents the SPA navigation fade-in on every page change. */
-.ch-homepage #navbar-transition-maple:not(.ch-navbar-ready) {
+/* Hide the navbar on the initial page load (every page) until its injected
+   contents — logo (homepage) + CTA + theme toggle (all pages) — have settled,
+   then fade in, to mask the layout shift those injections cause.
+
+   The `html:not(.ch-navbar-revealed)` guard limits the hide to the FIRST load:
+   tab-nav.js adds `.ch-navbar-revealed` to <html> the first time the navbar is
+   revealed, and since <html> survives SPA navigations the hide never re-applies
+   — so there's no fade on every in-app page change (only on real page loads).
+   A safety timeout in tab-nav.js adds `.ch-navbar-revealed` unconditionally, so
+   the navbar can never stay stuck hidden if an injection never completes. */
+html:not(.ch-navbar-revealed) #navbar-transition-maple:not(.ch-navbar-ready) {
     opacity: 0;
 }
-.ch-homepage #navbar-transition-maple.ch-navbar-ready {
+#navbar-transition-maple.ch-navbar-ready {
     opacity: 1;
     transition: opacity 0.15s ease-out;
 }
