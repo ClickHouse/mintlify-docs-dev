@@ -706,7 +706,7 @@ export const kbIndex = {
     {
       id: "data-import-export/importing-geojason-with-nested-object-array",
       title: "깊게 중첩된 객체 배열이 포함된 GeoJSON 가져오기",
-      description: ""깊게 중첩된 객체 배열이 포함된 GeoJSON 가져오기"",
+      description: "깊게 중첩된 객체 배열이 포함된 GeoJSON 가져오기",
       href: "/resources/support-center/knowledge-base/data-import-export/importing-geojason-with-nested-object-array",
       category: "데이터 가져오기 & 내보내기",
       tags: ["Data Formats"]
