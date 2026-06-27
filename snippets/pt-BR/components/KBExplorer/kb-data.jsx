@@ -938,7 +938,7 @@ export const kbIndex = {
     },
     {
       id: "general-faqs/ne-tormozit",
-      title: "O que significa "не тормозит"?",
+      title: 'O que significa "не тормозит"?',
       description: 'Esta página explica o que significa "Не тормозит"',
       href: "/resources/support-center/knowledge-base/general-faqs/ne-tormozit",
       category: "Geral e FAQs",

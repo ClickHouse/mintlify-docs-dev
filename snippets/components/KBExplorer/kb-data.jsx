@@ -869,7 +869,7 @@ export const kbIndex = {
     {
       "id": "data-import-export/importing-geojason-with-nested-object-array",
       "title": "Importing GeoJSON with a deeply nested object array",
-      "description": "Importing GeoJSON with a deeply nested object array",
+      "description": "Learn how to import GeoJSON files with deeply nested object arrays into ClickHouse and query the nested feature data.",
       "href": "/resources/support-center/knowledge-base/data-import-export/importing-geojason-with-nested-object-array",
       "category": "Data import & export",
       "tags": [

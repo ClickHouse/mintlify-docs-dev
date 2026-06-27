@@ -30,6 +30,84 @@
   // version (e.g. @0.5.119) when deploying for reproducible builds.
   var INKEEP_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/@inkeep/cxkit-mintlify@0.5/dist/index.js';
 
+  // ── Search tabs ──────────────────────────────────────────────────────────
+  // Row 1 (always visible): the top-level tabs.
+  var ROW1_TABS = ['All', 'Docs', 'Changelogs', 'Blogs', 'Website', 'GitHub'];
+  // Row 2 (docs sub-areas): shown only while a docs-context tab is active. A
+  // docs source is tagged with BOTH 'Docs' and its sub-area, so selecting
+  // 'Docs' shows everything and selecting a sub-area narrows it.
+  var DOCS_SUBAREAS = [
+    'Get started', 'Concepts', 'Guides', 'Reference',
+    'Cloud', 'ClickHouse Private', 'Managed Postgres', 'ClickStack',
+    'Agentic Data Stack', 'chDB', 'Kubernetes Operator',
+    'ClickPipes', 'Connectors', 'Language clients', 'Ecosystem',
+  ];
+  var SEARCH_TABS = ROW1_TABS.concat(DOCS_SUBAREAS);
+
+  // Maps a docs path (segment after /docs/) to its row-2 sub-area. Ordered:
+  // first matching prefix wins, so specific paths precede their parent.
+  var DOCS_SUBAREA_RULES = [
+    ['get-started', 'Get started'],
+    ['concepts', 'Concepts'],
+    ['guides', 'Guides'],
+    ['reference', 'Reference'],
+    ['products/cloud', 'Cloud'],
+    ['products/bring-your-own-cloud', 'Cloud'],
+    ['products/clickhouse-private', 'ClickHouse Private'],
+    ['products/managed-postgres', 'Managed Postgres'],
+    ['products/agentic-data-stack', 'Agentic Data Stack'],
+    ['products/chdb', 'chDB'],
+    ['products/kubernetes-operator', 'Kubernetes Operator'],
+    ['clickstack', 'ClickStack'],
+    ['integrations/clickpipes', 'ClickPipes'],
+    ['integrations/connectors', 'Connectors'],
+    ['integrations/language-clients', 'Language clients'],
+    ['integrations', 'Ecosystem'],
+  ];
+
+  function docsSubAreaTab(canonicalDocsUrl) {
+    var path = canonicalDocsUrl
+      .replace(/^https?:\/\/clickhouse\.com\/docs\//, '')
+      .replace(/[?#].*$/, '');
+    for (var i = 0; i < DOCS_SUBAREA_RULES.length; i++) {
+      var prefix = DOCS_SUBAREA_RULES[i][0];
+      if (path === prefix || path.indexOf(prefix + '/') === 0) return DOCS_SUBAREA_RULES[i][1];
+    }
+    return null;
+  }
+
+  // CSS (injected into the Inkeep shadow root via theme.styles) that turns the
+  // flat tab row into two rows: row 1 always visible, the docs sub-areas only
+  // while 'Docs' or one of those sub-areas is the active tab. Tabs are matched
+  // by their stable id suffix (`...-trigger-<TabName>`); a sub-area tab is
+  // simply "any tab that is not a row-1 tab", so adding sub-areas needs no CSS
+  // change. data-state + :has drive the conditional visibility (both verified
+  // supported in the cxkit shadow root).
+  function buildTwoRowTabCss() {
+    var LIST = '.ikp-ai-search-results__tab-list';
+    var TAB = '.ikp-ai-search-results__tab';
+    var notRow1 = ROW1_TABS.map(function (n) { return ':not([id$="-trigger-' + n + '"])'; }).join('');
+    var SUB = TAB + notRow1;            // any docs sub-area tab
+    var row1 = TAB + ':not(' + SUB.slice(TAB.length) + ')'; // its complement (row-1 tabs)
+    var docsActive = LIST + ':has(' + TAB + '[id$="-trigger-Docs"][data-state="active"])';
+    var subActive = LIST + ':has(' + SUB + '[data-state="active"])';
+    return [
+      // Let the row wrap and stop the single-line horizontal scroll.
+      LIST + ' { flex-wrap: wrap !important; overflow-x: visible !important; row-gap: 0.375rem; }',
+      // Force ordering: row-1 tabs, then a break, then the sub-area tabs.
+      row1 + ' { order: 0; }',
+      SUB + ' { order: 2; display: none !important; }',
+      // Reveal the sub-area tabs only when Docs (or a sub-area) is active.
+      docsActive + ' ' + SUB + ', ' + subActive + ' ' + SUB + ' { display: inline-flex !important; }',
+      // A full-width pseudo-element (a flex item of the tab-list) ordered
+      // between row-1 and the sub-areas forces the sub-areas onto their own
+      // second line — only while that row is showing. No DOM injection, so it
+      // survives Inkeep's re-renders.
+      docsActive + '::before, ' + subActive + '::before' +
+        ' { content: ""; order: 1; flex: 0 0 100%; height: 0; }',
+    ].join('');
+  }
+
   function loadScript(url, callback) {
     if (document.getElementById('inkeep-cxkit-script')) {
       callback();
@@ -74,6 +152,46 @@
         apiKey: INKEEP_API_KEY,
         primaryBrandColor: '#fdff75',
         organizationDisplayName: 'ClickHouse',
+        // Route each search result into a custom tab by its URL. The cxkit
+        // `tabs` array below (in searchSettings) controls which tabs render and
+        // their order. Docs results are served from the Mintlify preview host,
+        // so we also rewrite those links to the canonical clickhouse.com/docs.
+        // IMPORTANT: this must be idempotent. Inkeep re-invokes transformSource
+        // on already-transformed sources (the incoming source.tabs/url are what
+        // we returned last time), so we must NOT append to source.tabs or
+        // re-derive from a URL we already rewrote. We rebuild the tabs array
+        // from scratch off the URL each call — recognizing both the raw preview
+        // host and the already rewritten clickhouse.com/docs form — and
+        // overwrite tabs with the result.
+        transformSource: function (source) {
+          var url = source.url || '';
+          var isPreview = url.indexOf('private-7c7dfe99.mintlify.app') !== -1;
+          if (isPreview) {
+            // Rewrite preview links to the canonical clickhouse.com/docs domain.
+            url = url.replace(/^https?:\/\/private-7c7dfe99\.mintlify\.app\//, 'https://clickhouse.com/docs/');
+          }
+          // Do NOT tag sources with 'All' — 'All' is Inkeep's reserved built-in
+          // tab (shows every result automatically); tagging sources with it
+          // corrupts per-tab filtering. Docs sources are multi-tab (Docs + the
+          // row-2 sub-area) so 'Docs' shows all docs and a sub-area narrows.
+          var tabs = [];
+          if (isPreview || /clickhouse\.com\/docs(\/|$)/.test(url)) {
+            if (/\/resources\/changelogs(\/|$)/.test(url)) {
+              tabs.push('Changelogs');
+            } else {
+              tabs.push('Docs');
+              var sub = docsSubAreaTab(url);
+              if (sub) tabs.push(sub);
+            }
+          } else if (url.indexOf('github.com') !== -1 && /\/issues(\/|$)/.test(url)) {
+            tabs.push('GitHub'); // GitHub issues only — exclude repos, PRs, etc.
+          } else if (/\/blog(\/|$)/.test(url)) {
+            tabs.push('Blogs');
+          } else if (url.indexOf('clickhouse.com') !== -1) {
+            tabs.push('Website'); // marketing site (the /docs case is handled above)
+          }
+          return Object.assign({}, source, { tabs: tabs, url: url });
+        },
         // Follow Mintlify's `.dark` class on <html>.
         colorMode: {
           sync: {
@@ -100,11 +218,23 @@
               type: 'style',
               value: '.dark\\:bg-overlay-dark { background-color: rgba(0, 0, 0, 0.75) !important; }',
             },
+            {
+              key: 'two-row-docs-tabs',
+              type: 'style',
+              value: buildTwoRowTabCss(),
+            },
           ],
         },
       },
       searchSettings: {
         placeholder: 'Search ClickHouse docs...',
+        shouldShowContentSnippets: true,
+        contentSnippetLength: 200,
+        shouldHighlightMatches: true,
+        // Row-1 tabs followed by the docs sub-areas (see SEARCH_TABS). The
+        // two-row-docs-tabs CSS above keeps the sub-areas hidden until 'Docs'
+        // (or one of them) is active. All tabs are populated by transformSource.
+        tabs: SEARCH_TABS,
       },
     };
 
