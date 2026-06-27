@@ -133,6 +133,50 @@ body[data-scroll-locked] {
     top: var(--banner-height, 0px) !important;
 }
 
+/* Visually distinguish the expand/collapse chevron from the group label in the
+   sidebar. Each collapsible group is a single <button> whose children are: an
+   optional icon div (.shrink-0, first), the label div (no .shrink-0, holds the
+   text), and the chevron div (.shrink-0, :last-child). Behavior is unchanged —
+   the whole row still toggles — these are visual affordances only.
+
+   Chevron: floated to the right edge with a hover box so it reads as the
+   expand/collapse control. Applies to every collapsible group. */
+#sidebar button[aria-expanded] > div:last-child {
+    margin-left: auto;
+    padding: 2px 3px;
+    border-radius: 6px;
+    transition: background-color 0.12s ease;
+}
+#sidebar button[aria-expanded] > div:last-child:hover {
+    background-color: rgba(15, 23, 42, 0.08);
+}
+.dark #sidebar button[aria-expanded] > div:last-child:hover,
+:is(.dark) #sidebar button[aria-expanded] > div:last-child:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Label: only groups that have a root (landing) page are navigable. Mintlify
+   gives those <li>s an id equal to the root path (e.g. id="/get-started");
+   pure container groups have NO id attribute, so we match on id^="/" (must
+   start with a slash) rather than :not([id=""]) — the latter also matches the
+   id-less container groups. Highlight the label on hover for the navigable
+   groups so it reads as a link; container-group labels get no cue (only the
+   chevron). Padding is offset by an equal negative margin so the highlight adds
+   no layout shift. */
+#sidebar li[id^="/"] > button[aria-expanded] > div:not(.shrink-0) {
+    padding: 1px 6px;
+    margin: -1px -6px;
+    border-radius: 6px;
+    transition: background-color 0.12s ease;
+}
+#sidebar li[id^="/"] > button[aria-expanded] > div:not(.shrink-0):hover {
+    background-color: rgba(15, 23, 42, 0.08);
+}
+.dark #sidebar li[id^="/"] > button[aria-expanded] > div:not(.shrink-0):hover,
+:is(.dark) #sidebar li[id^="/"] > button[aria-expanded] > div:not(.shrink-0):hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
 /* `navbar-cta.js` injects the GitHub stars + Get-started button into
    `#navbar-transition-maple` after Mintlify hydrates. The navbar is
    `justify-content: flex-end`, so the inserted children push the existing
