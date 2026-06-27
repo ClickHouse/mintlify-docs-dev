@@ -706,7 +706,7 @@ export const kbIndex = {
     {
       id: "data-import-export/importing-geojason-with-nested-object-array",
       title: "导入包含深层嵌套对象数组的 GeoJSON",
-      description: ""导入包含深层嵌套对象数组的 GeoJSON"",
+      description: "导入包含深层嵌套对象数组的 GeoJSON",
       href: "/resources/support-center/knowledge-base/data-import-export/importing-geojason-with-nested-object-array",
       category: "数据导入与导出",
       tags: ["数据格式"]
