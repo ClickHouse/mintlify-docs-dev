@@ -706,7 +706,7 @@ export const kbIndex = {
     {
       id: "data-import-export/importing-geojason-with-nested-object-array",
       title: "Importación de GeoJSON con un array de objetos profundamente anidado",
-      description: ""Importación de GeoJSON con un array de objetos profundamente anidado"",
+      description: "Importación de GeoJSON con un array de objetos profundamente anidado",
       href: "/resources/support-center/knowledge-base/data-import-export/importing-geojason-with-nested-object-array",
       category: "Importación y exportación de datos",
       tags: ["Data Formats"]
