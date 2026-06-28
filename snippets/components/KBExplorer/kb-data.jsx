@@ -46,7 +46,7 @@ export const kbIndex = {
   "articles": [
     {
       "id": "integrations/python-clickhouse-connect-example",
-      "title": "A Python client working example for connecting to ClickHouse Cloud Service",
+      "title": "A Python client working example for connecting to ClickHouse Cloud service",
       "description": "Learn how to connect to ClickHouse Cloud Service using Python with a step-by-step example using the clickhouse-connect driver.",
       "href": "/resources/support-center/knowledge-base/integrations/python-clickhouse-connect-example",
       "category": "Integrations & client libraries",
@@ -56,7 +56,7 @@ export const kbIndex = {
     },
     {
       "id": "configuration-settings/about-quotas-and-query-complexity",
-      "title": "About Quotas and Query complexity",
+      "title": "About quotas and query complexity",
       "description": "Quotas and Query Complexity are powerful ways to limit and restrict what users can do in ClickHouse. This KB article shows examples on how to apply these two different approaches.",
       "href": "/resources/support-center/knowledge-base/configuration-settings/about-quotas-and-query-complexity",
       "category": "Configuration & settings",
@@ -87,7 +87,7 @@ export const kbIndex = {
     },
     {
       "id": "configuration-settings/alter-user-settings-exception",
-      "title": "Alter User Settings Exception",
+      "title": "Alter user settings exception",
       "description": "Handing the an exception thrown when altering user settings",
       "href": "/resources/support-center/knowledge-base/configuration-settings/alter-user-settings-exception",
       "category": "Configuration & settings",
@@ -348,7 +348,7 @@ export const kbIndex = {
     },
     {
       "id": "cloud-services/execute-system-queries-in-cloud",
-      "title": "Execute SYSTEM Statements on All Nodes in ClickHouse Cloud",
+      "title": "Execute SYSTEM statements on all nodes in ClickHouse Cloud",
       "description": "Learn how to use `ON CLUSTER` and `clusterAllReplicas` to execute SYSTEM statements and queries across all nodes in a ClickHouse Cloud service.",
       "href": "/resources/support-center/knowledge-base/cloud-services/execute-system-queries-in-cloud",
       "category": "Cloud",
@@ -368,7 +368,7 @@ export const kbIndex = {
     },
     {
       "id": "troubleshooting/fix-developer-verification-error-in-macos",
-      "title": "Fix the Developer Verification Error in MacOS",
+      "title": "Fix the developer verification error in macOS",
       "description": "Learn how to resolve the MacOS developer verification error when running ClickHouse commands, using either System Settings or the terminal.",
       "href": "/resources/support-center/knowledge-base/troubleshooting/fix-developer-verification-error-in-macos",
       "category": "Troubleshooting & errors",
@@ -389,7 +389,7 @@ export const kbIndex = {
     },
     {
       "id": "data-import-export/kafka-clickhouse-json",
-      "title": "How can I use the new JSON Data Type with Kafka?",
+      "title": "How can I use the new JSON data type with Kafka?",
       "description": "Learn how to load JSON messages from Apache Kafka directly into a single JSON column in ClickHouse using the Kafka table engine and JSON data type.",
       "href": "/resources/support-center/knowledge-base/data-import-export/kafka-clickhouse-json",
       "category": "Data import & export",
@@ -400,7 +400,7 @@ export const kbIndex = {
     },
     {
       "id": "cloud-services/change-billing-email",
-      "title": "How do I change my Billing Contact in ClickHouse Cloud?",
+      "title": "How do I change my billing contact in ClickHouse Cloud?",
       "description": "Let's learn how to change your billing address in ClickHouse Cloud.",
       "href": "/resources/support-center/knowledge-base/cloud-services/change-billing-email",
       "category": "Cloud",
@@ -420,7 +420,7 @@ export const kbIndex = {
     },
     {
       "id": "data-import-export/parquet-to-csv-json",
-      "title": "How do I convert Files from Parquet to CSV or JSON?",
+      "title": "How do I convert files from Parquet to CSV or JSON?",
       "description": "Learn how to use ClickHouse's `clickhouse-local` tool to easily convert Parquet files to CSV or JSON formats.",
       "href": "/resources/support-center/knowledge-base/data-import-export/parquet-to-csv-json",
       "category": "Data import & export",
@@ -431,7 +431,7 @@ export const kbIndex = {
     },
     {
       "id": "data-import-export/mysql-to-parquet-csv-json",
-      "title": "How do I export MySQL Data to Parquet, CSV, or JSON Using ClickHouse",
+      "title": "How do I export MySQL data to Parquet, CSV, or JSON using ClickHouse",
       "description": "Learn how to use the `clickhouse-local` tool to export MySQL data into formats like Parquet, CSV, or JSON quickly and efficiently.",
       "href": "/resources/support-center/knowledge-base/data-import-export/mysql-to-parquet-csv-json",
       "category": "Data import & export",
@@ -453,7 +453,7 @@ export const kbIndex = {
     },
     {
       "id": "setup-installation/install-clickhouse-windows10",
-      "title": "How do I Install ClickHouse on Windows 10?",
+      "title": "How do I install ClickHouse on Windows 10?",
       "description": "Learn how to install and test ClickHouse on Windows 10 using WSL 2. Includes setup, troubleshooting, and running a test environment.",
       "href": "/resources/support-center/knowledge-base/setup-installation/install-clickhouse-windows10",
       "category": "Setup & installation",
@@ -473,7 +473,7 @@ export const kbIndex = {
     },
     {
       "id": "cloud-services/ingest-failures-23-9-release",
-      "title": "How do I resolve Ingest Failures After ClickHouse 23.9 Release?",
+      "title": "How do I resolve ingest failures after ClickHouse 23.9 release?",
       "description": "Learn how to resolve ingest failures caused by stricter grant checking introduced in ClickHouse 23.9 for tables using `async_inserts`. Update grants to fix errors.",
       "href": "/resources/support-center/knowledge-base/cloud-services/ingest-failures-23-9-release",
       "category": "Cloud",
@@ -567,7 +567,7 @@ export const kbIndex = {
     },
     {
       "id": "cloud-services/how-to-check-my-clickhouse-cloud-sevice-state",
-      "title": "How to Check Your ClickHouse Cloud Service State",
+      "title": "How to check your ClickHouse Cloud service state",
       "description": "Learn how to use the ClickHouse Cloud API to check if your service is stopped, idle, or running without waking it up.",
       "href": "/resources/support-center/knowledge-base/cloud-services/how-to-check-my-clickhouse-cloud-sevice-state",
       "category": "Cloud",
@@ -577,7 +577,7 @@ export const kbIndex = {
     },
     {
       "id": "configuration-settings/configure-a-user-setting",
-      "title": "How to Configure Settings for a User in ClickHouse",
+      "title": "How to configure settings for a user in ClickHouse",
       "description": "Learn how to define settings in ClickHouse for individual queries, client sessions, or specific users using `SET` and `ALTER USER` commands.",
       "href": "/resources/support-center/knowledge-base/configuration-settings/configure-a-user-setting",
       "category": "Configuration & settings",
@@ -597,7 +597,7 @@ export const kbIndex = {
     },
     {
       "id": "cloud-services/how-to-connect-to-ch-cloud-using-ssh-keys",
-      "title": "How to connect to ClickHouse using SSH Keys",
+      "title": "How to connect to ClickHouse using SSH keys",
       "description": "How to connect to ClickHouse and ClickHouse Cloud using SSH Keys",
       "href": "/resources/support-center/knowledge-base/cloud-services/how-to-connect-to-ch-cloud-using-ssh-keys",
       "category": "Cloud",
@@ -628,7 +628,7 @@ export const kbIndex = {
     },
     {
       "id": "setup-installation/enabling-ssl-with-lets-encrypt",
-      "title": "How to Enable SSL with Let's Encrypt on a Single ClickHouse Server",
+      "title": "How to enable SSL with Let's Encrypt on a single ClickHouse server",
       "description": "Learn how to set up SSL for a single ClickHouse server using Let's Encrypt, including certificate issuance, configuration, and validation.",
       "href": "/resources/support-center/knowledge-base/setup-installation/enabling-ssl-with-lets-encrypt",
       "category": "Setup & installation",
@@ -638,7 +638,7 @@ export const kbIndex = {
     },
     {
       "id": "data-import-export/file-export",
-      "title": "How to Export Data from ClickHouse to a File",
+      "title": "How to export data from ClickHouse to a file",
       "description": "Learn various methods to export data from ClickHouse, including `INTO OUTFILE`, the File table engine, and command-line redirection.",
       "href": "/resources/support-center/knowledge-base/data-import-export/file-export",
       "category": "Data import & export",
@@ -659,7 +659,7 @@ export const kbIndex = {
     },
     {
       "id": "monitoring-debugging/generate-har-file",
-      "title": "How to Generate a HAR file for support",
+      "title": "How to generate a HAR file for support",
       "description": "A HAR (HTTP Archive) file captures the network activity in your browser. It can help our support team diagnose slow page loads, failed requests, or other network issues.",
       "href": "/resources/support-center/knowledge-base/monitoring-debugging/generate-har-file",
       "category": "Monitoring & debugging",
@@ -679,7 +679,7 @@ export const kbIndex = {
     },
     {
       "id": "performance-optimization/find-expensive-queries",
-      "title": "How to Identify the Most Expensive Queries in ClickHouse",
+      "title": "How to identify the most expensive queries in ClickHouse",
       "description": "Learn how to use the `query_log` table in ClickHouse to identify the most memory and CPU-intensive queries across distributed nodes.",
       "href": "/resources/support-center/knowledge-base/performance-optimization/find-expensive-queries",
       "category": "Performance & optimization",
@@ -689,7 +689,7 @@ export const kbIndex = {
     },
     {
       "id": "configuration-settings/ignoring-incorrect-settings",
-      "title": "How to Ignore Incorrect Settings in ClickHouse",
+      "title": "How to ignore incorrect settings in ClickHouse",
       "description": "Learn how to use the `skip_check_for_incorrect_settings` option to allow ClickHouse to start even when user-level settings are specified incorrectly.",
       "href": "/resources/support-center/knowledge-base/configuration-settings/ignoring-incorrect-settings",
       "category": "Configuration & settings",
@@ -707,7 +707,7 @@ export const kbIndex = {
     },
     {
       "id": "setup-installation/how-to-increase-thread-pool-size",
-      "title": "How to Increase the Number of Threads in ClickHouse",
+      "title": "How to increase the number of threads in ClickHouse",
       "description": "Learn how to configure the Global Thread pool in ClickHouse by adjusting settings like `max_thread_pool_size`, `thread_pool_queue_size`, and `max_thread_pool_free_size`.",
       "href": "/resources/support-center/knowledge-base/setup-installation/how-to-increase-thread-pool-size",
       "category": "Setup & installation",
@@ -717,7 +717,7 @@ export const kbIndex = {
     },
     {
       "id": "data-import-export/kafka-to-clickhouse-setup",
-      "title": "How to Ingest Data from Kafka into ClickHouse",
+      "title": "How to ingest data from Kafka into ClickHouse",
       "description": "Learn how to ingest data from a Kafka topic into ClickHouse using the Kafka table engine, materialized views, and MergeTree tables.",
       "href": "/resources/support-center/knowledge-base/data-import-export/kafka-to-clickhouse-setup",
       "category": "Data import & export",
@@ -827,7 +827,7 @@ export const kbIndex = {
     },
     {
       "id": "monitoring-debugging/check-query-cache-in-use",
-      "title": "How to Verify Query Cache Usage in ClickHouse",
+      "title": "How to verify query cache usage in ClickHouse",
       "description": "Learn how to check if query cache is being utilized in ClickHouse using `clickhouse-client` trace logs or SQL commands.",
       "href": "/resources/support-center/knowledge-base/monitoring-debugging/check-query-cache-in-use",
       "category": "Monitoring & debugging",
@@ -878,7 +878,7 @@ export const kbIndex = {
     },
     {
       "id": "performance-optimization/improve-map-performance",
-      "title": "Improving Map Lookup Performance in ClickHouse",
+      "title": "Improving Map lookup performance in ClickHouse",
       "description": "Learn how to optimize Map column lookups in ClickHouse for better query performance by materializing specific keys as standalone columns.",
       "href": "/resources/support-center/knowledge-base/performance-optimization/improve-map-performance",
       "category": "Performance & optimization",
@@ -1008,7 +1008,7 @@ export const kbIndex = {
     },
     {
       "id": "data-import-export/cannot-append-data-to-parquet-format",
-      "title": "Resolving \"Cannot Append Data in Parquet Format\" Error in ClickHouse",
+      "title": "Resolving \"Cannot Append Data in Parquet Format\" error in ClickHouse",
       "description": "Are you getting the error \"Cannot append data in format Parquet to file\" error in ClickHouse? Let's take a look at how to resolve it.",
       "href": "/resources/support-center/knowledge-base/data-import-export/cannot-append-data-to-parquet-format",
       "category": "Data import & export",
@@ -1019,7 +1019,7 @@ export const kbIndex = {
     },
     {
       "id": "troubleshooting/exception-too-many-parts",
-      "title": "Resolving \"Too Many Parts\" Error in ClickHouse",
+      "title": "Resolving \"Too Many Parts\" error in ClickHouse",
       "description": "Learn how to address the \"Too many parts\" error in ClickHouse by optimizing insert rates, configuring MergeTree settings, and managing partitions effectively.",
       "href": "/resources/support-center/knowledge-base/troubleshooting/exception-too-many-parts",
       "category": "Troubleshooting & errors",
@@ -1122,7 +1122,7 @@ export const kbIndex = {
     },
     {
       "id": "general-faqs/use-clickhouse-for-log-analytics",
-      "title": "Using ClickHouse for Log Analytics",
+      "title": "Using ClickHouse for log analytics",
       "description": "ClickHouse is popular for logs and metrics analysis because of the real-time analytics capabilities provided. Ready to find out more?",
       "href": "/resources/support-center/knowledge-base/general-faqs/use-clickhouse-for-log-analytics",
       "category": "General & FAQs",
@@ -1132,7 +1132,7 @@ export const kbIndex = {
     },
     {
       "id": "queries-sql/filtered-aggregates",
-      "title": "Using Filtered Aggregates in ClickHouse",
+      "title": "Using filtered aggregates in ClickHouse",
       "description": "Learn how to use filtered aggregates in ClickHouse with `-If` and `-Distinct` aggregate combinators to simplify query syntax and enhance analytics.",
       "href": "/resources/support-center/knowledge-base/queries-sql/filtered-aggregates",
       "category": "Queries & SQL",
@@ -1175,10 +1175,12 @@ export const kbIndex = {
     {
       "id": "general-faqs/columnar-database",
       "title": "What is a columnar database?",
-      "description": "This page describes what a columnar database is",
+      "description": "A columnar database stores the data of each column independently. This allows reading data from disk only for those columns that are used in any given query.",
       "href": "/resources/support-center/knowledge-base/general-faqs/columnar-database",
       "category": "General & FAQs",
-      "tags": []
+      "tags": [
+        "Core Data Concepts"
+      ]
     },
     {
       "id": "general-faqs/olap",

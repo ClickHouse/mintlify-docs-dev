@@ -138,8 +138,9 @@ def generate_badges(use_cases: List[str], products: List[str]) -> str:
     Returns:
         Badge components as a string
     """
-    # First line: link badge
-    first_line = '<a href="/get-started/quickstarts/home"><Badge size="lg" color="gray" icon="arrow-left">All quickstarts</Badge></a>'
+    # First line: muted text back-link (arrow icon + label), styled to match the
+    # homepage links (e.g. "Read the quickstart" / "Set up docs MCP server").
+    first_line = '<a href="/get-started/quickstarts/home" className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-zinc-500 hover:text-gray-900 dark:hover:text-[#fdff75] transition-colors font-normal no-underline"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></svg>All quickstarts</a>'
 
     # Second line: all other badges
     second_line_badges = []
