@@ -74,4 +74,4 @@ SELECT * FROM events WHERE user_id = 12345;
 -- Look for "Skip" in output showing granules skipped
 ```
 
-Reference: [Use Data Skipping Indices Where Appropriate](/concepts/best-practices/using-data-skipping-indices)
+Reference: [Use Data Skipping Indices Where Appropriate](https://clickhouse.com/docs/best-practices/use-data-skipping-indices-where-appropriate)

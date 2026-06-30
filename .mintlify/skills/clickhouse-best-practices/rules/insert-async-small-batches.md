@@ -52,4 +52,4 @@ ALTER USER my_app_user SETTINGS
 | `wait_for_async_insert=1` | Waits for flush, confirms durability | **Recommended** |
 | `wait_for_async_insert=0` | Fire-and-forget, unaware of errors | **Risky** - only if you accept data loss |
 
-Reference: [Selecting an Insert Strategy](/concepts/best-practices/selecting-an-insert-strategy)
+Reference: [Selecting an Insert Strategy](https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy)

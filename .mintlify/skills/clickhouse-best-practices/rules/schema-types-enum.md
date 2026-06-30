@@ -55,4 +55,4 @@ SELECT * FROM orders WHERE status > 'processing';  -- shipped and delivered
 | < 256 distinct values | Enum8 (1 byte) |
 | 256-65,536 distinct values | Enum16 (2 bytes) |
 
-Reference: [Select Data Types](/concepts/best-practices/select-data-type)
+Reference: [Select Data Types](https://clickhouse.com/docs/best-practices/select-data-types)
