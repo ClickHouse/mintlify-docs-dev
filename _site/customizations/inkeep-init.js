@@ -231,6 +231,8 @@
         // Wait 300ms after the last keystroke before firing a search request,
         // so fast typing issues one query instead of one per character.
         debounceTimeMs: 300,
+        // Return at most 20 results per query (down from Inkeep's default 40).
+        maxResults: 20,
         shouldShowContentSnippets: true,
         contentSnippetLength: 200,
         shouldHighlightMatches: true,
