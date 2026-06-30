@@ -39,4 +39,4 @@ ORDER BY (event_type, timestamp);
 | Query performance on time ranges | Maybe (test first) |
 | No specific lifecycle needs | No |
 
-Reference: [Choosing a Partitioning Key](/concepts/best-practices/partitioning-keys)
+Reference: [Choosing a Partitioning Key](https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key)

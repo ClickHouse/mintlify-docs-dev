@@ -47,4 +47,4 @@ ALTER TABLE events DROP PARTITION '202301';
 ALTER TABLE events_archive ATTACH PARTITION '202301' FROM events;
 ```
 
-Reference: [Choosing a Partitioning Key](/concepts/best-practices/partitioning-keys)
+Reference: [Choosing a Partitioning Key](https://clickhouse.com/docs/best-practices/choosing-a-partitioning-key)

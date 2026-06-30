@@ -61,4 +61,4 @@ ORDER BY (user_id, event_date, event_id);
 - [ ] Ordered columns by cardinality (low first, high last)
 - [ ] Limited to 4-5 key columns (typically sufficient)
 
-Reference: [Choosing a Primary Key](/concepts/best-practices/choosing-a-primary-key)
+Reference: [Choosing a Primary Key](https://clickhouse.com/docs/best-practices/choosing-a-primary-key)

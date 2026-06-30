@@ -51,4 +51,4 @@ GROUP BY table
 ORDER BY parts DESC;
 ```
 
-Reference: [Selecting an Insert Strategy](/concepts/best-practices/selecting-an-insert-strategy)
+Reference: [Selecting an Insert Strategy](https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy)

@@ -55,4 +55,4 @@ country_code FixedString(2),    -- "US", "DE", "JP" - always 2 chars
 country_name LowCardinality(String),  -- "United States", "Germany"
 ```
 
-Reference: [Select Data Types](/concepts/best-practices/select-data-type)
+Reference: [Select Data Types](https://clickhouse.com/docs/best-practices/select-data-types)
