@@ -170,7 +170,7 @@ Structure your response as follows:
 
 - `schema-types-native-types` - Use native types, not String for everything
 - `schema-types-minimize-bitwidth` - Use smallest numeric type that fits
-- `schema-types-lowcardinality` - LowCardinality for <10K unique strings
+- `schema-types-lowcardinality` - LowCardinality for fewer than 10K unique strings
 - `schema-types-enum` - Enum for finite value sets with validation
 - `schema-types-avoid-nullable` - Avoid Nullable; use DEFAULT instead
 
