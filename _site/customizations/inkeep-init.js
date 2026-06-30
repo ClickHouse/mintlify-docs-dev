@@ -228,6 +228,9 @@
       },
       searchSettings: {
         placeholder: 'Search ClickHouse docs...',
+        // Wait 300ms after the last keystroke before firing a search request,
+        // so fast typing issues one query instead of one per character.
+        debounceTimeMs: 300,
         shouldShowContentSnippets: true,
         contentSnippetLength: 200,
         shouldHighlightMatches: true,
