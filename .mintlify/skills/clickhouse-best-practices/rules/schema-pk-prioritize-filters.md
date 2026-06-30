@@ -41,4 +41,4 @@ SELECT * FROM events WHERE tenant_id = 123;
 -- Look for "PrimaryKey" with Key Condition
 ```
 
-Reference: [Choosing a Primary Key](/concepts/best-practices/choosing-a-primary-key)
+Reference: [Choosing a Primary Key](https://clickhouse.com/docs/best-practices/choosing-a-primary-key)

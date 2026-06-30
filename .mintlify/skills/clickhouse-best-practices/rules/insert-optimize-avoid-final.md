@@ -54,4 +54,4 @@ SELECT * FROM events FINAL WHERE user_id = 123;
 | Deduplicate ReplacingMergeTree | Use `FINAL` modifier in SELECT |
 | Reduce part count | Rely on background merges |
 
-Reference: [Avoid OPTIMIZE FINAL](/concepts/best-practices/avoid-optimize-final)
+Reference: [Avoid OPTIMIZE FINAL](https://clickhouse.com/docs/best-practices/avoid-optimize-final)

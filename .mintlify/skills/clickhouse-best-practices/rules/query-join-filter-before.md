@@ -51,4 +51,4 @@ FROM (
 JOIN customers c ON c.id = o.customer_id;
 ```
 
-Reference: [Minimize and Optimize JOINs](/concepts/best-practices/minimize-optimize-joins)
+Reference: [Minimize and Optimize JOINs](https://clickhouse.com/docs/best-practices/minimize-optimize-joins)

@@ -26,4 +26,4 @@ Data format affects insert performance. Native format is column-oriented with mi
 client.execute("INSERT INTO events VALUES", data, settings={'input_format': 'Native'})
 ```
 
-Reference: [Selecting an Insert Strategy](/concepts/best-practices/selecting-an-insert-strategy)
+Reference: [Selecting an Insert Strategy](https://clickhouse.com/docs/best-practices/selecting-an-insert-strategy)

@@ -52,4 +52,4 @@ CREATE TABLE users (
 | DateTime | `now()` or `toDateTime(0)` |
 | UUID | `generateUUIDv4()` |
 
-Reference: [Select Data Types](/concepts/best-practices/select-data-type)
+Reference: [Select Data Types](https://clickhouse.com/docs/best-practices/select-data-types)

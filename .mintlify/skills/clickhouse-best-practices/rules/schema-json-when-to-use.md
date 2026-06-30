@@ -73,4 +73,4 @@ CREATE TABLE events (
 )
 ```
 
-Reference: [Use JSON Where Appropriate](/concepts/best-practices/json-type)
+Reference: [Use JSON Where Appropriate](https://clickhouse.com/docs/best-practices/use-json-where-appropriate)
