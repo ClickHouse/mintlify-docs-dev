@@ -171,14 +171,6 @@ Maximal size of block in bytes accumulated during aggregation in order of primar
 
 Number of threads to use for merge intermediate aggregation results in memory efficient mode. When bigger, then more memory is consumed. 0 means - same as 'max_threads'.
 
-## ai_function_credentials {#ai_function_credentials} 
-
-<ExperimentalBadge/>
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": ""},{"label": "New setting"}]}]}/>
-
-Name of the named collection that AI functions use for provider credentials and configuration (`provider`, `endpoint`, `model`, optional `api_key`, etc.). When empty, an exception is raised.
-
 ## ai_function_embedding_max_batch_size {#ai_function_embedding_max_batch_size} 
 
 <ExperimentalBadge/>
@@ -339,17 +331,6 @@ Allow to create databases with deprecated Ordinary engine
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.5"},{"label": "0"},{"label": "Allow usage of deprecated error prone window functions (neighbor, runningAccumulate, runningDifferenceStartingWithFirstValue, runningDifference)"}]}]}/>
 
 Allow usage of deprecated error prone window functions (neighbor, runningAccumulate, runningDifferenceStartingWithFirstValue, runningDifference)
-
-## allow_deprecated_snowflake_conversion_functions {#allow_deprecated_snowflake_conversion_functions} 
-
-<SettingsInfoBlock type="Bool" default_value="0" />
-
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.6"},{"label": "0"},{"label": "Disabled deprecated functions snowflakeToDateTime[64] and dateTime[64]ToSnowflake."}]}]}/>
-
-Functions `snowflakeToDateTime`, `snowflakeToDateTime64`, `dateTimeToSnowflake`, and `dateTime64ToSnowflake` are deprecated and disabled by default.
-Please use functions `snowflakeIDToDateTime`, `snowflakeIDToDateTime64`, `dateTimeToSnowflakeID`, and `dateTime64ToSnowflakeID` instead.
-
-To re-enable the deprecated functions (e.g., during a transition period), please set this setting to `true`.
 
 ## allow_deprecated_syntax_for_merge_tree {#allow_deprecated_syntax_for_merge_tree} 
 
@@ -513,11 +494,13 @@ Allow experimental delta-kernel-rs implementation.
 
 ## allow_experimental_delta_lake_writes {#allow_experimental_delta_lake_writes} 
 
-<ExperimentalBadge/>
+<BetaBadge/>
+
+**Aliases**: `allow_delta_lake_writes`
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.9"},{"label": "0"},{"label": "New setting."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "0"},{"label": "Delta Lake writes were moved to Beta."}]}, {"id": "row-2","items": [{"label": "25.9"},{"label": "0"},{"label": "New setting."}]}]}/>
 
 Enables delta-kernel writes feature.
 
@@ -543,7 +526,7 @@ Enable experimental functions for funnel analysis.
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting to allow parsing Iceberg geometry/geography fields as Geometry type."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "0"},{"label": "New setting to allow parsing Iceberg geometry\/geography fields as Geometry type."}]}]}/>
 
 Allow parsing Iceberg `geometry` and `geography` field types as ClickHouse `Geometry` (Variant) type.
 
@@ -729,6 +712,16 @@ Allows creation of tables with the [TimeSeries](/reference/engines/table-engines
 
 Allows creation of tables with the `UNIQUE KEY` clause on MergeTree-family engines.
 
+## allow_experimental_url_wildcard_from_index_pages {#allow_experimental_url_wildcard_from_index_pages} 
+
+<ExperimentalBadge/>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "0"},{"label": "New setting to enable expanding wildcards in the `url` table function by listing HTTP index pages."}]}]}/>
+
+Allow experimental wildcard expansion for `url()` and `ENGINE = URL` from HTTP index pages.
+
 ## allow_experimental_window_view {#allow_experimental_window_view} 
 
 <ExperimentalBadge/>
@@ -885,7 +878,7 @@ Allow to execute alters which affects not only tables metadata, but also data on
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "23.4"},{"label": "0"},{"label": "Allow non-const timezone arguments in certain time-related functions like toTimeZone(), fromUnixTimestamp*(), snowflakeToDateTime*()."}]}]}/>
 
-Allow non-const timezone arguments in certain time-related functions like toTimeZone(), fromUnixTimestamp*(), snowflakeToDateTime*().
+Allow non-const timezone arguments in certain time-related functions like toTimeZone(), fromUnixTimestamp*(), snowflakeIDToDateTime*().
 This setting exists only for compatibility reasons. In ClickHouse, the time zone is a property of the data type, respectively of the column.
 Enabling this setting gives the wrong impression that different values within a column can have different timezones.
 Therefore, please do not enable this setting.
@@ -993,6 +986,18 @@ restored — arguments are silently ignored, matching the pre-26.5 behavior.
 
 When moving conditions from WHERE to PREWHERE, allow reordering them to optimize filtering
 
+## allow_replace_partition_from_empty_source {#allow_replace_partition_from_empty_source} 
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New safety check: `ALTER TABLE ... REPLACE PARTITION ... FROM ...` now throws when the source table has no parts in the requested partition (fixes the silent data loss in [#23727](https:\/\/github.com\/ClickHouse\/ClickHouse\/issues\/23727)). The previous behavior, silently dropping the destination partition, is preserved by setting `allow_replace_partition_from_empty_source = 1`."}]}]}/>
+
+Allow `ALTER TABLE ... REPLACE PARTITION ... FROM ...` to silently drop the destination partition when the source has no parts in that partition.
+
+By default this is disallowed: `REPLACE PARTITION` from a source that has no data in the requested partition raises an exception, because in this case the operation effectively becomes a silent `DROP PARTITION` on the destination (the destination's data is removed and nothing replaces it), a common cause of accidental data loss (see [#23727](https://github.com/ClickHouse/ClickHouse/issues/23727)).
+
+Enable this setting to restore the previous behavior, for example when you intentionally use an empty source partition to clear data in the destination. For an unconditional drop, prefer `ALTER TABLE ... DROP PARTITION ...` instead.
+
 ## allow_settings_after_format_in_insert {#allow_settings_after_format_in_insert} 
 
 <SettingsInfoBlock type="Bool" default_value="0" />
@@ -1033,7 +1038,7 @@ Allow using simdjson library in 'JSON*' functions if AVX2 instructions are avail
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.11"},{"label": "1"},{"label": "Enable direct output of special columns representations like Sparse/Replicated in some output formats"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": "0"},{"label": "Add a setting to allow output of special columns representations like Sparse/Replicated without converting them to full columns"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.11"},{"label": "1"},{"label": "Enable direct output of special columns representations like Sparse\/Replicated in some output formats"}]}, {"id": "row-2","items": [{"label": "25.10"},{"label": "0"},{"label": "Add a setting to allow output of special columns representations like Sparse\/Replicated without converting them to full columns"}]}]}/>
 
 Allows to output columns with special serialization kinds like Sparse and Replicated without converting them to full column representation.
 It helps to avoid unnecessary data copy during formatting.
@@ -1103,7 +1108,7 @@ Possible values:
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "0"},{"label": "Forbid suspicious PRIMARY KEY/ORDER BY for MergeTree (i.e. SimpleAggregateFunction)"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "0"},{"label": "Forbid suspicious PRIMARY KEY\/ORDER BY for MergeTree (i.e. SimpleAggregateFunction)"}]}]}/>
 
 Allow suspicious `PRIMARY KEY`/`ORDER BY` for MergeTree (i.e. SimpleAggregateFunction).
 
@@ -1119,7 +1124,7 @@ Reject TTL expressions that don't depend on any of table's columns. It indicates
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.11"},{"label": "0"},{"label": "Don't allow Variant/Dynamic types in GROUP BY by default"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.11"},{"label": "0"},{"label": "Don't allow Variant\/Dynamic types in GROUP BY by default"}]}]}/>
 
 Allows or restricts using [Variant](/reference/data-types/variant) and [Dynamic](/reference/data-types/dynamic) types in GROUP BY keys.
 
@@ -1127,7 +1132,7 @@ Allows or restricts using [Variant](/reference/data-types/variant) and [Dynamic]
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.11"},{"label": "0"},{"label": "Don't allow Variant/Dynamic types in ORDER BY by default"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.11"},{"label": "0"},{"label": "Don't allow Variant\/Dynamic types in ORDER BY by default"}]}]}/>
 
 Allows or restricts using [Variant](/reference/data-types/variant) and [Dynamic](/reference/data-types/dynamic) types in ORDER BY keys.
 
@@ -1906,7 +1911,7 @@ Maximum size of data of a [Zoo]Keeper's node during backup
 
 <SettingsInfoBlock type="UInt64" default_value="1000" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.7"},{"label": "1000"},{"label": "Setting for Aws::Client::RetryStrategy, Aws::Client does retries itself, 0 means no retries. It takes place only for backup/restore."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.7"},{"label": "1000"},{"label": "Setting for Aws::Client::RetryStrategy, Aws::Client does retries itself, 0 means no retries. It takes place only for backup\/restore."}]}]}/>
 
 Setting for Aws::Client::RetryStrategy, Aws::Client does retries itself, 0 means no retries. It takes place only for backup/restore.
 
@@ -2060,7 +2065,7 @@ Use types inference during String to Dynamic conversio
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.4"},{"label": "1"},{"label": "New setting to enable/disable types inference during CAST from String to Variant"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.4"},{"label": "1"},{"label": "New setting to enable\/disable types inference during CAST from String to Variant"}]}]}/>
 
 Use types inference during String to Variant conversion.
 
@@ -2751,7 +2756,7 @@ The default value is `CURRENT_USER`.
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "Setting newly added in 26.5 to gate the FINAL partition-pruning behavior that shipped silently in 26.3 (https://github.com/ClickHouse/ClickHouse/pull/98242). The meaningful semantic change is registered under the 26.3 block so `compatibility = '26.2'` reverts it; this entry exists so the upgrade-from-26.4 check accepts the newly-introduced name."}]}, {"id": "row-2","items": [{"label": "26.3"},{"label": "1"},{"label": "Gates the FINAL planner's unconditional skipping of partition pruning when the partition-key column is not in the sorting key. The behavior change itself shipped silently in 26.3 via https://github.com/ClickHouse/ClickHouse/pull/98242; this entry retroactively documents it so `compatibility = '26.2'` restores the pre-regression behavior (0 = prune before FINAL, fast; 1 = defer pruning, correctness-safe)."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "Setting newly added in 26.5 to gate the FINAL partition-pruning behavior that shipped silently in 26.3 (https:\/\/github.com\/ClickHouse\/ClickHouse\/pull\/98242). The meaningful semantic change is registered under the 26.3 block so `compatibility = '26.2'` reverts it; this entry exists so the upgrade-from-26.4 check accepts the newly-introduced name."}]}, {"id": "row-2","items": [{"label": "26.3"},{"label": "1"},{"label": "Gates the FINAL planner's unconditional skipping of partition pruning when the partition-key column is not in the sorting key. The behavior change itself shipped silently in 26.3 via https:\/\/github.com\/ClickHouse\/ClickHouse\/pull\/98242; this entry retroactively documents it so `compatibility = '26.2'` restores the pre-regression behavior (0 = prune before FINAL, fast; 1 = defer pruning, correctness-safe)."}]}]}/>
 
 When enabled (default), partition pruning is skipped for `FINAL` queries on tables whose
 partition-key columns are not part of the sorting key. This is the correctness-safe behavior
@@ -3200,6 +3205,16 @@ Cloud default value: `20000`.
 
 Only has an effect in ClickHouse Cloud. Timeout for receiving data from distributed cache server, in milliseconds. If no bytes were received in this interval, the exception is thrown.
 
+## distributed_cache_registry_show_certificate_and_signature {#distributed_cache_registry_show_certificate_and_signature} 
+
+<CloudOnlyBadge/>
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting to show the `certificate` and `signature` columns in `system.distributed_cache_registry`."}]}]}/>
+
+Only has an effect in ClickHouse Cloud. Show the `certificate` and `signature` columns in the `system.distributed_cache_registry` table. By default these columns are empty to keep the output compact; enable this setting to inspect them.
+
 ## distributed_cache_send_timeout_ms {#distributed_cache_send_timeout_ms} 
 
 <CloudOnlyBadge/>
@@ -3508,6 +3523,16 @@ Removes unnecessary exchanges in distributed query plan. Disable it for debuggin
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.4"},{"label": "0"},{"label": "New setting to serialize distributed plan for replicas"}]}]}/>
 
 Serialize the distributed query plan for execution at replicas.
+
+## distributed_plan_workers_num {#distributed_plan_workers_num} 
+
+<ExperimentalBadge/>
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New experimental setting for how many stateless workers to lease for a distributed query. Zero disables leasing."}]}]}/>
+
+How many stateless workers will be used to execute this query. Zero disables stateless-worker leasing for distributed plans.
 
 ## distributed_product_mode {#distributed_product_mode} 
 
@@ -4347,6 +4372,22 @@ Execute non-correlated EXISTS subqueries as scalar subqueries. As for scalar sub
 Cloud default value: `0`.
     
 
+## explain_query_plan_default {#explain_query_plan_default} 
+
+<SettingsInfoBlock type="ExplainQueryPlanDefault" default_value="pretty" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "pretty"},{"label": "From 26.7, `EXPLAIN PLAN` defaults to `actions=1, compact=1, pretty=1`. Set this to `legacy` to restore the pre-26.7 output."}]}]}/>
+
+Default format used by `EXPLAIN PLAN`.
+
+Possible values:
+- `pretty` (default since 26.7) — `actions`, `compact`, and `pretty` default to `true`, producing a compact, pretty, action-annotated plan.
+- `legacy` — pre-26.7 output.
+
+Specifying the `actions`, `compact`, or `pretty` options explicitly in the `EXPLAIN` statement (for example, `EXPLAIN actions = 0, compact = 0, pretty = 0 SELECT ...`) always overrides this setting.
+
+`EXPLAIN PLAN` with `json = 1` or `distributed = 1` keeps the legacy (pre-26.7) defaults regardless of this setting, unless `actions`, `compact`, or `pretty` are set explicitly. The pretty output cannot represent JSON results or per-shard distributed plans, so those modes are only rendered correctly in legacy form.
+
 ## external_storage_connect_timeout_sec {#external_storage_connect_timeout_sec} 
 
 <SettingsInfoBlock type="UInt64" default_value="10" />
@@ -4774,7 +4815,7 @@ Recursively remove data on DROP query. Avoids 'Directory not empty' error, but m
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.5"},{"label": "0"},{"label": "Improved compatibility with MySQL DATE_FORMAT/STR_TO_DATE"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.5"},{"label": "0"},{"label": "Improved compatibility with MySQL DATE_FORMAT\/STR_TO_DATE"}]}]}/>
 
 Formatter '%e' in function 'formatDateTime' prints single-digit days with a leading space, e.g. ' 2' instead of '2'.
     
@@ -4791,7 +4832,7 @@ Formatter '%f' in function 'formatDateTime' prints only the scale amount of digi
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "23.4"},{"label": "0"},{"label": "Improved compatibility with MySQL DATE_FORMAT()/STR_TO_DATE()"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "23.4"},{"label": "0"},{"label": "Improved compatibility with MySQL DATE_FORMAT()\/STR_TO_DATE()"}]}]}/>
 
 Formatter '%f' in function 'formatDateTime' prints a single zero instead of six zeros if the formatted value has no fractional seconds.
 
@@ -4805,7 +4846,7 @@ Formatters '%c', '%l' and '%k' in function 'formatDateTime' print months and hou
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "23.4"},{"label": "1"},{"label": "Improved compatibility with MySQL DATE_FORMAT/STR_TO_DATE"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "23.4"},{"label": "1"},{"label": "Improved compatibility with MySQL DATE_FORMAT\/STR_TO_DATE"}]}]}/>
 
 Formatter '%M' in functions 'formatDateTime' and 'parseDateTime' print/parse the month name instead of minutes.
 
@@ -4829,7 +4870,7 @@ Maximum size, in bytes, of a single input value for the functions `base58Encode`
 
 <SettingsInfoBlock type="UInt64" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.7"},{"label": "0"},{"label": "Add new setting to preserve old behaviour of dateTrunc function"}]}, {"id": "row-2","items": [{"label": "25.4"},{"label": "0"},{"label": "Change the result type for dateTrunc function for DateTime64/Date32 arguments to DateTime64/Date32 regardless of time unit to get correct result for negative values"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.7"},{"label": "0"},{"label": "Add new setting to preserve old behaviour of dateTrunc function"}]}, {"id": "row-2","items": [{"label": "25.4"},{"label": "0"},{"label": "Change the result type for dateTrunc function for DateTime64\/Date32 arguments to DateTime64\/Date32 regardless of time unit to get correct result for negative values"}]}]}/>
 
 Allows to change the behaviour of the result type of `dateTrunc` function.
 
@@ -5314,7 +5355,7 @@ Enable HTTP response buffering on the server-side.
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.11"},{"label": "0"},{"label": "Changed for consistency across formats"}]}, {"id": "row-2","items": [{"label": "23.9"},{"label": "1"},{"label": "Output valid JSON/XML on exception in HTTP streaming."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.11"},{"label": "0"},{"label": "Changed for consistency across formats"}]}, {"id": "row-2","items": [{"label": "23.9"},{"label": "1"},{"label": "Output valid JSON\/XML on exception in HTTP streaming."}]}]}/>
 
 Write exception in output format to produce valid output. Works with JSON and XML formats.
 
@@ -5720,7 +5761,7 @@ For the replicated tables by default the only 100 of the most recent inserts for
 For not replicated tables see [non_replicated_deduplication_window](/reference/settings/merge-tree-settings#non_replicated_deduplication_window).
 
 <Note>
-`insert_deduplication_token` works on a partition level (the same as `insert_deduplication` checksum). Multiple partitions can have the same `insert_deduplication_token`.
+`insert_deduplication_token` is tracked per partition, so multiple partitions written by one insert can carry the same token. Without a token, the default content checksum (`insert_deduplication_version = new_unified_hash`) is computed over the whole inserted block, so an insert is deduplicated only when its entire data matches a previous insert (a retry), not when a single partition's rows happen to coincide with a different insert.
 </Note>
 
 Example:
@@ -7254,7 +7295,7 @@ Amount of retries while fetching partition from another host.
 
 ## max_final_threads {#max_final_threads} 
 
-<SettingsInfoBlock type="MaxThreads" default_value="'auto(N)'" />
+<SettingsInfoBlock type="MaxThreads" default_value="auto(N)" />
 
 Sets the maximum number of parallel threads for the `SELECT` query data read phase with the [FINAL](/reference/statements/select/from#final-modifier) modifier.
 
@@ -7629,7 +7670,7 @@ Possible values:
 
 ## max_parsing_threads {#max_parsing_threads} 
 
-<SettingsInfoBlock type="MaxThreads" default_value="'auto(N)'" />
+<SettingsInfoBlock type="MaxThreads" default_value="auto(N)" />
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.4"},{"label": "0"},{"label": "Add a separate setting to control number of threads in parallel parsing from files"}]}]}/>
 
@@ -8143,7 +8184,7 @@ approximately zero computing resources.
 
 ## max_threads {#max_threads} 
 
-<SettingsInfoBlock type="MaxThreads" default_value="'auto(N)'" />
+<SettingsInfoBlock type="MaxThreads" default_value="auto(N)" />
 
 The maximum number of query processing threads, excluding threads for retrieving data from remote servers (see the ['max_distributed_connections'](/reference/settings/session-settings#max_distributed_connections) parameter).
 
@@ -8993,6 +9034,14 @@ Possible values:
 
 - [GROUP BY optimization](/reference/statements/select/group-by#group-by-optimization-depending-on-table-sorting-key)
 
+## optimize_aggregation_in_order_limit {#optimize_aggregation_in_order_limit} 
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "1"},{"label": "New setting to push the `LIMIT` into aggregation-in-order for early termination when the `ORDER BY` is a prefix of the `GROUP BY` sort description."}]}]}/>
+
+When enabled and aggregation in order is active, pushes LIMIT into the aggregation step to enable early termination after producing enough groups. This reduces the amount of data read when ORDER BY matches the GROUP BY key prefix. May reduce the value reported by `rows_before_limit_at_least`; use `exact_rows_before_limit` if exact counts are needed.
+
 ## optimize_aggregators_of_group_by_keys {#optimize_aggregators_of_group_by_keys} 
 
 <SettingsInfoBlock type="Bool" default_value="1" />
@@ -9006,6 +9055,14 @@ Eliminates min/max/any/anyLast aggregators of GROUP BY keys in SELECT sectio
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.2"},{"label": "1"},{"label": "A new setting"}]}]}/>
 
 Populate constant comparison in AND chains to enhance filtering ability. Support operators `<`, `<=`, `>`, `>=`, `=` and mix of them. For example, `(a < b) AND (b < c) AND (c < 5)` would be `(a < b) AND (b < c) AND (c < 5) AND (b < 5) AND (a < 5)`.
+
+## optimize_and_compare_chain_max_hash_work {#optimize_and_compare_chain_max_hash_work} 
+
+<SettingsInfoBlock type="UInt64" default_value="5000000" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "5000000"},{"label": "New setting that bounds the work of the `optimize_and_compare_chain` optimization (measured in query-tree nodes hashed) so it cannot dominate analysis of queries with very many or very large `AND`-chains of comparisons. The previous value `0` (unlimited) reproduces the pre-26.7 behavior where the optimization was uncapped, so `compatibility` set to an earlier version keeps deriving transitive predicates without a budget. Set to `0` to disable the budget."}]}]}/>
+
+Work budget for the `optimize_and_compare_chain` optimization during query analysis, measured in the number of query-tree nodes hashed by `getTreeHash` (the dominant cost of this optimization). Once a query has hashed more than this many nodes while applying the optimization, it stops applying it for the rest of the query. This bounds analysis time for queries with very many or very large `AND`-chains of comparisons, where the optimization can otherwise dominate analysis while folding nothing. Stopping early is always safe: it only forgoes an optimization and never changes results. Set to `0` to disable the budget (unlimited).
 
 ## optimize_append_index {#optimize_append_index} 
 
@@ -9785,7 +9842,7 @@ The former is used when we know that the right table size is below the threshold
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "New setting to enable parallel processing of non-joined rows in RIGHT/FULL parallel_hash joins."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "New setting to enable parallel processing of non-joined rows in RIGHT\/FULL parallel_hash joins."}]}]}/>
 
 Allow multiple threads to process non-joined rows from the right table in parallel during RIGHT and FULL JOINs.
 This can speed up the non-joined phase when using the `parallel_hash` join algorithm with large tables.
@@ -9995,7 +10052,7 @@ Enables pushing to attached views concurrently instead of sequentially.
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "23.5"},{"label": "1"},{"label": "Allow parallelism when executing queries that read from file/url/s3/etc. This may reorder rows."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "23.5"},{"label": "1"},{"label": "Allow parallelism when executing queries that read from file\/url\/s3\/etc. This may reorder rows."}]}]}/>
 
 Parallelize output for reading step from storage. It allows parallelization of query processing right after reading from storage if possible
 
@@ -10003,7 +10060,7 @@ Parallelize output for reading step from storage. It allows parallelization of q
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.5"},{"label": "0"},{"label": "Improved compatibility with MySQL DATE_FORMAT/STR_TO_DATE"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.5"},{"label": "0"},{"label": "Improved compatibility with MySQL DATE_FORMAT\/STR_TO_DATE"}]}]}/>
 
 Formatter '%e' in function 'parseDateTime' expects that single-digit days are space-padded, e.g., ' 2' is accepted but '2' raises an error.
     
@@ -10012,7 +10069,7 @@ Formatter '%e' in function 'parseDateTime' expects that single-digit days are sp
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "23.11"},{"label": "1"},{"label": "Improved compatibility with MySQL DATE_FORMAT/STR_TO_DATE"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "23.11"},{"label": "1"},{"label": "Improved compatibility with MySQL DATE_FORMAT\/STR_TO_DATE"}]}]}/>
 
 Formatters '%c', '%l' and '%k' in function 'parseDateTime' parse months and hours without leading zeros.
 
@@ -10970,7 +11027,7 @@ Allow to add hint (additional predicate) for filtering built from the inverted t
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "New setting to enable a query-plan-level optimization that pushes ORDER BY ... LIMIT n through a LEFT/RIGHT join when the sort key only references the preserved side."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.5"},{"label": "1"},{"label": "New setting to enable a query-plan-level optimization that pushes ORDER BY ... LIMIT n through a LEFT\/RIGHT join when the sort key only references the preserved side."}]}]}/>
 
 Toggles a query-plan-level optimization which pushes `ORDER BY ... LIMIT n` down through a join when the sort key only references columns from the side preserved by the join (LEFT/RIGHT). Restricts how many rows the preserved-side input must produce before joining.
 Only takes effect if setting [query_plan_enable_optimizations](#query_plan_enable_optimizations) is 1.
@@ -11326,6 +11383,19 @@ Possible values:
 - `0` — Do not wait.
 - Negative integer — Wait for unlimited time.
 - Positive integer — The number of seconds to wait.
+
+## reserve_memory {#reserve_memory} 
+
+<ExperimentalBadge/>
+
+<SettingsInfoBlock type="UInt64" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "0"},{"label": "New setting to reserve memory for specific workload before starting a query."}]}]}/>
+
+Used in workload scheduling. The minimum amount of RAM reserved to be used for running a query on a single server. Reservation is made through the WORKLOAD hierarchy using the value of a `workload` query setting.
+If not enough memory is available to the workload, a query is prevented from starting and waits in pending state until the reservation can be fulfilled.
+A value of `0` means no reservation.
+This setting takes effect only if MEMORY RESERVATION resource is created.
 
 ## restore_replace_external_dictionary_source_to_null {#restore_replace_external_dictionary_source_to_null} 
 
@@ -12180,7 +12250,7 @@ The smaller the value, the more often data is flushed into the table. Setting th
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "21.12"},{"label": "0"},{"label": "Do not allow direct select for Kafka/RabbitMQ/FileLog by default"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "21.12"},{"label": "0"},{"label": "Do not allow direct select for Kafka\/RabbitMQ\/FileLog by default"}]}]}/>
 
 Allow direct SELECT query for Kafka, RabbitMQ, FileLog, Redis Streams, S3Queue, AzureQueue and NATS engines. In case there are attached materialized views, SELECT query is not allowed even if this setting is enabled.
 If there are no attached materialized views, enabling this setting allows to read data. Be aware that usually the read data is removed from the queue. In order to avoid removing read data the related engine settings should be configured properly.
@@ -12597,6 +12667,14 @@ For example, if `url_base` is `https://example.com/def/`, then:
 - `/test/data.csv` resolves to `https://example.com/test/data.csv`
 - `//other.com/test/data.csv` resolves to `https://other.com/test/data.csv`
 
+## url_wildcard_max_directories_to_read {#url_wildcard_max_directories_to_read} 
+
+<SettingsInfoBlock type="UInt64" default_value="100000" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "100000"},{"label": "New setting to limit the number of directories read when expanding wildcards in the `url` table function."}]}]}/>
+
+Maximum number of directories that can be traversed while expanding URL wildcards from index pages.
+
 ## use_async_executor_for_materialized_views {#use_async_executor_for_materialized_views} 
 
 <SettingsInfoBlock type="Bool" default_value="0" />
@@ -12724,9 +12802,9 @@ predicate for the target side.
 
 ## use_legacy_to_time {#use_legacy_to_time} 
 
-<SettingsInfoBlock type="Bool" default_value="1" />
+<SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.6"},{"label": "1"},{"label": "New setting. Allows for user to use the old function logic for toTime, which works as toTimeWithFixedDate."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "0"},{"label": "Use the new `toTime` function (converting values to the `Time` data type) by default instead of the legacy `toTime` (which is still available as `toTimeWithFixedDate`)."}]}, {"id": "row-2","items": [{"label": "25.6"},{"label": "1"},{"label": "New setting. Allows for user to use the old function logic for toTime, which works as toTimeWithFixedDate."}]}]}/>
 
 When enabled, allows to use legacy toTime function, which converts a date with time to a certain fixed date, while preserving the time.
 Otherwise, uses a new toTime function, that converts different type of data into the Time type.
@@ -12949,7 +13027,7 @@ Possible values:
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "The text index is now GA"}]}, {"id": "row-2","items": [{"label": "26.1"},{"label": "1"},{"label": "Default enable"}]}, {"id": "row-3","items": [{"label": "25.9"},{"label": "0"},{"label": "New setting"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.2"},{"label": "1"},{"label": "The text index is now GA"}]}, {"id": "row-2","items": [{"label": "26.1"},{"label": "0"},{"label": "Default enable"}]}, {"id": "row-3","items": [{"label": "25.9"},{"label": "0"},{"label": "New setting"}]}]}/>
 
 Enable using data skipping indexes during data reading.
 
@@ -13023,11 +13101,11 @@ Use structure from insertion table instead of schema inference from data. Possib
 
 ## use_text_index_header_cache {#use_text_index_header_cache} 
 
-<SettingsInfoBlock type="Bool" default_value="0" />
+<SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.11"},{"label": "0"},{"label": "New setting"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "1"},{"label": "Enabled the text index header cache globally."}]}, {"id": "row-2","items": [{"label": "25.11"},{"label": "0"},{"label": "New setting"}]}]}/>
 
-Whether to use a cache of deserialized text index header.
+Whether to cache deserialized text index headers in memory.
 Using the text index header cache can significantly reduce latency and increase throughput when working with a large number of text index queries.
 
 ## use_text_index_like_evaluation_by_dictionary_scan {#use_text_index_like_evaluation_by_dictionary_scan} 
@@ -13044,16 +13122,16 @@ Enable evaluation of LIKE/ILIKE queries by scanning the inverted text index dict
 
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.11"},{"label": "0"},{"label": "New setting"}]}]}/>
 
-Whether to use a cache of deserialized text index posting lists.
+Whether to cache deserialized text index deserialized posting lists in memory.
 Using the text index postings cache can significantly reduce latency and increase throughput when working with a large number of text index queries.
 
 ## use_text_index_tokens_cache {#use_text_index_tokens_cache} 
 
-<SettingsInfoBlock type="Bool" default_value="0" />
+<SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.3"},{"label": "0"},{"label": "New setting"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "1"},{"label": "Enabled the text index tokens cache globally."}]}, {"id": "row-2","items": [{"label": "26.3"},{"label": "0"},{"label": "New setting"}]}]}/>
 
-Whether to use a cache of deserialized text index token infos.
+Whether to cache deserialized text index token infos in memory.
 Using the text index tokens cache can significantly reduce latency and increase throughput when working with a large number of text index queries.
 
 ## use_top_k_dynamic_filtering {#use_top_k_dynamic_filtering} 
@@ -13101,7 +13179,7 @@ For queries that read at least a somewhat large volume of data (one million rows
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.1"},{"label": "1"},{"label": "Improves usability."}]}, {"id": "row-2","items": [{"label": "24.1"},{"label": "0"},{"label": "Allow to use Variant in if/multiIf if there is no common type"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.1"},{"label": "1"},{"label": "Improves usability."}]}, {"id": "row-2","items": [{"label": "24.1"},{"label": "0"},{"label": "Allow to use Variant in if\/multiIf if there is no common type"}]}]}/>
 
 Allows to use `Variant` type as a result type for [if](/reference/functions/regular-functions/conditional-functions#if)/[multiIf](/reference/functions/regular-functions/conditional-functions#multiIf)/[array](/reference/functions/regular-functions/array-functions)/[map](/reference/functions/regular-functions/tuple-map-functions) functions when there is no common type for argument types.
 
