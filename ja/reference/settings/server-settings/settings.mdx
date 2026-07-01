@@ -79,6 +79,12 @@ SQL コマンドで作成されたユーザーおよびロールの設定を Cli
 
 <SettingsInfoBlock type="UInt64" default_value="16777215" changeable_without_restart="No" />groupArray 関数における配列要素の最大サイズ (バイト単位) 。この制限はシリアライゼーション時にチェックされ、state サイズが大きくなりすぎるのを防ぐのに役立ちます。
 
+<div id="allow_experimental_executable_udf_drivers">
+  ## allow_experimental_executable_udf_drivers
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />`user_defined_executable_function_drivers_config` で宣言された、実行可能なユーザー定義関数向けドライバーの実験的サポートを有効にします。ドライバーは、`CREATE FUNCTION ... ENGINE = DriverName(...) AS '...'` で指定されたユーザーコードスニペットを、実行可能な UDF として動作する実行ファイルに変換します。
+
 <div id="allow_experimental_webassembly_udf">
   ## allow_experimental_webassembly_udf
 </div>
@@ -399,6 +405,12 @@ MergeTree エンジンを使用するテーブルで、バックグラウンド�
 <background_pool_size>16</background_pool_size>
 ```
 
+<div id="background_schedule_pool_initial_size">
+  ## background_schedule_pool_initial_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="16" changeable_without_restart="No" />各 background schedule pool に最初に割り当てられるワーカースレッド数。各プールは、必要に応じて、現在のワーカー数で足りなくなると設定された上限 (`background_schedule_pool_size` など) まで段階的に拡張されます。値を小さくすると、起動時のオーバーヘッドとアイドル状態のスレッド数を抑えられます。値を大きくすると、負荷の高いサーバーで最初のタスクのスケジューリングレイテンシをなくせます。
+
 <div id="background_schedule_pool_log">
   ## background_schedule_pool_log
 </div>
@@ -430,7 +442,7 @@ MergeTree エンジンを使用するテーブルで、バックグラウンド�
   ## background_schedule_pool_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="512" changeable_without_restart="増加のみ" />レプリケートテーブル、Kafkaストリーミング、DNS cacheの更新などの軽量な定期処理を継続的に実行するために使用されるスレッドの最大数。
+<SettingsInfoBlock type="UInt64" default_value="512" changeable_without_restart="増加のみ" />レプリケートテーブル、Kafkaストリーミング、DNS cacheの更新などの軽量な定期処理を実行するために使用されるスレッド数の上限。スレッドは必要に応じてこの上限まで遅延的に生成されるため、バックグラウンド負荷が軽いサーバーでは、この数よりはるかに少ないスレッドしか使用されません。
 
 <div id="backup_log">
   ## backup_log
@@ -675,6 +687,18 @@ cgroup オブザーバーを無効にするには、この値を `0` に設定�
     </case>
 </compression>
 ```
+
+<div id="concurrent_threads_lazy_allocation">
+  ## concurrent_threads_lazy_allocation
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Yes" />
+
+CPUスロットをクエリにどのように割り当てるかを制御します。
+
+`true` の場合 (デフォルト) 、クエリは 1 つの CPUスロットで開始し、そのパイプラインが実際により多くの並列化可能な処理を生成したときにのみ、scheduler に追加のスロットを要求します。これにより、クエリが最大 `max_threads` 個のスロットを予約していても、実際にはその一部しか使用せず、他の同時実行クエリを圧迫してしまう状況を回避できます。これは、Concurrency 制御と、workload 向けのプリエンプティブな CPU scheduler の両方に適用されます。
+
+`false` の場合、クエリは開始時に `max_threads` 個のスロットをすべてまとめて要求します。
 
 <div id="concurrent_threads_scheduler">
   ## concurrent_threads_scheduler
@@ -1163,7 +1187,7 @@ IP アドレス、ドメイン、サブドメイン、および完全にバイ�
   ## disk_connections_rcvbuf
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="0" changeable_without_restart="Yes" />ディスク (S3、Azure、GCS) 接続の SO&#95;RCVBUF オプションのサイズです。0 より大きい値を設定すると、受信バッファに対するカーネルの TCP 自動調整を無効にして、この値で上書きします。0 = カーネルのデフォルト (自動調整) 。注: この設定を 0 に戻しても、自動調整が復元されるのは新規に作成される接続のみです。既存のプール接続は、再作成されるまで固定のバッファサイズを維持します。
+<SettingsInfoBlock type="UInt64" default_value="204800" changeable_without_restart="Yes" />ディスク (S3、Azure、GCS) 接続の SO&#95;RCVBUF オプションのサイズです。デフォルト値は 204800 (200 KB) です。オブジェクトストレージへは同一 Region 内からアクセスされ、帯域幅遅延積は 100 KB を大きく下回るため、小さい上限値でも最大のスループットを得られ、そうしない場合にカーネルの自動調整によって割り当てられるソケットごとの複数 MiB のバッファを回避できます。代わりに受信バッファに対してカーネルの TCP 自動調整を使用するには、0 に設定します。注: この設定を 0 に戻しても、自動調整が復元されるのは新規に作成される接続のみです。既存のプールされた接続は、再作成されるまで固定のバッファサイズを維持します。
 
 <div id="disk_connections_sndbuf">
   ## disk_connections_sndbuf
@@ -1370,6 +1394,21 @@ hostname の DNS cache の更新でこの回数だけ連続して失敗すると
 </div>
 
 <SettingsInfoBlock type="UInt64" default_value="1000" changeable_without_restart="No" />分散キャッシュの drop に使用される スレッドプール の queue のサイズ。
+
+<div id="dynamic_user_defined_executable_functions_path">
+  ## dynamic_user_defined_executable_functions_path
+</div>
+
+<SettingsInfoBlock type="String" default_value="/var/lib/clickhouse/dynamic_user_defined_executable_functions/" changeable_without_restart="No" />
+
+ドライバーによって動的に作成された実行可能 UDF の設定ファイルを保存するためのディレクトリです (`CREATE FUNCTION ... ENGINE = DriverName(...)` を参照) 。
+サーバーの再起動時には、このディレクトリ内の設定ファイルがスキャンされ、対応する UDF がドライバーを再度呼び出すことなく読み込まれます。
+
+**例**
+
+```xml
+<dynamic_user_defined_executable_functions_path>/var/lib/clickhouse/dynamic_user_defined_executable_functions/</dynamic_user_defined_executable_functions_path>
+```
 
 <div id="enable_azure_sdk_logging">
   ## enable_azure_sdk_logging
@@ -1991,15 +2030,19 @@ substitution を記述したファイルへのパスです。XML と YAML の両
   ## insert_deduplication_version
 </div>
 
-<SettingsInfoBlock type="InsertDeduplicationVersions" default_value="compatible_double_hashes" changeable_without_restart="No" />
+<SettingsInfoBlock type="InsertDeduplicationVersions" default_value="new_unified_hash" changeable_without_restart="No" />
 
 この設定により、同期 INSERT と非同期 INSERT でまったく別々かつ非透過的な方法で挿入の重複排除を行うコードバージョンから、同期 INSERT と非同期 INSERT をまたいで挿入データを重複排除できるコードバージョンへ移行できます。
 値 `old_separate_hashes` は、ClickHouse が同期 INSERT と非同期 INSERT で異なる重複排除ハッシュを使用することを意味します (従来どおり) 。
-移行を開始する予定がない場合は、この値をデフォルト値として使用する必要があります。
+この値は、意図的に移行を開始していないインスタンス向けに、移行前の従来の動作を維持します。現在では推奨されるデフォルト値ではありません。
 値 `compatible_double_hashes` は、ClickHouse が 2 つの重複排除ハッシュを使用することを意味します。1 つは同期または非同期 INSERT 用の従来のハッシュで、もう 1 つはすべての INSERT 用の新しいハッシュです。この値は、既存のインスタンスを新しい動作へ安全に移行するために使用する必要があります。
 移行中に同期 INSERT または非同期 INSERT が失われないようにするため、この値はしばらくの間有効にしておく必要があります (`replicated_deduplication_window` および `non_replicated_deduplication_window` 設定を参照) 。
 最後に、値 `new_unified_hash` は、ClickHouse が同期 INSERT と非同期 INSERT に対して新しい重複排除ハッシュを使用することを意味します。この値は、新しい ClickHouse インスタンス、またはすでにしばらく `compatible_double_hashes` を使用しているインスタンスで有効にできます。
-移行を安全に 2 段階で完了するため、デフォルト値はまず `compatible_double_hashes` に設定され、その後、将来の ClickHouse バージョンで `new_unified_hash` に変更される予定です。
+`new_unified_hash` では、重複排除ハッシュは挿入された block 全体を対象とするため、INSERT が重複排除されるのは、そのデータ全体が以前の INSERT (再試行) と一致する場合のみであり、個々のパーティション単位ではありません。
+`new_unified_hash` では非同期 INSERT も統一ハッシュを使用し、同期の重複排除ウィンドウ (`replicated_deduplication_window` / `replicated_deduplication_window_seconds`) を共有します。`*_for_async_inserts` のウィンドウ設定が適用されるのは、従来の `old_separate_hashes` / `compatible_double_hashes` パスだけです。
+デフォルト値は、移行の 1 つの段階では `compatible_double_hashes` でしたが、現在は `new_unified_hash` であり、これにより移行は安全に 2 段階で完了します。
+`old_separate_hashes` から直接アップグレードしたインスタンスは、統一ハッシュに切り替える前に、最も長い関連する重複排除ウィンドウ (同期ウィンドウ `replicated_deduplication_window` / `replicated_deduplication_window_seconds`、非同期 INSERT を使用している場合はデフォルトで 1 週間となる非同期ウィンドウ `replicated_deduplication_window_for_async_inserts` / `replicated_deduplication_window_seconds_for_async_inserts`、および `non_replicated_deduplication_window`) が経過するまで `compatible_double_hashes` で実行する必要があります。そうしないと、アップグレード前の id は古い `blocks` / `async_blocks` directories に保持されたままとなり、統一ハッシュからは参照されないため、それらの再試行が新しい INSERT として受け入れられて重複が発生する可能性があります。
+非同期 INSERT では、`new_unified_hash` への切り替え時に注意点があります。`compatible_double_hashes` では、重複排除の対象期間は実質的に非同期ウィンドウ全体に及びます (`async_blocks` の id がその期間保持されるため) が、`new_unified_hash` は `deduplication_hashes` のみを参照し (同期ウィンドウの間だけ保持されます) 、そのため同期ウィンドウより古い非同期 INSERT は、待機後であっても切り替え後に再び受け入れられる可能性があります。非同期ワークロードを切り替える前に、`replicated_deduplication_window` / `replicated_deduplication_window_seconds` を非同期ウィンドウまで引き上げてその状態で非同期ウィンドウ全体にわたって実行するか、非同期 INSERT を非同期ウィンドウの間停止するか、または `compatible_double_hashes` を維持してください。
 
 <div id="interserver_http_credentials">
   ## interserver_http_credentials
@@ -2212,7 +2255,7 @@ ClickHouse が HTTP プロトコルでの受信リクエストを待機し、接
 **例**
 
 ```xml
-<keep_alive_timeout>10</keep_alive_timeout>
+<keep_alive_timeout>30</keep_alive_timeout>
 ```
 
 <div id="keeper_hosts">
@@ -2951,6 +2994,17 @@ Dictionary の数がこの値を超えると、サーバーは例外をスロー
 
 <SettingsInfoBlock type="UInt64" default_value="0" changeable_without_restart="No" />同時に保持できる軽量スナップショットの最大数です。0 は無制限を意味します。スナップショット数がこの上限に達すると、新しいスナップショットを作成しようとした際に例外が発生します。
 
+<div id="max_http_index_page_size">
+  ## max_http_index_page_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="10485760" changeable_without_restart="No" />
+
+HTTP 経由でディレクトリ一覧を表示する際に使用される、HTTP インデックスページのレスポンスの最大サイズです。
+レスポンスがこの制限を超えると、クエリはエラーになります。
+
+デフォルト: `10485760` (10 MiB)。
+
 <div id="max_io_thread_pool_free_size">
   ## max_io_thread_pool_free_size
 </div>
@@ -3158,6 +3212,14 @@ named collection の数が指定した値を超えると、ClickHouse server は
 ```xml
 <max_pending_mutations_to_warn>400</max_pending_mutations_to_warn>
 ```
+
+<div id="max_per_cpu_untracked_memory">
+  ## max_per_cpu_untracked_memory
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="8388608" changeable_without_restart="Yes" />
+
+1 つの CPU 上で実行されるすべてのスレッドが、memory tracker に書き出される前に一度に保持できる未追跡メモリの上限 (バイト単位) 。`max_untracked_memory` が単一スレッドを制限するのに対し、こちらは CPU ごとの合計を制限するため、多数のスレッドがスレッドごとの許容量を積み上げてサーバー全体で大きな overcommit を引き起こすことを防ぎます。したがって、未追跡メモリの総量はおおよそ `number_of_cpus * max_per_cpu_untracked_memory` によって制限されます。値を `0` にすると CPU ごとの制限は無効になり (スレッドごとの `max_untracked_memory` のみが適用されます) 。Linux のみ。
 
 <div id="max_prefixes_deserialization_thread_pool_free_size">
   ## max_prefixes_deserialization_thread_pool_free_size
@@ -3545,6 +3607,29 @@ ClickHouse server で使用可能なメモリに対する、jemalloc のダー�
 <SettingsInfoBlock type="Double" default_value="0.9" changeable_without_restart="No" />
 
 ClickHouse server で利用可能なメモリに対する、jemalloc のパージ実行のしきい値比率です。総メモリ使用量がこの比率を超えると、バックグラウンドメモリワーカー はダーティページのパージを強制的に実行します。0 に設定すると、総メモリに基づく強制パージは無効になります。
+
+<div id="memory_worker_rss_speculative_reserve_ratio">
+  ## memory_worker_rss_speculative_reserve_ratio
+</div>
+
+<SettingsInfoBlock type="Double" default_value="1" changeable_without_restart="No" />
+
+各 `MemoryWorker` ティックで、観測された RSS に加えて、
+`ratio * min(resident - previous_resident, resident - tracked)` を追加で
+予約します。これは、次のティックでも前回と同じ量だけ増加する可能性があるという
+前提に基づくものです (`resident - previous_resident` は直前のティックにおける
+RSS の増加量です) 。この増加量は `resident - tracked` で上限が設定されます。
+これは、グローバルmemory trackerから見えない RSS の部分であり、すでに追跡
+されている増加分は通常のハードリミットチェックで処理されるためです。この予約は、
+グローバルなハードリミットチェックが `MemoryTracker::allocImpl` を介して参照する
+`rss` カウンターに適用されるため、外挿値が `max_server_memory_usage` を超えると、
+その後の割り当てではカーネルの OOM-killer が作動する前に
+`MEMORY_LIMIT_EXCEEDED` 例外が送出されます。値を `0` にするとこの推測は無効化され
+(`rss = resident` に戻ります) 、デフォルト値 `1` では次の間隔に備えて
+増加分 1 回分のヘッドルームを予約します。サニタイザ (`ASan`、`UBSan`、`MSan`、
+`TSan`) 下では、デフォルト値は `0` です。これは、`resident - tracked`
+のギャップがトラッカーの記帳遅延ではなく、主にサニタイザのシャドー領域や
+ランタイムのオーバーヘッドによって生じるためです。
 
 <div id="memory_worker_use_cgroup">
   ## memory_worker_use_cgroup
@@ -4329,6 +4414,29 @@ shared merge tree のパーツキラースレッドのクリーンアップに�
 <path>/var/lib/clickhouse/</path>
 ```
 
+<div id="per_cpu_untracked_memory_thread_buffer">
+  ## per_cpu_untracked_memory_thread_buffer
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="32768" changeable_without_restart="Yes" />
+
+各スレッドが、共有の CPU ごとの予算を更新せずに保持できる未追跡メモリ量 (バイト単位) 。これは、小さな割り当てに対する CPU ごとの管理コストを償却するためのもので、最悪の場合には `max_per_cpu_untracked_memory * number_of_cpus` に上乗せされる余裕分となります。値を `0` にすると、この余裕分はなくなります。つまり、すべての割り当てで共有の CPU ごとのカウンターが更新されます (最も正確ですが、競合は増えます) 。Linux のみ。
+
+<div id="point_in_polygon_cache_size">
+  ## point_in_polygon_cache_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="268435456" changeable_without_restart="Yes" />
+
+定数の Polygon 引数を持つ関数 `pointInPolygon` で使用される、前処理済み Polygon の cache の最大サイズをバイト単位で指定します。
+上限を超えたエントリは、最後に使用された時点が最も古いものから順に追い出されます。
+これを `0` に設定すると cache は無効になります。つまり、cache 済みのすべての Polygon が追い出され、その後の各クエリでは定数 Polygon が毎回あらためて前処理されます。
+この cache は、[`SYSTEM DROP POINT IN POLYGON CACHE`](/ja/reference/statements/system#drop-point-in-polygon-cache) クエリを使うことで、この上限を変更しなくても手動でクリアできます。
+
+<Note>
+  この設定は実行時に変更でき、即座に反映されます。
+</Note>
+
 <div id="postgresql_port">
   ## postgresql_port
 </div>
@@ -5061,6 +5169,12 @@ ClickHouse コア開発チームにクラッシュレポートを送信するた
 </div>
 
 <SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="No" />true に設定すると、スタックトレース内にアドレスを表示します
+
+<div id="show_license_expiration_warnings">
+  ## show_license_expiration_warnings
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Yes" />system.warnings に、今後のライセンス有効期限切れに関する警告を表示します
 
 <div id="shutdown_wait_backups_and_restores">
   ## shutdown_wait_backups_and_restores
@@ -5807,6 +5921,24 @@ server には共有 cache が 1 つあります。メモリは必要に応じて
 </div>
 
 <SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />非圧縮 cache における protected queue (SLRU ポリシーの場合) のサイズが、cache の総サイズに占める割合です。
+
+<div id="unique_key_bitmap_cache_policy">
+  ## unique_key_bitmap_cache_policy
+</div>
+
+<SettingsInfoBlock type="String" default_value="SLRU" changeable_without_restart="No" />UNIQUE KEY の削除ビットマップキャッシュ policy 名 (SLRU または LRU) 。
+
+<div id="unique_key_bitmap_cache_size_bytes">
+  ## unique_key_bitmap_cache_size_bytes
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1073741824" changeable_without_restart="Yes" />UNIQUE KEY のパートごとの削除ビットマップキャッシュに対するインプロセス cache の最大サイズ (バイト単位) 。cache を無効にするには 0 に設定します。
+
+<div id="unique_key_bitmap_cache_size_ratio">
+  ## unique_key_bitmap_cache_size_ratio
+</div>
+
+<SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />UNIQUE KEY の削除ビットマップキャッシュにおける 保護キュー (SLRU policy の場合) のサイズが、cache 全体のサイズに占める割合です。
 
 <div id="unique_key_index_cache_policy">
   ## unique_key_index_cache_policy

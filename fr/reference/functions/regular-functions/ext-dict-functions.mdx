@@ -283,6 +283,37 @@ pour exécuter les exemples des fonctions décrites ci-dessous.
   ```
 </Accordion>
 
+<div id="passing-keys">
+  ## Passage des clés aux fonctions de dictionnaire
+</div>
+
+L’argument de clé (`id_expr`) de fonctions telles que `dictGet`, `dictGetOrDefault`, `dictGetOrNull` et `dictHas` dépend du type de clé du dictionnaire :
+
+* Pour un dictionnaire avec une **clé simple** (`UInt64`), passez directement la valeur de la clé :
+
+```sql
+SELECT dictGet('simple_key_dictionary', 'attr_name', toUInt64(1));
+```
+
+* Pour un dictionnaire avec une **clé composite (complexe)** de plus d’un attribut, indiquez les valeurs de la clé sous forme de tuple :
+
+```sql
+SELECT dictGet('complex_key_dictionary', 'attr_name', ('value_for_field1', 42));
+```
+
+* Lorsque la **clé composite ne comporte qu’un seul attribut**, la valeur de la clé peut être transmise directement, sans l’encapsuler dans `tuple`. Les deux formes suivantes sont valides et équivalentes :
+
+```sql
+SELECT dictGet('complex_key_dictionary', 'attr_name', 'key');
+SELECT dictGet('complex_key_dictionary', 'attr_name', tuple('key'));
+```
+
+Cela s’applique également aux dictionnaires `ip_trie`, dont la clé est constituée d’un seul attribut. L’adresse IP à rechercher peut être transmise directement :
+
+```sql
+SELECT dictGet('ip_trie_dictionary', 'attr_name', toIPv4('202.79.32.10'));
+```
+
 {/* 
   Le contenu des balises ci-dessous est remplacé, lors du build du framework de documentation, par 
   la documentation générée à partir de system.functions. Veuillez ne pas modifier ni supprimer ces balises.
@@ -299,6 +330,10 @@ Introduit dans : v18.16.0
 
 Récupère des valeurs dans un dictionnaire.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -309,7 +344,7 @@ dictGet('dict_name', attr_names, id_expr)
 
 * `dict_name` — Nom du dictionnaire. [`String`](/fr/reference/data-types/string)
 * `attr_names` — Nom de la colonne du dictionnaire, ou tuple de noms de colonnes. [`String`](/fr/reference/data-types/string) ou [`Tuple(String)`](/fr/reference/data-types/tuple)
-* `id_expr` — Valeur de la clé. Expression renvoyant UInt64/Tuple(T). [`UInt64`](/fr/reference/data-types/int-uint) ou [`Tuple(T)`](/fr/reference/data-types/tuple)
+* `id_expr` — Valeur de la clé. Pour un dictionnaire avec une clé simple, expression renvoyant une valeur `UInt64`. Pour un dictionnaire avec une clé composite (complexe), expression renvoyant un tuple de valeurs de clé. Si la clé composite se compose d’un seul attribut, sa valeur peut être transmise directement, sans être encapsulée dans `tuple`. [`UInt64`](/fr/reference/data-types/int-uint) ou [`Tuple(T)`](/fr/reference/data-types/tuple)
 
 **Valeur renvoyée**
 
@@ -361,6 +396,10 @@ Introduit dans : v23.5.0
 Récupère les valeurs d’attribut de tous les nœuds correspondant à chaque clé dans un [dictionnaire en arbre d’expressions régulières](/fr/reference/statements/create/dictionary/layouts/regexp-tree).
 
 Hormis le fait qu’elle renvoie des valeurs de type `Array(T)` au lieu de `T`, cette fonction se comporte comme [`dictGet`](#dictGet).
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -415,6 +454,10 @@ Introduit dans : v21.4.0
 
 Renvoie les enfants du premier niveau sous forme de tableau d’indices. Il s’agit de la transformation inverse de [dictGetHierarchy](#dictGetHierarchy).
 
+<Note>
+  Cette fonction n’est pas déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -451,6 +494,10 @@ SELECT dictGetChildren('hierarchical_dictionary', 2);
 Introduit dans : v1.1.0
 
 Convertit la valeur d’un attribut de dictionnaire en type de données `Date`, quelle que soit la configuration du dictionnaire.
+
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -494,6 +541,10 @@ SELECT dictGetDate('all_types_dict', 'Date_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Date`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -546,6 +597,10 @@ Introduit dans : v1.1.0
 
 Convertit la valeur d’un attribut de dictionnaire en type de données `DateTime`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction n’est pas déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -588,6 +643,10 @@ SELECT dictGetDateTime('all_types_dict', 'DateTime_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `DateTime`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé n’est pas trouvée.
+
+<Note>
+  Cette fonction n’est pas déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -640,6 +699,10 @@ Introduit dans : v21.4.0
 
 Renvoie tous les descendants comme si la fonction [`dictGetChildren`](#dictGetChildren) était appliquée récursivement `level` fois.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -687,6 +750,10 @@ Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Float32`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -729,6 +796,10 @@ SELECT dictGetFloat32('all_types_dict', 'Float32_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Float32`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé n’est pas trouvée.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -781,6 +852,10 @@ Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Float64`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -823,6 +898,10 @@ SELECT dictGetFloat64('all_types_dict', 'Float64_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Float64`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -875,6 +954,10 @@ Introduit dans : v1.1.0
 
 Crée un tableau contenant tous les parents d’une clé dans le [dictionnaire hiérarchique](/fr/reference/statements/create/dictionary/layouts/hierarchical#hierarchical-dictionaries).
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -911,6 +994,10 @@ SELECT dictGetHierarchy('hierarchical_dictionary', 5)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `IPv4`, quelle que soit la configuration du dictionnaire.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -954,6 +1041,10 @@ SELECT dictGetIPv4('all_types_dict', 'IPv4_value', 1)
 Introduit dans : v23.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `IPv4`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé n’est pas trouvée.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1006,6 +1097,10 @@ Introduit dans : v23.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `IPv6`, indépendamment de la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1048,6 +1143,10 @@ SELECT dictGetIPv6('all_types_dict', 'IPv6_value', 1)
 Introduit dans : v23.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `IPv6`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé n’est pas trouvée.
+
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1100,6 +1199,10 @@ Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Int16`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1142,6 +1245,10 @@ SELECT dictGetInt16('all_types_dict', 'Int16_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Int16`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1194,6 +1301,10 @@ Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Int32`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1236,6 +1347,10 @@ SELECT dictGetInt32('all_types_dict', 'Int32_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Int32`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1288,6 +1403,10 @@ Introduit dans : v1.1.0
 
 Convertit la valeur d’un attribut de dictionnaire en type de données `Int64`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1330,6 +1449,10 @@ SELECT dictGetInt64('all_types_dict', 'Int64_value', 1)
 Introduit dans : v1.1.0
 
 Convertit la valeur d’un attribut de dictionnaire en type de données `Int64`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1382,6 +1505,10 @@ Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Int8`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1424,6 +1551,10 @@ SELECT dictGetInt8('all_types_dict', 'Int8_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `Int8`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1481,6 +1612,10 @@ Le cache stocke des tuples de clés sérialisés pour chaque valeur d’attribut
 Le cache n’est pas conservé d’une requête à l’autre. Lorsque la limite est atteinte, les entrées sont supprimées selon la politique LRU.
 Ce mécanisme est particulièrement efficace avec de grands dictionnaires lorsque l’entrée présente une faible cardinalité et que l’ensemble de travail tient dans le cache. Définissez cette valeur sur `0` pour désactiver la mise en cache.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1519,6 +1654,10 @@ Introduit dans : v18.16.0
 
 Récupère des valeurs d’un dictionnaire, avec une valeur par défaut si la clé est introuvable.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1529,7 +1668,7 @@ dictGetOrDefault('dict_name', attr_names, id_expr, default_value)
 
 * `dict_name` — Nom du dictionnaire. [`String`](/fr/reference/data-types/string)
 * `attr_names` — Nom de la colonne du dictionnaire, ou tuple de noms de colonnes. [`String`](/fr/reference/data-types/string) ou [`Tuple(String)`](/fr/reference/data-types/tuple)
-* `id_expr` — Valeur de la clé. Expression renvoyant UInt64/Tuple(T). [`UInt64`](/fr/reference/data-types/int-uint) ou [`Tuple(T)`](/fr/reference/data-types/tuple)
+* `id_expr` — Valeur de la clé. Pour un dictionnaire avec une clé simple, une expression renvoyant une valeur `UInt64`. Pour un dictionnaire avec une clé composite (complexe), une expression renvoyant un tuple des valeurs de la clé. Si la clé composite se compose d’un seul attribut, sa valeur peut être transmise directement, sans être encapsulée dans `tuple`. [`UInt64`](/fr/reference/data-types/int-uint) ou [`Tuple(T)`](/fr/reference/data-types/tuple)
 * `default_value` — Valeur par défaut à renvoyer si la clé n’est pas trouvée. Le type doit correspondre au type de données de l’attribut.
 
 **Valeur renvoyée**
@@ -1556,6 +1695,10 @@ SELECT dictGetOrDefault('ext_dict_mult', 'c1', toUInt64(999), 0) AS val
 Introduit dans : v21.4.0
 
 Récupère des valeurs dans un dictionnaire et renvoie NULL si la clé est introuvable.
+
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1599,6 +1742,10 @@ Introduit dans : v1.1.0
 
 Convertit la valeur d’un attribut de dictionnaire en type de données `String`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1641,6 +1788,10 @@ SELECT dictGetString('all_types_dict', 'String_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `String`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1693,6 +1844,10 @@ Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `UInt16`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1735,6 +1890,10 @@ SELECT dictGetUInt16('all_types_dict', 'UInt16_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `UInt16`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé n’est pas trouvée.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1787,6 +1946,10 @@ Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `UInt32`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1829,6 +1992,10 @@ SELECT dictGetUInt32('all_types_dict', 'UInt32_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `UInt32`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1881,6 +2048,10 @@ Introduit dans : v1.1.0
 
 Convertit la valeur d’un attribut de dictionnaire en type de données `UInt64`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1923,6 +2094,10 @@ SELECT dictGetUInt64('all_types_dict', 'UInt64_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `UInt64`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -1975,6 +2150,10 @@ Introduit dans : v1.1.0
 
 Convertit la valeur d’un attribut de dictionnaire en type de données `UInt8`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -2017,6 +2196,10 @@ SELECT dictGetUInt8('all_types_dict', 'UInt8_value', 1)
 Introduit dans : v1.1.0
 
 Convertit une valeur d’attribut de dictionnaire en type de données `UInt8`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -2069,6 +2252,10 @@ Introduit dans : v1.1.0
 
 Convertit la valeur d’un attribut de dictionnaire en type de données `UUID`, quelle que soit la configuration du dictionnaire.
 
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -2111,6 +2298,10 @@ SELECT dictGetUUID('all_types_dict', 'UUID_value', 1)
 Introduit dans : v1.1.0
 
 Convertit la valeur d’un attribut de dictionnaire en type de données `UUID`, quelle que soit la configuration du dictionnaire, ou renvoie la valeur par défaut fournie si la clé est introuvable.
+
+<Note>
+  Cette fonction est non déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 
@@ -2163,6 +2354,10 @@ Introduit dans : v1.1.0
 
 Vérifie si une clé est présente dans un dictionnaire.
 
+<Note>
+  Cette fonction n’est pas déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -2212,6 +2407,10 @@ SELECT dictHas('hierarchical_dictionary', 7);
 Introduit dans : v1.1.0
 
 Vérifie l’ancêtre d’une clé sur l’ensemble de la chaîne hiérarchique du dictionnaire.
+
+<Note>
+  Cette fonction est non-déterministe : elle peut renvoyer des résultats différents pour les mêmes arguments.
+</Note>
 
 **Syntaxe**
 

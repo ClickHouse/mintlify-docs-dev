@@ -80,6 +80,12 @@ Caminho para uma pasta em que o servidor ClickHouse armazena as configurações 
 
 <SettingsInfoBlock type="UInt64" default_value="16777215" changeable_without_restart="No" />Tamanho máximo do elemento do Array, em bytes, para a função groupArray. Esse limite é verificado durante a serialização e ajuda a evitar um estado de tamanho grande.
 
+<div id="allow_experimental_executable_udf_drivers">
+  ## allow_experimental_executable_udf_drivers
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="Não" />Habilita suporte experimental a drivers para funções definidas pelo usuário executáveis, declaradas por meio de `user_defined_executable_function_drivers_config`. Um driver transforma um trecho de código fornecido pelo usuário em `CREATE FUNCTION ... ENGINE = DriverName(...) AS '...'` em uma UDF executável.
+
 <div id="allow_experimental_webassembly_udf">
   ## allow_experimental_webassembly_udf
 </div>
@@ -400,6 +406,12 @@ Antes de alterá-la, veja também as configurações relacionadas do MergeTree, 
 <background_pool_size>16</background_pool_size>
 ```
 
+<div id="background_schedule_pool_initial_size">
+  ## background_schedule_pool_initial_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="16" changeable_without_restart="No" />Número inicial de threads de trabalho alocadas para cada background schedule pool. Cada pool cresce sob demanda até o limite configurado (`background_schedule_pool_size` e afins) quando a demanda excede a quantidade atual de workers. Valores mais baixos reduzem a sobrecarga de inicialização e o número de threads ociosas; valores mais altos eliminam a latência de agendamento da primeira tarefa em servidores com alta carga.
+
 <div id="background_schedule_pool_log">
   ## background_schedule_pool_log
 </div>
@@ -431,7 +443,7 @@ Contém informações sobre todas as tarefas em segundo plano executadas por mei
   ## background_schedule_pool_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="512" changeable_without_restart="Increase only" />O número máximo de threads que serão usadas para executar continuamente algumas operações periódicas leves de tabelas replicadas, streaming do Kafka e atualizações do cache DNS.
+<SettingsInfoBlock type="UInt64" default_value="512" changeable_without_restart="Increase only" />O número máximo de threads que serão usadas para executar operações periódicas leves de tabelas replicadas, streaming do Kafka, atualizações do cache DNS e tarefas semelhantes. As threads são criadas sob demanda até esse limite, portanto um servidor com carga leve em segundo plano usa muito menos threads do que esse número.
 
 <div id="backup_log">
   ## backup_log
@@ -676,6 +688,18 @@ Configurações de compressão de dados para tabelas com o mecanismo [MergeTree]
     </case>
 </compression>
 ```
+
+<div id="concurrent_threads_lazy_allocation">
+  ## concurrent_threads_lazy_allocation
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Yes" />
+
+Controla como os slots de CPU são alocados para as consultas.
+
+Quando `true` (padrão), uma consulta começa com um slot de CPU e solicita slots adicionais ao scheduler apenas quando seu pipeline realmente passa a enviar mais trabalho paralelizável. Isso evita a situação em que uma consulta reserva até `max_threads` slots, mas acaba usando apenas uma fração deles, deixando outras consultas concorrentes sem recursos. Aplica-se tanto ao controle de concorrência quanto ao scheduler preemptivo de CPU para cargas de trabalho.
+
+Quando `false`, a consulta solicita antecipadamente todos os slots de `max_threads` logo no início.
 
 <div id="concurrent_threads_scheduler">
   ## concurrent_threads_scheduler
@@ -1164,7 +1188,7 @@ O mesmo se aplica ao GitLab, mesmo com um ponto inicial. Tanto `gitlab.com` quan
   ## disk_connections_rcvbuf
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="0" changeable_without_restart="Sim" />O tamanho da opção SO&#95;RCVBUF para conexões de disco (S3, Azure, GCS). Se definido com um valor maior que 0, substitui o autotuning de TCP do kernel para o buffer de recebimento. 0 = padrão do kernel (autotuning). Observação: alterar essa configuração de volta para 0 restaura o autotuning apenas para conexões recém-criadas; conexões existentes no pool mantêm tamanhos fixos de buffer até serem recriadas.
+<SettingsInfoBlock type="UInt64" default_value="204800" changeable_without_restart="Sim" />O tamanho da opção SO&#95;RCVBUF para conexões de disco (S3, Azure, GCS). O padrão é 204800 (200 KB): o armazenamento de objetos é acessado dentro da mesma região, onde o produto entre largura de banda e latência fica bem abaixo de 100 KB, portanto um pequeno limite oferece throughput total e evita os buffers de vários MiB por socket que, de outra forma, o autotuning do kernel alocaria. Defina como 0 para usar o autotuning de TCP do kernel para o buffer de recebimento. Observação: alterar essa configuração de volta para 0 restaura o autotuning apenas para conexões recém-criadas; conexões existentes no pool mantêm tamanhos fixos de buffer até serem recriadas.
 
 <div id="disk_connections_sndbuf">
   ## disk_connections_sndbuf
@@ -1370,6 +1394,21 @@ Interrompe novas tentativas de atualizar o cache DNS de um hostname após esse n
 </div>
 
 <SettingsInfoBlock type="UInt64" default_value="1000" changeable_without_restart="No" />O tamanho da fila do pool de threads usado para remover o cache distribuído.
+
+<div id="dynamic_user_defined_executable_functions_path">
+  ## dynamic_user_defined_executable_functions_path
+</div>
+
+<SettingsInfoBlock type="String" default_value="/var/lib/clickhouse/dynamic_user_defined_executable_functions/" changeable_without_restart="No" />
+
+O diretório usado para armazenar os arquivos de configuração de UDFs executáveis criadas dinamicamente por drivers (consulte `CREATE FUNCTION ... ENGINE = DriverName(...)`).
+Ao reiniciar o servidor, o diretório é verificado em busca de arquivos de configuração, e as UDFs correspondentes são carregadas sem invocar o driver novamente.
+
+**Exemplo**
+
+```xml
+<dynamic_user_defined_executable_functions_path>/var/lib/clickhouse/dynamic_user_defined_executable_functions/</dynamic_user_defined_executable_functions_path>
+```
 
 <div id="enable_azure_sdk_logging">
   ## enable_azure_sdk_logging
@@ -1991,15 +2030,19 @@ Tamanho máximo do cache para blocos não comprimidos dos índices `MergeTree`.
   ## insert_deduplication_version
 </div>
 
-<SettingsInfoBlock type="InsertDeduplicationVersions" default_value="compatible_double_hashes" changeable_without_restart="No" />
+<SettingsInfoBlock type="InsertDeduplicationVersions" default_value="new_unified_hash" changeable_without_restart="No" />
 
 Essa configuração permite migrar da versão do código em que a desduplicação de insert para inserts síncronos e assíncronos era feita de forma totalmente diferente e não transparente para a versão do código em que os dados inseridos são desduplicados entre inserts síncronos e assíncronos.
 O valor `old_separate_hashes` significa que o ClickHouse usará hashes de desduplicação diferentes para inserts síncronos e assíncronos (como antes).
-Esse valor deve ser usado como valor padrão se não houver intenção de iniciar a migração.
+Esse valor preserva o comportamento legado anterior à migração para instâncias que, intencionalmente, ainda não iniciaram a migração; ele não é mais o valor padrão recomendado.
 O valor `compatible_double_hashes` significa que o ClickHouse usará dois hashes de desduplicação: o antigo para inserts síncronos ou assíncronos e outro, o novo, para todos os inserts. Esse valor deve ser usado para migrar instâncias existentes para o novo comportamento de forma segura.
 Esse valor deve ficar habilitado por algum tempo (consulte as configurações replicated&#95;deduplication&#95;window e non&#95;replicated&#95;deduplication&#95;window) para garantir que nenhum insert síncrono ou assíncrono seja perdido durante a migração.
 Por fim, o valor `new_unified_hash` significa que o ClickHouse usará o novo hash de desduplicação para inserts síncronos e assíncronos. Esse valor pode ser habilitado em novas instâncias do ClickHouse ou em instâncias que já tenham usado o valor `compatible_double_hashes` por algum tempo.
-O valor padrão será definido como `compatible_double_hashes` e, mais tarde, como `new_unified_hash` em versões futuras do ClickHouse, para concluir a migração com segurança em duas etapas.
+Com `new_unified_hash`, o hash de desduplicação cobre todo o block inserido, portanto um insert é desduplicado apenas quando todos os seus dados correspondem a um insert anterior (um retry), não por partição individual.
+Em `new_unified_hash`, os inserts assíncronos também usam o hash unificado e compartilham a janela de desduplicação síncrona (`replicated_deduplication_window` / `replicated_deduplication_window_seconds`); as configurações de janela `*_for_async_inserts` se aplicam somente ao caminho legado `old_separate_hashes` / `compatible_double_hashes`.
+O valor padrão foi `compatible_double_hashes` em uma etapa da migração e agora é `new_unified_hash`, o que conclui a migração com segurança em duas etapas.
+Instâncias atualizadas diretamente de `old_separate_hashes` devem executar com `compatible_double_hashes` até que a janela de desduplicação relevante mais longa tenha decorrido (a janela síncrona `replicated_deduplication_window` / `replicated_deduplication_window_seconds`, a janela assíncrona `replicated_deduplication_window_for_async_inserts` / `replicated_deduplication_window_seconds_for_async_inserts`, que por padrão é de uma semana se inserts assíncronos forem usados, e `non_replicated_deduplication_window`) antes de passar a usar o hash unificado. Caso contrário, ids anteriores à atualização ainda mantidos nos diretórios antigos `blocks` / `async_blocks` não são vistos pelo hash unificado e seus retries podem ser aceitos como novos inserts, produzindo duplicatas.
+Inserts assíncronos trazem uma ressalva na mudança para `new_unified_hash`: em `compatible_double_hashes`, a desduplicação deles efetivamente abrange a janela assíncrona (o id de `async_blocks` é mantido por esse tempo), enquanto `new_unified_hash` consulta apenas `deduplication_hashes` (mantido pela janela síncrona), portanto inserts assíncronos mais antigos que a janela síncrona podem ser aceitos novamente após a mudança, mesmo depois da espera. Antes de alternar workloads assíncronas, aumente `replicated_deduplication_window` / `replicated_deduplication_window_seconds` para a janela assíncrona e execute assim por uma janela assíncrona completa, interrompa inserts assíncronos pela duração da janela assíncrona ou mantenha `compatible_double_hashes`.
 
 <div id="interserver_http_credentials">
   ## interserver_http_credentials
@@ -2212,7 +2255,7 @@ Número de segundos que o ClickHouse aguarda solicitações recebidas via protoc
 **Exemplo**
 
 ```xml
-<keep_alive_timeout>10</keep_alive_timeout>
+<keep_alive_timeout>30</keep_alive_timeout>
 ```
 
 <div id="keeper_hosts">
@@ -2951,6 +2994,17 @@ Número total máximo de threads a serem usadas na análise da entrada.
 
 <SettingsInfoBlock type="UInt64" default_value="0" changeable_without_restart="No" />Número máximo de snapshots leves que podem ser mantidos ao mesmo tempo. Zero significa ilimitado. Se o número de snapshots atingir esse limite, será gerada uma exceção ao tentar criar um novo snapshot.
 
+<div id="max_http_index_page_size">
+  ## max_http_index_page_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="10485760" changeable_without_restart="No" />
+
+Tamanho máximo da resposta de uma página de índice HTTP usada para listagem de diretório via HTTP.
+Se a resposta exceder esse limite, a consulta falhará com um erro.
+
+Padrão: `10485760` (10 MiB).
+
 <div id="max_io_thread_pool_free_size">
   ## max_io_thread_pool_free_size
 </div>
@@ -3158,6 +3212,14 @@ Se o número de mutações pendentes ultrapassar o valor especificado, o servido
 ```xml
 <max_pending_mutations_to_warn>400</max_pending_mutations_to_warn>
 ```
+
+<div id="max_per_cpu_untracked_memory">
+  ## max_per_cpu_untracked_memory
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="8388608" changeable_without_restart="Sim" />
+
+Limite superior, em bytes, da memória não rastreada que todas as threads em execução em uma CPU podem manter ao mesmo tempo antes de ser transferida para o memory tracker. Enquanto `max_untracked_memory` limita uma única thread, este parâmetro limita o total por CPU, para evitar que várias threads multipliquem sua cota por thread e gerem um grande overcommit no servidor como um todo. Portanto, a memória total não rastreada fica limitada a aproximadamente `number_of_cpus * max_per_cpu_untracked_memory`. Um valor de `0` desabilita o limite por CPU (aplica-se apenas o `max_untracked_memory` por thread). Somente no Linux.
 
 <div id="max_prefixes_deserialization_thread_pool_free_size">
   ## max_prefixes_deserialization_thread_pool_free_size
@@ -3545,6 +3607,29 @@ A proporção limite de páginas sujas do jemalloc em relação à memória disp
 <SettingsInfoBlock type="Double" default_value="0.9" changeable_without_restart="No" />
 
 A proporção de limite para purgar o jemalloc em relação à memória disponível para o servidor ClickHouse. Quando o uso total de memória excede essa proporção, o worker de memória em segundo plano força a limpeza de páginas sujas. Se definido como 0, a limpeza forçada com base na memória total é desativada.
+
+<div id="memory_worker_rss_speculative_reserve_ratio">
+  ## memory_worker_rss_speculative_reserve_ratio
+</div>
+
+<SettingsInfoBlock type="Double" default_value="1" changeable_without_restart="Não" />
+
+A cada tick do `MemoryWorker`, reserve um valor adicional de
+`ratio * min(resident - previous_resident, resident - tracked)` acima do
+RSS observado, partindo da premissa de que o próximo tick pode crescer na mesma
+quantidade que o anterior (`resident - previous_resident` é o aumento do RSS
+no último tick). Esse aumento é limitado por `resident - tracked`, a parte
+do RSS não visível ao memory tracker global, porque o crescimento que
+já está sendo rastreado é tratado pela verificação normal do limite rígido. A reserva
+é aplicada ao contador `rss` que a verificação global do limite rígido consulta
+por meio de `MemoryTracker::allocImpl`, de modo que, quando o valor extrapolado ultrapassa
+`max_server_memory_usage`, as alocações subsequentes lançam
+`MEMORY_LIMIT_EXCEEDED` antes que o OOM-killer do kernel entre em ação. Um valor de `0`
+desabilita a especulação (voltando para `rss = resident`); o valor padrão `1`
+reserva um delta completo de crescimento como margem extra para o próximo intervalo. Em
+sanitizers (`ASan`, `UBSan`, `MSan`, `TSan`), o padrão é `0`, porque a
+lacuna `resident - tracked` é dominada pela sobrecarga do shadow memory / runtime do sanitizer,
+e não pela defasagem na contabilidade do rastreador.
 
 <div id="memory_worker_use_cgroup">
   ## memory_worker_use_cgroup
@@ -4332,6 +4417,29 @@ O caminho para o diretório que contém os dados.
 <path>/var/lib/clickhouse/</path>
 ```
 
+<div id="per_cpu_untracked_memory_thread_buffer">
+  ## per_cpu_untracked_memory_thread_buffer
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="32768" changeable_without_restart="Yes" />
+
+Quantidade de memória não rastreada, em bytes, que cada thread pode manter sem afetar o orçamento compartilhado por CPU. Isso amortiza o custo da contabilização por CPU para pequenas alocações e corresponde à folga adicionada a `max_per_cpu_untracked_memory * number_of_cpus` no pior caso. Um valor de `0` remove essa folga: cada alocação atualiza o contador compartilhado por CPU (mais preciso, mas com mais contenção). Somente no Linux.
+
+<div id="point_in_polygon_cache_size">
+  ## point_in_polygon_cache_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="268435456" changeable_without_restart="Yes" />
+
+Tamanho máximo, em bytes, do cache de polígonos pré-processados usado pela função `pointInPolygon` com um argumento de polígono constante.
+As entradas que excederem o limite são removidas em ordem de uso menos recente.
+Defini-lo como `0` desabilita o cache: todos os polígonos armazenados em cache são removidos, e cada consulta subsequente pré-processa novamente seu polígono constante.
+O cache também pode ser limpo manualmente, sem alterar esse limite, com a consulta [`SYSTEM DROP POINT IN POLYGON CACHE`](/pt-BR/reference/statements/system#drop-point-in-polygon-cache).
+
+<Note>
+  Essa configuração pode ser modificada em tempo de execução e passa a valer imediatamente.
+</Note>
+
 <div id="postgresql_port">
   ## postgresql_port
 </div>
@@ -5062,6 +5170,12 @@ Caminho no Keeper com números autoincrementais, gerados pela função `generate
 </div>
 
 <SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Não" />Se definido como true, mostra endereços nos stack traces
+
+<div id="show_license_expiration_warnings">
+  ## show_license_expiration_warnings
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Yes" />Exibe o aviso sobre a expiração iminente da licença em system.warnings
 
 <div id="shutdown_wait_backups_and_restores">
   ## shutdown_wait_backups_and_restores
@@ -5809,6 +5923,24 @@ O cache de dados não comprimidos é vantajoso, em alguns casos, para consultas 
 </div>
 
 <SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />O tamanho da fila protegida (no caso da política SLRU) no cache não comprimido em relação ao tamanho total do cache.
+
+<div id="unique_key_bitmap_cache_policy">
+  ## unique_key_bitmap_cache_policy
+</div>
+
+<SettingsInfoBlock type="String" default_value="SLRU" changeable_without_restart="No" />Nome da política de cache do bitmap de exclusão de UNIQUE KEY (SLRU ou LRU).
+
+<div id="unique_key_bitmap_cache_size_bytes">
+  ## unique_key_bitmap_cache_size_bytes
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1073741824" changeable_without_restart="Sim" />Tamanho máximo, em bytes, do cache no próprio processo para bitmaps de exclusão por parte da UNIQUE KEY. Defina como 0 para desabilitar o cache.
+
+<div id="unique_key_bitmap_cache_size_ratio">
+  ## unique_key_bitmap_cache_size_ratio
+</div>
+
+<SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="Não" />O tamanho da fila protegida (no caso da política SLRU) no cache de bitmap de exclusão da UNIQUE KEY, em relação ao tamanho total do cache.
 
 <div id="unique_key_index_cache_policy">
   ## unique_key_index_cache_policy

@@ -679,8 +679,8 @@ arrayDotProduct(v1, v2)
 
 **Argumentos**
 
-* `v1` — Primeiro vetor. [`Array((U)Int* | Float* | Decimal)`](/pt-BR/reference/data-types/array) ou [`Tuple((U)Int* | Float* | Decimal)`](/pt-BR/reference/data-types/tuple)
-* `v2` — Segundo vetor. [`Array((U)Int* | Float* | Decimal)`](/pt-BR/reference/data-types/array) ou [`Tuple((U)Int* | Float* | Decimal)`](/pt-BR/reference/data-types/tuple)
+* `v1` — Primeiro vetor. [`Array((U)Int* | Float* | BFloat16 | Decimal)`](/pt-BR/reference/data-types/array) ou [`Tuple((U)Int* | Float* | Decimal)`](/pt-BR/reference/data-types/tuple)
+* `v2` — Segundo vetor. [`Array((U)Int* | Float* | BFloat16 | Decimal)`](/pt-BR/reference/data-types/array) ou [`Tuple((U)Int* | Float* | Decimal)`](/pt-BR/reference/data-types/tuple)
 
 **Valor retornado**
 
@@ -688,6 +688,7 @@ O produto escalar dos dois vetores.
 
 <Note>
   O tipo de retorno é determinado pelos tipos dos argumentos. Se Arrays ou Tuples contiverem tipos de elemento mistos, o tipo do resultado será o supertipo.
+  Dois arrays `BFloat16` acumulam em `Float32` e retornam `Float32` (a mesma regra que para dois arrays `Float32`).
 </Note>
 
 [`(U)Int*`](/pt-BR/reference/data-types/int-uint) ou [`Float*`](/pt-BR/reference/data-types/float) ou [`Decimal`](/pt-BR/reference/data-types/decimal)
@@ -1731,6 +1732,10 @@ e com as funções de agregação, que recebem um grupo de linhas e as &quot;com
 Todos os valores nas colunas são simplesmente copiados, exceto os valores da coluna à qual essa função é aplicada;
 eles são substituídos pelo valor correspondente do array.
 
+<Note>
+  Esta função é não determinística: pode retornar resultados diferentes para os mesmos argumentos.
+</Note>
+
 **Sintaxe**
 
 ```sql
@@ -1766,7 +1771,7 @@ SELECT arrayJoin([1, 2, 3] AS src) AS dst, 'Hello', src
 **arrayJoin afeta todas as cláusulas da consulta**
 
 ```sql title=Query
--- A função arrayJoin afeta todas as seções da consulta, incluindo a seção WHERE. Observe o resultado 2, mesmo que a subconsulta tenha retornado 1 linha.
+-- The arrayJoin function affects all sections of the query, including the WHERE section. Notice the result 2, even though the subquery returned 1 row.
 
 SELECT sum(1) AS impressions
 FROM
@@ -1785,7 +1790,7 @@ WHERE arrayJoin(cities) IN ['Istanbul', 'Berlin'];
 **Usando várias funções arrayJoin**
 
 ```sql title=Query
-- Uma consulta pode usar múltiplas funções arrayJoin. Nesse caso, a transformação é executada várias vezes e as linhas são multiplicadas.
+- A query can use multiple arrayJoin functions. In this case, the transformation is performed multiple times and the rows are multiplied.
 
 SELECT
     sum(1) AS impressions,
@@ -1816,14 +1821,14 @@ GROUP BY
 **Resultados inesperados devido a otimizações**
 
 ```sql title=Query
--- Usar múltiplos arrayJoin com a mesma expressão pode não produzir o resultado esperado devido a otimizações.
--- Para esses casos, considere modificar a expressão de array repetida com operações extras que não afetam o resultado do join.
+-- Using multiple arrayJoin with the same expression may not produce the expected result due to optimizations.
+-- For these cases, consider modifying the repeated array expression with extra operations that do not affect join result.
 - e.g. arrayJoin(arraySort(arr)), arrayJoin(arrayConcat(arr, []))
 
 SELECT
     arrayJoin(dice) as first_throw,
-    /* arrayJoin(dice) as second_throw */ -- é tecnicamente correto, mas eliminará o conjunto de resultados
-    arrayJoin(arrayConcat(dice, [])) as second_throw -- expressão intencionalmente alterada para forçar reavaliação
+    /* arrayJoin(dice) as second_throw */ -- is technically correct, but will annihilate result set
+    arrayJoin(arrayConcat(dice, [])) as second_throw -- intentionally changed expression to force re-evaluation
 FROM (
     SELECT [1, 2, 3, 4, 5, 6] as dice
 );
@@ -2322,6 +2327,10 @@ Esta função é igual a `arrayReverseSort`, mas com o argumento adicional `limi
   Para manter apenas os elementos ordenados, use `arrayResize`.
 </Tip>
 
+<Note>
+  Esta função não é determinística: pode retornar resultados diferentes para os mesmos argumentos.
+</Note>
+
 **Sintaxe**
 
 ```sql
@@ -2406,6 +2415,10 @@ O valor de `limit` deve estar no intervalo `[1..n]`. Valores fora desse interval
   Esta função não materializa constantes.
 
   O valor de `limit` deve estar no intervalo `[1..N]`. Valores fora desse intervalo equivalem a executar [`arrayShuffle`](#arrayShuffle) completo.
+</Note>
+
+<Note>
+  Esta função é não determinística: pode retornar resultados diferentes para os mesmos argumentos.
 </Note>
 
 **Sintaxe**
@@ -2498,6 +2511,10 @@ Esta função é igual a `arraySort`, mas com um argumento adicional, `limit`, q
 <Tip>
   Para manter apenas os elementos ordenados, use `arrayResize`.
 </Tip>
+
+<Note>
+  Esta função é não determinística: pode retornar resultados diferentes para os mesmos argumentos.
+</Note>
 
 **Sintaxe**
 
@@ -2837,6 +2854,10 @@ SELECT arrayROCAUC([0.1, 0.4, 0.35, 0.8], [0, 0, 1, 1]);
 Introduzido em: v23.10.0
 
 Retorna um subconjunto com `samples` elementos aleatórios de um array de entrada. Se `samples` exceder o tamanho do array de entrada, o tamanho da amostra será limitado ao tamanho do array, ou seja, todos os elementos do array serão retornados, mas a ordem deles não é garantida. A função pode lidar tanto com arrays simples quanto com arrays aninhados.
+
+<Note>
+  Esta função é não determinística: pode retornar resultados diferentes para os mesmos argumentos.
+</Note>
 
 **Sintaxe**
 
@@ -3511,6 +3532,10 @@ Os elementos são reordenados de modo que cada permutação possível tenha a me
 
 <Note>
   Esta função não materializa constantes.
+</Note>
+
+<Note>
+  Esta função é não determinística: pode retornar resultados diferentes para os mesmos argumentos.
 </Note>
 
 **Sintaxe**
@@ -5181,78 +5206,6 @@ SELECT indexOfAssumeSorted([1, 3, 3, 3, 4, 4, 5], 4)
 5
 ```
 
-<div id="kql_array_sort_asc">
-  ## kql_array_sort_asc
-</div>
-
-Introduzido em: v23.10.0
-
-Ordena um ou mais arrays em ordem crescente. O primeiro array é ordenado, e os arrays subsequentes são reorganizados para seguir a ordem do primeiro array após a ordenação. Os valores NULL são colocados no final. Esta é uma função de compatibilidade com KQL (Kusto Query Language).
-
-**Sintaxe**
-
-```sql
-kql_array_sort_asc(array1[, array2, ..., nulls_last])
-```
-
-**Argumentos**
-
-* `array1` — O array a ser ordenado. [`Array(T)`](/pt-BR/reference/data-types/array)
-* `array2` — Opcional. Arrays adicionais a serem reordenados de acordo com a ordenação de `array1`. [`Array(T)`](/pt-BR/reference/data-types/array)
-* `nulls_last` — Opcional. Um valor booleano que indica se os valores NULL devem aparecer por último. O padrão é true. [`UInt8`](/pt-BR/reference/data-types/int-uint)
-
-**Valor retornado**
-
-Retorna uma tupla de arrays ordenados em ordem crescente. [`Tuple(Array, ...)`](/pt-BR/reference/data-types/tuple)
-
-**Exemplos**
-
-**Uso básico**
-
-```sql title=Query
-SELECT kql_array_sort_asc([3, 1, 2])
-```
-
-```response title=Response
-([1, 2, 3])
-```
-
-<div id="kql_array_sort_desc">
-  ## kql_array_sort_desc
-</div>
-
-Introduzido em: v23.10.0
-
-Ordena um ou mais arrays em ordem decrescente. O primeiro array é ordenado, e os arrays subsequentes são reordenados para corresponder à ordem do primeiro array após a ordenação. Os valores NULL são colocados no final. Esta é uma função de compatibilidade com KQL (Kusto Query Language).
-
-**Sintaxe**
-
-```sql
-kql_array_sort_desc(array1[, array2, ..., nulls_last])
-```
-
-**Argumentos**
-
-* `array1` — O array a ser ordenado. [`Array(T)`](/pt-BR/reference/data-types/array)
-* `array2` — Arrays adicionais opcionais a serem reordenados de acordo com a ordem de `array1`. [`Array(T)`](/pt-BR/reference/data-types/array)
-* `nulls_last` — Booleano opcional que indica se os valores nulos devem aparecer por último. O padrão é true. [`UInt8`](/pt-BR/reference/data-types/int-uint)
-
-**Valor retornado**
-
-Retorna uma tupla de arrays ordenados em ordem decrescente. [`Tuple(Array, ...)`](/pt-BR/reference/data-types/tuple)
-
-**Exemplos**
-
-**Uso básico**
-
-```sql title=Query
-SELECT kql_array_sort_desc([3, 1, 2])
-```
-
-```response title=Response
-([3, 2, 1])
-```
-
 <div id="length">
   ## length
 </div>
@@ -5263,7 +5216,8 @@ Calcula o comprimento de uma string ou array.
 
 * Para argumentos String ou FixedString: calcula o número de bytes da string.
 * Para argumentos Array: calcula o número de elementos do array.
-* Se aplicada a um argumento FixedString, a função é uma expressão constante.
+* Para argumentos QBit: calcula a dimensão do vetor.
+* Se aplicada a um argumento FixedString ou QBit, a função é uma expressão constante.
 
 Observe que o número de bytes em uma string não é o mesmo que o número de
 &quot;pontos de código&quot; Unicode, nem o mesmo que o número de &quot;clusters de grafemas&quot; Unicode
@@ -5281,11 +5235,11 @@ length(x)
 
 **Argumentos**
 
-* `x` — Valor para o qual se calcula o número de bytes (para String/FixedString) ou de elementos (para Array). [`String`](/pt-BR/reference/data-types/string) ou [`FixedString`](/pt-BR/reference/data-types/fixedstring) ou [`Array(T)`](/pt-BR/reference/data-types/array)
+* `x` — Valor para o qual se calcula o número de bytes (para String/FixedString), de elementos (para Array) ou a dimensão (para QBit). [`String`](/pt-BR/reference/data-types/string) ou [`FixedString`](/pt-BR/reference/data-types/fixedstring) ou [`Array(T)`](/pt-BR/reference/data-types/array) ou [`QBit`](/pt-BR/reference/data-types/qbit)
 
 **Valor retornado**
 
-Retorna o número de bytes na String/FixedString `x` / o número de elementos no array `x` [`UInt64`](/pt-BR/reference/data-types/int-uint)
+Retorna o número de bytes na String/FixedString `x`, o número de elementos no array `x` ou a dimensão do QBit `x` [`UInt64`](/pt-BR/reference/data-types/int-uint)
 
 **Exemplos**
 
@@ -5307,6 +5261,16 @@ SELECT length(['Hello', 'world'])
 
 ```response title=Response
 2
+```
+
+**Exemplo de QBit**
+
+```sql title=Query
+SELECT length([0, 0, 0, 0, 0, 0, 0, 0]::QBit(Float32, 8))
+```
+
+```response title=Response
+8
 ```
 
 **exemplo de constexpr**
@@ -5391,6 +5355,84 @@ SELECT notEmpty([1,2]);
 
 ```response title=Response
 1
+```
+
+<div id="randomHadamardTransform">
+  ## randomHadamardTransform
+</div>
+
+Introduzido em: v26.7.0
+
+Aplica uma transformada de Hadamard aleatorizada a um vetor de float: `y = (1/sqrt(k)) * (H * D * x)`, em que
+`D` é uma matriz diagonal de sinais determinísticos de +/-1 escolhidos por `seed`, `H` é a matriz de Walsh-Hadamard,
+e a entrada é preenchida com zeros até `m`, a próxima potência de dois de seu comprimento.
+
+A transformada é uma rotação ortogonal que **preserva a norma** e distribui a energia de um vetor uniformemente
+entre as coordenadas, tornando a distribuição por coordenada aproximadamente gaussiana e
+independente dos dados. Ela é útil como etapa de pré-processamento antes da quantização escalar e -- quando
+truncada -- como uma projeção aleatória de Johnson-Lindenstrauss / subsampled-randomized-Hadamard (SRHT).
+
+Quando o comprimento da entrada é `2^k * m`, com `m` em `{12, 20}` (ordens que têm uma matriz de Hadamard, por exemplo,
+`768 = 64 * 12`, `1536 = 128 * 12`, `3072 = 256 * 12`, `2560 = 128 * 20`), é usada uma transformada de Kronecker exata
+`H_(2^k) (x) H_m` em vez de padding, de modo que a saída mantém a dimensão da entrada
+em vez de crescer até a próxima potência de dois. Todos os outros comprimentos são preenchidos com zeros até `m`, a próxima
+potência de dois.
+
+O resultado tem o mesmo tipo de elemento da entrada; um array de entrada vazio retorna um array vazio.
+
+* `seed` (opcional, padrão `0`): seleciona o padrão de sinais; o mesmo seed sempre produz a mesma
+  transformada.
+* `output_dims` (opcional, por padrão o comprimento da transformada): mantém apenas as primeiras `output_dims`
+  coordenadas. O fator de escala `1/sqrt(output_dims)` faz com que o resultado preserve a norma na transformada completa
+  e preserve a norma em expectativa quando truncada. Ele não deve exceder o comprimento da transformada
+  (a próxima potência de dois, ou o comprimento da entrada no caso exato de Kronecker).
+
+**Sintaxe**
+
+```sql
+randomHadamardTransform(vector[, seed[, output_dims]])
+```
+
+**Argumentos**
+
+* `vector` — Vetor a ser transformado. [`Array(BFloat16)`](/pt-BR/reference/data-types/array) ou [`Array(Float32)`](/pt-BR/reference/data-types/array) ou [`Array(Float64)`](/pt-BR/reference/data-types/array)
+* `seed` — Opcional. Semente para os sinais determinísticos de +/-1 (padrão: 0). [`UInt*`](/pt-BR/reference/data-types/int-uint)
+* `output_dims` — Opcional. Trunca o resultado para esse número de coordenadas iniciais (padrão: o comprimento total da transformação, que é o comprimento da entrada para dimensões exatas de Kronecker e, caso contrário, a próxima potência de dois). [`UInt*`](/pt-BR/reference/data-types/int-uint)
+
+**Valor retornado**
+
+O vetor transformado (com o mesmo tipo de elemento da entrada). Seu comprimento é o comprimento da transformação: o comprimento da entrada para dimensões exatas de Kronecker; caso contrário, a entrada é preenchida até a próxima potência de dois; opcionalmente truncado para output&#95;dims. [`Array(BFloat16)`](/pt-BR/reference/data-types/array) ou [`Array(Float32)`](/pt-BR/reference/data-types/array) ou [`Array(Float64)`](/pt-BR/reference/data-types/array)
+
+**Exemplos**
+
+**Transformação completa (comprimento preenchido até a próxima potência de dois)**
+
+```sql title=Query
+SELECT length(randomHadamardTransform([1, 2, 3]::Array(Float32)))
+```
+
+```response title=Response
+4
+```
+
+**A norma é mantida**
+
+```sql title=Query
+SELECT round(arraySum(x -> x * x, randomHadamardTransform([1, 2, 3, 4]::Array(Float32))) - 30, 4)
+```
+
+```response title=Response
+0
+```
+
+**Projeção truncada para 3 dimensões**
+
+```sql title=Query
+SELECT length(randomHadamardTransform([1, 2, 3, 4, 5, 6, 7, 8]::Array(Float32), 42, 3))
+```
+
+```response title=Response
+3
 ```
 
 <div id="range">

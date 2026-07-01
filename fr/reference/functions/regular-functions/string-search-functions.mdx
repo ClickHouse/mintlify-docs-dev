@@ -470,6 +470,8 @@ Avant la recherche, la fonction effectue la tokenisation de
   à l&#39;aide du tokenizer spécifié pour l&#39;index de texte.
   Si aucun index de texte n&#39;est défini pour la colonne, le tokenizer `splitByNonAlpha` est utilisé à la place.
   Si l&#39;argument `needle` est de type [Array(String)](/fr/reference/data-types/array), chaque élément du tableau est traité comme un token — aucune tokenisation supplémentaire n&#39;a lieu.
+  Si l&#39;index de texte a une expression de [preprocessor](/fr/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional) configurée, le preprocessor est appliqué à `needle` (s&#39;il est fourni en tant que `String`) avant la tokenisation.
+  Si l&#39;index de texte a une expression de [postprocessor](/fr/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional) configurée, le postprocessor est appliqué aux tokens de `needle` et à ceux de `input` (c&#39;est-à-dire aux deux après la tokenisation).
 
 Les tokens en double sont ignorés.
 Par exemple, needles = [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] est traité de la même manière que [&#39;ClickHouse&#39;].
@@ -546,7 +548,7 @@ SELECT count() FROM table WHERE hasAllTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**Utilisez un tokenizer personnalisé avec le 3e argument**
+**Utiliser un tokenizer personnalisé avec le 3e argument**
 
 ```sql title=Query
 SELECT hasAllTokens('abcdef', 'abc', 'ngrams(3)');
@@ -636,6 +638,8 @@ Avant la recherche, la fonction tokenise :
   à l&#39;aide du tokenizer spécifié pour l&#39;index de texte.
   Si aucun index de texte n&#39;est défini pour la colonne, le tokenizer `splitByNonAlpha` est utilisé à la place.
   Si l&#39;argument `needle` est de type [Array(String)](/fr/reference/data-types/array), chaque élément du tableau est traité comme un token — aucune tokenisation supplémentaire n&#39;est effectuée.
+  Si l&#39;index de texte a une expression [preprocessor](/fr/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional) configurée, le preprocessor est appliqué à `needle` (s&#39;il est fourni sous forme de `String`) avant la tokenisation.
+  Si l&#39;index de texte a une expression [postprocessor](/fr/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional) configurée, le postprocessor est appliqué aux tokens de `needle` et aux tokens de `input` (c&#39;est-à-dire aux deux après la tokenisation).
 
 Les tokens dupliqués sont ignorés.
 Par exemple, [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] est traité de la même manière que [&#39;ClickHouse&#39;].
@@ -700,7 +704,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, ['a', 'd']);
 └─────────┘
 ```
 
-**Générez des needles avec la fonction `tokens`**
+**Générer des needles avec la fonction `tokens`**
 
 ```sql title=Query
 SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString', ['()', '\\']));
@@ -712,7 +716,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**Exemples d’utilisation de colonnes array et map**
+**Exemples d&#39;utilisation des colonnes Array et Map**
 
 ```sql title=Query
 CREATE TABLE log (
@@ -1061,6 +1065,11 @@ Introduit dans : v20.1.0
 
 Effectue une recherche insensible à la casse du motif dans la chaîne source à l’aide de l’index tokenbf&#95;v1.
 
+<Note>
+  Cette fonction présente certains pièges avec les tokenizers non par défaut et les expressions de prétraitement ou de post-traitement.
+  Nous recommandons d’utiliser [`hasAnyTokens`](#hasAnyTokens) et [`hasAllTokens`](#hasAllTokens) à la place.
+</Note>
+
 **Syntaxe**
 
 ```sql
@@ -1082,6 +1091,11 @@ hasTokenCaseInsensitive(haystack, needle)
 Introduit dans : v23.1.0
 
 Effectue une recherche insensible à la casse du motif dans la chaîne à l’aide de l’index tokenbf&#95;v1. Renvoie NULL si le motif est mal formé.
+
+<Note>
+  Cette fonction présente certains écueils avec des tokenizers non par défaut et des expressions de prétraitement ou de post-traitement.
+  Nous recommandons d’utiliser [`hasAnyTokens`](#hasAnyTokens) et [`hasAllTokens`](#hasAllTokens) à la place.
+</Note>
 
 **Syntaxe**
 

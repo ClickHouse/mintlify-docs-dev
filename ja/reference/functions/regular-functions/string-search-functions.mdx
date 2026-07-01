@@ -470,6 +470,8 @@ SELECT extractGroups(s, '< ([\\w\\-]+): ([^\\r\\n]+)');
   テキスト索引で指定されたトークナイザーを使用して処理されます。
   カラムにテキスト索引が定義されていない場合は、代わりに `splitByNonAlpha` トークナイザーが使用されます。
   `needle` 引数の型が [Array(String)](/ja/reference/data-types/array) の場合、配列の各要素はトークンとして扱われ、追加のトークン化は行われません。
+  テキスト索引に [プリプロセッサ](/ja/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional) 式が設定されている場合、`needle` (`String` として指定された場合) にはトークン化の前にプリプロセッサが適用されます。
+  テキスト索引に [postprocessor](/ja/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional) 式が設定されている場合、needle のトークンと input のトークンの両方 (つまり、どちらもトークン化後) に postprocessor が適用されます。
 
 重複するトークンは無視されます。
 例えば、needles = [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] は [&#39;ClickHouse&#39;] と同じように扱われます。
@@ -546,7 +548,7 @@ SELECT count() FROM table WHERE hasAllTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**第3引数でカスタムトークナイザーを使用する**
+**第3引数でカスタムトークナイザーを指定**
 
 ```sql title=Query
 SELECT hasAllTokens('abcdef', 'abc', 'ngrams(3)');
@@ -622,7 +624,7 @@ SELECT count() FROM log WHERE hasAllTokens(mapValues(attributes), ['192.0.0.1', 
 
 導入バージョン: v25.10.0
 
-`needle` の文字列またはArrayの中に少なくとも1つのtokenが `input` 文字列と一致する場合は1を、それ以外の場合は0を返します。`input` がカラムの場合、この条件を満たすすべての行を返します。
+`needle` の文字列またはArrayの中に少なくとも1つのトークンが `input` 文字列と一致する場合は1を、それ以外の場合は0を返します。`input` がカラムの場合、この条件を満たすすべての行を返します。
 
 <Note>
   最適なパフォーマンスを得るには、カラム `input` に [テキスト索引](/ja/reference/engines/table-engines/mergetree-family/textindexes) を定義する必要があります。
@@ -636,6 +638,8 @@ SELECT count() FROM log WHERE hasAllTokens(mapValues(attributes), ['192.0.0.1', 
   テキスト索引で指定されたトークナイザーを使用して処理されます。
   カラムにテキスト索引が定義されていない場合は、代わりに `splitByNonAlpha` トークナイザーが使用されます。
   `needle` 引数の型が [Array(String)](/ja/reference/data-types/array) の場合、配列の各要素はトークンとして扱われ、追加のトークン化は行われません。
+  テキスト索引に [プリプロセッサ](/ja/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional) の式が設定されている場合、`needle` (`String` として指定された場合) には、トークン化の前にプリプロセッサが適用されます。
+  テキスト索引に [postprocessor](/ja/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional) の式が設定されている場合、トークン化の後にポストプロセッサが `needle` のトークンと `input` のトークンの両方に適用されます。
 
 重複するトークンは無視されます。
 例えば、[&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] は [&#39;ClickHouse&#39;] と同じように扱われます。
@@ -700,7 +704,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, ['a', 'd']);
 └─────────┘
 ```
 
-**`tokens` 関数を使用してneedleを生成する**
+**`tokens` 関数で needle を生成する**
 
 ```sql title=Query
 SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString', ['()', '\\']));
@@ -712,7 +716,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**ArrayおよびMapカラムの使用例**
+**ArrayカラムとMapカラムの使用例**
 
 ```sql title=Query
 CREATE TABLE log (
@@ -1061,6 +1065,11 @@ SELECT hasToken('clickhouse test', 'test')
 
 tokenbf&#95;v1 索引を使用して、haystack 内の needle の大文字と小文字を区別しないルックアップを実行します。
 
+<Note>
+  この関数には、デフォルト以外のトークナイザーや、プリプロセッサまたはポストプロセッサの式に関して、いくつか注意点があります。
+  代わりに [`hasAnyTokens`](#hasAnyTokens) と [`hasAllTokens`](#hasAllTokens) を使用することを推奨します。
+</Note>
+
 **構文**
 
 ```sql
@@ -1082,6 +1091,11 @@ hasTokenCaseInsensitive(haystack, needle)
 導入バージョン: v23.1.0
 
 tokenbf&#95;v1 索引を使用して、haystack 内の needle を大文字と小文字を区別せずにルックアップします。needle の形式が不正な場合は null を返します。
+
+<Note>
+  この関数は、既定以外のトークナイザーや、プリプロセッサまたはポストプロセッサの式を使用する場合に、いくつか注意点があります。
+  代わりに [`hasAnyTokens`](#hasAnyTokens) と [`hasAllTokens`](#hasAllTokens) を使用することを推奨します。
+</Note>
 
 **構文**
 

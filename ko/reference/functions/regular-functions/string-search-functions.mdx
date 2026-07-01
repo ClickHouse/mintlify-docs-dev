@@ -470,6 +470,8 @@ SELECT extractGroups(s, '< ([\\w\\-]+): ([^\\r\\n]+)');
   텍스트 인덱스에 지정된 토크나이저를 사용해 처리됩니다.
   컬럼에 텍스트 인덱스가 정의되어 있지 않으면 대신 `splitByNonAlpha` 토크나이저가 사용됩니다.
   `needle` 인수가 [Array(String)](/ko/reference/data-types/array) 타입이면 각 배열 요소가 토큰으로 간주되며, 추가 토큰화는 수행되지 않습니다.
+  텍스트 인덱스에 [전처리기](/ko/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional) 표현식이 구성되어 있으면, `needle`이 `String`으로 지정된 경우 토큰화 전에 전처리기가 적용됩니다.
+  텍스트 인덱스에 [후처리기](/ko/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional) 표현식이 구성되어 있으면, 후처리기는 `needle` 토큰과 `input` 토큰 모두에 적용됩니다(즉, 둘 다 토큰화 이후에 적용됩니다).
 
 중복된 토큰(token)은 무시됩니다.
 예시: needles = [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;]는 [&#39;ClickHouse&#39;]와 동일하게 처리됩니다.
@@ -546,7 +548,7 @@ SELECT count() FROM table WHERE hasAllTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**3번째 인수로 사용자 정의 토크나이저 사용**
+**3번째 인수로 사용자 지정 토크나이저 사용**
 
 ```sql title=Query
 SELECT hasAllTokens('abcdef', 'abc', 'ngrams(3)');
@@ -636,6 +638,8 @@ SELECT count() FROM log WHERE hasAllTokens(mapValues(attributes), ['192.0.0.1', 
   텍스트 인덱스에 지정된 토크나이저를 사용해 처리합니다.
   컬럼에 텍스트 인덱스가 정의되어 있지 않으면 `splitByNonAlpha` 토크나이저를 대신 사용합니다.
   `needle` 인수가 [Array(String)](/ko/reference/data-types/array) 타입이면 각 배열 요소를 토큰으로 간주하며, 추가 토큰화는 수행되지 않습니다.
+  텍스트 인덱스에 [전처리기](/ko/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional) 표현식이 구성되어 있으면, 전처리기는 토큰화 전에 `needle`(`String`으로 지정된 경우)에 적용됩니다.
+  텍스트 인덱스에 [후처리기](/ko/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional) 표현식이 구성되어 있으면, 후처리기는 `needle` 토큰과 `input` 토큰 모두에 적용됩니다(즉, 둘 다 토큰화 후에 적용됨).
 
 중복된 토큰은 무시됩니다.
 예시: [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;]는 [&#39;ClickHouse&#39;]와 동일하게 처리됩니다.
@@ -700,7 +704,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, ['a', 'd']);
 └─────────┘
 ```
 
-**`tokens` 함수를 사용하여 needle 생성**
+**`tokens` 함수를 사용해 검색 패턴 생성하기**
 
 ```sql title=Query
 SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString', ['()', '\\']));
@@ -712,7 +716,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**배열 및 맵 컬럼의 사용 예시**
+**배열 및 맵 컬럼 사용 예시**
 
 ```sql title=Query
 CREATE TABLE log (
@@ -1061,6 +1065,11 @@ SELECT hasToken('clickhouse test', 'test')
 
 tokenbf&#95;v1 인덱스를 사용하여 검색 대상 문자열에서 needle을 대소문자를 구분하지 않고 조회합니다.
 
+<Note>
+  이 함수는 기본이 아닌 토크나이저와 전처리기 또는 후처리기 표현식을 사용할 때 몇 가지 주의할 점이 있습니다.
+  대신 [`hasAnyTokens`](#hasAnyTokens) 및 [`hasAllTokens`](#hasAllTokens)를 사용하는 것을 권장합니다.
+</Note>
+
 **구문**
 
 ```sql
@@ -1082,6 +1091,11 @@ hasTokenCaseInsensitive(haystack, needle)
 도입 버전: v23.1.0
 
 tokenbf&#95;v1 인덱스를 사용해 검색 대상 문자열에서 needle을 대소문자를 구분하지 않고 검색합니다. needle 형식이 올바르지 않으면 NULL을 반환합니다.
+
+<Note>
+  이 함수는 기본이 아닌 토크나이저와 전처리기 또는 후처리기 표현식을 사용할 때 몇 가지 주의할 점이 있습니다.
+  대신 [`hasAnyTokens`](#hasAnyTokens) 및 [`hasAllTokens`](#hasAllTokens)를 사용하는 것이 좋습니다.
+</Note>
 
 **구문**
 

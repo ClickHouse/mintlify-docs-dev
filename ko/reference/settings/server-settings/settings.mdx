@@ -79,6 +79,12 @@ SQL 명령으로 생성된 사용자 및 역할 구성이 ClickHouse 서버에 �
 
 <SettingsInfoBlock type="UInt64" default_value="16777215" changeable_without_restart="No" />groupArray 함수에서 배열 요소의 최대 크기(바이트 단위)입니다. 이 제한은 serialization 시 검사되며, state 크기가 과도하게 커지는 것을 방지하는 데 도움이 됩니다.
 
+<div id="allow_experimental_executable_udf_drivers">
+  ## allow_experimental_executable_udf_drivers
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="0" changeable_without_restart="No" />`user_defined_executable_function_drivers_config`를 통해 선언되는 실행형 사용자 정의 함수 드라이버에 대한 Experimental 지원을 활성화합니다. 드라이버는 `CREATE FUNCTION ... ENGINE = DriverName(...) AS '...'`에 제공된 사용자 코드 조각을 실행형 UDF로 변환합니다.
+
 <div id="allow_experimental_webassembly_udf">
   ## allow_experimental_webassembly_udf
 </div>
@@ -399,6 +405,12 @@ MergeTree 엔진 테이블에서 백그라운드 머지와 뮤테이션을 수�
 <background_pool_size>16</background_pool_size>
 ```
 
+<div id="background_schedule_pool_initial_size">
+  ## background_schedule_pool_initial_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="16" changeable_without_restart="No" />각 background schedule pool에 할당되는 초기 worker 스레드 수입니다. 각 풀은 현재 worker 수로 처리할 수 있는 수요를 초과하면, 구성된 상한(`background_schedule_pool_size` 및 관련 설정)까지 필요할 때만 점진적으로 확장됩니다. 값을 낮게 설정하면 시작 오버헤드와 유휴 스레드 수를 줄일 수 있고, 값을 높게 설정하면 사용량이 많은 서버에서 첫 작업의 스케줄링 지연 시간을 없앨 수 있습니다.
+
 <div id="background_schedule_pool_log">
   ## background_schedule_pool_log
 </div>
@@ -430,7 +442,7 @@ MergeTree 엔진 테이블에서 백그라운드 머지와 뮤테이션을 수�
   ## background_schedule_pool_size
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="512" changeable_without_restart="증가만 가능" />복제된 테이블, Kafka 스트리밍, DNS 캐시 업데이트를 위한 일부 경량 주기 작업을 지속적으로 실행하는 데 사용할 수 있는 최대 스레드 수입니다.
+<SettingsInfoBlock type="UInt64" default_value="512" changeable_without_restart="증가만 가능" />복제된 테이블, Kafka 스트리밍, DNS 캐시 업데이트 및 이와 유사한 작업을 위한 경량 주기 작업을 실행하는 데 사용되는 스레드 수의 상한입니다. 스레드는 필요할 때만 이 상한까지 생성되므로, 백그라운드 부하가 낮은 서버는 이 수보다 훨씬 적은 스레드만 사용합니다.
 
 <div id="backup_log">
   ## backup_log
@@ -675,6 +687,18 @@ cgroup observer를 비활성화하려면 이 값을 `0`으로 설정하십시오
     </case>
 </compression>
 ```
+
+<div id="concurrent_threads_lazy_allocation">
+  ## concurrent_threads_lazy_allocation
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Yes" />
+
+CPU 슬롯이 쿼리에 할당되는 방식을 제어합니다.
+
+`true`(기본값)인 경우, 쿼리는 1개의 CPU 슬롯으로 시작하며, 파이프라인에서 실제로 더 많은 병렬 처리 가능한 작업이 발생할 때만 스케줄러에 추가 슬롯을 요청합니다. 이렇게 하면 쿼리가 최대 `max_threads`개의 슬롯을 예약해 놓고도 실제로는 그중 일부만 사용해, 동시에 실행 중인 다른 쿼리가 자원을 할당받지 못하는 상황을 방지할 수 있습니다. 이 설정은 동시성 제어와 워크로드용 선점형 CPU 스케줄러 모두에 적용됩니다.
+
+`false`인 경우, 쿼리는 시작 시점에 `max_threads` 슬롯 전체를 한 번에 요청합니다.
 
 <div id="concurrent_threads_scheduler">
   ## concurrent_threads_scheduler
@@ -1163,7 +1187,7 @@ IP 주소, 도메인, 서브도메인, 그리고 전체 우회를 위한 `'*'` �
   ## disk_connections_rcvbuf
 </div>
 
-<SettingsInfoBlock type="UInt64" default_value="0" changeable_without_restart="Yes" />디스크(S3, Azure, GCS) 연결의 SO&#95;RCVBUF 옵션 크기입니다. 0보다 큰 값으로 설정하면 수신 버퍼에 대한 커널 TCP 자동 튜닝을 덮어씁니다. 0 = 커널 기본값(자동 튜닝)입니다. 참고: 이 설정을 다시 0으로 변경하면 새로 생성되는 연결에 대해서만 자동 튜닝이 복원되며, 기존의 풀링된 연결은 다시 생성될 때까지 고정된 버퍼 크기를 유지합니다.
+<SettingsInfoBlock type="UInt64" default_value="204800" changeable_without_restart="Yes" />디스크(S3, Azure, GCS) 연결의 SO&#95;RCVBUF 옵션 크기입니다. 기본값은 204800(200 KB)입니다. 객체 스토리지는 동일 Region 내에서 액세스되며, 이 경우 대역폭-지연 곱이 100 KB보다 훨씬 낮으므로 작은 상한값만으로도 전체 처리량을 확보하면서, 그렇지 않으면 커널 자동 튜닝이 소켓당 할당할 수 MiB 크기의 버퍼를 피할 수 있습니다. 대신 수신 버퍼에 커널 TCP 자동 튜닝을 사용하려면 0으로 설정하십시오. 참고: 이 설정을 다시 0으로 변경하면 새로 생성되는 연결에 대해서만 자동 튜닝이 복원되며, 기존의 풀링된 연결은 다시 생성될 때까지 고정된 버퍼 크기를 유지합니다.
 
 <div id="disk_connections_sndbuf">
   ## disk_connections_sndbuf
@@ -1369,6 +1393,21 @@ DDL 쿼리 실행에 사용되는 profile
 </div>
 
 <SettingsInfoBlock type="UInt64" default_value="1000" changeable_without_restart="No" />Distributed Cache 삭제에 사용되는 스레드 풀의 큐 크기입니다.
+
+<div id="dynamic_user_defined_executable_functions_path">
+  ## dynamic_user_defined_executable_functions_path
+</div>
+
+<SettingsInfoBlock type="String" default_value="/var/lib/clickhouse/dynamic_user_defined_executable_functions/" changeable_without_restart="No" />
+
+드라이버가 동적으로 생성한 실행형 UDF의 설정 파일을 보관하는 디렉터리입니다(`CREATE FUNCTION ... ENGINE = DriverName(...)` 참조).
+server를 다시 시작하면 이 디렉터리에서 설정 파일을 검사하고, 드라이버를 다시 호출하지 않아도 해당 UDF를 로드합니다.
+
+**예시**
+
+```xml
+<dynamic_user_defined_executable_functions_path>/var/lib/clickhouse/dynamic_user_defined_executable_functions/</dynamic_user_defined_executable_functions_path>
+```
 
 <div id="enable_azure_sdk_logging">
   ## enable_azure_sdk_logging
@@ -1990,15 +2029,19 @@ ClickHouse HTTP(s) 서버에 접근할 때 기본으로 표시되는 페이지�
   ## insert_deduplication_version
 </div>
 
-<SettingsInfoBlock type="InsertDeduplicationVersions" default_value="compatible_double_hashes" changeable_without_restart="No" />
+<SettingsInfoBlock type="InsertDeduplicationVersions" default_value="new_unified_hash" changeable_without_restart="No" />
 
 이 설정을 사용하면 sync 및 async 삽입에 대해 서로 완전히 다르고 호환되지 않는 방식으로 중복 제거를 수행하는 코드 버전에서, 삽입된 데이터가 sync 및 async 삽입 전체에 걸쳐 중복 제거되는 코드 버전으로 마이그레이션할 수 있습니다.
 값 `old_separate_hashes`는 ClickHouse가 sync 및 async 삽입에 서로 다른 중복 제거 해시를 사용한다는 의미입니다(이전과 동일).
-마이그레이션을 시작할 계획이 없다면 이 값을 기본값으로 사용해야 합니다.
+이 값은 의도적으로 마이그레이션을 시작하지 않은 인스턴스에서 마이그레이션 이전의 레거시 동작을 유지하며, 더 이상 권장 기본값은 아닙니다.
 값 `compatible_double_hashes`는 ClickHouse가 두 개의 중복 제거 해시를 사용한다는 의미입니다. 하나는 sync 또는 async 삽입에 대한 기존 해시이고, 다른 하나는 모든 삽입에 대한 새 해시입니다. 이 값은 기존 인스턴스를 새 동작으로 안전하게 마이그레이션할 때 사용해야 합니다.
 마이그레이션 중 sync 또는 async 삽입이 손실되지 않도록 하려면 이 값을 일정 기간 활성화해야 합니다(`replicated_deduplication_window` 및 `non_replicated_deduplication_window` 설정 참조).
 마지막으로 값 `new_unified_hash`는 ClickHouse가 sync 및 async 삽입에 새 중복 제거 해시를 사용한다는 의미입니다. 이 값은 새 ClickHouse 인스턴스나, 이미 한동안 `compatible_double_hashes` 값을 사용해 온 인스턴스에서 활성화할 수 있습니다.
-안전하게 2단계에 걸쳐 마이그레이션을 완료하기 위해 기본값은 먼저 `compatible_double_hashes`로 설정되고, 이후 향후 ClickHouse 버전에서 `new_unified_hash`로 변경될 예정입니다.
+`new_unified_hash`에서는 중복 제거 해시가 삽입된 전체 block을 기준으로 계산되므로, 삽입은 개별 파티션별로가 아니라 전체 데이터가 이전 삽입(재시도)과 완전히 일치할 때만 중복 제거됩니다.
+`new_unified_hash`에서는 async 삽입도 통합 해시를 사용하며 sync 중복 제거 윈도우(`replicated_deduplication_window` / `replicated_deduplication_window_seconds`)를 공유합니다. `*_for_async_inserts` 윈도우 설정은 레거시 `old_separate_hashes` / `compatible_double_hashes` 경로에만 적용됩니다.
+기본값은 마이그레이션의 한 단계 동안 `compatible_double_hashes`였으며, 이제는 `new_unified_hash`입니다. 이를 통해 2단계에 걸쳐 안전하게 마이그레이션이 완료됩니다.
+`old_separate_hashes`에서 직접 업그레이드한 인스턴스는 통합 해시를 사용하기 전에 가장 긴 관련 중복 제거 윈도우가 경과할 때까지 `compatible_double_hashes`로 실행해야 합니다(sync 윈도우 `replicated_deduplication_window` / `replicated_deduplication_window_seconds`, async 삽입을 사용하는 경우 기본값이 1주인 async 윈도우 `replicated_deduplication_window_for_async_inserts` / `replicated_deduplication_window_seconds_for_async_inserts`, 그리고 `non_replicated_deduplication_window`). 그렇지 않으면 이전 `blocks` / `async_blocks` 디렉터리에 여전히 보관된 업그레이드 전 id를 통합 해시가 인식하지 못해, 해당 재시도가 새 삽입으로 받아들여지면서 중복이 발생할 수 있습니다.
+Async 삽입은 `new_unified_hash`로 전환할 때 한 가지 주의사항이 있습니다. `compatible_double_hashes`에서는 중복 제거가 사실상 async 윈도우 전체에 걸쳐 적용되지만(`async_blocks` id가 그 기간 동안 유지됨), `new_unified_hash`는 `deduplication_hashes`만 조회합니다(sync 윈도우 동안 유지됨). 따라서 sync 윈도우보다 오래된 async 삽입은 충분히 기다린 뒤에도 전환 후 다시 받아들여질 수 있습니다. async 워크로드를 전환하기 전에 `replicated_deduplication_window` / `replicated_deduplication_window_seconds`를 async 윈도우 길이까지 늘린 뒤 전체 async 윈도우 동안 해당 상태로 실행하거나, async 윈도우 동안 async 삽입을 중지하거나, `compatible_double_hashes`를 계속 유지하십시오.
 
 <div id="interserver_http_credentials">
   ## interserver_http_credentials
@@ -2206,12 +2249,12 @@ jemalloc의 `lg_prof_sample`을 제어합니다. 이는 할당 샘플 간 평균
 
 <SettingsInfoBlock type="Seconds" default_value="30" changeable_without_restart="No" />
 
-ClickHouse가 연결을 닫기 전에 HTTP protocol을 통한 들어오는 요청을 기다리는 시간(초)입니다.
+ClickHouse가 연결을 닫기 전에 HTTP 프로토콜을 통한 들어오는 요청을 기다리는 시간(초)입니다.
 
 **예시**
 
 ```xml
-<keep_alive_timeout>10</keep_alive_timeout>
+<keep_alive_timeout>30</keep_alive_timeout>
 ```
 
 <div id="keeper_hosts">
@@ -2950,6 +2993,17 @@ attached 상태인 딕셔너리의 개수가 지정된 값을 초과하면, Clic
 
 <SettingsInfoBlock type="UInt64" default_value="0" changeable_without_restart="No" />동시에 유지할 수 있는 경량 스냅샷의 최대 개수입니다. 0은 무제한을 의미합니다. 스냅샷 수가 이 한도에 도달한 상태에서 새 스냅샷을 생성하려고 하면 예외가 발생합니다.
 
+<div id="max_http_index_page_size">
+  ## max_http_index_page_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="10485760" changeable_without_restart="No" />
+
+HTTP를 통한 디렉터리 목록 조회에 사용되는 HTTP 인덱스 페이지 응답의 최대 크기입니다.
+응답이 이 한도를 초과하면 쿼리가 오류와 함께 실패합니다.
+
+기본값: `10485760` (10 MiB).
+
 <div id="max_io_thread_pool_free_size">
   ## max_io_thread_pool_free_size
 </div>
@@ -3157,6 +3211,14 @@ ClickHouse 서버가 단일 keep-alive connection을 종료하기 전까지, 해
 ```xml
 <max_pending_mutations_to_warn>400</max_pending_mutations_to_warn>
 ```
+
+<div id="max_per_cpu_untracked_memory">
+  ## max_per_cpu_untracked_memory
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="8388608" changeable_without_restart="Yes" />
+
+한 CPU에서 실행 중인 모든 스레드가 메모리 트래커로 플러시되기 전에 동시에 보유할 수 있는 미추적 메모리의 상한을 바이트 단위로 지정합니다. `max_untracked_memory`가 단일 스레드의 상한을 제한하는 반면, 이 설정은 CPU별 총량의 상한을 제한하므로 많은 스레드가 스레드별 허용량을 합쳐 server 전체에서 큰 오버커밋을 일으키지 못하게 합니다. 따라서 미추적 메모리의 총량은 대략 `number_of_cpus * max_per_cpu_untracked_memory`로 제한됩니다. 값이 `0`이면 CPU별 상한이 비활성화되며(스레드별 `max_untracked_memory`만 적용됨), Linux에서만 사용할 수 있습니다.
 
 <div id="max_prefixes_deserialization_thread_pool_free_size">
   ## max_prefixes_deserialization_thread_pool_free_size
@@ -3544,6 +3606,28 @@ ClickHouse 서버에서 사용 가능한 메모리 대비 jemalloc 더티 페이
 <SettingsInfoBlock type="Double" default_value="0.9" changeable_without_restart="아니요" />
 
 ClickHouse 서버에서 사용할 수 있는 메모리를 기준으로 jemalloc을 정리하는 임계값 비율입니다. 전체 메모리 사용량이 이 비율을 초과하면 백그라운드 메모리 워커가 더티 페이지 정리를 강제로 수행합니다. 0으로 설정하면 전체 메모리를 기준으로 한 강제 정리가 비활성화됩니다.
+
+<div id="memory_worker_rss_speculative_reserve_ratio">
+  ## memory_worker_rss_speculative_reserve_ratio
+</div>
+
+<SettingsInfoBlock type="Double" default_value="1" changeable_without_restart="No" />
+
+각 `MemoryWorker` 틱마다 관측된 RSS에
+`ratio * min(resident - previous_resident, resident - tracked)`를 추가로 예약합니다.
+이는 다음 틱에서도 직전과 같은 양만큼 증가할 수 있다고 가정하기 때문입니다
+(`resident - previous_resident`는 지난 틱 동안의 RSS 증가량입니다).
+이 증가량의 상한은 `resident - tracked`이며, 이는 전역 메모리 추적기에
+포착되지 않는 RSS 부분입니다. 이미 추적 중인 증가분은 일반적인 하드 제한 검사에서
+처리되기 때문입니다. 이 예약은 전역 하드 제한 검사가
+`MemoryTracker::allocImpl`을 통해 참조하는 `rss` 카운터에 적용되므로,
+외삽된 값이 `max_server_memory_usage`를 넘으면 이후 할당은 커널 OOM-killer가
+작동하기 전에 `MEMORY_LIMIT_EXCEEDED`를 발생시킵니다. 값이 `0`이면
+speculation이 비활성화되어 (`rss = resident`로 돌아감), 기본값 `1`은
+다음 인터벌을 위해 전체 증가 delta에 해당하는 여유 용량을 예약합니다. 새니타이저
+환경(`ASan`, `UBSan`, `MSan`, `TSan`)에서는 기본값이 `0`인데, 이는
+`resident - tracked` 간극이 tracker의 bookkeeping 지연보다 새니타이저의 shadow /
+런타임 오버헤드의 영향을 더 크게 받기 때문입니다.
 
 <div id="memory_worker_use_cgroup">
   ## memory_worker_use_cgroup
@@ -4325,6 +4409,29 @@ shared merge tree parts killer 스레드를 정리하는 데 사용하는 스레
 <path>/var/lib/clickhouse/</path>
 ```
 
+<div id="per_cpu_untracked_memory_thread_buffer">
+  ## per_cpu_untracked_memory_thread_buffer
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="32768" changeable_without_restart="Yes" />
+
+각 스레드가 공유 per-CPU 예산을 건드리지 않고 보유할 수 있는 추적되지 않은 메모리의 양(바이트)입니다. 이는 작은 allocations에서 per-CPU bookkeeping 비용을 분산해 주며, 최악의 경우 `max_per_cpu_untracked_memory * number_of_cpus`에 추가로 더해지는 여유분입니다. 값이 `0`이면 이 여유분이 없어집니다. 즉, 모든 allocation이 공유 per-CPU counter를 업데이트합니다(가장 정확하지만 경합은 더 커집니다). Linux에서만 지원됩니다.
+
+<div id="point_in_polygon_cache_size">
+  ## point_in_polygon_cache_size
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="268435456" changeable_without_restart="Yes" />
+
+상수 다각형 인수를 사용하는 `pointInPolygon` 함수에서 사용하는 전처리된 다각형 캐시의 최대 크기(바이트)입니다.
+한도를 초과한 항목은 가장 오래전에 사용된 순서대로 제거됩니다.
+이 값을 `0`으로 설정하면 캐시가 비활성화됩니다. 즉, 캐시된 모든 다각형이 제거되며, 이후 실행되는 모든 쿼리에서는 상수 다각형을 매번 새로 전처리합니다.
+이 한도 값을 변경하지 않아도 [`SYSTEM DROP POINT IN POLYGON CACHE`](/ko/reference/statements/system#drop-point-in-polygon-cache) 쿼리를 사용해 캐시를 수동으로 비울 수 있습니다.
+
+<Note>
+  이 설정은 런타임에 수정할 수 있으며 즉시 적용됩니다.
+</Note>
+
 <div id="postgresql_port">
   ## postgresql_port
 </div>
@@ -5057,6 +5164,12 @@ ClickHouse 코어 개발팀에 크래시 보고서를 전송하기 위한 설정
 </div>
 
 <SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="No" />true로 설정되면 스택 트레이스에 주소를 표시합니다
+
+<div id="show_license_expiration_warnings">
+  ## show_license_expiration_warnings
+</div>
+
+<SettingsInfoBlock type="Bool" default_value="1" changeable_without_restart="Yes" />system.warnings에 예정된 라이선스 만료 경고를 표시합니다
 
 <div id="shutdown_wait_backups_and_restores">
   ## shutdown_wait_backups_and_restores
@@ -5804,6 +5917,24 @@ MergeTree 엔진 계열의 테이블 엔진에서 사용하는 비압축 데이�
 </div>
 
 <SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />비압축 캐시에서 보호 큐( SLRU 정책 사용 시)가 전체 캐시 크기에서 차지하는 비율입니다.
+
+<div id="unique_key_bitmap_cache_policy">
+  ## unique_key_bitmap_cache_policy
+</div>
+
+<SettingsInfoBlock type="String" default_value="SLRU" changeable_without_restart="No" />UNIQUE KEY 삭제 비트맵의 캐시 정책 이름입니다(SLRU 또는 LRU).
+
+<div id="unique_key_bitmap_cache_size_bytes">
+  ## unique_key_bitmap_cache_size_bytes
+</div>
+
+<SettingsInfoBlock type="UInt64" default_value="1073741824" changeable_without_restart="Yes" />UNIQUE KEY의 파트별 삭제 비트맵을 위한 in-process 캐시의 최대 크기(바이트)입니다. 캐시를 비활성화하려면 0으로 설정하십시오.
+
+<div id="unique_key_bitmap_cache_size_ratio">
+  ## unique_key_bitmap_cache_size_ratio
+</div>
+
+<SettingsInfoBlock type="Double" default_value="0.5" changeable_without_restart="No" />UNIQUE KEY 삭제 비트맵 캐시에서 전체 캐시 크기 대비 보호 큐(SLRU 정책을 사용하는 경우)의 크기입니다.
 
 <div id="unique_key_index_cache_policy">
   ## unique_key_index_cache_policy

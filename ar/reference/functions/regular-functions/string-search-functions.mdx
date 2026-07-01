@@ -470,6 +470,8 @@ SELECT extractGroups(s, '< ([\\w\\-]+): ([^\\r\\n]+)');
   باستخدام مُجزِّئ الرموز المحدد للفهرس النصي.
   إذا لم يكن للعمود فهرس نصي معرّف، فسيُستخدم بدلًا منه مُجزِّئ الرموز `splitByNonAlpha`.
   إذا كان الوسيط `needle` من النوع [Array(String)](/ar/reference/data-types/array)، فسيُعامل كل عنصر في المصفوفة على أنه رمز — ولا تُجرى أي عملية إضافية لتجزئته إلى رموز.
+  إذا كان الفهرس النصي يحتوي على [تعبير معالج مسبق](/ar/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional) مُعدّ، فسيُطبَّق المعالج المسبق على `needle` (إذا أُعطي كـ `String`) قبل تجزئته إلى رموز.
+  إذا كان الفهرس النصي يحتوي على [تعبير معالج لاحق](/ar/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional) مُعدّ، فسيُطبَّق المعالج اللاحق على رموز `needle` ورموز `input` (أي على كليهما بعد التجزئة إلى رموز).
 
 تُتجاهل الرموز المكررة.
 على سبيل المثال، تُعامل needles = [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] بالطريقة نفسها مثل [&#39;ClickHouse&#39;].
@@ -546,7 +548,7 @@ SELECT count() FROM table WHERE hasAllTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**استخدم مُجزِّئًا مخصصًا عبر المُعامِل الثالث**
+**استخدم مُجزِّئًا مخصصًا باستخدام الوسيطة الثالثة**
 
 ```sql title=Query
 SELECT hasAllTokens('abcdef', 'abc', 'ngrams(3)');
@@ -633,9 +635,11 @@ SELECT count() FROM log WHERE hasAllTokens(mapValues(attributes), ['192.0.0.1', 
 
 * الوسيط `input` (دائمًا)، و
 * الوسيط `needle` (إذا أُعطي على هيئة [String](/ar/reference/data-types/string))
-  باستخدام مُقسِّم الرموز المحدد للفهرس النصي.
-  وإذا لم يكن للعمود فهرس نصي معرّف، فسيُستخدم بدلًا من ذلك مُقسِّم الرموز `splitByNonAlpha`.
+  باستخدام مُجزِّئ الرموز المحدد للفهرس النصي.
+  وإذا لم يكن للعمود فهرس نصي معرّف، فسيُستخدم بدلًا من ذلك مُجزِّئ الرموز `splitByNonAlpha`.
   وإذا كان الوسيط `needle` من النوع [Array(String)](/ar/reference/data-types/array)، فسيُعامل كل عنصر في المصفوفة على أنه رمز — ولا يحدث أي تجزئة إضافية إلى رموز.
+  وإذا كان الفهرس النصي مهيأً بتعبير [معالج مسبق](/ar/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional)، فسيُطبَّق المعالج المسبق على `needle` (إذا أُعطي على هيئة `String`) قبل التجزئة إلى رموز.
+  وإذا كان الفهرس النصي مهيأً بتعبير [معالج لاحق](/ar/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional)، فسيُطبَّق المعالج اللاحق على رموز `needle` ورموز `input` (أي على كليهما بعد التجزئة إلى رموز).
 
 تُتجاهل الرموز المكررة.
 فعلى سبيل المثال، [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] تُعامل بالطريقة نفسها مثل [&#39;ClickHouse&#39;].
@@ -657,8 +661,8 @@ hasAnyTokens(input, needles)
 **الوسيطات**
 
 * `input` — عمود الإدخال. [`String`](/ar/reference/data-types/string) أو [`FixedString`](/ar/reference/data-types/fixedstring) أو [`Nullable(String)`](/ar/reference/data-types/nullable) أو [`Nullable(FixedString)`](/ar/reference/data-types/nullable) أو [`Array(String)`](/ar/reference/data-types/array) أو [`Array(FixedString)`](/ar/reference/data-types/array) أو [`Array(Nullable(String))`](/ar/reference/data-types/array) أو [`Array(Nullable(FixedString))`](/ar/reference/data-types/array)
-* `needles` — التوكنات المراد البحث عنها. [`String`](/ar/reference/data-types/string) أو [`Array(String)`](/ar/reference/data-types/array)
-* `tokenizer` — أداة تقسيم النص المستخدمة. الوسيطات الصالحة هي `splitByNonAlpha` و`splitByString` و`asciiCJK` و`ngrams` و`sparseGrams` و`array`. هذا الوسيط اختياري، وإذا لم يُحدَّد صراحةً، تكون القيمة الافتراضية `splitByNonAlpha`. [`const String`](/ar/reference/data-types/string)
+* `needles` — الرموز المراد البحث عنها. [`String`](/ar/reference/data-types/string) أو [`Array(String)`](/ar/reference/data-types/array)
+* `tokenizer` — مُجزِّئ الرموز المستخدم. الوسيطات الصالحة هي `splitByNonAlpha` و`splitByString` و`asciiCJK` و`ngrams` و`sparseGrams` و`array`. هذا الوسيط اختياري، وإذا لم يُحدَّد صراحةً، تكون القيمة الافتراضية `splitByNonAlpha`. [`const String`](/ar/reference/data-types/string)
 
 **القيمة المعادة**
 
@@ -700,7 +704,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, ['a', 'd']);
 └─────────┘
 ```
 
-**ولِّد أنماط البحث باستخدام الدالة `tokens`**
+**توليد أنماط البحث باستخدام الدالة `tokens`**
 
 ```sql title=Query
 SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString', ['()', '\\']));
@@ -712,7 +716,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**أمثلة على استخدام الأعمدة من النوع Array وMap**
+**أمثلة على استخدام أعمدة Array وMap**
 
 ```sql title=Query
 CREATE TABLE log (
@@ -1061,6 +1065,11 @@ SELECT hasToken('clickhouse test', 'test')
 
 ينفّذ بحثًا غير حساس لحالة الأحرف عن `needle` داخل `haystack` باستخدام الفهرس tokenbf&#95;v1.
 
+<Note>
+  لهذه الدالة بعض الإشكالات مع مُقسِّمات الرموز غير الافتراضية وتعبيرات المعالجة المسبقة أو اللاحقة.
+  نوصي باستخدام [`hasAnyTokens`](#hasAnyTokens) و[`hasAllTokens`](#hasAllTokens) بدلًا من ذلك.
+</Note>
+
 **الصياغة**
 
 ```sql
@@ -1081,7 +1090,12 @@ hasTokenCaseInsensitive(haystack, needle)
 
 أُضيفت في: v23.1.0
 
-تُجري بحثًا عن needle داخل haystack دون حساسية لحالة الأحرف باستخدام فهرس tokenbf&#95;v1. وتُرجع NULL إذا كان needle غير صالح التكوين.
+تُجري بحثًا عن needle داخل haystack غير حساس لحالة الأحرف باستخدام فهرس tokenbf&#95;v1. وتُرجع NULL إذا كان needle غير صالح التكوين.
+
+<Note>
+  لهذه الدالة بعض المحاذير عند استخدامها مع مُقسِّمات الرموز غير الافتراضية أو تعبيرات المعالج التمهيدي أو المعالج اللاحق.
+  نوصي باستخدام [`hasAnyTokens`](#hasAnyTokens) و[`hasAllTokens`](#hasAllTokens) بدلًا من ذلك.
+</Note>
 
 **الصيغة**
 

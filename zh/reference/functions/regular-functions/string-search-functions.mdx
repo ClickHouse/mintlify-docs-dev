@@ -470,6 +470,8 @@ SELECT extractGroups(s, '< ([\\w\\-]+): ([^\\r\\n]+)');
   会使用为文本索引指定的分词器进行处理。
   如果该列未定义文本索引，则会改用 `splitByNonAlpha` 分词器。
   如果 `needle` 参数的类型为 [Array(String)](/zh/reference/data-types/array)，则数组中的每个元素都会被视为一个标记——不会再进行额外的分词。
+  如果文本索引配置了[预处理器](/zh/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional)表达式，则会在标记化之前将预处理器应用到 needle (如果其类型为 `String`) 。
+  如果文本索引配置了[后处理器](/zh/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional)表达式，则会将后处理器应用到 needle 标记和 input 标记 (即两者都在标记化之后处理) 。
 
 重复的标记将被忽略。
 例如，needles = [&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] 与 [&#39;ClickHouse&#39;] 等效。
@@ -546,7 +548,7 @@ SELECT count() FROM table WHERE hasAllTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**通过第三个参数使用自定义分词器**
+**通过第 3 个参数指定自定义分词器**
 
 ```sql title=Query
 SELECT hasAllTokens('abcdef', 'abc', 'ngrams(3)');
@@ -636,6 +638,8 @@ SELECT count() FROM log WHERE hasAllTokens(mapValues(attributes), ['192.0.0.1', 
   会使用为文本索引指定的分词器进行分词。
   如果该列未定义文本索引，则会改用 `splitByNonAlpha` 分词器。
   如果 `needle` 参数的类型为 [Array(String)](/zh/reference/data-types/array)，则会将数组中的每个元素视为一个标记——不会再进行额外分词。
+  如果文本索引配置了 [预处理器](/zh/reference/engines/table-engines/mergetree-family/textindexes#preprocessor-argument-optional) 表达式，则会在分词前将预处理器应用于 `needle` (如果其类型为 `String`)。
+  如果文本索引配置了 [后处理器](/zh/reference/engines/table-engines/mergetree-family/textindexes#postprocessor-argument-optional) 表达式，则会在分词后将后处理器应用于 `needle` 标记和 `input` 标记 (即两者都会应用)。
 
 重复的标记将被忽略。
 例如，[&#39;ClickHouse&#39;, &#39;ClickHouse&#39;] 与 [&#39;ClickHouse&#39;] 的处理方式相同。
@@ -700,7 +704,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, ['a', 'd']);
 └─────────┘
 ```
 
-**使用 `tokens` 函数生成 needle**
+**使用 `tokens` 函数生成 needles**
 
 ```sql title=Query
 SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString', ['()', '\\']));
@@ -712,7 +716,7 @@ SELECT count() FROM table WHERE hasAnyTokens(msg, tokens('a()d', 'splitByString'
 └─────────┘
 ```
 
-**数组和 map 列的使用示例**
+**数组列和 map 列的使用示例**
 
 ```sql title=Query
 CREATE TABLE log (
@@ -1061,6 +1065,11 @@ SELECT hasToken('clickhouse test', 'test')
 
 使用 tokenbf&#95;v1 索引在 haystack 中执行对 needle 的不区分大小写查找。
 
+<Note>
+  此函数在配合非 `default` 分词器以及预处理器或后处理器表达式时存在一些陷阱。
+  我们建议改用 [`hasAnyTokens`](#hasAnyTokens) 和 [`hasAllTokens`](#hasAllTokens)。
+</Note>
+
 **语法**
 
 ```sql
@@ -1082,6 +1091,11 @@ hasTokenCaseInsensitive(haystack, needle)
 引入版本：v23.1.0
 
 使用 tokenbf&#95;v1 索引在 haystack 中不区分大小写地查找 needle。如果 needle 的格式不合法，则返回 NULL。
+
+<Note>
+  该函数在使用非 default 分词器以及预处理器或后处理器表达式时有一些注意事项。
+  我们建议改用 [`hasAnyTokens`](#hasAnyTokens) 和 [`hasAllTokens`](#hasAllTokens)。
+</Note>
 
 **语法**
 

@@ -283,6 +283,37 @@ doc_type: 'reference'
   ```
 </Accordion>
 
+<div id="passing-keys">
+  ## Передача ключей в функции словаря
+</div>
+
+Аргумент ключа (`id_expr`) в таких функциях, как `dictGet`, `dictGetOrDefault`, `dictGetOrNull` и `dictHas`, зависит от ключа словаря:
+
+* Для словаря с **простым ключом** (`UInt64`) передайте значение ключа напрямую:
+
+```sql
+SELECT dictGet('simple_key_dictionary', 'attr_name', toUInt64(1));
+```
+
+* Для словаря с **составным ключом**, включающим более одного атрибута, передайте значения ключа в виде кортежа:
+
+```sql
+SELECT dictGet('complex_key_dictionary', 'attr_name', ('value_for_field1', 42));
+```
+
+* Когда **составной ключ состоит из одного атрибута**, значение ключа можно передавать напрямую, не оборачивая его в `tuple`. Оба следующих варианта допустимы и эквивалентны:
+
+```sql
+SELECT dictGet('complex_key_dictionary', 'attr_name', 'key');
+SELECT dictGet('complex_key_dictionary', 'attr_name', tuple('key'));
+```
+
+Это также относится к словарям `ip_trie`, у которых ключом служит один атрибут. IP-адрес для поиска можно передать напрямую:
+
+```sql
+SELECT dictGet('ip_trie_dictionary', 'attr_name', toIPv4('202.79.32.10'));
+```
+
 {/* 
   Внутреннее содержимое приведённых ниже тегов при сборке фреймворка документации заменяется на 
   документацию, сгенерированную из system.functions. Пожалуйста, не изменяйте и не удаляйте эти теги.
@@ -299,6 +330,10 @@ doc_type: 'reference'
 
 Возвращает значения из словаря.
 
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -309,7 +344,7 @@ dictGet('dict_name', attr_names, id_expr)
 
 * `dict_name` — Имя словаря. [`String`](/ru/reference/data-types/string)
 * `attr_names` — Имя столбца словаря или кортеж имён столбцов. [`String`](/ru/reference/data-types/string) или [`Tuple(String)`](/ru/reference/data-types/tuple)
-* `id_expr` — Значение ключа. Выражение, возвращающее UInt64/Tuple(T). [`UInt64`](/ru/reference/data-types/int-uint) или [`Tuple(T)`](/ru/reference/data-types/tuple)
+* `id_expr` — Значение ключа. Для словаря с простым ключом — выражение, возвращающее значение `UInt64`. Для словаря с составным ключом — выражение, возвращающее кортеж значений ключа. Если составной ключ состоит из одного атрибута, его значение можно передать напрямую, не оборачивая в `tuple`. [`UInt64`](/ru/reference/data-types/int-uint) или [`Tuple(T)`](/ru/reference/data-types/tuple)
 
 **Возвращаемое значение**
 
@@ -358,9 +393,13 @@ LIMIT 3;
 
 Добавленный в: v23.5.0
 
-Возвращает значения атрибутов всех узлов, совпавших с каждым ключом в [словаре с древовидной структурой регулярных выражений](/ru/reference/statements/create/dictionary/layouts/regexp-tree).
+Возвращает значения атрибутов всех узлов, совпавших с каждым ключом в [словаре дерева регулярных выражений](/ru/reference/statements/create/dictionary/layouts/regexp-tree).
 
 За исключением того, что эта функция возвращает значения типа `Array(T)` вместо `T`, она ведёт себя аналогично [`dictGet`](#dictGet).
+
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -373,7 +412,7 @@ dictGetAll(dict_name, attr_names, id_expr[, limit])
 * `dict_name` — Имя словаря. [`String`](/ru/reference/data-types/string)
 * `attr_names` — Имя столбца словаря или кортеж имён столбцов. [`String`](/ru/reference/data-types/string) или [`Tuple(String)`](/ru/reference/data-types/tuple)
 * `id_expr` — Значение ключа. Выражение, возвращающее значение типа ключа словаря или значение кортежа (в зависимости от конфигурации словаря). [`Expression`](/ru/reference/data-types/special-data-types/expression) или [`Tuple(T)`](/ru/reference/data-types/tuple)
-* `limit` — Необязательно. Максимальная длина каждого возвращаемого массива значений. При усечении дочерние узлы имеют приоритет над родительскими; в остальных случаях соблюдается заданный порядок элементов в словаре `regexp tree`. Если не указано, длина массива не ограничена. [`UInt*`](/ru/reference/data-types/int-uint)
+* `limit` — Необязательно. Максимальная длина каждого возвращаемого массива значений. При усечении дочерние узлы имеют приоритет над родительскими; в остальных случаях соблюдается заданный порядок элементов в словаре дерева регулярных выражений. Если не указано, длина массива не ограничена. [`UInt*`](/ru/reference/data-types/int-uint)
 
 **Возвращаемое значение**
 
@@ -415,6 +454,10 @@ SELECT
 
 Возвращает дочерние элементы первого уровня в виде массива индексов. Это преобразование, обратное [dictGetHierarchy](#dictGetHierarchy).
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -451,6 +494,10 @@ SELECT dictGetChildren('hierarchical_dictionary', 2);
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип `Date` независимо от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -495,6 +542,10 @@ SELECT dictGetDate('all_types_dict', 'Date_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `Date` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -522,10 +573,10 @@ dictGetDateOrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetDate('all_types_dict', 'Date_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию
+-- for key which does not exist, returns the provided default value
 SELECT dictGetDateOrDefault('all_types_dict', 'Date_value', 999, toDate('1970-01-01'));
 ```
 
@@ -545,6 +596,10 @@ SELECT dictGetDateOrDefault('all_types_dict', 'Date_value', 999, toDate('1970-01
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип данных `DateTime` вне зависимости от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -589,6 +644,10 @@ SELECT dictGetDateTime('all_types_dict', 'DateTime_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `DateTime` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -616,10 +675,10 @@ dictGetDateTimeOrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetDateTime('all_types_dict', 'DateTime_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию
+-- for key which does not exist, returns the provided default value
 SELECT dictGetDateTimeOrDefault('all_types_dict', 'DateTime_value', 999, toDateTime('1970-01-01 00:00:00'));
 ```
 
@@ -639,6 +698,10 @@ SELECT dictGetDateTimeOrDefault('all_types_dict', 'DateTime_value', 999, toDateT
 Добавленный в: v21.4.0
 
 Возвращает всех потомков, как если бы функция [`dictGetChildren`](#dictGetChildren) рекурсивно применялась `level` раз.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -661,14 +724,14 @@ dictGetDescendants(dict_name, key, level)
 **Получение дочерних элементов первого уровня словаря**
 
 ```sql title=Query
--- рассмотрим следующий иерархический словарь:
--- 0 (Корень)
--- └── 1 (Уровень 1 - Узел 1)
---     ├── 2 (Уровень 2 - Узел 2)
---     │   ├── 4 (Уровень 3 - Узел 4)
---     │   └── 5 (Уровень 3 - Узел 5)
---     └── 3 (Уровень 2 - Узел 3)
---         └── 6 (Уровень 3 - Узел 6)
+-- consider the following hierarchical dictionary:
+-- 0 (Root)
+-- └── 1 (Level 1 - Node 1)
+--     ├── 2 (Level 2 - Node 2)
+--     │   ├── 4 (Level 3 - Node 4)
+--     │   └── 5 (Level 3 - Node 5)
+--     └── 3 (Level 2 - Node 3)
+--         └── 6 (Level 3 - Node 6)
 
 SELECT dictGetDescendants('hierarchical_dictionary', 0, 2)
 ```
@@ -686,6 +749,10 @@ SELECT dictGetDescendants('hierarchical_dictionary', 0, 2)
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип данных `Float32` вне зависимости от конфигурации словаря.
+
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -730,6 +797,10 @@ SELECT dictGetFloat32('all_types_dict', 'Float32_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `Float32` независимо от конфигурации словаря или возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -757,10 +828,10 @@ dictGetFloat32OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetFloat32('all_types_dict', 'Float32_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (-1.0)
+-- for key which does not exist, returns the provided default value (-1.0)
 SELECT dictGetFloat32OrDefault('all_types_dict', 'Float32_value', 999, -1.0);
 ```
 
@@ -780,6 +851,10 @@ SELECT dictGetFloat32OrDefault('all_types_dict', 'Float32_value', 999, -1.0);
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип `Float64` независимо от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -824,6 +899,10 @@ SELECT dictGetFloat64('all_types_dict', 'Float64_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `Float64` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -851,10 +930,10 @@ dictGetFloat64OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetFloat64('all_types_dict', 'Float64_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (nan)
+-- for key which does not exist, returns the provided default value (nan)
 SELECT dictGetFloat64OrDefault('all_types_dict', 'Float64_value', 999, nan);
 ```
 
@@ -874,6 +953,10 @@ SELECT dictGetFloat64OrDefault('all_types_dict', 'Float64_value', 999, nan);
 Добавленный в: v1.1.0
 
 Создает массив, содержащий всех предков ключа в [иерархическом словаре](/ru/reference/statements/create/dictionary/layouts/hierarchical#hierarchical-dictionaries).
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -911,6 +994,10 @@ SELECT dictGetHierarchy('hierarchical_dictionary', 5)
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип данных `IPv4` независимо от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -955,6 +1042,10 @@ SELECT dictGetIPv4('all_types_dict', 'IPv4_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `IPv4` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция недетерминированна: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -982,10 +1073,10 @@ dictGetIPv4OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetIPv4('all_types_dict', 'IPv4_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию
+-- for key which does not exist, returns the provided default value
 SELECT dictGetIPv4OrDefault('all_types_dict', 'IPv4_value', 999, toIPv4('0.0.0.0'));
 ```
 
@@ -1005,6 +1096,10 @@ SELECT dictGetIPv4OrDefault('all_types_dict', 'IPv4_value', 999, toIPv4('0.0.0.0
 Добавленный в: v23.1.0
 
 Преобразует значение атрибута словаря в тип данных `IPv6` вне зависимости от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1049,6 +1144,10 @@ SELECT dictGetIPv6('all_types_dict', 'IPv6_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `IPv6` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1076,10 +1175,10 @@ dictGetIPv6OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetIPv6('all_types_dict', 'IPv6_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию
+-- for key which does not exist, returns the provided default value
 SELECT dictGetIPv6OrDefault('all_types_dict', 'IPv6_value', 999, '::1'::IPv6);
 ```
 
@@ -1099,6 +1198,10 @@ SELECT dictGetIPv6OrDefault('all_types_dict', 'IPv6_value', 999, '::1'::IPv6);
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип данных `Int16` вне зависимости от конфигурации словаря.
+
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1143,6 +1246,10 @@ SELECT dictGetInt16('all_types_dict', 'Int16_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `Int16` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1170,10 +1277,10 @@ dictGetInt16OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetInt16('all_types_dict', 'Int16_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (-1)
+-- for key which does not exist, returns the provided default value (-1)
 SELECT dictGetInt16OrDefault('all_types_dict', 'Int16_value', 999, -1);
 ```
 
@@ -1193,6 +1300,10 @@ SELECT dictGetInt16OrDefault('all_types_dict', 'Int16_value', 999, -1);
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип данных `Int32` вне зависимости от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1237,6 +1348,10 @@ SELECT dictGetInt32('all_types_dict', 'Int32_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `Int32` независимо от конфигурации словаря или, если ключ не найден, возвращает указанное значение по умолчанию.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1264,10 +1379,10 @@ dictGetInt32OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetInt32('all_types_dict', 'Int32_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (-1)
+-- for key which does not exist, returns the provided default value (-1)
 SELECT dictGetInt32OrDefault('all_types_dict', 'Int32_value', 999, -1);
 ```
 
@@ -1287,6 +1402,10 @@ SELECT dictGetInt32OrDefault('all_types_dict', 'Int32_value', 999, -1);
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря к типу данных `Int64` независимо от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1331,6 +1450,10 @@ SELECT dictGetInt64('all_types_dict', 'Int64_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `Int64` вне зависимости от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1357,10 +1480,10 @@ dictGetInt64OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetInt64('all_types_dict', 'Int64_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (-1)
+-- for key which does not exist, returns the provided default value (-1)
 SELECT dictGetInt64OrDefault('all_types_dict', 'Int64_value', 999, -1);
 ```
 
@@ -1380,6 +1503,10 @@ SELECT dictGetInt64OrDefault('all_types_dict', 'Int64_value', 999, -1);
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря к типу данных `Int8` независимо от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1424,6 +1551,10 @@ SELECT dictGetInt8('all_types_dict', 'Int8_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `Int8` независимо от конфигурации словаря или возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1451,10 +1582,10 @@ dictGetInt8OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetInt8('all_types_dict', 'Int8_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (-1)
+-- for key which does not exist, returns the provided default value (-1)
 SELECT dictGetInt8OrDefault('all_types_dict', 'Int8_value', 999, -1);
 ```
 
@@ -1479,6 +1610,10 @@ SELECT dictGetInt8OrDefault('all_types_dict', 'Int8_value', 999, -1);
 Кэш хранит сериализованные кортежи ключей для каждого значения атрибута, чтобы избежать повторного сканирования словаря в рамках одного и того же запроса.
 Кэш не сохраняется между запросами. При достижении лимита записи вытесняются по LRU.
 Это наиболее эффективно для больших словарей, когда входные данные имеют низкую кардинальность, а рабочий набор помещается в кэш. Установите `0`, чтобы отключить кэширование.
+
+<Note>
+  Эта функция недетерминированна: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1518,6 +1653,10 @@ SELECT dictGetKeys('task_id_to_priority_dictionary', 'priority_level', 'high') A
 
 Возвращает значения из словаря; если ключ не найден, используется значение по умолчанию.
 
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1528,7 +1667,7 @@ dictGetOrDefault('dict_name', attr_names, id_expr, default_value)
 
 * `dict_name` — Имя словаря. [`String`](/ru/reference/data-types/string)
 * `attr_names` — Имя столбца словаря или кортеж имён столбцов. [`String`](/ru/reference/data-types/string) или [`Tuple(String)`](/ru/reference/data-types/tuple)
-* `id_expr` — Значение ключа. Выражение, возвращающее UInt64/Tuple(T). [`UInt64`](/ru/reference/data-types/int-uint) или [`Tuple(T)`](/ru/reference/data-types/tuple)
+* `id_expr` — Значение ключа. Для словаря с простым ключом — выражение, возвращающее значение `UInt64`. Для словаря с составным ключом — выражение, возвращающее кортеж значений ключа. Если составной ключ состоит из одного атрибута, его значение можно передать напрямую, без обёртывания в `tuple`. [`UInt64`](/ru/reference/data-types/int-uint) или [`Tuple(T)`](/ru/reference/data-types/tuple)
 * `default_value` — Значение по умолчанию, возвращаемое, если ключ не найден. Тип должен совпадать с типом данных атрибута.
 
 **Возвращаемое значение**
@@ -1555,6 +1694,10 @@ SELECT dictGetOrDefault('ext_dict_mult', 'c1', toUInt64(999), 0) AS val
 Добавленный в: v21.4.0
 
 Возвращает значения из словаря; если ключ не найден, возвращает NULL.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1597,6 +1740,10 @@ FROM system.numbers LIMIT 5 FORMAT TabSeparated;
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип данных `String` вне зависимости от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1641,6 +1788,10 @@ SELECT dictGetString('all_types_dict', 'String_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `String` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1668,10 +1819,10 @@ dictGetStringOrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetString('all_types_dict', 'String_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию
+-- for key which does not exist, returns the provided default value
 SELECT dictGetStringOrDefault('all_types_dict', 'String_value', 999, 'default');
 ```
 
@@ -1691,6 +1842,10 @@ SELECT dictGetStringOrDefault('all_types_dict', 'String_value', 999, 'default');
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип данных `UInt16` независимо от конфигурации словаря.
+
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1735,6 +1890,10 @@ SELECT dictGetUInt16('all_types_dict', 'UInt16_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `UInt16` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1762,10 +1921,10 @@ dictGetUInt16OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetUInt16('all_types_dict', 'UInt16_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (0)
+-- for key which does not exist, returns the provided default value (0)
 SELECT dictGetUInt16OrDefault('all_types_dict', 'UInt16_value', 999, 0);
 ```
 
@@ -1785,6 +1944,10 @@ SELECT dictGetUInt16OrDefault('all_types_dict', 'UInt16_value', 999, 0);
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип `UInt32` независимо от конфигурации словаря.
+
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1829,6 +1992,10 @@ SELECT dictGetUInt32('all_types_dict', 'UInt32_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `UInt32` независимо от конфигурации словаря или, если ключ не найден, возвращает указанное значение по умолчанию.
 
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1856,10 +2023,10 @@ dictGetUInt32OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetUInt32('all_types_dict', 'UInt32_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (0)
+-- for key which does not exist, returns the provided default value (0)
 SELECT dictGetUInt32OrDefault('all_types_dict', 'UInt32_value', 999, 0);
 ```
 
@@ -1879,6 +2046,10 @@ SELECT dictGetUInt32OrDefault('all_types_dict', 'UInt32_value', 999, 0);
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип `UInt64` независимо от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -1923,6 +2094,10 @@ SELECT dictGetUInt64('all_types_dict', 'UInt64_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `UInt64` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1950,10 +2125,10 @@ dictGetUInt64OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetUInt64('all_types_dict', 'UInt64_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (0)
+-- for key which does not exist, returns the provideddefault value (0)
 SELECT dictGetUInt64OrDefault('all_types_dict', 'UInt64_value', 999, 0);
 ```
 
@@ -1974,6 +2149,10 @@ SELECT dictGetUInt64OrDefault('all_types_dict', 'UInt64_value', 999, 0);
 
 Преобразует значение атрибута словаря в тип данных `UInt8` независимо от конфигурации словаря.
 
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -1984,7 +2163,7 @@ dictGetUInt8(dict_name, attr_name, id_expr)
 
 * `dict_name` — Имя словаря. [`String`](/ru/reference/data-types/string)
 * `attr_name` — Имя столбца словаря. [`String`](/ru/reference/data-types/string) или [`Tuple(String)`](/ru/reference/data-types/tuple)
-* `id_expr` — Значение ключа. Выражение, возвращающее значение типа ключа словаря или кортеж (в зависимости от конфигурации словаря). [`Expression`](/ru/reference/data-types/special-data-types/expression) или [`Tuple(T)`](/ru/reference/data-types/tuple)
+* `id_expr` — Значение ключа. Выражение, возвращающее значение типа ключа словаря или значение кортежа (в зависимости от конфигурации словаря). [`Expression`](/ru/reference/data-types/special-data-types/expression) или [`Tuple(T)`](/ru/reference/data-types/tuple)
 
 **Возвращаемое значение**
 
@@ -2017,6 +2196,10 @@ SELECT dictGetUInt8('all_types_dict', 'UInt8_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `UInt8` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция недетерминирована: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -2044,10 +2227,10 @@ dictGetUInt8OrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetUInt8('all_types_dict', 'UInt8_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию (0)
+-- for key which does not exist, returns the provided default value (0)
 SELECT dictGetUInt8OrDefault('all_types_dict', 'UInt8_value', 999, 0);
 ```
 
@@ -2067,6 +2250,10 @@ SELECT dictGetUInt8OrDefault('all_types_dict', 'UInt8_value', 999, 0);
 Добавленный в: v1.1.0
 
 Преобразует значение атрибута словаря в тип данных `UUID` вне зависимости от конфигурации словаря.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -2111,6 +2298,10 @@ SELECT dictGetUUID('all_types_dict', 'UUID_value', 1)
 
 Преобразует значение атрибута словаря в тип данных `UUID` независимо от конфигурации словаря либо возвращает указанное значение по умолчанию, если ключ не найден.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -2138,10 +2329,10 @@ dictGetUUIDOrDefault(dict_name, attr_name, id_expr, default_value_expr)
 **Пример использования**
 
 ```sql title=Query
--- для ключа, который существует
+-- for key which exists
 SELECT dictGetUUID('all_types_dict', 'UUID_value', 1);
 
--- для ключа, которого не существует, возвращает указанное значение по умолчанию
+-- for key which does not exist, returns the provided default value
 SELECT dictGetUUIDOrDefault('all_types_dict', 'UUID_value', 999, '00000000-0000-0000-0000-000000000000'::UUID);
 ```
 
@@ -2161,6 +2352,10 @@ SELECT dictGetUUIDOrDefault('all_types_dict', 'UUID_value', 999, '00000000-0000-
 Добавленный в: v1.1.0
 
 Проверяет, содержится ли ключ в словаре.
+
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
 
 **Синтаксис**
 
@@ -2182,14 +2377,14 @@ dictHas('dict_name', id_expr)
 **Проверка наличия ключа в словаре**
 
 ```sql title=Query
--- рассмотрим следующий иерархический словарь:
--- 0 (Корень)
--- └── 1 (Уровень 1 - Узел 1)
---     ├── 2 (Уровень 2 - Узел 2)
---     │   ├── 4 (Уровень 3 - Узел 4)
---     │   └── 5 (Уровень 3 - Узел 5)
---     └── 3 (Уровень 2 - Узел 3)
---         └── 6 (Уровень 3 - Узел 6)
+-- consider the following hierarchical dictionary:
+-- 0 (Root)
+-- └── 1 (Level 1 - Node 1)
+--     ├── 2 (Level 2 - Node 2)
+--     │   ├── 4 (Level 3 - Node 4)
+--     │   └── 5 (Level 3 - Node 5)
+--     └── 3 (Level 2 - Node 3)
+--         └── 6 (Level 3 - Node 6)
 
 SELECT dictHas('hierarchical_dictionary', 2);
 SELECT dictHas('hierarchical_dictionary', 7);
@@ -2212,6 +2407,10 @@ SELECT dictHas('hierarchical_dictionary', 7);
 
 Проверяет предка ключа по всей иерархической цепочке словаря.
 
+<Note>
+  Эта функция является недетерминированной: она может возвращать разные результаты для одних и тех же аргументов.
+</Note>
+
 **Синтаксис**
 
 ```sql
@@ -2233,10 +2432,10 @@ dictIsIn(dict_name, child_id_expr, ancestor_id_expr)
 **Проверка иерархической зависимости**
 
 ```sql title=Query
--- допустимая иерархия
+-- valid hierarchy
 SELECT dictIsIn('hierarchical_dictionary', 6, 3)
 
--- недопустимая иерархия
+-- invalid hierarchy
 SELECT dictIsIn('hierarchical_dictionary', 3, 5)
 ```
 
