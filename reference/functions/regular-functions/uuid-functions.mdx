@@ -260,50 +260,6 @@ SELECT UUIDv7ToDateTime(toUUID('018f05c9-4ab8-7b86-b64e-c9f03fbd45d1'), 'America
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## dateTime64ToSnowflake {#dateTime64ToSnowflake}
-
-Introduced in: v21.10.0
-
-<DeprecatedBadge/>
-
-<Warning>
-This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](/reference/settings/session-settings#allow_deprecated_snowflake_conversion_functions) is enabled.
-The function will be removed at some point in future.
-
-Please use function [dateTime64ToSnowflakeID](#dateTime64ToSnowflakeID) instead.
-</Warning>
-
-Converts a [DateTime64](/reference/data-types/datetime64) to the first [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) at the giving time.
-    
-
-**Syntax**
-
-```sql
-dateTime64ToSnowflake(value)
-```
-
-**Arguments**
-
-- `value` — Date with time. [`DateTime64`](/reference/data-types/datetime64)
-
-**Returned value**
-
-Returns the input value converted as the first Snowflake ID at that time. [`Int64`](/reference/data-types/int-uint)
-
-**Examples**
-
-**Usage example**
-
-```sql title=Query
-WITH toDateTime64('2021-08-15 18:57:56.492', 3, 'Asia/Shanghai') AS dt64 SELECT dateTime64ToSnowflake(dt64);
-```
-
-```response title=Response
-┌─dateTime64ToSnowflake(dt64)─┐
-│         1426860704886947840 │
-└─────────────────────────────┘
-```
-
 ## dateTime64ToSnowflakeID {#dateTime64ToSnowflakeID}
 
 Introduced in: v24.6.0
@@ -335,50 +291,6 @@ SELECT dateTime64ToSnowflakeID(toDateTime64('2021-08-15 18:57:56', 3, 'Asia/Shan
 
 ```response title=Response
 6832626394434895872
-```
-
-## dateTimeToSnowflake {#dateTimeToSnowflake}
-
-Introduced in: v21.10.0
-
-<DeprecatedBadge/>
-
-<Warning>
-This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](/reference/settings/session-settings#allow_deprecated_snowflake_conversion_functions) is enabled.
-The function will be removed at some point in future.
-
-Please use function [dateTimeToSnowflakeID](#dateTimeToSnowflakeID) instead.
-</Warning>
-
-Converts a [DateTime](/reference/data-types/datetime) value to the first [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) at the giving time.
-    
-
-**Syntax**
-
-```sql
-dateTimeToSnowflake(value)
-```
-
-**Arguments**
-
-- `value` — Date with time. [`DateTime`](/reference/data-types/datetime)
-
-**Returned value**
-
-Returns the input value as the first Snowflake ID at that time. [`Int64`](/reference/data-types/int-uint)
-
-**Examples**
-
-**Usage example**
-
-```sql title=Query
-WITH toDateTime('2021-08-15 18:57:56', 'Asia/Shanghai') AS dt SELECT dateTimeToSnowflake(dt);
-```
-
-```response title=Response
-┌─dateTimeToSnowflake(dt)─┐
-│     1426860702823350272 │
-└─────────────────────────┘
 ```
 
 ## dateTimeToSnowflakeID {#dateTimeToSnowflakeID}
@@ -426,6 +338,10 @@ See section ["UUIDv7 generation"](#uuidv7-generation) for details on UUID struct
 As of September 2025, version 7 UUIDs are in draft status and their layout may change in future.
 </Note>
     
+
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
 
 **Syntax**
 
@@ -481,6 +397,10 @@ Function `generateSnowflakeID` guarantees that the counter field within a timest
 
 See section ["Snowflake ID generation"](#snowflake-id-generation) for implementation details.
     
+
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
 
 **Syntax**
 
@@ -546,6 +466,10 @@ Introduced in: v1.1.0
 
 Generates a [version 4](https://tools.ietf.org/html/rfc4122#section-4.4) [UUID](/reference/data-types/uuid).
 
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
+
 **Syntax**
 
 ```sql
@@ -600,6 +524,10 @@ See section ["UUIDv7 generation"](#uuidv7-generation) for details on UUID struct
 As of September 2025, version 7 UUIDs are in draft status and their layout may change in future.
 </Note>
     
+
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
 
 **Syntax**
 
@@ -715,97 +643,6 @@ SELECT snowflakeIDToDateTime64(7204436857747984384) AS res
 ┌─────────────────res─┐
 │ 2024-06-06 10:59:58 │
 └─────────────────────┘
-```
-
-## snowflakeToDateTime {#snowflakeToDateTime}
-
-Introduced in: v21.10.0
-
-<DeprecatedBadge/>
-
-<Warning>
-This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](/reference/settings/session-settings#allow_deprecated_snowflake_conversion_functions) is enabled.
-The function will be removed at some point in future.
-
-Please use function [`snowflakeIDToDateTime`](#snowflakeIDToDateTime) instead.
-</Warning>
-
-Extracts the timestamp component of a [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) in [DateTime](/reference/data-types/datetime) format.
-    
-
-**Syntax**
-
-```sql
-snowflakeToDateTime(value[, time_zone])
-```
-
-**Arguments**
-
-- `value` — Snowflake ID. [`Int64`](/reference/data-types/int-uint)
-- `time_zone` — Optional. [Timezone](/reference/settings/server-settings/settings#timezone). The function parses `time_string` according to the timezone. [`String`](/reference/data-types/string)
-
-**Returned value**
-
-Returns the timestamp component of `value`. [`DateTime`](/reference/data-types/datetime)
-
-**Examples**
-
-**Usage example**
-
-```sql title=Query
-SELECT snowflakeToDateTime(CAST('1426860702823350272', 'Int64'), 'UTC');
-```
-
-```response title=Response
-┌─snowflakeToDateTime(CAST('1426860702823350272', 'Int64'), 'UTC')─┐
-│                                              2021-08-15 10:57:56 │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-## snowflakeToDateTime64 {#snowflakeToDateTime64}
-
-Introduced in: v21.10.0
-
-<DeprecatedBadge/>
-
-<Warning>
-This function is deprecated and can only be used if setting [`allow_deprecated_snowflake_conversion_functions`](/reference/settings/session-settings#allow_deprecated_snowflake_conversion_functions) is enabled.
-The function will be removed at some point in future.
-
-Please use function [`snowflakeIDToDateTime64`](#snowflakeIDToDateTime64) instead.
-</Warning>
-
-Extracts the timestamp component of a [Snowflake ID](https://en.wikipedia.org/wiki/Snowflake_ID) in [DateTime64](/reference/data-types/datetime64) format.
-
-    
-
-**Syntax**
-
-```sql
-snowflakeToDateTime64(value[, time_zone])
-```
-
-**Arguments**
-
-- `value` — Snowflake ID. [`Int64`](/reference/data-types/int-uint)
-- `time_zone` — Optional. [Timezone](/reference/settings/server-settings/settings#timezone). The function parses `time_string` according to the timezone. [`String`](/reference/data-types/string)
-
-**Returned value**
-
-Returns the timestamp component of `value`. [`DateTime64(3)`](/reference/data-types/datetime64)
-
-**Examples**
-
-**Usage example**
-
-```sql title=Query
-SELECT snowflakeToDateTime64(CAST('1426860802823350272', 'Int64'), 'UTC');
-```
-
-```response title=Response
-┌─snowflakeToDateTime64(CAST('1426860802823350272', 'Int64'), 'UTC')─┐
-│                                            2021-08-15 10:58:19.841 │
-└────────────────────────────────────────────────────────────────────┘
 ```
 
 ## toUUIDOrDefault {#toUUIDOrDefault}

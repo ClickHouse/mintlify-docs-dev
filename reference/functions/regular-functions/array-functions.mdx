@@ -656,8 +656,8 @@ arrayDotProduct(v1, v2)
 
 **Arguments**
 
-- `v1` — First vector. [`Array((U)Int* | Float* | Decimal)`](/reference/data-types/array) or [`Tuple((U)Int* | Float* | Decimal)`](/reference/data-types/tuple)
-- `v2` — Second vector. [`Array((U)Int* | Float* | Decimal)`](/reference/data-types/array) or [`Tuple((U)Int* | Float* | Decimal)`](/reference/data-types/tuple)
+- `v1` — First vector. [`Array((U)Int* | Float* | BFloat16 | Decimal)`](/reference/data-types/array) or [`Tuple((U)Int* | Float* | Decimal)`](/reference/data-types/tuple)
+- `v2` — Second vector. [`Array((U)Int* | Float* | BFloat16 | Decimal)`](/reference/data-types/array) or [`Tuple((U)Int* | Float* | Decimal)`](/reference/data-types/tuple)
 
 **Returned value**
 
@@ -665,6 +665,7 @@ The dot product of the two vectors.
 
 <Note>
 The return type is determined by the type of the arguments. If Arrays or Tuples contain mixed element types then the result type is the supertype.
+Two `BFloat16` arrays accumulate in and return `Float32` (the same rule as two `Float32` arrays).
 </Note>
 
  [`(U)Int*`](/reference/data-types/int-uint) or [`Float*`](/reference/data-types/float) or [`Decimal`](/reference/data-types/decimal)
@@ -1673,6 +1674,10 @@ and Aggregate Functions which take a group of rows and "compress" or "reduce" th
 All the values in the columns are simply copied, except the values in the column where this function is applied;
 these are replaced with the corresponding array value.
 
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
+
 **Syntax**
 
 ```sql
@@ -2250,6 +2255,10 @@ To retain only the sorted elements use `arrayResize`.
 </Tip>
     
 
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
+
 **Syntax**
 
 ```sql
@@ -2334,6 +2343,10 @@ This function will not materialize constants.
 The value of `limit` should be in the range `[1..N]`. Values outside of that range are equivalent to performing full [`arrayShuffle`](#arrayShuffle).
 </Note>
     
+
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
 
 **Syntax**
 
@@ -2424,6 +2437,10 @@ This function is the same as `arraySort` but with an additional `limit` argument
 To retain only the sorted elements use `arrayResize`.
 </Tip>
     
+
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
 
 **Syntax**
 
@@ -2752,6 +2769,10 @@ SELECT arrayROCAUC([0.1, 0.4, 0.35, 0.8], [0, 0, 1, 1]);
 Introduced in: v23.10.0
 
 Returns a subset with `samples`-many random elements of an input array. If `samples` exceeds the size of the input array, the sample size is limited to the size of the array, i.e. all array elements are returned but their order is not guaranteed. The function can handle both flat arrays and nested arrays.
+
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
 
 **Syntax**
 
@@ -3404,6 +3425,10 @@ Elements are reordered in such a way that each possible permutation of those ele
 This function will not materialize constants.
 </Note>
     
+
+<Note>
+This function is non-deterministic: it can return different results for the same arguments.
+</Note>
 
 **Syntax**
 
@@ -5009,76 +5034,6 @@ SELECT indexOfAssumeSorted([1, 3, 3, 3, 4, 4, 5], 4)
 5
 ```
 
-## kql_array_sort_asc {#kql_array_sort_asc}
-
-Introduced in: v23.10.0
-
-Sorts one or more arrays in ascending order. The first array is sorted, and subsequent arrays are reordered to match the first array's sorted order. Null values are placed at the end. This is a KQL (Kusto Query Language) compatibility function.
-    
-
-**Syntax**
-
-```sql
-kql_array_sort_asc(array1[, array2, ..., nulls_last])
-```
-
-**Arguments**
-
-- `array1` — The array to sort. [`Array(T)`](/reference/data-types/array)
-- `array2` — Optional. Additional arrays to reorder according to array1's sort order. [`Array(T)`](/reference/data-types/array)
-- `nulls_last` — Optional. A boolean indicating whether nulls should appear last. Default is true. [`UInt8`](/reference/data-types/int-uint)
-
-**Returned value**
-
-Returns a tuple of arrays sorted in ascending order. [`Tuple(Array, ...)`](/reference/data-types/tuple)
-
-**Examples**
-
-**Basic usage**
-
-```sql title=Query
-SELECT kql_array_sort_asc([3, 1, 2])
-```
-
-```response title=Response
-([1, 2, 3])
-```
-
-## kql_array_sort_desc {#kql_array_sort_desc}
-
-Introduced in: v23.10.0
-
-Sorts one or more arrays in descending order. The first array is sorted, and subsequent arrays are reordered to match the first array's sorted order. Null values are placed at the end. This is a KQL (Kusto Query Language) compatibility function.
-    
-
-**Syntax**
-
-```sql
-kql_array_sort_desc(array1[, array2, ..., nulls_last])
-```
-
-**Arguments**
-
-- `array1` — The array to sort. [`Array(T)`](/reference/data-types/array)
-- `array2` — Optional additional arrays to reorder according to array1's sort order. [`Array(T)`](/reference/data-types/array)
-- `nulls_last` — Optional boolean indicating whether nulls should appear last. Default is true. [`UInt8`](/reference/data-types/int-uint)
-
-**Returned value**
-
-Returns a tuple of arrays sorted in descending order. [`Tuple(Array, ...)`](/reference/data-types/tuple)
-
-**Examples**
-
-**Basic usage**
-
-```sql title=Query
-SELECT kql_array_sort_desc([3, 1, 2])
-```
-
-```response title=Response
-([3, 2, 1])
-```
-
 ## length {#length}
 
 Introduced in: v1.1.0
@@ -5087,7 +5042,8 @@ Calculates the length of a string or array.
 
 - For String or FixedString arguments: calculates the number of bytes in the string.
 - For Array arguments: calculates the number of elements in the array.
-- If applied to a FixedString argument, the function is a constant expression.
+- For QBit arguments: calculates the dimension of the vector.
+- If applied to a FixedString or QBit argument, the function is a constant expression.
 
 Please note that the number of bytes in a string is not the same as the number of
 Unicode "code points" and it is not the same as the number of Unicode "grapheme clusters"
@@ -5106,11 +5062,11 @@ length(x)
 
 **Arguments**
 
-- `x` — Value for which to calculate the number of bytes (for String/FixedString) or elements (for Array). [`String`](/reference/data-types/string) or [`FixedString`](/reference/data-types/fixedstring) or [`Array(T)`](/reference/data-types/array)
+- `x` — Value for which to calculate the number of bytes (for String/FixedString), elements (for Array), or the dimension (for QBit). [`String`](/reference/data-types/string) or [`FixedString`](/reference/data-types/fixedstring) or [`Array(T)`](/reference/data-types/array) or [`QBit`](/reference/data-types/qbit)
 
 **Returned value**
 
-Returns the number of number of bytes in the String/FixedString `x` / the number of elements in array `x` [`UInt64`](/reference/data-types/int-uint)
+Returns the number of bytes in the String/FixedString `x`, the number of elements in array `x`, or the dimension of the QBit `x` [`UInt64`](/reference/data-types/int-uint)
 
 **Examples**
 
@@ -5132,6 +5088,16 @@ SELECT length(['Hello', 'world'])
 
 ```response title=Response
 2
+```
+
+**QBit example**
+
+```sql title=Query
+SELECT length([0, 0, 0, 0, 0, 0, 0, 0]::QBit(Float32, 8))
+```
+
+```response title=Response
+8
 ```
 
 **constexpr example**
@@ -5215,6 +5181,82 @@ SELECT notEmpty([1,2]);
 
 ```response title=Response
 1
+```
+
+## randomHadamardTransform {#randomHadamardTransform}
+
+Introduced in: v26.7.0
+
+Applies a randomized Hadamard transform to a float vector: `y = (1/sqrt(k)) * (H * D * x)`, where
+`D` is a diagonal matrix of deterministic +/-1 signs chosen by `seed`, `H` is the Walsh-Hadamard
+matrix, and the input is zero-padded to `m`, the next power of two of its length.
+
+The transform is an orthogonal, **norm-preserving** rotation that spreads a vector's energy evenly
+across coordinates, making the per-coordinate distribution approximately Gaussian and
+data-independent. It is useful as a preprocessing step before scalar quantization, and -- when
+truncated -- as a Johnson-Lindenstrauss / subsampled-randomized-Hadamard (SRHT) random projection.
+
+When the input length is `2^k * m` with `m` in `{12, 20}` (orders that have a Hadamard matrix, e.g.
+`768 = 64 * 12`, `1536 = 128 * 12`, `3072 = 256 * 12`, `2560 = 128 * 20`), an exact Kronecker
+transform `H_(2^k) (x) H_m` is used instead of padding, so the output keeps the input dimension
+rather than growing to the next power of two. All other lengths are zero-padded to `m`, the next
+power of two.
+
+The result has the same element type as the input; an empty input array returns an empty array.
+
+- `seed` (optional, default `0`): selects the sign pattern; the same seed always yields the same
+  transform.
+- `output_dims` (optional, default the transform length): keeps only the first `output_dims`
+  coordinates. The `1/sqrt(output_dims)` scaling keeps the result norm-preserving for the full
+  transform and norm-preserving in expectation when truncated. It must not exceed the transform
+  length (the next power of two, or the input length for the exact Kronecker case).
+
+**Syntax**
+
+```sql
+randomHadamardTransform(vector[, seed[, output_dims]])
+```
+
+**Arguments**
+
+- `vector` — Vector to transform. [`Array(BFloat16)`](/reference/data-types/array) or [`Array(Float32)`](/reference/data-types/array) or [`Array(Float64)`](/reference/data-types/array)
+- `seed` — Optional. Seed for the deterministic +/-1 signs (default 0). [`UInt*`](/reference/data-types/int-uint)
+- `output_dims` — Optional. Truncate the result to this many leading coordinates (default: the full transform length, which is the input length for exact Kronecker dimensions and otherwise the next power of two). [`UInt*`](/reference/data-types/int-uint)
+
+**Returned value**
+
+The transformed vector (same element type as the input). Its length is the transform length: the input length for exact Kronecker dimensions, otherwise the input padded to the next power of two; optionally truncated to output_dims. [`Array(BFloat16)`](/reference/data-types/array) or [`Array(Float32)`](/reference/data-types/array) or [`Array(Float64)`](/reference/data-types/array)
+
+**Examples**
+
+**Full transform (length padded to a power of two)**
+
+```sql title=Query
+SELECT length(randomHadamardTransform([1, 2, 3]::Array(Float32)))
+```
+
+```response title=Response
+4
+```
+
+**Norm is preserved**
+
+```sql title=Query
+SELECT round(arraySum(x -> x * x, randomHadamardTransform([1, 2, 3, 4]::Array(Float32))) - 30, 4)
+```
+
+```response title=Response
+0
+```
+
+**Truncated projection to 3 dimensions**
+
+```sql title=Query
+SELECT length(randomHadamardTransform([1, 2, 3, 4, 5, 6, 7, 8]::Array(Float32), 42, 3))
+```
+
+```response title=Response
+3
 ```
 
 ## range {#range}

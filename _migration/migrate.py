@@ -2128,13 +2128,44 @@ def main():
     if not args.slug_map.exists():
         ap.error(f"slug-map.csv not found at {args.slug_map}; run _migration/generate-slug-map.py first")
 
+    lk, all_rows = build_lookups(args.slug_map)
+
     target = None
+    docu_targets = None
     if args.path:
         target = Path(args.path)
         if not target.is_absolute():
             target = THIS_REPO / target
+        # Allow the path to point into the Docusaurus source tree (e.g.
+        # `--docusaurus ~/Desktop/clickhouse-docs .../docs/development`). The
+        # migrator operates on this repo's files, so translate the source
+        # path into the corresponding Mintlify destination files via the
+        # slug map's docusaurus_file -> mintlify_file mapping.
+        docu_root = args.docusaurus.resolve()
+        try:
+            rel_docu = target.resolve().relative_to(docu_root).as_posix()
+        except ValueError:
+            rel_docu = None
+        if rel_docu is not None:
+            prefix = rel_docu.rstrip("/")
+            seen: set[Path] = set()
+            docu_targets = []
+            for r in all_rows:
+                df = r["docusaurus_file"]
+                if df != prefix and not df.startswith(prefix + "/"):
+                    continue
+                mf = r["mintlify_file"].split(" | ")[0] if r["mintlify_file"] else ""
+                if not mf:
+                    continue
+                p = THIS_REPO / mf
+                if p in seen:
+                    continue
+                seen.add(p)
+                if p.exists() and not _is_skip_path(mf):
+                    docu_targets.append(p)
+            docu_targets = sorted(docu_targets)
 
-    targets = iter_targets(target)
+    targets = docu_targets if docu_targets is not None else iter_targets(target)
     if not targets:
         print("No targets found", file=sys.stderr)
         return 1
@@ -2147,8 +2178,6 @@ def main():
             print(f"Synced {copied} new image file(s) from {args.docusaurus}/static/images")
         if overwritten:
             print(f"Overwrote {overwritten} drifted file(s) with upstream content")
-
-    lk, all_rows = build_lookups(args.slug_map)
 
     updates: dict[str, dict[str, str]] = {}
     skipped = changed = total_issues = 0

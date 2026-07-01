@@ -1021,8 +1021,9 @@ SELECT moduloLegacy(10, 3)
 
 Introduced in: v25.5.0
 
-Calculates the remainder when dividing `a` by `b`. Similar to function `modulo` except that `moduloOrNull` will return NULL
-if the right argument is 0.
+Calculates the remainder when dividing `a` by `b`. Similar to function `modulo` except that `moduloOrNull` returns `NULL`
+when the operation would otherwise raise a floating-point exception. For floating-point arguments this happens only when the
+divisor is `0`; for integer arguments it additionally covers the minimal negative value modulo `-1` (e.g. `-128 % -1` for `Int8`).
     
 
 **Syntax**
@@ -1040,7 +1041,8 @@ moduloOrNull(x, y)
 
 **Returned value**
 
-Returns the remainder of the division of `x` by `y`, or null when the divisor is zero.
+Returns the remainder of the division of `x` by `y`, or `NULL` when the operation would raise a floating-point exception:
+when the divisor is zero, or, for integer arguments, when computing the minimal negative value modulo `-1`.
 
 **Examples**
 
@@ -1048,6 +1050,16 @@ Returns the remainder of the division of `x` by `y`, or null when the divisor is
 
 ```sql title=Query
 SELECT moduloOrNull(5, 0)
+```
+
+```response title=Response
+\N
+```
+
+**moduloOrNull of the minimal negative integer by -1**
+
+```sql title=Query
+SELECT moduloOrNull(toInt8(-128), toInt8(-1))
 ```
 
 ```response title=Response
@@ -1333,8 +1345,9 @@ SELECT positiveModulo(-1, 10)
 
 Introduced in: v25.5.0
 
-Calculates the remainder when dividing `a` by `b`. Similar to function `positiveModulo` except that `positiveModuloOrNull` will return NULL
-if the right argument is 0.
+Calculates the remainder when dividing `a` by `b`. Similar to function `positiveModulo` except that `positiveModuloOrNull` returns `NULL`
+when the operation would otherwise raise a floating-point exception. For floating-point arguments this happens only when the
+divisor is `0`; for integer arguments it additionally covers the minimal negative value modulo `-1` (e.g. `-128 % -1` for `Int8`).
     
 
 **Syntax**
@@ -1352,14 +1365,25 @@ positiveModuloOrNull(x, y)
 **Returned value**
 
 Returns the difference between `x` and the nearest integer not greater than
-`x` divisible by `y`, `null` when the divisor is zero.
+`x` divisible by `y`, or `NULL` when the operation would raise a floating-point exception: when the divisor is zero, or,
+for integer arguments, when computing the minimal negative value modulo `-1`.
 
 **Examples**
 
-**positiveModuloOrNull**
+**positiveModuloOrNull by zero**
 
 ```sql title=Query
 SELECT positiveModuloOrNull(5, 0)
+```
+
+```response title=Response
+\N
+```
+
+**positiveModuloOrNull of the minimal negative integer by -1**
+
+```sql title=Query
+SELECT positiveModuloOrNull(toInt8(-128), toInt8(-1))
 ```
 
 ```response title=Response

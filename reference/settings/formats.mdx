@@ -149,7 +149,7 @@ For AvroConfluent format: connection timeout in seconds for the Confluent Schema
 
 <SettingsInfoBlock type="UInt64" default_value="5" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "5"},{"label": "New setting controlling the maximum number of retries for transient failures (transport timeouts, connection refused, DNS errors, HTTP 5xx/408/429) when communicating with the Confluent Schema Registry. Set to 0 to disable retries. Previous behavior (no retries) is preserved by `compatibility = '26.5'`."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "5"},{"label": "New setting controlling the maximum number of retries for transient failures (transport timeouts, connection refused, DNS errors, HTTP 5xx\/408\/429) when communicating with the Confluent Schema Registry. Set to 0 to disable retries. Previous behavior (no retries) is preserved by `compatibility = '26.5'`."}]}]}/>
 
 For AvroConfluent format: maximum number of retries for transient failures when communicating with the Confluent Schema Registry (transport timeouts, connection refused, DNS errors, HTTP 5xx/408/429). Set to 0 to disable retries. The maximum allowed value is 20. Schema validation errors (HTTP 409, malformed Avro JSON) are not retried.
 
@@ -300,6 +300,20 @@ Possible values:
 
 -   0 — Disabled.
 -   1 — Enabled.
+
+## format_geojson_validate_geometry {#format_geojson_validate_geometry}   
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "1"},{"label": "New setting that controls whether the GeoJSON format enforces RFC 7946 geometry validity (minimum points per line and ring, ring closure, non-empty multi-geometries) when reading and writing"}]}]}/>
+
+Controls whether the `GeoJSON` format enforces RFC 7946 geometry validity, in both directions.
+
+When enabled (default), a geometry that violates the GeoJSON shape rules is rejected: a `LineString` (or a line of a `MultiLineString`) with fewer than two points; a `Polygon` or `MultiPolygon` ring with fewer than four points or whose first and last points differ (an unclosed ring); or an empty `MultiLineString`, `Polygon`, or `MultiPolygon`. This applies both when reading (such a document is rejected) and when writing (such a ClickHouse value is rejected instead of producing a document the input format would reject).
+
+When disabled, these shape rules are not enforced: such geometries are read as-is and written as-is, so degenerate geometries round-trip, but a written document may not be valid GeoJSON.
+
+The validation is structural only: it checks point counts and ring closure. It does not inspect the geometric correctness of a shape — ring orientation (the right-hand rule / winding order) is not enforced, and structurally valid but geometrically degenerate geometries are accepted, such as a zero-area polygon, a self-intersecting ring, or a polygon whose holes lie outside its outer ring. Non-finite coordinates (`NaN`, `Inf`) are always rejected regardless of this setting, because they cannot be represented as JSON numbers.
 
 ## format_json_object_each_row_column_for_object_name {#format_json_object_each_row_column_for_object_name}   
 
@@ -579,6 +593,14 @@ Treat empty fields in CSV input as default values.
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 Treat inserted enum values in CSV formats as enum indices
+
+## input_format_csv_missing_nullable_as_empty_string {#input_format_csv_missing_nullable_as_empty_string}   
+
+<SettingsInfoBlock type="Bool" default_value="0" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "0"},{"label": "New setting to read a missing value of `Nullable(String)` from CSV as an empty string instead of NULL."}]}]}/>
+
+Controls how `Nullable(String)` is read from a missing value in CSV. A missing value is an empty space between/before/after commas, not surrounded by quotes. If this setting is enabled, regardless of the value of `input_format_csv_empty_as_default`, the missing value of `Nullable(String)` will be interpreted as an empty `String`, not as NULL.
 
 ## input_format_csv_skip_first_lines {#input_format_csv_skip_first_lines}   
 
@@ -1219,7 +1241,7 @@ Allow missing columns while reading Parquet input formats
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.5"},{"label": "1"},{"label": "When reading Parquet files, skip whole row groups based on the WHERE/PREWHERE expressions and bloom filter in the Parquet metadata."}]}, {"id": "row-2","items": [{"label": "24.10"},{"label": "0"},{"label": "When reading Parquet files, skip whole row groups based on the WHERE/PREWHERE expressions and bloom filter in the Parquet metadata."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.5"},{"label": "1"},{"label": "When reading Parquet files, skip whole row groups based on the WHERE\/PREWHERE expressions and bloom filter in the Parquet metadata."}]}, {"id": "row-2","items": [{"label": "24.10"},{"label": "0"},{"label": "When reading Parquet files, skip whole row groups based on the WHERE\/PREWHERE expressions and bloom filter in the Parquet metadata."}]}]}/>
 
 When reading Parquet files, skip whole row groups based on the WHERE expressions and bloom filter in the Parquet metadata.
 
@@ -1427,7 +1449,7 @@ Enabled by default.
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.9"},{"label": "0"},{"label": "Try to infer Variant type in text formats when there is more than one possible type for column/array elements"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.9"},{"label": "0"},{"label": "Try to infer Variant type in text formats when there is more than one possible type for column\/array elements"}]}]}/>
 
 If enabled, ClickHouse will try to infer type [`Variant`](/reference/data-types/variant) in schema inference for text formats when there is more than one possible type for column/array elements.
 
@@ -1510,7 +1532,7 @@ For Values format: if the field could not be parsed by streaming parser, run SQL
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "20.5"},{"label": "1"},{"label": "Enable using header with names for formats with WithNames/WithNamesAndTypes suffixes"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "20.5"},{"label": "1"},{"label": "Enable using header with names for formats with WithNames\/WithNamesAndTypes suffixes"}]}]}/>
 
 Enables or disables checking the column order when inserting data.
 
@@ -1652,7 +1674,7 @@ Enable output LowCardinality type as Dictionary Arrow type
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "1"},{"label": "ClickHouse allows arbitrary binary data in the String data type, which is typically UTF-8. Parquet/ORC/Arrow Strings only support UTF-8. That's why you can choose which Arrow's data type to use for the ClickHouse String data type - String or Binary. While Binary would be more correct and compatible, using String by default will correspond to user expectations in most cases."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "1"},{"label": "ClickHouse allows arbitrary binary data in the String data type, which is typically UTF-8. Parquet\/ORC\/Arrow Strings only support UTF-8. That's why you can choose which Arrow's data type to use for the ClickHouse String data type - String or Binary. While Binary would be more correct and compatible, using String by default will correspond to user expectations in most cases."}]}]}/>
 
 Use Arrow String type instead of Binary for String columns
 
@@ -1753,6 +1775,16 @@ Possible values: non-negative numbers. Note that if the value is too small or to
 <SettingsInfoBlock type="Bool" default_value="0" />
 
 If it is set true, end of line in CSV format will be \\r\\n instead of \\n.
+
+## output_format_csv_header_serialize_tuple_into_separate_columns {#output_format_csv_header_serialize_tuple_into_separate_columns}   
+
+<SettingsInfoBlock type="Bool" default_value="1" />
+
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "1"},{"label": "New setting. When output_format_csv_serialize_tuple_into_separate_columns is enabled, the CSVWithNames\/CSVWithNamesAndTypes header now flattens Tuple columns into their leaf fields so the header width matches the data. Set to false to restore the previous single-name header."}]}]}/>
+
+When [output_format_csv_serialize_tuple_into_separate_columns](#output_format_csv_serialize_tuple_into_separate_columns) is enabled, the header rows of `CSVWithNames` and `CSVWithNamesAndTypes` flatten each Tuple column into its leaf fields (dotted names like `t.a`, `t.b`, and the leaf type names), so the header has the same number of columns as the data. For `CustomSeparated*` this flattening applies only when `format_custom_escaping_rule = 'CSV'` and `format_custom_field_delimiter` is a single character equal to `format_csv_delimiter`; otherwise (for example the default tab delimiter or `format_custom_field_delimiter = '|'`) the header stays unflattened so it still matches the data. Set it to `0` to keep the previous behavior where the header keeps the single top-level Tuple name and type.
+
+Note: a flattened header is not read back into a Tuple by name when `input_format_with_names_use_header = 1`. To read such data back into a Tuple, either set this setting to `0` on output, or read with `input_format_with_names_use_header = 0` (and, for the `*WithNamesAndTypes` formats `CSVWithNamesAndTypes` and `CustomSeparatedWithNamesAndTypes`, also `input_format_with_types_use_header = 0`, since the flattened types row is otherwise validated against the single top-level Tuple input field and rejected).
 
 ## output_format_csv_serialize_tuple_into_separate_columns {#output_format_csv_serialize_tuple_into_separate_columns}   
 
@@ -2121,7 +2153,7 @@ Write data types in binary format instead of type names in Native output format
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.6"},{"label": "0"},{"label": "Add flattened Dynamic/JSON serializations to Native format"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.6"},{"label": "0"},{"label": "Add flattened Dynamic\/JSON serializations to Native format"}]}]}/>
 
 Write data of [JSON](/reference/data-types/newjson) and [Dynamic](/reference/data-types/dynamic) columns in a flattened format (all types/paths as separate subcolumns).
 
@@ -2145,7 +2177,7 @@ The size of the compression block in bytes for ORC output format.
 
 <SettingsInfoBlock type="ORCCompression" default_value="zstd" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "zstd"},{"label": "Parquet/ORC/Arrow support many compression methods, including lz4 and zstd. ClickHouse supports each and every compression method. Some inferior tools, such as 'duckdb', lack support for the faster `lz4` compression method, that's why we set zstd by default."}]}, {"id": "row-2","items": [{"label": "23.3"},{"label": "lz4_frame"},{"label": "Use lz4 compression in ORC output format by default"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "zstd"},{"label": "Parquet\/ORC\/Arrow support many compression methods, including lz4 and zstd. ClickHouse supports each and every compression method. Some inferior tools, such as 'duckdb', lack support for the faster `lz4` compression method, that's why we set zstd by default."}]}, {"id": "row-2","items": [{"label": "23.3"},{"label": "lz4_frame"},{"label": "Use lz4 compression in ORC output format by default"}]}]}/>
 
 Compression method for ORC output format. Supported codecs: lz4, snappy, zlib, zstd, none (uncompressed)
 
@@ -2167,7 +2199,7 @@ Target row index stride in ORC output format
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "1"},{"label": "ClickHouse allows arbitrary binary data in the String data type, which is typically UTF-8. Parquet/ORC/Arrow Strings only support UTF-8. That's why you can choose which Arrow's data type to use for the ClickHouse String data type - String or Binary. While Binary would be more correct and compatible, using String by default will correspond to user expectations in most cases."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "1"},{"label": "ClickHouse allows arbitrary binary data in the String data type, which is typically UTF-8. Parquet\/ORC\/Arrow Strings only support UTF-8. That's why you can choose which Arrow's data type to use for the ClickHouse String data type - String or Binary. While Binary would be more correct and compatible, using String by default will correspond to user expectations in most cases."}]}]}/>
 
 Use ORC String type instead of Binary for String columns
 
@@ -2224,7 +2256,7 @@ Where in the parquet file to place the bloom filters. Bloom filters will be writ
 
 <SettingsInfoBlock type="ParquetCompression" default_value="zstd" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "zstd"},{"label": "Parquet/ORC/Arrow support many compression methods, including lz4 and zstd. ClickHouse supports each and every compression method. Some inferior tools, such as 'duckdb', lack support for the faster `lz4` compression method, that's why we set zstd by default."}]}, {"id": "row-2","items": [{"label": "23.3"},{"label": "lz4"},{"label": "Use lz4 compression in Parquet output format by default"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "zstd"},{"label": "Parquet\/ORC\/Arrow support many compression methods, including lz4 and zstd. ClickHouse supports each and every compression method. Some inferior tools, such as 'duckdb', lack support for the faster `lz4` compression method, that's why we set zstd by default."}]}, {"id": "row-2","items": [{"label": "23.3"},{"label": "lz4"},{"label": "Use lz4 compression in Parquet output format by default"}]}]}/>
 
 Compression method for Parquet output format. Supported codecs: snappy, lz4, brotli, zstd, gzip, none (uncompressed)
 
@@ -2304,7 +2336,7 @@ Target row group size in bytes, before compression.
 
 <SettingsInfoBlock type="Bool" default_value="1" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "1"},{"label": "ClickHouse allows arbitrary binary data in the String data type, which is typically UTF-8. Parquet/ORC/Arrow Strings only support UTF-8. That's why you can choose which Arrow's data type to use for the ClickHouse String data type - String or Binary. While Binary would be more correct and compatible, using String by default will correspond to user expectations in most cases."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.3"},{"label": "1"},{"label": "ClickHouse allows arbitrary binary data in the String data type, which is typically UTF-8. Parquet\/ORC\/Arrow Strings only support UTF-8. That's why you can choose which Arrow's data type to use for the ClickHouse String data type - String or Binary. While Binary would be more correct and compatible, using String by default will correspond to user expectations in most cases."}]}]}/>
 
 Use Parquet String type instead of Binary for String columns.
 
@@ -2614,7 +2646,7 @@ If it is set true, end of line in TSV format will be \\r\\n instead of \\n.
 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.2"},{"label": "0"},{"label": "If true escape ' with '', otherwise quoted with \'"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "24.2"},{"label": "0"},{"label": "If true escape ' with '', otherwise quoted with \\'"}]}]}/>
 
 If true escape ' with '', otherwise quoted with \\'
 
