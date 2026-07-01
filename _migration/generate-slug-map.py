@@ -31,7 +31,12 @@ from pathlib import Path
 
 THIS_REPO = Path(__file__).resolve().parent.parent
 DEFAULT_DOCUSAURUS = Path.home() / "Desktop" / "clickhouse-docs"
-SKIP_DIRS = {"node_modules", ".git", "i18n", ".claude", "scripts", "snippets", "ja", "ko", "ru", "zh", "es", "pt-BR"}
+# Localised content is handled by the translation bot and must never be
+# migrated — walking it into the slug map makes every English slug "ambiguous"
+# because each language tree carries a duplicate copy. Keep this list in sync
+# with the top-level (and snippets/) language directories in the repo.
+LANG_DIRS = {"ar", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh"}
+SKIP_DIRS = {"node_modules", ".git", "i18n", ".claude", "scripts", "snippets", *LANG_DIRS}
 EXTS = (".md", ".mdx")
 SLUG_RE = re.compile(r"^slug:\s*['\"]?(\S+?)['\"]?\s*$", re.MULTILINE)
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---", re.DOTALL)

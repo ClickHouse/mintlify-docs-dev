@@ -132,6 +132,15 @@ with settings `min_age_to_force_merge_seconds`,
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "24.12"},{"label": "0"},{"label": "New setting"}]}]}/>
 
 Obsolete setting, does nothing.
+## allow_experimental_text_index_positions {#allow_experimental_text_index_positions} 
+
+<ExperimentalBadge/>
+<SettingsInfoBlock type="Bool" default_value="0" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.7"},{"label": "0"},{"label": "New setting"}]}]}/>
+
+Allow creating text indexes with the experimental `positions` argument which
+stores token positions to support exact phrase matching.
+
 ## allow_floating_point_partition_key {#allow_floating_point_partition_key} 
 <SettingsInfoBlock type="Bool" default_value="0" />
 
@@ -508,7 +517,7 @@ Minimal number of parts to activated distributed index analysis
 
 ## dynamic_serialization_version {#dynamic_serialization_version} 
 <SettingsInfoBlock type="MergeTreeDynamicSerializationVersion" default_value="v3" />
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.8"},{"label": "v2"},{"label": "Add a setting to control Dynamic serialization versions"}]}, {"id": "row-2","items": [{"label": "25.12"},{"label": "v3"},{"label": "Enable v3 serialization version for Dynamic by default for better serialization/deserialization"}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.8"},{"label": "v2"},{"label": "Add a setting to control Dynamic serialization versions"}]}, {"id": "row-2","items": [{"label": "25.12"},{"label": "v3"},{"label": "Enable v3 serialization version for Dynamic by default for better serialization\/deserialization"}]}]}/>
 
 Serialization version for Dynamic data type. Required for compatibility.
 
@@ -1104,10 +1113,10 @@ Zero means no limit on the number of mutations per replica (the execution can
 still be constrained by other settings).
 
 ## max_part_loading_threads {#max_part_loading_threads} 
-<SettingsInfoBlock type="MaxThreads" default_value="'auto(14)'" />
+<SettingsInfoBlock type="MaxThreads" default_value="auto(14)" />
 Obsolete setting, does nothing.
 ## max_part_removal_threads {#max_part_removal_threads} 
-<SettingsInfoBlock type="MaxThreads" default_value="'auto(14)'" />
+<SettingsInfoBlock type="MaxThreads" default_value="auto(14)" />
 Obsolete setting, does nothing.
 ## max_partitions_to_read {#max_partitions_to_read} 
 <SettingsInfoBlock type="Int64" default_value="-1" />
@@ -1716,8 +1725,10 @@ Possible values:
 - `0` (disable deduplication).
 
 A deduplication mechanism is used, similar to replicated tables (see
-[replicated_deduplication_window](#replicated_deduplication_window) setting).
-The hash sums of the created parts are written to a local file on a disk.
+[replicated_deduplication_window](#replicated_deduplication_window) setting), including the
+`insert_deduplication_version` granularity (whole inserted block under the default
+`new_unified_hash`, per created part under the legacy versions). The hash sums are written to
+a local file on a disk rather than to ClickHouse Keeper.
 
 ## notify_newest_block_number {#notify_newest_block_number} 
 
@@ -1964,7 +1975,7 @@ High-cardinality primary keys, e.g. involving timestamp columns of type
 
 <ExperimentalBadge/>
 <SettingsInfoBlock type="UInt64" default_value="0" />
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting. Pack any skip-index substream whose serialized on-disk size is at most this many bytes into a single skp_idx.packed archive per part; larger substreams stay in the standalone skp_idx_<name>.idx2 / .mrk2 layout. Decision is made per substream at write time."}]}]}/>
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting. Pack any skip-index substream whose serialized on-disk size is at most this many bytes into a single skp_idx.packed archive per part; larger substreams stay in the standalone skp_idx_<name>.idx2 \/ .mrk2 layout. Decision is made per substream at write time."}]}]}/>
 
 Threshold (serialized on-disk bytes, i.e. after the substream's compression and hashing
 chain) below which a skip-index substream is bundled into a single `skp_idx.packed`
@@ -2333,17 +2344,20 @@ Possible values:
 - Any positive integer.
 - 0 (disable deduplication)
 
-The `Insert` command creates one or more blocks (parts). For
-[insert deduplication](/reference/engines/table-engines/mergetree-family/replication),
-when writing into replicated tables, ClickHouse writes the hash sums of the
-created parts into ClickHouse Keeper. Hash sums are stored only for the most
-recent `replicated_deduplication_window` blocks. The oldest hash sums are
-removed from ClickHouse Keeper.
+For [insert deduplication](/reference/engines/table-engines/mergetree-family/replication),
+when writing into replicated tables, ClickHouse writes deduplication hash sums into
+ClickHouse Keeper. Hash sums are stored only for the most recent
+`replicated_deduplication_window` blocks. The oldest hash sums are removed from
+ClickHouse Keeper.
 
-A large number for `replicated_deduplication_window` slows down `Inserts`
-because more entries need to be compared. The hash sum is calculated from
-the composition of the field names and types and the data of the inserted
-part (stream of bytes).
+Under the default `insert_deduplication_version = new_unified_hash` the hash sum covers the
+whole inserted block, so an insert is deduplicated only when its entire data matches a
+previous insert (a retry), not per individual part. Under the legacy `old_separate_hashes` /
+`compatible_double_hashes` the hash sum is instead calculated per created part, from the
+composition of the field names and types and the data of that part (stream of bytes).
+
+A large number for `replicated_deduplication_window` slows down `Inserts` because more
+entries need to be compared.
 
 ## replicated_deduplication_window_for_async_inserts {#replicated_deduplication_window_for_async_inserts} 
 <SettingsInfoBlock type="UInt64" default_value="10000" />
@@ -2365,6 +2379,12 @@ A large number of `replicated_deduplication_window_for_async_inserts` slows
 down `Async Inserts` because it needs to compare more entries.
 The hash sum is calculated from the composition of the field names and types
 and the data of the insert (stream of bytes).
+
+This setting applies only under `insert_deduplication_version = old_separate_hashes` or
+`compatible_double_hashes`, which keep async-insert hashes in a separate `async_blocks`
+directory. Under the default `new_unified_hash`, async inserts share the unified
+`deduplication_hashes` directory with sync inserts and are governed by
+`replicated_deduplication_window` / `replicated_deduplication_window_seconds` instead.
 
 ## replicated_deduplication_window_seconds {#replicated_deduplication_window_seconds} 
 <SettingsInfoBlock type="UInt64" default_value="3600" />
@@ -2403,6 +2423,10 @@ removed from ClickHouse Keeper, even if they are less than
 
 The time is relative to the time of the most recent record, not to the wall
 time. If it's the only record it will be stored forever.
+
+Like `replicated_deduplication_window_for_async_inserts`, this applies only under
+`insert_deduplication_version = old_separate_hashes` / `compatible_double_hashes`; under the
+default `new_unified_hash`, async inserts use `replicated_deduplication_window_seconds`.
 
 ## replicated_fetches_http_connection_timeout {#replicated_fetches_http_connection_timeout} 
 <SettingsInfoBlock type="Seconds" default_value="0" />
@@ -2535,14 +2559,14 @@ How many seconds partition will be stored in keeper if it has no parts.
 Enabled cleanup of Keeper entries of empty partition.
 
 ## shared_merge_tree_enable_coordinated_merges {#shared_merge_tree_enable_coordinated_merges} 
-<SettingsInfoBlock type="Bool" default_value="0" />
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.5"},{"label": "0"},{"label": "New setting"}]}]}/>
+<SettingsInfoBlock type="Bool" default_value="1" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Enable coordinated merges by default"}]}, {"id": "row-2","items": [{"label": "25.5"},{"label": "0"},{"label": "New setting"}]}]}/>
 
 Enables coordinated merges strategy
 
 ## shared_merge_tree_enable_keeper_parts_extra_data {#shared_merge_tree_enable_keeper_parts_extra_data} 
-<SettingsInfoBlock type="Bool" default_value="0" />
-<VersionHistory rows={[{"id": "row-1","items": [{"label": "25.3"},{"label": "0"},{"label": "New setting"}]}]}/>
+<SettingsInfoBlock type="Bool" default_value="1" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "1"},{"label": "Enable coordinated merges by default"}]}, {"id": "row-2","items": [{"label": "25.3"},{"label": "0"},{"label": "New setting"}]}]}/>
 
 Enables writing attributes into virtual parts and committing blocks in keeper
 
@@ -2558,6 +2582,16 @@ Enable outdated parts check. Only available in ClickHouse Cloud
 
 Interval in seconds for parts update without being triggered by ZooKeeper
 watch in the shared merge tree. Only available in ClickHouse Cloud
+
+## shared_merge_tree_inactive_replica_cutoff_seconds {#shared_merge_tree_inactive_replica_cutoff_seconds} 
+<SettingsInfoBlock type="Seconds" default_value="0" />
+<VersionHistory rows={[{"id": "row-1","items": [{"label": "26.6"},{"label": "0"},{"label": "New setting which controls for how long an inactive replica is taken into account by the background cleanup (0 means two ZooKeeper session timeouts)"}]}]}/>
+
+For how long an inactive replica is still taken into account by the background cleanup
+(`OutdatedPartsQuorumThread`): while a replica has been inactive for less than this many seconds,
+it still holds back removal of outdated parts and truncation of finished mutations. A value of 0
+means use the default of two ZooKeeper session timeouts.
+Only in ClickHouse Cloud
 
 ## shared_merge_tree_initial_parts_update_backoff_ms {#shared_merge_tree_initial_parts_update_backoff_ms} 
 <SettingsInfoBlock type="UInt64" default_value="50" />
@@ -2747,8 +2781,8 @@ merging it locally. Only available in ClickHouse Cloud.
 <SettingsInfoBlock type="UInt64" default_value="10" />
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "25.1"},{"label": "10"},{"label": "Cloud sync"}]}]}/>
 
-Time to keep a locally merged part without starting a new merge containing
-this part. Gives other replicas a chance fetch the part and start this merge.
+Window size (in block numbers) used to distribute merge assignment across
+replicas. Parts within the same window are assigned to the same replicas.
 Only available in ClickHouse Cloud
 
 ## shared_merge_tree_read_virtual_parts_from_leader {#shared_merge_tree_read_virtual_parts_from_leader} 
@@ -2873,7 +2907,17 @@ the database data. Can be set only for s3_plain/s3_plain_rewritable/web.
 <SettingsInfoBlock type="Bool" default_value="0" />
 <VersionHistory rows={[{"id": "row-1","items": [{"label": "26.3"},{"label": "0"},{"label": "New setting to mark table as read-only, preventing inserts and modifications"}]}]}/>
 
-If set to true, the table is in read-only mode. Any attempts to insert data or modify the table will fail.
+If set to true, the table is in read-only mode and performs no modifications on disk.
+
+All foreground operations that would modify the table are rejected: inserts, mutations, `OPTIMIZE`, and the data-mutating partition commands
+(`ATTACH`/`MOVE`/`DROP`/`DROP DETACHED`/`FETCH`/`REPLACE PARTITION`, as well as `MOVE PARTITION ... TO TABLE` targeting this table). Operations
+that do not modify the table's data, such as `FREEZE`/`UNFREEZE` and `FORGET PARTITION`, remain allowed.
+
+No background work is scheduled either: regular merges, TTL merges (`DELETE`/`MOVE`/recompression), recompression merges, background mutations,
+and background part moves are all suppressed. As a consequence, a table with a TTL no longer reclaims or moves its expired data while this setting
+is enabled.
+
+The setting can always be toggled back with `ALTER TABLE ... MODIFY SETTING table_readonly = 0` (or `RESET SETTING`). It is not supported for `ReplicatedMergeTree`.
 
 ## temporary_directories_lifetime {#temporary_directories_lifetime} 
 <SettingsInfoBlock type="Seconds" default_value="86400" />

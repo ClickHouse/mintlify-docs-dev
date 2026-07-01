@@ -223,10 +223,50 @@ def transform_frontmatter(text: str) -> tuple[str, str | None, str | None]:
 # ----- redundant H1 ----------------------------------------------------------
 
 def drop_redundant_h1(text: str, title: str | None) -> str:
+    # Mintlify renders the frontmatter `title:` as the page's H1, so a leading
+    # H1 in the body is always a duplicate. Remove the first H1 that opens the
+    # body — allowing it to be preceded only by blank lines, import statements,
+    # or comments. The H1 text does NOT have to match `title` exactly: anchors
+    # (`# Title {#foo}`), casing, and trailing punctuation frequently differ,
+    # and any of those still render as a duplicate heading. Only a top-of-body
+    # H1 is removed, so genuine mid-page `#` headings are left untouched.
     if not title:
         return text
+    m = FRONTMATTER_RE.match(text)
+    body_start = m.end() if m else 0
+    head, body = text[:body_start], text[body_start:]
+
+    lines = body.split("\n")
+
+    def skippable(ln: str) -> bool:
+        # Lines that may legitimately precede the title H1: blanks, imports,
+        # comments, and standalone JSX/HTML elements (e.g. a `<...Badge />`).
+        # Only self-closing or single-line elements are skipped — a bare
+        # opening tag like `<Note>` is left in place so we never reach into a
+        # container's body and delete a heading that lives inside it.
+        s = ln.strip()
+        return (
+            s == ""
+            or s.startswith("import ")
+            or s.startswith("{/*")
+            or s.startswith("<!--")
+            or (s.startswith("<") and (s.endswith("/>") or "</" in s))
+        )
+
+    i = 0
+    while i < len(lines) and skippable(lines[i]):
+        i += 1
+    if i < len(lines) and re.match(r"^# +\S", lines[i]):
+        del lines[i]
+        while i < len(lines) and lines[i].strip() == "":
+            del lines[i]
+        return head + "\n".join(lines)
+
+    # Fallback: an H1 that exactly matches the title but sits after content the
+    # skip logic doesn't recognise. Preserve the original behaviour of removing
+    # the first such H1 anywhere in the body so we're never worse than before.
     pattern = re.compile(r"^# +" + re.escape(title) + r"\s*\n+", re.MULTILINE)
-    return pattern.sub("", text, count=1)
+    return head + pattern.sub("", body, count=1)
 
 
 # ----- imports ---------------------------------------------------------------
@@ -2128,13 +2168,44 @@ def main():
     if not args.slug_map.exists():
         ap.error(f"slug-map.csv not found at {args.slug_map}; run _migration/generate-slug-map.py first")
 
+    lk, all_rows = build_lookups(args.slug_map)
+
     target = None
+    docu_targets = None
     if args.path:
         target = Path(args.path)
         if not target.is_absolute():
             target = THIS_REPO / target
+        # Allow the path to point into the Docusaurus source tree (e.g.
+        # `--docusaurus ~/Desktop/clickhouse-docs .../docs/development`). The
+        # migrator operates on this repo's files, so translate the source
+        # path into the corresponding Mintlify destination files via the
+        # slug map's docusaurus_file -> mintlify_file mapping.
+        docu_root = args.docusaurus.resolve()
+        try:
+            rel_docu = target.resolve().relative_to(docu_root).as_posix()
+        except ValueError:
+            rel_docu = None
+        if rel_docu is not None:
+            prefix = rel_docu.rstrip("/")
+            seen: set[Path] = set()
+            docu_targets = []
+            for r in all_rows:
+                df = r["docusaurus_file"]
+                if df != prefix and not df.startswith(prefix + "/"):
+                    continue
+                mf = r["mintlify_file"].split(" | ")[0] if r["mintlify_file"] else ""
+                if not mf:
+                    continue
+                p = THIS_REPO / mf
+                if p in seen:
+                    continue
+                seen.add(p)
+                if p.exists() and not _is_skip_path(mf):
+                    docu_targets.append(p)
+            docu_targets = sorted(docu_targets)
 
-    targets = iter_targets(target)
+    targets = docu_targets if docu_targets is not None else iter_targets(target)
     if not targets:
         print("No targets found", file=sys.stderr)
         return 1
@@ -2147,8 +2218,6 @@ def main():
             print(f"Synced {copied} new image file(s) from {args.docusaurus}/static/images")
         if overwritten:
             print(f"Overwrote {overwritten} drifted file(s) with upstream content")
-
-    lk, all_rows = build_lookups(args.slug_map)
 
     updates: dict[str, dict[str, str]] = {}
     skipped = changed = total_issues = 0

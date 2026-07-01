@@ -113,6 +113,10 @@ Total count of addresses which have been marked as faulty due to connection erro
 
 Total time spent while aggregating sorted columns
 
+### AggregationConvertedToTwoLevel {#aggregationconvertedtotwolevel}
+
+How many times a single-level aggregation hash table was converted to two-level at runtime.
+
 ### AggregationHashTablesInitializedAsTwoLevel {#aggregationhashtablesinitializedastwolevel}
 
 How many hash tables were inited as two-level for aggregation.
@@ -607,7 +611,7 @@ Total number of CPU preemptions
 
 ### ConcurrencyControlQueriesDelayed {#concurrencycontrolqueriesdelayed}
 
-Total number of CPU slot allocations (queries) that were required to wait for slots to upscale
+Number of queries delayed by CPU slot capacity pressure. Contention indicator — excludes lazy-upscale waits on an uncontested server.
 
 ### ConcurrencyControlSlotsAcquired {#concurrencycontrolslotsacquired}
 
@@ -619,7 +623,7 @@ Total number of noncompeting CPU slot acquired
 
 ### ConcurrencyControlSlotsDelayed {#concurrencycontrolslotsdelayed}
 
-Number of CPU slot not granted initially and required to wait for a free CPU slot
+Number of CPU slots not granted at allocation time due to capacity pressure. Excludes slots held back by lazy allocation.
 
 ### ConcurrencyControlSlotsGranted {#concurrencycontrolslotsgranted}
 
@@ -1535,6 +1539,18 @@ Number of times distributed index analysis failed on one of replicas without fal
 
 Number of replicas (local replica will be accounted once) to which distributed index analysis has been scheduled
 
+### DistributedPlanHostsUsed {#distributedplanhostsused}
+
+Number of distinct hosts that were assigned at least one task when executing a query with make_distributed_plan.
+
+### DistributedPlanLocalExecution {#distributedplanlocalexecution}
+
+Set to 1 when a make_distributed_plan query was executed in-process via the local executor (distributed_plan_execute_locally) instead of being dispatched to remote workers.
+
+### DistributedPlanRemoteTasks {#distributedplanremotetasks}
+
+Number of tasks dispatched to remote workers when executing a query with make_distributed_plan. A non-zero value means the query was actually executed distributedly.
+
 ### DistributedRejectedInserts {#distributedrejectedinserts}
 
 Number of times the INSERT of a block to a Distributed table was rejected with 'Too many bytes' exception due to high number of pending bytes.
@@ -1839,6 +1855,10 @@ Number of file segments which unexpectedly failed to be evicted during dynamic f
 
 Number of failed file cache space reservation attempts.
 
+### FilesystemCacheFreeSpaceKeepingThreadErrors {#filesystemcachefreespacekeepingthreaderrors}
+
+Number of exceptions caught by the background free space keeping job (collection, removal or finalization)
+
 ### FilesystemCacheFreeSpaceKeepingThreadRun {#filesystemcachefreespacekeepingthreadrun}
 
 Number of times background thread executed free space keeping job
@@ -2089,7 +2109,7 @@ Total number of returned object infos from iceberg iterator.
 
 ### IcebergMetadataUpdateMicroseconds {#icebergmetadataupdatemicroseconds}
 
-Total time spent on synchronous initialization of iceberg data iterators.
+Total time spent updating iceberg storage metadata from state (buildStorageMetadataFromState).
 
 ### IcebergMinMaxIndexPrunedFiles {#icebergminmaxindexprunedfiles}
 
@@ -2587,6 +2607,14 @@ Time spent waiting for acquiring Keeper storage lock
 
 Time spent waiting for acquiring Keeper storage shared lock
 
+### KeeperTTLRemoveRequestsDropped {#keeperttlremoverequestsdropped}
+
+Number of TTL remove requests dropped because the queue was full
+
+### KeeperTTLRemoveRequestsEnqueued {#keeperttlremoverequestsenqueued}
+
+Number of TTL remove requests successfully enqueued
+
 ### KeeperTotalElapsedMicroseconds {#keepertotalelapsedmicroseconds}
 
 Keeper total latency for a single request
@@ -2790,6 +2818,30 @@ Total time spent for memory allocator purge
 ### MemoryOvercommitWaitTimeMicroseconds {#memoryovercommitwaittimemicroseconds}
 
 Total time spent in waiting for memory to be freed in OvercommitTracker.
+
+### MemoryReservationAdmitMicroseconds {#memoryreservationadmitmicroseconds}
+
+Total time a query was waiting for initial memory reservation to be admitted
+
+### MemoryReservationDecreases {#memoryreservationdecreases}
+
+Total number of approved memory reservation decrease requests
+
+### MemoryReservationFailed {#memoryreservationfailed}
+
+Total number of failed memory reservations
+
+### MemoryReservationIncreaseMicroseconds {#memoryreservationincreasemicroseconds}
+
+Total time a query was waiting for memory reservation increase to be approved
+
+### MemoryReservationIncreases {#memoryreservationincreases}
+
+Total number of approved memory reservation increase requests
+
+### MemoryReservationKilled {#memoryreservationkilled}
+
+Total number of memory reservation kill signals
 
 ### MemoryWorkerRun {#memoryworkerrun}
 
@@ -3671,14 +3723,6 @@ Stalled cycles during issue.
 
 A clock count specific to the task that is running
 
-### PolygonsAddedToPool {#polygonsaddedtopool}
-
-A polygon has been added to the cache (pool) for the 'pointInPolygon' function.
-
-### PolygonsInPoolAllocatedBytes {#polygonsinpoolallocatedbytes}
-
-The number of bytes for polygons added to the cache (pool) for the 'pointInPolygon' function.
-
 ### PreferredWarmedUnmergedParts {#preferredwarmedunmergedparts}
 
 See setting prefer_warmed_unmerged_parts_seconds. Number of times read queries used outdated pre-merge parts that are in cache instead of merged part that wasn't pulled into cache by CacheWarmer yet.
@@ -3698,6 +3742,10 @@ Count queries with all subqueries
 ### Query {#query}
 
 Number of queries to be interpreted and potentially executed. Does not include queries that failed to parse or were rejected due to AST size limits, quota limits or limits on the number of simultaneously running queries. May include internal queries initiated by ClickHouse itself. Does not count subqueries.
+
+### QueryAnalysisMicroseconds {#queryanalysismicroseconds}
+
+Total time spent building the query tree and running analyzer passes (resolves identifiers, types, expressions).
 
 ### QueryBackupThrottlerBytes {#querybackupthrottlerbytes}
 
@@ -3766,6 +3814,18 @@ Number of times query masking rules was successfully matched.
 ### QueryMemoryLimitExceeded {#querymemorylimitexceeded}
 
 Number of times when memory limit exceeded for query.
+
+### QueryParseMicroseconds {#queryparsemicroseconds}
+
+Total time spent parsing the query text into an AST.
+
+### QueryPipelineBuildMicroseconds {#querypipelinebuildmicroseconds}
+
+Total time spent constructing the QueryPipeline from the optimized QueryPlan.
+
+### QueryPlanBuildMicroseconds {#queryplanbuildmicroseconds}
+
+Total time spent building the QueryPlan from the analyzed query tree.
 
 ### QueryPlanOptimizeMicroseconds {#queryplanoptimizemicroseconds}
 
@@ -4599,6 +4659,10 @@ How many HTTP requests were send to confirm outdated parts
 
 How many HTTP responses were send to confirm outdated parts
 
+### SharedMergeTreePartitionOperationRetries {#sharedmergetreepartitionoperationretries}
+
+How many times a partition-level operation (DROP/MOVE/REPLACE/CLONE/TRUNCATE PARTITION) had to retry the Keeper multi-write because of a concurrent change
+
 ### SharedMergeTreePartsKillerMicroseconds {#sharedmergetreepartskillermicroseconds}
 
 How much time does parts killer main thread takes
@@ -4923,6 +4987,14 @@ Number of fully-dense segments padded as a whole (memset for OR, increment for A
 
 Number of segments skipped because the output region was already resolved (all-ones for OR, all-zeros for AND) in lazy posting list mode.
 
+### TextIndexPhraseMatchMicroseconds {#textindexphrasematchmicroseconds}
+
+Total time spent in the roaringish phrase-match intersection.
+
+### TextIndexPositionsDecodeMicroseconds {#textindexpositionsdecodemicroseconds}
+
+Total time spent decoding text index position lists (.pos) for phrase search.
+
 ### TextIndexPostingsCacheHits {#textindexpostingscachehits}
 
 Number of times a text index posting list has been found in the cache.
@@ -5066,6 +5138,14 @@ Number of times a block of data has not been found in the uncompressed cache (an
 ### UncompressedCacheWeightLost {#uncompressedcacheweightlost}
 
 Number of bytes evicted from the uncompressed cache.
+
+### UniqueKeyBitmapLoadMicroseconds {#uniquekeybitmaploadmicroseconds}
+
+Time spent reading and deserializing UNIQUE KEY delete-bitmap sidecar files on a DeleteBitmapCache miss.
+
+### UniqueKeyBitmapUpdates {#uniquekeybitmapupdates}
+
+Number of UNIQUE KEY delete-bitmap sidecar files written (one per supersession / DELETE commit).
 
 ### UniqueKeyIndexCacheHits {#uniquekeyindexcachehits}
 
