@@ -19,7 +19,7 @@ Esta guía explica cómo funciona PREWHERE, cómo medir su impacto y cómo ajust
 
 Comenzaremos ilustrando cómo se procesa una consulta en la tabla [uk&#95;price&#95;paid&#95;simple](/es/concepts/core-concepts/parts) sin usar PREWHERE:
 
-<Image img="/images/guides/best-practices/prewhere_01.gif" size="md" alt="Procesamiento de consultas sin optimización de PREWHERE" />
+<Image img="/images/guides/best-practices/prewhere_01.webp" size="md" alt="Procesamiento de consultas sin optimización de PREWHERE" />
 
 <br />
 
@@ -45,7 +45,7 @@ Las siguientes animaciones muestran cómo se procesa la consulta anterior con un
 
 Los tres primeros pasos del procesamiento son los mismos que antes:
 
-<Image img="/images/guides/best-practices/prewhere_02.gif" size="md" alt="Procesamiento de la consulta con optimización de PREWHERE" />
+<Image img="/images/guides/best-practices/prewhere_02.webp" size="md" alt="Procesamiento de la consulta con optimización de PREWHERE" />
 
 <br />
 
@@ -66,7 +66,7 @@ ClickHouse comienza el procesamiento de PREWHERE ① leyendo los gránulos selec
 
 En nuestro ejemplo, todos los gránulos seleccionados coinciden, por lo que ② los gránulos alineados posicionalmente correspondientes de la siguiente columna de filtro, `date`, se seleccionan para su procesamiento:
 
-<Image img="/images/guides/best-practices/prewhere_03.gif" size="md" alt="Paso 1: Filtrado por town" />
+<Image img="/images/guides/best-practices/prewhere_03.webp" size="md" alt="Paso 1: Filtrado por town" />
 
 <br />
 
@@ -77,7 +77,7 @@ A continuación, ClickHouse ① lee los gránulos seleccionados de la columna `d
 
 En este caso, dos de los tres gránulos contienen filas coincidentes, por lo que ② solo se seleccionan para su posterior procesamiento sus gránulos alineados posicionalmente de la siguiente columna de filtro, `price`:
 
-<Image img="/images/guides/best-practices/prewhere_04.gif" size="md" alt="Paso 2: Filtrado por date" />
+<Image img="/images/guides/best-practices/prewhere_04.webp" size="md" alt="Paso 2: Filtrado por date" />
 
 <br />
 
@@ -88,7 +88,7 @@ Por último, ClickHouse ① lee los dos gránulos seleccionados de la columna `p
 
 Solo uno de los dos gránulos contiene filas coincidentes, por lo que ② solo es necesario cargar su gránulo alineado posicionalmente de la columna del `SELECT`, `street`, para continuar el procesamiento:
 
-<Image img="/images/guides/best-practices/prewhere_05.gif" size="md" alt="Paso 2: Filtrado por price" />
+<Image img="/images/guides/best-practices/prewhere_05.webp" size="md" alt="Paso 2: Filtrado por price" />
 
 <br />
 
@@ -106,7 +106,7 @@ En el paso final, solo se carga el conjunto mínimo de gránulos de columna: los
   ## La optimización de PREWHERE se aplica automáticamente
 </div>
 
-La cláusula PREWHERE puede añadirse manualmente, como se muestra en el ejemplo anterior. Sin embargo, no es necesario escribir PREWHERE manualmente. Cuando la configuración [`optimize_move_to_prewhere`](/es/reference/settings/session-settings#optimize_move_to_prewhere) está habilitada (`true` de forma predeterminada), ClickHouse mueve automáticamente las condiciones de filtro de WHERE a PREWHERE, priorizando las que más reducen el volumen de lectura.
+La cláusula PREWHERE puede añadirse manualmente, como se muestra en el ejemplo anterior. Sin embargo, no es necesario escribir PREWHERE manualmente. Cuando la configuración [`optimize_move_to_prewhere`](/es/reference/settings/session-settings/optimize-move-to-prewhere#optimize_move_to_prewhere) está habilitada (`true` de forma predeterminada), ClickHouse mueve automáticamente las condiciones de filtro de WHERE a PREWHERE, priorizando las que más reducen el volumen de lectura.
 
 La idea es que las columnas más pequeñas se escanean más rápido y, para cuando se procesan las columnas más grandes, la mayoría de los gránulos ya se han descartado. Como todas las columnas tienen el mismo número de filas, el tamaño de una columna viene determinado principalmente por su tipo de datos; por ejemplo, una columna `UInt8` suele ser mucho más pequeña que una columna `String`.
 

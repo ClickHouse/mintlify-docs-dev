@@ -51,11 +51,10 @@ def normalize_slug(slug: str) -> str:
 # placeholder slugs and shouldn't show up in the mapping report.
 SKIP_FILES = (
     "scripts/vale/test/test_headings_must_fail.md",
-    "scripts/vale/test/test_headings_must_pass.md",
 )
 
 
-def scan_docs(root: Path, skip_dirs: tuple = ("snippets", "_snippets", "__pycache__", "en", "i18n", "src", ".claude")) -> dict:
+def scan_docs(root: Path, skip_dirs: tuple = ("snippets", "_snippets", "__pycache__", "en", "i18n", "src")) -> dict:
     """Scan a docs directory and return {normalized_slug: {slug, title, path}}."""
     pages = {}
     duplicates = []
@@ -97,13 +96,12 @@ def scan_docs(root: Path, skip_dirs: tuple = ("snippets", "_snippets", "__pycach
     return pages
 
 
-def print_summary(docusaurus: dict, mintlify: dict, mapped: list, unmapped: list, new_additions: list, deleted: dict = None):
+def print_summary(docusaurus: dict, mintlify: dict, mapped: list, unmapped: list, new_additions: list):
     total_docu = len(docusaurus)
     total_mint = len(mintlify)
     n_mapped = len(mapped)
     n_unmapped = len(unmapped)
     n_new = len(new_additions)
-    n_deleted = len(deleted) if deleted else 0
 
     pct = (n_mapped / total_docu * 100) if total_docu > 0 else 0
     bar_width = 40
@@ -115,8 +113,6 @@ def print_summary(docusaurus: dict, mintlify: dict, mapped: list, unmapped: list
     print(f"  Mapped:            {GREEN}{n_mapped}{RESET}")
     print(f"  Unmapped:          {RED}{n_unmapped}{RESET}")
     print(f"  New additions:     {BLUE}{n_new}{RESET}")
-    if n_deleted:
-        print(f"  Deleted (retired): {YELLOW}{n_deleted}{RESET}")
     print()
     print(f"  Migration progress: [{GREEN}{'█' * filled}{RESET}{'░' * (bar_width - filled)}] {pct:.1f}%")
     print()
@@ -144,14 +140,13 @@ def export_csv(docusaurus: dict, mintlify: dict, mapped: list, unmapped: list, n
     print(f"\n  Exported to {output_path}")
 
 
-def interactive_menu(docusaurus: dict, mintlify: dict, mapped: list, unmapped: list, new_additions: list, deleted_pages: dict = None):
+def interactive_menu(docusaurus: dict, mintlify: dict, mapped: list, unmapped: list, new_additions: list):
     while True:
         print(f"{BOLD}Options:{RESET}")
         print("  1) Show unmapped pages (Docusaurus only)")
         print("  2) Show new addition pages (Mintlify only)")
-        print("  3) Show deleted/retired pages")
-        print("  4) Export to CSV")
-        print("  5) Quit")
+        print("  3) Export to CSV")
+        print("  4) Quit")
         print()
 
         try:
@@ -165,11 +160,6 @@ def interactive_menu(docusaurus: dict, mintlify: dict, mapped: list, unmapped: l
         elif choice == "2":
             print_page_list(new_additions, BLUE, "New addition pages", "path")
         elif choice == "3":
-            print(f"\n{BOLD}{YELLOW}--- Deleted / Retired Pages ({len(deleted_pages or {})}) ---{RESET}")
-            for slug, info in sorted((deleted_pages or {}).items()):
-                print(f"  {YELLOW}{info['docusaurus_slug']:55s}{RESET}  → {info['redirect_to']}")
-            print()
-        elif choice == "4":
             try:
                 path = input("  Output file path [mapping.csv]: ").strip() or "mapping.csv"
             except (EOFError, KeyboardInterrupt):
@@ -177,67 +167,30 @@ def interactive_menu(docusaurus: dict, mintlify: dict, mapped: list, unmapped: l
                 continue
             export_csv(docusaurus, mintlify, mapped, unmapped, new_additions, path)
             print()
-        elif choice == "5":
+        elif choice == "4":
             break
         else:
             print(f"  {YELLOW}Invalid option.{RESET}\n")
 
 
-def load_deleted_pages(mintlify_root: Path) -> dict:
-    """Load pages with status=deleted from slug-map.csv.
-
-    Returns {normalized_docusaurus_slug: {mintlify_path, redirect_to}} so
-    verify_mapping can (a) exclude them from the unmapped list and (b) check
-    that a redirect exists from the old Mintlify path to the declared destination.
-    """
-    deleted = {}
-    slug_map = mintlify_root / "_migration" / "slug-map.csv"
-    if not slug_map.is_file():
-        return deleted
-    try:
-        with open(slug_map, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row.get("status") != "deleted":
-                    continue
-                docu_slug = normalize_slug(row.get("docusaurus_slug", ""))
-                mintlify_file = row.get("mintlify_file", "").strip()
-                # Derive the old Mintlify URL path from the file path
-                # e.g. get-started/about/olap.mdx -> /get-started/about/olap
-                mintlify_path = "/" + re.sub(r"\.mdx?$", "", mintlify_file) if mintlify_file else ""
-                redirect_to = row.get("new_url", "").strip()
-                if docu_slug:
-                    deleted[docu_slug] = {
-                        "mintlify_path": mintlify_path,
-                        "redirect_to": redirect_to,
-                        "docusaurus_slug": row.get("docusaurus_slug", ""),
-                    }
-    except Exception as e:
-        print(f"{YELLOW}Warning: Could not load deleted pages from {slug_map}: {e}{RESET}")
-    return deleted
-
-
 def load_redirects(mintlify_root: Path) -> set:
-    """Load redirects and return normalized source slugs.
-
-    Redirects are composable: docs.json references them via
-    `"redirects": {"$ref": "_site/redirects.json"}`. The canonical
-    definitions live in _site/redirects.json as a flat list of
-    {source, destination} objects, which we read directly.
-    """
+    """Load redirects from docs.json and return normalized source slugs."""
     redirects = set()
-    redirects_json = mintlify_root / "_site" / "redirects.json"
-    if not redirects_json.is_file():
+    docs_json = mintlify_root.parent / "docs.json"
+    if not docs_json.is_file():
+        # Also check in the mintlify root itself
+        docs_json = mintlify_root / "docs.json"
+    if not docs_json.is_file():
         return redirects
     try:
-        entries = json.loads(redirects_json.read_text(encoding="utf-8"))
-        for r in entries:
+        data = json.loads(docs_json.read_text(encoding="utf-8"))
+        for r in data.get("redirects", []):
             source = r.get("source", "")
             # Strip leading /docs/ prefix to match slug format
             slug = re.sub(r"^/?docs/", "", source.strip("/"))
             redirects.add(normalize_slug(slug))
     except Exception as e:
-        print(f"{YELLOW}Warning: Could not parse redirects from {redirects_json}: {e}{RESET}")
+        print(f"{YELLOW}Warning: Could not parse redirects from {docs_json}: {e}{RESET}")
     return redirects
 
 
@@ -292,63 +245,29 @@ def main():
     mintlify = scan_docs(mintlify_root)
     print(f"  Found {len(mintlify)} pages with slugs")
 
-    # Load redirects from _site/redirects.json to treat redirect sources as mapped
+    # Load redirects from docs.json to treat redirect sources as mapped
     redirect_slugs = load_redirects(mintlify_root)
     if redirect_slugs:
-        print(f"  Found {len(redirect_slugs)} redirects in _site/redirects.json")
+        print(f"  Found {len(redirect_slugs)} redirects in docs.json")
 
     # Scan for unlisted pages (e.g. quickstarts) that exist but aren't in the nav
     unlisted_slugs = scan_unlisted_pages(mintlify_root)
     if unlisted_slugs:
         print(f"  Found {len(unlisted_slugs)} unlisted pages (quickstarts, etc.)")
 
-    # Load intentionally deleted/retired pages from slug-map.csv
-    deleted_pages = load_deleted_pages(mintlify_root)
-    if deleted_pages:
-        print(f"  Found {len(deleted_pages)} deleted pages in slug-map.csv")
-
     docu_slugs = set(docusaurus.keys())
-    # Exclude deleted pages from unmapped — they are intentionally retired
-    accounted_slugs = set(mintlify.keys()) | redirect_slugs | unlisted_slugs | set(deleted_pages.keys())
     mint_slugs = set(mintlify.keys()) | redirect_slugs | unlisted_slugs
 
-    mapped = [(s, docusaurus[s]) for s in sorted(docu_slugs & accounted_slugs - set(deleted_pages.keys()))]
-    unmapped = [(s, docusaurus[s]) for s in sorted(docu_slugs - accounted_slugs)]
+    mapped = [(s, docusaurus[s]) for s in sorted(docu_slugs & mint_slugs)]
+    unmapped = [(s, docusaurus[s]) for s in sorted(docu_slugs - mint_slugs)]
     new_additions = [(s, mintlify[s]) for s in sorted((set(mintlify.keys())) - docu_slugs)]
 
-    # Verify each deleted page has a redirect in _site/redirects.json
-    all_redirect_sources = set()
-    redirects_json = mintlify_root / "_site" / "redirects.json"
-    if redirects_json.is_file():
-        try:
-            for r in json.loads(redirects_json.read_text(encoding="utf-8")):
-                all_redirect_sources.add(r.get("source", "").rstrip("/"))
-        except Exception:
-            pass
-
-    print(f"\n{BOLD}=== Deleted / Retired Pages ==={RESET}")
-    all_ok = True
-    for slug, info in sorted(deleted_pages.items()):
-        path = info["mintlify_path"]
-        dest = info["redirect_to"]
-        has_redirect = path in all_redirect_sources
-        icon = f"{GREEN}✓{RESET}" if has_redirect else f"{RED}✗{RESET}"
-        status = "redirect verified" if has_redirect else f"{RED}MISSING REDIRECT{RESET}"
-        print(f"  {icon}  {info['docusaurus_slug']:55s} → {dest}  [{status}]")
-        if not has_redirect:
-            all_ok = False
-    if not deleted_pages:
-        print("  (none)")
-    if not all_ok:
-        print(f"\n  {RED}Some deleted pages are missing redirects in _site/redirects.json!{RESET}")
-    print()
-
-    print_summary(docusaurus, mintlify, mapped, unmapped, new_additions, deleted_pages)
+    print_summary(docusaurus, mintlify, mapped, unmapped, new_additions)
 
     # Translation summary
     scan_translations(docusaurus_root, mintlify_root)
 
-    interactive_menu(docusaurus, mintlify, mapped, unmapped, new_additions, deleted_pages)
+    interactive_menu(docusaurus, mintlify, mapped, unmapped, new_additions)
 
 
 # Docusaurus uses "jp", Mintlify uses "ja"; others match
@@ -371,8 +290,8 @@ def scan_translations(docusaurus_root: Path, mintlify_root: Path):
         if not docu_lang_dir.is_dir():
             continue
 
-        docu_pages = scan_docs(docu_lang_dir, skip_dirs=("snippets", "_snippets", "__pycache__", ".claude"))
-        mint_pages = scan_docs(mint_lang_dir, skip_dirs=("snippets", "_snippets", "__pycache__", ".claude")) if mint_lang_dir.is_dir() else {}
+        docu_pages = scan_docs(docu_lang_dir, skip_dirs=("snippets", "_snippets", "__pycache__"))
+        mint_pages = scan_docs(mint_lang_dir, skip_dirs=("snippets", "_snippets", "__pycache__")) if mint_lang_dir.is_dir() else {}
 
         total = len(docu_pages)
         matched = len(set(docu_pages.keys()) & set(mint_pages.keys()))

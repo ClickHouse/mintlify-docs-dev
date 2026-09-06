@@ -9,7 +9,7 @@ doc_type: 'guide'
 
 import { Image } from "/snippets/ru/components/Image.jsx";
 
-import ClickHouseSupportedBadge from "/snippets/ru/components/ClickHouseSupported/ClickHouseSupported.jsx";
+import { ClickHouseSupportedBadge } from "/snippets/ru/components/ClickHouseSupported/ClickHouseSupported.jsx";
 
 <ClickHouseSupportedBadge />
 
@@ -38,7 +38,7 @@ import ClickHouseSupportedBadge from "/snippets/ru/components/ClickHouseSupporte
 
 dbt особенно хорошо подходит для моделирования сильно связанных реляционных данных. В качестве примера мы используем небольшой набор данных IMDB со следующей реляционной схемой. Этот набор данных взят из [репозитория реляционных наборов данных](https://relational.fit.cvut.cz/dataset/IMDb). По сравнению с типичными схемами, используемыми в dbt, он весьма прост, но при этом представляет собой удобный небольшой образец:
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_01.png" size="lg" alt="Схема таблиц IMDB" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_01.webp" size="lg" alt="Схема таблиц IMDB" />
 
 Как показано ниже, мы используем подмножество этих таблиц.
 
@@ -100,32 +100,32 @@ CREATE TABLE imdb.roles
 ```sql
 INSERT INTO imdb.actors
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_actors.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_actors.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.directors
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_directors.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_directors.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.genres
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_genres.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_genres.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.movie_directors
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_directors.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_directors.tsv.gz', NOSIGN,
         'TSVWithNames');
 
 INSERT INTO imdb.movies
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.roles(actor_id, movie_id, role)
 SELECT actor_id, movie_id, role
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_roles.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_roles.tsv.gz', NOSIGN,
 'TSVWithNames');
 ```
 
@@ -209,13 +209,13 @@ LIMIT 5;
 
 3. На этом этапе вам понадобится любой текстовый редактор. В примерах ниже мы используем популярный VS Code. Открыв каталог IMDB, вы должны увидеть набор файлов yml и sql:
 
-   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_02.png" size="lg" alt="Новый проект dbt" />
+   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_02.webp" size="lg" alt="Новый проект dbt" />
 
 4. Обновите файл `dbt_project.yml`, чтобы указать нашу первую модель — `actor_summary`, и задайте профиль `clickhouse_imdb`.
 
-   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_03.png" size="lg" alt="Профиль dbt" />
+   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_03.webp" size="lg" alt="Профиль dbt" />
 
-   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_04.png" size="lg" alt="Профиль dbt" />
+   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_04.webp" size="lg" alt="Профиль dbt" />
 
 5. Далее нужно указать для dbt сведения о подключении к вашему экземпляру ClickHouse. Добавьте следующее в `~/.dbt/profiles.yml`.
 
@@ -681,7 +681,7 @@ AND event_time > subtractMinutes(now(), 15) ORDER BY event_time LIMIT 100;
 
 Это показано ниже:
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_05.png" size="lg" alt="инкрементальные обновления dbt" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_05.webp" size="lg" alt="инкрементальные обновления dbt" />
 
 Эта стратегия может вызывать трудности при работе с очень большими моделями. Подробнее см. в разделе [Ограничения](/ru/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations).
 
@@ -794,7 +794,7 @@ WHERE id > (SELECT max(id) FROM imdb_dbt.actor_summary) OR updated_at > (SELECT 
 
 Изначально в ClickHouse была лишь ограниченная поддержка обновлений и удалений в виде асинхронных [Мутаций](/ru/reference/statements/alter/index). Они могут быть чрезвычайно затратными по I/O, поэтому их обычно следует избегать.
 
-В ClickHouse 22.8 появились [легковесные удаления](/ru/snippets/delete), а в ClickHouse 25.7 — [легковесные обновления](/ru/reference/statements/update). С появлением этих возможностей изменения, вносимые отдельными запросами на обновление, даже при асинхронной материализации становятся мгновенно видимыми для пользователя.
+В ClickHouse 22.8 появились [легковесные удаления](/ru/reference/statements/delete), а в ClickHouse 25.7 — [легковесные обновления](/ru/reference/statements/update). С появлением этих возможностей изменения, вносимые отдельными запросами на обновление, даже при асинхронной материализации становятся мгновенно видимыми для пользователя.
 
 Этот режим можно настроить для модели с помощью параметра `incremental_strategy`, например:
 
@@ -812,7 +812,7 @@ WHERE id > (SELECT max(id) FROM imdb_dbt.actor_summary) OR updated_at > (SELECT 
 
 Ниже показан этот процесс:
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_06.png" size="lg" alt="инкрементальное легковесное удаление" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_06.webp" size="lg" alt="инкрементальное легковесное удаление" />
 
 <div id="insert_overwrite-mode-experimental">
   ### Режим insert_overwrite (экспериментальный)
@@ -832,7 +832,7 @@ WHERE id > (SELECT max(id) FROM imdb_dbt.actor_summary) OR updated_at > (SELECT 
 * Он безопаснее других стратегий, поскольку не изменяет исходную таблицу, пока операция INSERT не завершится успешно: в случае сбоя на промежуточном этапе исходная таблица не изменяется.
 * Он реализует рекомендуемую в дата-инжиниринге практику «неизменяемости партиций», что упрощает инкрементальную и параллельную обработку данных, откаты и т. д.
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_07.png" size="lg" alt="инкрементальный insert overwrite" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_07.webp" size="lg" alt="инкрементальный insert overwrite" />
 
 <div id="creating-a-snapshot">
   ## Создание снимка

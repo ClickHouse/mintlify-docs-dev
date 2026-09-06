@@ -19,7 +19,7 @@ Ce guide explique le fonctionnement de PREWHERE, comment mesurer son impact et c
 
 Nous allons commencer par illustrer comment une requête sur la table [uk&#95;price&#95;paid&#95;simple](/fr/concepts/core-concepts/parts) est traitée sans utiliser PREWHERE :
 
-<Image img="/images/guides/best-practices/prewhere_01.gif" size="md" alt="Traitement des requêtes sans optimisation PREWHERE" />
+<Image img="/images/guides/best-practices/prewhere_01.webp" size="md" alt="Traitement des requêtes sans optimisation PREWHERE" />
 
 <br />
 
@@ -45,7 +45,7 @@ Les animations suivantes montrent comment la requête ci-dessus est traitée lor
 
 Les trois premières étapes du traitement sont les mêmes que précédemment :
 
-<Image img="/images/guides/best-practices/prewhere_02.gif" size="md" alt="Traitement de la requête avec l’optimisation PREWHERE" />
+<Image img="/images/guides/best-practices/prewhere_02.webp" size="md" alt="Traitement de la requête avec l’optimisation PREWHERE" />
 
 <br />
 
@@ -57,7 +57,7 @@ Les trois premières étapes du traitement sont les mêmes que précédemment :
 
 ③ puis parcourt les entrées de l’index pour identifier quels granules de la colonne `town` peuvent contenir des lignes correspondant au prédicat.
 
-Grâce à la clause PREWHERE, l’étape suivante est différente : au lieu de lire d’emblée toutes les colonnes pertinentes, ClickHouse filtre les données colonne par colonne et ne charge que ce qui est réellement nécessaire. Cela réduit drastiquement les E/S, en particulier pour les tables larges.
+Grâce à la clause PREWHERE, l’étape suivante est différente : au lieu de lire d’emblée toutes les colonnes pertinentes, ClickHouse filtre les données colonne par colonne et ne charge que ce qui est réellement nécessaire. Cela réduit drastiquement les E/S, en particulier pour les tables comportant de nombreuses colonnes.
 
 À chaque étape, il ne charge que les granules qui contiennent au moins une ligne ayant passé — c’est-à-dire correspondant à — au filtre précédent. Par conséquent, le nombre de granules à charger et à évaluer pour chaque filtre diminue de façon monotone :
 
@@ -66,7 +66,7 @@ ClickHouse commence le traitement PREWHERE en ① lisant les granules sélection
 
 Dans notre exemple, tous les granules sélectionnés correspondent, donc ② les granules correspondants, alignés positionnellement, de la colonne du filtre suivant — `date` — sont alors sélectionnés pour traitement :
 
-<Image img="/images/guides/best-practices/prewhere_03.gif" size="md" alt="Étape 1 : Filtrage par ville" />
+<Image img="/images/guides/best-practices/prewhere_03.webp" size="md" alt="Étape 1 : Filtrage par ville" />
 
 <br />
 
@@ -77,7 +77,7 @@ Ensuite, ClickHouse ① lit les granules sélectionnés de la colonne `date` pou
 
 Dans ce cas, deux granules sur trois contiennent des lignes correspondantes, donc ② seuls leurs granules, alignés positionnellement, de la colonne du filtre suivant — `price` — sont sélectionnés pour la suite du traitement :
 
-<Image img="/images/guides/best-practices/prewhere_04.gif" size="md" alt="Étape 2 : Filtrage par date" />
+<Image img="/images/guides/best-practices/prewhere_04.webp" size="md" alt="Étape 2 : Filtrage par date" />
 
 <br />
 
@@ -88,7 +88,7 @@ Enfin, ClickHouse ① lit les deux granules sélectionnés de la colonne `price`
 
 Un seul des deux granules contient des lignes correspondantes, donc ② seul son granule, aligné positionnellement, de la colonne du `SELECT` — `street` — doit être chargé pour la suite du traitement :
 
-<Image img="/images/guides/best-practices/prewhere_05.gif" size="md" alt="Étape 2 : Filtrage par prix" />
+<Image img="/images/guides/best-practices/prewhere_05.webp" size="md" alt="Étape 2 : Filtrage par prix" />
 
 <br />
 
@@ -106,7 +106,7 @@ Un seul des deux granules contient des lignes correspondantes, donc ② seul son
   ## L’optimisation PREWHERE est appliquée automatiquement
 </div>
 
-La clause PREWHERE peut être ajoutée manuellement, comme dans l’exemple ci-dessus. Cependant, vous n’avez pas besoin d’écrire PREWHERE vous-même. Lorsque le paramètre [`optimize_move_to_prewhere`](/fr/reference/settings/session-settings#optimize_move_to_prewhere) est activé (`true` par défaut), ClickHouse déplace automatiquement les conditions de filtre de WHERE vers PREWHERE, en donnant la priorité à celles qui réduisent le plus le volume de lecture.
+La clause PREWHERE peut être ajoutée manuellement, comme dans l’exemple ci-dessus. Cependant, vous n’avez pas besoin d’écrire PREWHERE vous-même. Lorsque le paramètre [`optimize_move_to_prewhere`](/fr/reference/settings/session-settings/optimize-move-to-prewhere#optimize_move_to_prewhere) est activé (true par défaut), ClickHouse déplace automatiquement les conditions de filtre de WHERE vers PREWHERE, en donnant la priorité à celles qui réduisent le plus le volume de lecture.
 
 L’idée est que les colonnes les plus petites sont plus rapides à parcourir et qu’au moment où les colonnes plus volumineuses sont traitées, la plupart des granules ont déjà été filtrés. Comme toutes les colonnes ont le même nombre de lignes, la taille d’une colonne est principalement déterminée par son type de données ; par exemple, une colonne `UInt8` est généralement bien plus petite qu’une colonne `String`.
 

@@ -19,7 +19,7 @@ Este guia explica como a cláusula PREWHERE funciona, como medir seu impacto e c
 
 Vamos começar mostrando como uma consulta na tabela [uk&#95;price&#95;paid&#95;simple](/pt-BR/concepts/core-concepts/parts) é processada sem usar PREWHERE:
 
-<Image img="/images/guides/best-practices/prewhere_01.gif" size="md" alt="Processamento de consultas sem a otimização PREWHERE" />
+<Image img="/images/guides/best-practices/prewhere_01.webp" size="md" alt="Processamento de consultas sem a otimização PREWHERE" />
 
 <br />
 
@@ -31,7 +31,7 @@ Vamos começar mostrando como uma consulta na tabela [uk&#95;price&#95;paid&#95;
 
 ③ Ele percorre as entradas do índice para identificar quais grânulos da coluna `town` podem conter linhas que correspondam ao predicado.
 
-④ Esses grânulos potencialmente relevantes são carregados na memória, junto com grânulos alinhados por posição de quaisquer outras colunas necessárias para a consulta.
+④ Esses grânulos potencialmente relevantes são carregados na memória, junto com grânulos alinhados posicionalmente de quaisquer outras colunas necessárias para a consulta.
 
 ⑤ Os filtros restantes são então aplicados durante a execução da consulta.
 
@@ -45,7 +45,7 @@ As animações a seguir mostram como a consulta acima é processada com uma clá
 
 As três primeiras etapas do processamento são iguais às anteriores:
 
-<Image img="/images/guides/best-practices/prewhere_02.gif" size="md" alt="Processamento da consulta com a otimização PREWHERE" />
+<Image img="/images/guides/best-practices/prewhere_02.webp" size="md" alt="Processamento da consulta com a otimização PREWHERE" />
 
 <br />
 
@@ -66,7 +66,7 @@ O ClickHouse inicia o processamento do PREWHERE ① lendo os grânulos seleciona
 
 No nosso exemplo, todos os grânulos selecionados correspondem, então ② os grânulos correspondentes, alinhados posicionalmente, da próxima coluna de filtro — `date` — são selecionados para processamento:
 
-<Image img="/images/guides/best-practices/prewhere_03.gif" size="md" alt="Etapa 1: Filtragem por town" />
+<Image img="/images/guides/best-practices/prewhere_03.webp" size="md" alt="Etapa 1: Filtragem por town" />
 
 <br />
 
@@ -77,7 +77,7 @@ Em seguida, o ClickHouse ① lê os grânulos selecionados da coluna `date` para
 
 Nesse caso, dois dos três grânulos contêm linhas correspondentes, então ② apenas os grânulos correspondentes, alinhados posicionalmente, da próxima coluna de filtro — `price` — são selecionados para processamento adicional:
 
-<Image img="/images/guides/best-practices/prewhere_04.gif" size="md" alt="Etapa 2: Filtragem por date" />
+<Image img="/images/guides/best-practices/prewhere_04.webp" size="md" alt="Etapa 2: Filtragem por date" />
 
 <br />
 
@@ -88,7 +88,7 @@ Por fim, o ClickHouse ① lê os dois grânulos selecionados da coluna `price` p
 
 Apenas um dos dois grânulos contém linhas correspondentes, então ② somente o grânulo correspondente, alinhado posicionalmente, da coluna do `SELECT` — `street` — precisa ser carregado para processamento adicional:
 
-<Image img="/images/guides/best-practices/prewhere_05.gif" size="md" alt="Etapa 2: Filtragem por price" />
+<Image img="/images/guides/best-practices/prewhere_05.webp" size="md" alt="Etapa 2: Filtragem por price" />
 
 <br />
 
@@ -106,7 +106,7 @@ Na etapa final, apenas o conjunto mínimo de grânulos de coluna — aqueles que
   ## A otimização PREWHERE é aplicada automaticamente
 </div>
 
-A cláusula PREWHERE pode ser adicionada manualmente, como mostrado no exemplo acima. No entanto, não é necessário escrever PREWHERE manualmente. Quando a configuração [`optimize_move_to_prewhere`](/pt-BR/reference/settings/session-settings#optimize_move_to_prewhere) está habilitada (true por padrão), o ClickHouse move automaticamente as condições de filtro de WHERE para PREWHERE, priorizando aquelas que mais reduzem o volume de leitura.
+A cláusula PREWHERE pode ser adicionada manualmente, como mostrado no exemplo acima. No entanto, não é necessário escrever PREWHERE manualmente. Quando a configuração [`optimize_move_to_prewhere`](/pt-BR/reference/settings/session-settings/optimize-move-to-prewhere#optimize_move_to_prewhere) está habilitada (true por padrão), o ClickHouse move automaticamente as condições de filtro de WHERE para PREWHERE, priorizando aquelas que mais reduzem o volume de leitura.
 
 A ideia é que colunas menores sejam mais rápidas de ler e, quando as colunas maiores forem processadas, a maioria dos grânulos já tenha sido filtrada. Como todas as colunas têm o mesmo número de linhas, o tamanho de uma coluna é determinado principalmente pelo seu tipo de dado; por exemplo, uma coluna `UInt8` geralmente é muito menor do que uma coluna `String`.
 

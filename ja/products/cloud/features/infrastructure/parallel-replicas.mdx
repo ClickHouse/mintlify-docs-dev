@@ -32,15 +32,15 @@ shared-nothing アーキテクチャでは、クラスターは通常、複数�
 場合は各分片で指定されたクエリが実行されます。分散テーブルに対するクエリを
 受けたサーバーがデータを集約し、クライアントに応答を返します。
 
-<Image img="/images/deployment-guides/parallel-replicas-1.png" size="md" alt="分片アーキテクチャ" />
+<Image img="/images/deployment-guides/parallel-replicas-1.webp" size="md" alt="分片アーキテクチャ" />
 
 上の図は、クライアントが分散テーブルにクエリを実行した際に何が起こるかを示しています。
 
 <ol className="docs-ordered-list">
   <li>
     SELECT クエリは、任意のノード上の分散テーブルに送信されます
-    (ラウンドロビン戦略を介するか、ロードバランサーによって特定のサーバーに
-    ルーティングされた後) 。このノードがコーディネーターとして動作します。
+    (ラウンドロビン戦略を介するか、ロードバランサーによって特定のサーバー
+    にルーティングされた後)。このノードがコーディネーターとして動作します。
   </li>
 
   <li>
@@ -75,7 +75,7 @@ ClickHouse Cloud のアーキテクチャは、上で示したものとは大き
 
 以下の図は ClickHouse Cloud のアーキテクチャを示しています。
 
-<Image img="/images/deployment-guides/parallel-replicas-2.png" size="md" alt="非分片アーキテクチャ" />
+<Image img="/images/deployment-guides/parallel-replicas-2.webp" size="md" alt="非分片アーキテクチャ" />
 
 このアーキテクチャでは、レプリカをほぼ瞬時に追加・削除できるため、
 クラスターの高い拡張性を実現できます。ClickHouse
@@ -98,14 +98,14 @@ Keeper クラスター (右側に表示) は、メタデータの単一の信頼
 タスクの一覧を作成し、それらがすべて実行・
 集計され、結果がクライアントに返されることを保証する役割を担います。多くの
 分散システムと同様に、通常これは最初の
-クエリを受け取ったノードが担います。また、作業単位を定義する必要もあります。分片化アーキテクチャでは、
+クエリを受け取ったノードが担います。また、作業単位を定義する必要もあります。分片アーキテクチャでは、
 作業単位は分片、つまりデータの一部分です。並列レプリカでは、
 作業単位として [グラニュール](/ja/guides/clickhouse/data-modelling/sparse-primary-indexes#data-is-organized-into-granules-for-parallel-data-processing) と呼ばれるテーブルの小さな部分を
 使用します。
 
 では、以下の図を使って、実際にどのように動作するのか見てみましょう。
 
-<Image img="/images/deployment-guides/parallel-replicas-3.png" size="md" alt="並列レプリカ" />
+<Image img="/images/deployment-guides/parallel-replicas-3.webp" size="md" alt="並列レプリカ" />
 
 並列レプリカでは:
 
@@ -169,7 +169,7 @@ Keeper クラスター (右側に表示) は、メタデータの単一の信頼
 
 上のリストの (1) と (2) に対処するため、アナウンス という概念を導入しました。以下の図でその仕組みを見てみましょう。
 
-<Image img="/images/deployment-guides/parallel-replicas-4.png" size="md" alt="アナウンス" />
+<Image img="/images/deployment-guides/parallel-replicas-4.webp" size="md" alt="アナウンス" />
 
 <ol className="docs-ordered-list">
   <li>
@@ -215,7 +215,7 @@ Keeper クラスター (右側に表示) は、メタデータの単一の信頼
 
 以下の図は、動的協調がどのように機能するかを示しています。
 
-<Image img="/images/deployment-guides/parallel-replicas-5.png" size="md" alt="動的協調 - パート 1" />
+<Image img="/images/deployment-guides/parallel-replicas-5.webp" size="md" alt="動的協調 - パート 1" />
 
 <ol className="docs-ordered-list">
   <li>
@@ -228,7 +228,7 @@ Keeper クラスター (右側に表示) は、メタデータの単一の信頼
   </li>
 </ol>
 
-<Image img="/images/deployment-guides/parallel-replicas-6.png" size="md" alt="動的協調 - パート 2" />
+<Image img="/images/deployment-guides/parallel-replicas-6.webp" size="md" alt="動的協調 - パート 2" />
 
 <ol className="docs-ordered-list">
   <li>
@@ -241,7 +241,7 @@ Keeper クラスター (右側に表示) は、メタデータの単一の信頼
   </li>
 </ol>
 
-<Image img="/images/deployment-guides/parallel-replicas-7.png" size="md" alt="動的協調 - パート 3" />
+<Image img="/images/deployment-guides/parallel-replicas-7.webp" size="md" alt="動的協調 - パート 3" />
 
 <ol className="docs-ordered-list">
   <li>
@@ -322,14 +322,14 @@ Keeper クラスター (右側に表示) は、メタデータの単一の信頼
   GitHub でラベル `comp-parallel-replicas` を付けて issue を作成してください。
 </Note>
 
-| Limitation              | Description                                                                                                                                                                                                                                                               |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 複雑なクエリ                  | 現時点では、並列レプリカはシンプルなクエリでは比較的うまく機能します。CTE、サブクエリ、JOIN、ネストしたクエリなど、クエリの複雑さが増すと、クエリパフォーマンスに悪影響を及ぼす可能性があります。                                                                                                                                                                      |
-| 小規模なクエリ                 | 処理する行数がそれほど多くないクエリでは、複数のレプリカで実行しても性能が向上しないことがあります。これは、レプリカ間の協調に伴うネットワーク時間によって、クエリ実行に余分なサイクルが発生するためです。この問題は、設定 [`parallel_replicas_min_number_of_rows_per_replica`](/ja/reference/settings/session-settings#parallel_replicas_min_number_of_rows_per_replica) を使用することで抑えられます。 |
-| FINAL では並列レプリカは無効       |                                                                                                                                                                                                                                                                           |
-| プロジェクションは並列レプリカと併用されません |                                                                                                                                                                                                                                                                           |
-| 高カーディナリティのデータと複雑な集約     | 大量のデータ送信が必要な高カーディナリティの集約では、クエリが大幅に遅くなる可能性があります。                                                                                                                                                                                                                           |
-| 新しいアナライザとの互換性           | 新しいアナライザにより、特定のシナリオではクエリ実行が大幅に遅くなったり、逆に速くなったりする可能性があります。                                                                                                                                                                                                                  |
+| 制限事項                    | 説明                                                                                                                                                                                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 複雑なクエリ                  | 現時点では、並列レプリカはシンプルなクエリでは比較的うまく機能します。CTE、サブクエリ、JOIN、ネストしたクエリなど、クエリの複雑さが増すと、クエリパフォーマンスに悪影響を及ぼす可能性があります。                                                                                                                                                                                        |
+| 小規模なクエリ                 | 処理する行数がそれほど多くないクエリでは、複数のレプリカで実行しても性能が向上しないことがあります。これは、レプリカ間の協調に伴うネットワーク時間によって、クエリ実行に余分なサイクルが発生するためです。この問題は、設定 [`parallel_replicas_min_number_of_rows_per_replica`](/ja/reference/settings/session-settings/parallel-replicas#parallel_replicas_min_number_of_rows_per_replica) を使用することで抑えられます。 |
+| FINAL では並列レプリカは無効です     |                                                                                                                                                                                                                                                                                             |
+| プロジェクションは並列レプリカと併用されません |                                                                                                                                                                                                                                                                                             |
+| 高カーディナリティのデータと複雑な集約     | 大量のデータ送信が必要な高カーディナリティの集約では、クエリが大幅に遅くなる可能性があります。                                                                                                                                                                                                                                             |
+| アナライザとの互換性              | アナライザにより、特定のシナリオではクエリ実行が大幅に遅くなったり、逆に速くなったりする可能性があります。                                                                                                                                                                                                                                       |
 
 <div id="settings-related-to-parallel-replicas">
   ## 並列レプリカに関連する設定
@@ -508,7 +508,7 @@ SETTINGS allow_experimental_parallel_reading_from_replicas=0
 FORMAT TSV;
 ```
 
-<Image img="/images/deployment-guides/parallel-replicas-8.png" size="lg" alt="並列レプリカ なしの EXPLAIN" />
+<Image img="/images/deployment-guides/parallel-replicas-8.webp" size="lg" alt="並列レプリカ なしの EXPLAIN" />
 
 続いて、並列レプリカ を有効にした場合:
 
@@ -523,4 +523,4 @@ SETTINGS allow_experimental_parallel_reading_from_replicas=2
 FORMAT TSV;
 ```
 
-<Image img="/images/deployment-guides/parallel-replicas-9.png" size="lg" alt="並列レプリカ を使った EXPLAIN" />
+<Image img="/images/deployment-guides/parallel-replicas-9.webp" size="lg" alt="並列レプリカ を使った EXPLAIN" />

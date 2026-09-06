@@ -11,7 +11,7 @@ En los ejemplos anteriores de carga de datos JSON se asume el uso de [`JSONEachR
 
 ```sql
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONEachRow)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONEachRow)
 LIMIT 5
 ```
 
@@ -45,7 +45,7 @@ Compare el ejemplo anterior con la siguiente consulta, que lee los mismos datos 
 
 ```sql
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONAsObject)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONAsObject)
 LIMIT 5
 ```
 
@@ -72,7 +72,7 @@ ENGINE = MergeTree
 ORDER BY tuple();
 
 INSERT INTO pypi SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONAsObject)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONAsObject)
 LIMIT 5;
 
 SELECT *
@@ -93,7 +93,7 @@ El formato `JSONAsObject` también puede ser útil para leer JSON delimitado por
 
 ```sql
 SELECT count()
-FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', 'JSONEachRow')
+FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', NOSIGN, 'JSONEachRow')
 ```
 
 ```response
@@ -110,7 +110,7 @@ En cambio, `JSONAsObject` puede usarse en este caso, ya que el tipo `JSON` admit
 
 ```sql
 SELECT count()
-FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', 'JSONAsObject')
+FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', NOSIGN, 'JSONAsObject')
 ```
 
 ```response
@@ -125,7 +125,7 @@ FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.j
   ## Array de objetos JSON
 </div>
 
-Una de las formas más habituales de los datos JSON consiste en tener una lista de objetos JSON dentro de un array JSON, como en [este ejemplo](/es/assets/list.json):
+Una de las formas más habituales de los datos JSON consiste en tener una lista de objetos JSON dentro de un array JSON, como en [este ejemplo](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json):
 
 ```bash
 > cat list.json
@@ -157,7 +157,7 @@ ENGINE = MergeTree
 ORDER BY tuple(month, path)
 ```
 
-Para importar una lista de objetos JSON, podemos usar el formato [`JSONEachRow`](/es/reference/formats/JSON/JSONEachRow) (insertando datos del archivo [list.json](/es/assets/list.json)):
+Para importar una lista de objetos JSON, podemos usar el formato [`JSONEachRow`](/es/reference/formats/JSON/JSONEachRow) (insertando datos del archivo [list.json](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json)):
 
 ```sql
 INSERT INTO sometable
@@ -184,7 +184,7 @@ FROM sometable
   ## Claves de los objetos JSON
 </div>
 
-En algunos casos, la lista de objetos JSON puede codificarse como propiedades del objeto en lugar de elementos del array (consulta [objects.json](/es/assets/objects.json) para ver un ejemplo):
+En algunos casos, la lista de objetos JSON puede codificarse como propiedades del objeto en lugar de elementos del array (consulta [objects.json](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/objects.json) para ver un ejemplo):
 
 ```bash
 cat objects.json
@@ -225,7 +225,7 @@ SELECT * FROM sometable;
   ### Especificar los valores de clave del objeto padre
 </div>
 
-Supongamos que también queremos guardar en la tabla los valores de las claves del objeto padre. En este caso, podemos usar la [siguiente opción](/es/reference/settings/formats#format_json_object_each_row_column_for_object_name) para definir el nombre de la columna en la que queremos que se guarden esos valores de clave:
+Supongamos que también queremos guardar en la tabla los valores de las claves del objeto padre. En este caso, podemos usar la [siguiente opción](/es/reference/settings/formats/format#format_json_object_each_row_column_for_object_name) para definir el nombre de la columna en la que queremos que se guarden esos valores de clave:
 
 ```sql
 SET format_json_object_each_row_column_for_object_name = 'id'
@@ -251,7 +251,7 @@ Observa cómo la columna `id` se ha rellenado correctamente con los valores de l
   ## Arrays JSON
 </div>
 
-A veces, para ahorrar espacio, los archivos JSON se codifican como arrays en lugar de objetos. En este caso, trabajamos con una [lista de arrays JSON](/es/assets/arrays.jsonl):
+A veces, para ahorrar espacio, los archivos JSON se codifican como arrays en lugar de objetos. En este caso, trabajamos con una [lista de arrays JSON](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/arrays.jsonl):
 
 ```bash
 cat arrays.json
@@ -281,7 +281,7 @@ SELECT * FROM sometable
   ### Importación de columnas individuales a partir de arrays JSON
 </div>
 
-En algunos casos, los datos pueden codificarse por columnas en lugar de por filas. En este caso, un objeto JSON principal contiene columnas con valores. Echa un vistazo al [siguiente archivo](/es/assets/columns.json):
+En algunos casos, los datos pueden codificarse por columnas en lugar de por filas. En este caso, un objeto JSON principal contiene columnas con valores. Echa un vistazo al [siguiente archivo](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/columns.json):
 
 ```bash
 cat columns.json
@@ -309,7 +309,7 @@ SELECT * FROM file('columns.json', JSONColumns)
 └────────────────────────────┴────────────┴──────┘
 ```
 
-También se admite un formato más compacto cuando se trabaja con un [array de columnas](/es/assets/columns-array.json) en lugar de un objeto, con el formato [`JSONCompactColumns`](/es/reference/formats/JSON/JSONCompactColumns):
+También se admite un formato más compacto cuando se trabaja con un [array de columnas](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/columns-array.json) en lugar de un objeto, con el formato [`JSONCompactColumns`](/es/reference/formats/JSON/JSONCompactColumns):
 
 ```sql
 SELECT * FROM file('columns-array.json', JSONCompactColumns)
@@ -327,7 +327,7 @@ SELECT * FROM file('columns-array.json', JSONCompactColumns)
   ## Guardar objetos JSON en lugar de analizarlos
 </div>
 
-En algunos casos, puede que quiera guardar objetos JSON en una sola columna `String` (o `JSON`) en lugar de analizarlos. Esto puede ser útil al trabajar con una lista de objetos JSON con estructuras diferentes. Tomemos [este archivo](/es/assets/custom.json) como ejemplo, donde tenemos varios objetos JSON distintos dentro de una lista principal:
+En algunos casos, puede que quiera guardar objetos JSON en una sola columna `String` (o `JSON`) en lugar de analizarlos. Esto puede ser útil al trabajar con una lista de objetos JSON con estructuras diferentes. Tomemos [este archivo](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/custom.json) como ejemplo, donde tenemos varios objetos JSON distintos dentro de una lista principal:
 
 ```bash
 cat custom.json
@@ -383,7 +383,7 @@ Ten en cuenta que `JSONAsString` funciona perfectamente en los casos en los que 
   ## Esquema para objetos anidados
 </div>
 
-En los casos en los que trabajamos con [objetos JSON anidados](/es/assets/list-nested.json), también podemos definir un esquema explícito y usar tipos complejos ([`Array`](/es/reference/data-types/array), [`JSON`](/es/guides/clickhouse/data-formats/json/intro) o [`Tuple`](/es/reference/data-types/tuple)) para cargar los datos:
+En los casos en los que trabajamos con [objetos JSON anidados](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list-nested.json), también podemos definir un esquema explícito y usar tipos complejos ([`Array`](/es/reference/data-types/array), [`JSON`](/es/guides/clickhouse/data-formats/json/intro) o [`Tuple`](/es/reference/data-types/tuple)) para cargar los datos:
 
 ```sql
 SELECT *
@@ -401,7 +401,7 @@ LIMIT 1
   ## Acceso a objetos JSON anidados
 </div>
 
-Podemos hacer referencia a [claves JSON anidadas](/es/assets/list-nested.json) habilitando la [siguiente opción de configuración](/es/reference/settings/formats#input_format_import_nested_json):
+Podemos hacer referencia a [claves JSON anidadas](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list-nested.json) habilitando la [siguiente opción de configuración](/es/reference/settings/formats/input-format#input_format_import_nested_json):
 
 ```sql
 SET input_format_import_nested_json = 1
@@ -439,7 +439,7 @@ ENGINE = MergeTree
 ORDER BY path
 ```
 
-Todavía podemos insertar los [datos JSON originales](/es/assets/list.json) con 3 columnas en esta tabla:
+Todavía podemos insertar los [datos JSON originales](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json) con 3 columnas en esta tabla:
 
 ```sql
 INSERT INTO shorttable FROM INFILE 'list.json' FORMAT JSONEachRow;
@@ -454,7 +454,7 @@ SELECT * FROM shorttable
 └───────────────────────────┴──────┘
 ```
 
-ClickHouse ignorará las columnas desconocidas al importar. Esto puede desactivarse con la opción de configuración [input&#95;format&#95;skip&#95;unknown&#95;fields](/es/reference/settings/formats#input_format_skip_unknown_fields):
+ClickHouse ignorará las columnas desconocidas al importar. Esto puede desactivarse con la opción de configuración [input&#95;format&#95;skip&#95;unknown&#95;fields](/es/reference/settings/formats/input-format#input_format_skip_unknown_fields):
 
 ```sql
 SET input_format_skip_unknown_fields = 0;
@@ -475,7 +475,7 @@ ClickHouse generará excepciones cuando haya inconsistencias entre el JSON y la 
 
 ClickHouse permite exportar datos a archivos codificados en [BSON](https://bsonspec.org/) e importarlos desde ellos. Este formato lo utilizan algunos DBMS, por ejemplo, la base de datos [MongoDB](https://github.com/mongodb/mongo).
 
-Para importar datos BSON, usamos el formato [BSONEachRow](/es/reference/formats/BSONEachRow). Importemos los datos desde [este archivo BSON](/es/assets/data.bson):
+Para importar datos BSON, usamos el formato [BSONEachRow](/es/reference/formats/BSONEachRow). Importemos los datos desde [este archivo BSON](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/data.bson):
 
 ```sql
 SELECT * FROM file('data.bson', BSONEachRow)

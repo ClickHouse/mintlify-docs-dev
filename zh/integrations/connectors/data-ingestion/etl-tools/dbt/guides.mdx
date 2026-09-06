@@ -9,7 +9,7 @@ doc_type: 'guide'
 
 import { Image } from "/snippets/zh/components/Image.jsx";
 
-import ClickHouseSupportedBadge from "/snippets/zh/components/ClickHouseSupported/ClickHouseSupported.jsx";
+import { ClickHouseSupportedBadge } from "/snippets/zh/components/ClickHouseSupported/ClickHouseSupported.jsx";
 
 <ClickHouseSupportedBadge />
 
@@ -38,7 +38,7 @@ import ClickHouseSupportedBadge from "/snippets/zh/components/ClickHouseSupporte
 
 dbt 在对高度关系型数据进行建模时表现出色。为便于说明，我们提供了一个小型 IMDB 数据集，其关系型 schema 如下所示。该数据集来自[关系型数据集 repository](https://relational.fit.cvut.cz/dataset/IMDb)。相较于 dbt 中常见的 schema，这个数据集非常简单，但作为一个易于处理的样本很合适：
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_01.png" size="lg" alt="IMDB 表 schema" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_01.webp" size="lg" alt="IMDB 表 schema" />
 
 如图所示，我们使用其中部分表。
 
@@ -100,32 +100,32 @@ CREATE TABLE imdb.roles
 ```sql
 INSERT INTO imdb.actors
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_actors.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_actors.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.directors
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_directors.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_directors.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.genres
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_genres.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_genres.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.movie_directors
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_directors.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_directors.tsv.gz', NOSIGN,
         'TSVWithNames');
 
 INSERT INTO imdb.movies
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.roles(actor_id, movie_id, role)
 SELECT actor_id, movie_id, role
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_roles.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_roles.tsv.gz', NOSIGN,
 'TSVWithNames');
 ```
 
@@ -209,13 +209,13 @@ LIMIT 5;
 
 3. 此时，你需要使用自己选择的文本编辑器。在下面的示例中，我们使用常见的 VS Code。打开 IMDB 目录后，你应该会看到一组 yml 和 sql 文件：
 
-   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_02.png" size="lg" alt="新的 dbt 项目" />
+   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_02.webp" size="lg" alt="新的 dbt 项目" />
 
 4. 更新你的 `dbt_project.yml` 文件，指定第一个模型 `actor_summary`，并将 profile 设为 `clickhouse_imdb`。
 
-   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_03.png" size="lg" alt="dbt profile" />
+   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_03.webp" size="lg" alt="dbt profile" />
 
-   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_04.png" size="lg" alt="dbt profile" />
+   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_04.webp" size="lg" alt="dbt profile" />
 
 5. 接下来，我们需要向 dbt 提供 ClickHouse 实例的 connection details。将以下内容添加到 `~/.dbt/profiles.yml` 中。
 
@@ -681,7 +681,7 @@ AND event_time > subtractMinutes(now(), 15) ORDER BY event_time LIMIT 100;
 
 如下图所示：
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_05.png" size="lg" alt="dbt 增量更新" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_05.webp" size="lg" alt="dbt 增量更新" />
 
 这种策略在非常大的模型上可能会遇到一些挑战。更多细节请参见 [限制](/zh/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations)。
 
@@ -794,7 +794,7 @@ WHERE id > (SELECT max(id) FROM imdb_dbt.actor_summary) OR updated_at > (SELECT 
 
 一直以来，ClickHouse 对更新和删除的支持都比较有限，主要通过异步的[变更](/zh/reference/statements/alter/index)实现。这类操作可能会产生极高的 IO 开销，因此通常应尽量避免。
 
-ClickHouse 22.8 引入了[轻量级删除](/zh/snippets/delete)，ClickHouse 25.7 引入了[轻量级更新](/zh/reference/statements/update)。随着这些功能的推出，单条更新查询带来的修改即使以异步方式物化，从用户视角看也会立即生效。
+ClickHouse 22.8 引入了[轻量级删除](/zh/reference/statements/delete)，ClickHouse 25.7 引入了[轻量级更新](/zh/reference/statements/update)。随着这些功能的推出，单条更新查询带来的修改即使以异步方式物化，从用户视角看也会立即生效。
 
 可以通过 `incremental_strategy` 参数为模型配置此模式，即
 
@@ -812,7 +812,7 @@ ClickHouse 22.8 引入了[轻量级删除](/zh/snippets/delete)，ClickHouse 25.
 
 该过程如下所示：
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_06.png" size="lg" alt="轻量级删除增量" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_06.webp" size="lg" alt="轻量级删除增量" />
 
 <div id="insert_overwrite-mode-experimental">
   ### `insert_overwrite` 模式 (Experimental)
@@ -832,7 +832,7 @@ ClickHouse 22.8 引入了[轻量级删除](/zh/snippets/delete)，ClickHouse 25.
 * 它比其他策略更安全，因为在 INSERT 操作成功完成之前，不会修改原始表：如果中途失败，原始表不会被修改。
 * 它实现了数据工程中“分区不可变性”的最佳实践，从而简化增量和并行数据处理、回滚等操作。
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_07.png" size="lg" alt="insert overwrite 增量" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_07.webp" size="lg" alt="insert overwrite 增量" />
 
 <div id="creating-a-snapshot">
   ## 创建快照
