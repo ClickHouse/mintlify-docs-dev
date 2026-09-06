@@ -62,14 +62,12 @@ import { Image } from "/snippets/ar/components/Image.jsx";
 
 نوضح كلتا هاتين المعماريتين أدناه.
 
-<Image img="/images/use-cases/observability/clickstack-migrating-agents.png" alt="ترحيل الوكلاء" size="lg" background />
+<Image img="/images/use-cases/observability/clickstack-migrating-agents.webp" alt="ترحيل الوكلاء" size="lg" background />
 
 في المثال التالي، نقدّم الخطوات الأولية لتهيئة Vector لاستقبال أحداث السجلات من Filebeat عبر بروتوكول Lumberjack. كما نوفّر VRL لربط أحداث ECS الواردة بمواصفة OTel، قبل إرسالها إلى ClickStack جامع OpenTelemetry عبر OTLP. ويمكن للمستخدمين الذين يستهلكون الأحداث من Kafka استبدال مصدر Vector Logstash بـ [مصدر Kafka](https://vector.dev/docs/reference/configuration/sources/kafka/) — مع بقاء جميع الخطوات الأخرى كما هي.
 
 <Steps>
-  <Step>
-    ### تثبيت Vector
-
+  <Step title="تثبيت Vector" id="install-vector">
     ثبّت Vector باستخدام [دليل التثبيت الرسمي](https://vector.dev/docs/setup/installation/).
 
     يمكن تثبيته على نفس المثيل الذي يعمل عليه OTel collector الخاص بـ Elastic Stack.
@@ -77,9 +75,7 @@ import { Image } from "/snippets/ar/components/Image.jsx";
     يمكنك اتباع أفضل الممارسات المتعلقة بالمعمارية والأمان عند [نقل Vector إلى بيئة الإنتاج](https://vector.dev/docs/setup/going-to-prod/).
   </Step>
 
-  <Step>
-    ### تهيئة vector
-
+  <Step title="تهيئة vector" id="configure-vector">
     يجب تهيئة Vector لاستقبال الأحداث عبر بروتوكول Lumberjack، محاكيًا نسخة Logstash. يمكن تحقيق ذلك بتهيئة [`logstash` source](https://vector.dev/docs/reference/configuration/sources/logstash/) لـ Vector:
 
     ```yaml
@@ -255,7 +251,7 @@ import { Image } from "/snippets/ar/components/Image.jsx";
 
     يتم إنشاء `YOUR_INGESTION_API_KEY` بواسطة ClickStack. يمكنك العثور على المفتاح في واجهة ClickStack (HyperDX) ضمن `Team Settings → API Keys`.
 
-    <Image img="/images/use-cases/observability/ingestion-keys.png" alt="مفاتيح إدخال البيانات" size="lg" />
+    <Image img="/images/use-cases/observability/ingestion-keys.webp" alt="مفاتيح إدخال البيانات" size="lg" />
 
     يظهر أدناه الإعداد الكامل النهائي:
 
@@ -294,9 +290,7 @@ import { Image } from "/snippets/ar/components/Image.jsx";
     ```
   </Step>
 
-  <Step>
-    ### تهيئة Filebeat
-
+  <Step title="تهيئة Filebeat" id="configure-filebeat">
     لا يلزم في عمليات تثبيت Filebeat الحالية سوى تعديلها لإرسال أحداثها إلى Vector. ويتطلب ذلك إعداد مخرج Logstash — ومرة أخرى، يمكن تهيئة TLS اختياريًا:
 
     ```yaml
@@ -336,24 +330,20 @@ import { Image } from "/snippets/ar/components/Image.jsx";
 </div>
 
 <Steps>
-  <Step>
-    #### تثبيت Vector وتهيئته
-
+  <Step title="تثبيت Vector وتهيئته" id="install-configure-vector">
     ثبّت Vector وهيّئه باتباع [الخطوات نفسها](#install-vector) الموثقة للترحيل من Filebeat.
   </Step>
 
-  <Step>
-    #### تهيئة Elastic Agent
-
+  <Step title="تهيئة Elastic Agent" id="configure-elastic-agent">
     يجب تهيئة Elastic Agent لإرسال البيانات عبر بروتوكول Lumberjack الخاص بـ Logstash. وهذا [نمط نشر مدعوم](https://www.elastic.co/docs/manage-data/ingest/ingest-reference-architectures/ls-networkbridge)، ويمكن تهيئته مركزيًا أو [عبر ملف تهيئة الوكيل `elastic-agent.yaml`](https://www.elastic.co/docs/reference/fleet/logstash-output) عند النشر بدون Fleet.
 
     يمكن إجراء التهيئة المركزية عبر Kibana من خلال إضافة [Output إلى Fleet](https://www.elastic.co/docs/reference/fleet/fleet-settings#output-settings).
 
-    <Image img="/images/use-cases/observability/add-logstash-output.png" alt="إضافة مخرج Logstash" size="md" />
+    <Image img="/images/use-cases/observability/add-logstash-output.webp" alt="إضافة مخرج Logstash" size="md" />
 
     يمكن بعد ذلك استخدام هذا الـ Output ضمن [سياسة وكيل](https://www.elastic.co/docs/reference/fleet/agent-policy). وهذا يعني تلقائيًا أن أي وكلاء يستخدمون هذه السياسة سيرسلون بياناتهم إلى Vector.
 
-    <Image img="/images/use-cases/observability/agent-output-settings.png" alt="إعدادات الوكيل" size="md" />
+    <Image img="/images/use-cases/observability/agent-output-settings.webp" alt="إعدادات الوكيل" size="md" />
 
     ونظرًا إلى أن هذا يتطلب تهيئة اتصال آمن عبر TLS، فنوصي بالرجوع إلى الدليل [&quot;تهيئة SSL/TLS لمخرج Logstash&quot;](https://www.elastic.co/docs/reference/fleet/secure-logstash-connections#use-ls-output)، مع افتراض أن مثيل Vector لديك يؤدي دور Logstash.
 
@@ -408,7 +398,7 @@ exporters:
 
 يُنشئ ClickStack القيمة `YOUR_INGESTION_API_KEY` المستخدمة هنا. يمكنك العثور على المفتاح في ClickStack UI ضمن `Team Settings → API Keys`.
 
-<Image img="/images/use-cases/observability/ingestion-keys.png" alt="مفاتيح الاستيعاب" size="lg" />
+<Image img="/images/use-cases/observability/ingestion-keys.webp" alt="مفاتيح الاستيعاب" size="lg" />
 
 إذا كان Vector مُهيأً لاستخدام mutual TLS، مع الشهادة والمفاتيح التي جرى إنشاؤها باتباع الخطوات الواردة في دليل [&quot;تكوين SSL/TLS لمخرج Logstash&quot;](https://www.elastic.co/docs/reference/fleet/secure-logstash-connections#use-ls-output)، فسيلزم تهيئة الـ exporter ‏`otlp` وفقًا لذلك، على سبيل المثال.
 

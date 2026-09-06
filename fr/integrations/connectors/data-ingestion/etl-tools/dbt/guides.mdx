@@ -9,7 +9,7 @@ doc_type: 'guide'
 
 import { Image } from "/snippets/fr/components/Image.jsx";
 
-import ClickHouseSupportedBadge from "/snippets/fr/components/ClickHouseSupported/ClickHouseSupported.jsx";
+import { ClickHouseSupportedBadge } from "/snippets/fr/components/ClickHouseSupported/ClickHouseSupported.jsx";
 
 <ClickHouseSupportedBadge />
 
@@ -38,7 +38,7 @@ Suivez les instructions de la section [Configuration de dbt et de l’adaptateur
 
 dbt excelle dans la modélisation de données fortement relationnelles. À titre d’exemple, nous fournissons un petit jeu de données IMDB avec le schéma relationnel suivant. Ce jeu de données provient du [dépôt de jeux de données relationnelles](https://relational.fit.cvut.cz/dataset/IMDb). Il reste très simple par rapport aux schémas couramment utilisés avec dbt, mais constitue un exemple facile à manipuler :
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_01.png" size="lg" alt="schéma des tables IMDB" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_01.webp" size="lg" alt="schéma des tables IMDB" />
 
 Nous utilisons un sous-ensemble de ces tables, comme indiqué.
 
@@ -100,32 +100,32 @@ Nous utilisons la fonction `s3` pour lire les données source depuis des endpoin
 ```sql
 INSERT INTO imdb.actors
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_actors.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_actors.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.directors
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_directors.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_directors.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.genres
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_genres.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_genres.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.movie_directors
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_directors.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies_directors.tsv.gz', NOSIGN,
         'TSVWithNames');
 
 INSERT INTO imdb.movies
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_movies.tsv.gz', NOSIGN,
 'TSVWithNames');
 
 INSERT INTO imdb.roles(actor_id, movie_id, role)
 SELECT actor_id, movie_id, role
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_roles.tsv.gz',
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/imdb/imdb_ijs_roles.tsv.gz', NOSIGN,
 'TSVWithNames');
 ```
 
@@ -209,13 +209,13 @@ Dans les guides suivants, nous convertirons cette requête en un modèle, en la 
 
 3. À ce stade, vous aurez besoin de l’éditeur de texte de votre choix. Dans les exemples ci-dessous, nous utilisons le très répandu VS Code. En ouvrant le répertoire IMDB, vous devriez voir un ensemble de fichiers yml et sql :
 
-   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_02.png" size="lg" alt="Nouveau projet dbt" />
+   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_02.webp" size="lg" alt="Nouveau projet dbt" />
 
 4. Mettez à jour votre fichier `dbt_project.yml` pour spécifier notre premier modèle, `actor_summary`, et définir le profil sur `clickhouse_imdb`.
 
-   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_03.png" size="lg" alt="profil dbt" />
+   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_03.webp" size="lg" alt="profil dbt" />
 
-   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_04.png" size="lg" alt="profil dbt" />
+   <Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_04.webp" size="lg" alt="profil dbt" />
 
 5. Nous devons ensuite fournir à dbt les informations de connexion de notre instance ClickHouse. Ajoutez le contenu suivant à votre fichier `~/.dbt/profiles.yml`.
 
@@ -681,7 +681,7 @@ Adaptez la requête ci-dessus à la période d’exécution. Nous laissons l’e
 
 Le schéma ci-dessous l’illustre :
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_05.png" size="lg" alt="mises à jour incrémentielles dbt" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_05.webp" size="lg" alt="mises à jour incrémentielles dbt" />
 
 Cette stratégie peut poser des difficultés sur de très grands modèles. Pour plus de détails, voir [Limitations](/fr/integrations/connectors/data-ingestion/etl-tools/dbt/index#limitations).
 
@@ -794,7 +794,7 @@ Pour cette exécution, seules les nouvelles lignes sont ajoutées directement à
 
 Historiquement, ClickHouse n&#39;offrait qu&#39;une prise en charge limitée des mises à jour et des suppressions, sous la forme de [mutations](/fr/reference/statements/alter/index). Celles-ci peuvent être extrêmement gourmandes en IO et doivent généralement être évitées.
 
-ClickHouse 22.8 a introduit les [suppressions légères](/fr/snippets/delete), et ClickHouse 25.7 les [mises à jour légères](/fr/reference/statements/update). Avec l&#39;introduction de ces fonctionnalités, les modifications effectuées par une seule requête de mise à jour, même lorsqu&#39;elles sont matérialisées de façon asynchrone, prennent effet instantanément du point de vue de l&#39;utilisateur.
+ClickHouse 22.8 a introduit les [suppressions légères](/fr/reference/statements/delete), et ClickHouse 25.7 les [mises à jour légères](/fr/reference/statements/update). Avec l&#39;introduction de ces fonctionnalités, les modifications effectuées par une seule requête de mise à jour, même lorsqu&#39;elles sont matérialisées de façon asynchrone, prennent effet instantanément du point de vue de l&#39;utilisateur.
 
 Ce mode peut être configuré pour un modèle via le paramètre `incremental_strategy`, c.-à-d.
 
@@ -812,7 +812,7 @@ En résumé, cette approche :
 
 Ce processus est illustré ci-dessous :
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_06.png" size="lg" alt="suppression légère incrémentale" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_06.webp" size="lg" alt="suppression légère incrémentale" />
 
 <div id="insert_overwrite-mode-experimental">
   ### Mode insert_overwrite (expérimental)
@@ -832,7 +832,7 @@ Cette approche présente les avantages suivants :
 * Elle est plus sûre que les autres stratégies, car elle ne modifie pas la table d’origine tant que l’opération INSERT n’a pas abouti : en cas d’échec intermédiaire, la table d’origine n’est pas modifiée.
 * Elle applique la bonne pratique d’ingénierie des données dite de « l’immuabilité des partitions », ce qui simplifie le traitement incrémental et parallèle des données, les retours arrière, etc.
 
-<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_07.png" size="lg" alt="insert overwrite incrémental" />
+<Image img="/images/integrations/data-ingestion/etl-tools/dbt/dbt_07.webp" size="lg" alt="insert overwrite incrémental" />
 
 <div id="creating-a-snapshot">
   ## Créer un snapshot

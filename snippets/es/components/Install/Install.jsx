@@ -41,7 +41,7 @@ export const InstallSelector = (props) => {
     {key: 'Redhat',     title: 'Redhat',         iconUrl: `${assetBase}/images/install/redhat.svg`},
     {key: 'LinuxOther', title: 'Otro',           iconUrl: `${assetBase}/images/install/linux.svg`},
     {key: 'NixOS',      title: 'NixOS',          iconUrl: `${assetBase}/images/install/nixos.svg`},
-    {key: 'MacOS',      title: 'MacOS',          iconUrl: `${assetBase}/images/install/apple.png`},
+    {key: 'MacOS',      title: 'MacOS',          iconUrl: `${assetBase}/images/install/apple.webp`},
     {key: 'Windows',    title: 'Windows',        iconUrl: `${assetBase}/images/install/windows.svg`},
     {key: 'Docker',     title: 'Docker',         iconUrl: `${assetBase}/images/install/docker.svg`},
   ];

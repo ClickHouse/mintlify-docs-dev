@@ -1,0 +1,33 @@
+# Example Locadex integration. Run this after Locadex merges a reviewed locale
+# update into the main ClickHouse repository. The dispatcher does not need any
+# Cloudflare credentials.
+name: Deploy translated documentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      locale:
+        description: Updated locale
+        required: true
+        type: choice
+        options: [ar, es, fr, ja, ko, pt-BR, ru, zh]
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request one locale deployment
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+          DOCS_LOCALE: ${{ inputs.locale }}
+        run: |
+          jq -n \
+            --arg locale "$DOCS_LOCALE" \
+            '{
+              event_type: "docs-locale-deploy",
+              client_payload: { locale: $locale }
+            }' |
+            gh api --method POST repos/ClickHouse/ClickHouse/dispatches --input -

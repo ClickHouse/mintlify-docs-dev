@@ -44,19 +44,21 @@ ClickHouse BYOC deploys a complete Prometheus monitoring stack within your Kuber
 
 To connect to the built-in Prometheus stack:
 
-1. **Contact ClickHouse Support** to enable the private load balancer for your BYOC environment.
+1. **Enable the private load balancer** for your BYOC infrastructure in the ClickHouse Cloud console (see [Load Balancers](/products/bring-your-own-cloud/configuration/configurations#load-balancers)).
 2. **Request the Prometheus endpoint URL** from ClickHouse Support.
-3. **Verify private network connectivity** to the Prometheus endpoint—typically via VPC peering or other private network setup.
+3. **Verify private network connectivity** to the Prometheus endpoint—typically via VPC/VNet peering or other private network setup.
 
 Endpoint formats vary by connectivity type:
 
 | Connectivity | Endpoint format |
 |---|---|
-| VPC / VPC peering | `https://prometheus-internal.<subdomain>.<region>.<cloud>.clickhouse-byoc.com` |
-| PrivateLink | `https://prometheus.vpce.<subdomain>.<region>.<cloud>.clickhouse-byoc.com` |
+| VPC/VNet peering | `https://prometheus-internal.<subdomain>.<region>.<cloud>.clickhouse-byoc.com` |
+| Private endpoint | `https://prometheus.<label>.<subdomain>.<region>.<cloud>.clickhouse-byoc.com` |
+
+`<cloud>` is `aws`, `gcp`, or `azure`. For private endpoints, `<label>` is cloud-specific: `vpce` on AWS, `p` on GCP, and `privatelink` on Azure.
 
 <Note>
-The Prometheus stack URL is only accessible via private network connections and doesn't require authentication. Access is restricted to networks that can reach your BYOC VPC through VPC peering or other private connectivity options.
+The Prometheus stack URL is only accessible via private network connections and doesn't require authentication. Access is restricted to networks that can reach your BYOC VPC/VNet through peering or other private connectivity options.
 </Note>
 
 ### Integrating with Your Monitoring Tools {#prometheus-stack-integration}
@@ -101,7 +103,7 @@ ClickHouse services expose a Prometheus-compatible metrics endpoint that you can
 The metrics endpoint is available at `/metrics_all` on your ClickHouse service endpoint:
 
 ```bash
-curl --user <username>:<password> https://<service-subdomain>.<byoc-subdomain>.<region>.<provider>.byoc.clickhouse-byoc.com:8443/metrics_all
+curl --user <username>:<password> https://<service-subdomain>.<byoc-subdomain>.<region>.<provider>.clickhouse-byoc.com:8443/metrics_all
 ```
 
 **Sample Response:**
@@ -157,7 +159,7 @@ global:
 scrape_configs:
   - job_name: "clickhouse"
     static_configs:
-      - targets: ["<service-subdomain>.<byoc-subdomain>.<region>.<provider>.byoc.clickhouse-byoc.com:8443"]
+      - targets: ["<service-subdomain>.<byoc-subdomain>.<region>.<provider>.clickhouse-byoc.com:8443"]
     scheme: https
     metrics_path: "/metrics_all"
     basic_auth:
@@ -167,7 +169,7 @@ scrape_configs:
 ```
 
 Replace:
-- `<service-subdomain>.<byoc-subdomain>.<region>.<provider>.byoc.clickhouse-byoc.com:8443` with your actual service endpoint
+- `<service-subdomain>.<byoc-subdomain>.<region>.<provider>.clickhouse-byoc.com:8443` with your actual service endpoint
 - `<username>` and `<password>` with your scraping user credentials
 
 ## ClickHouse Mixin {#clickhouse-mixin}
@@ -181,19 +183,19 @@ Once your Prometheus instance is integrated with your ClickHouse monitoring stac
 1. **Add Prometheus as a Data Source in Grafana**  
    Go to "Data sources" in the Grafana sidebar, click "Add data source," and select "Prometheus." Enter your Prometheus instance URL and any required credentials to connect.
 
-<Image img="/images/cloud/reference/byoc-mixin-1.png" size="lg" alt="BYOC Mixin 1" background='black'/>
+<Image img="/images/cloud/reference/byoc-mixin-1.webp" size="lg" alt="BYOC Mixin 1" background='black'/>
 
-<Image img="/images/cloud/reference/byoc-mixin-2.png" size="lg" alt="BYOC Mixin 2" background='black'/>
+<Image img="/images/cloud/reference/byoc-mixin-2.webp" size="lg" alt="BYOC Mixin 2" background='black'/>
 
-<Image img="/images/cloud/reference/byoc-mixin-3.png" size="lg" alt="BYOC Mixin 3" background='black'/>
+<Image img="/images/cloud/reference/byoc-mixin-3.webp" size="lg" alt="BYOC Mixin 3" background='black'/>
 
 2. **Import the ClickHouse Dashboard**  
    In Grafana, navigate to the dashboard area and choose "Import." You can either upload the dashboard JSON file or paste its contents directly. Obtain the JSON file from the ClickHouse mixin repository:  
    [ClickHouse Mix-in Dashboard JSON](https://github.com/ClickHouse/clickhouse-mixin/blob/main/dashboard_byoc.json)
 
-<Image img="/images/cloud/reference/byoc-mixin-4.png" size="lg" alt="BYOC Mixin 4" background='black'/>
+<Image img="/images/cloud/reference/byoc-mixin-4.webp" size="lg" alt="BYOC Mixin 4" background='black'/>
 
 3. **Explore Your Metrics**  
    Once the dashboard is imported and configured with your Prometheus data source, you should see real-time metrics from your ClickHouse Cloud services.
 
-<Image img="/images/cloud/reference/byoc-mixin-5.png" size="lg" alt="BYOC Mixin 5" background='black'/>
+<Image img="/images/cloud/reference/byoc-mixin-5.webp" size="lg" alt="BYOC Mixin 5" background='black'/>

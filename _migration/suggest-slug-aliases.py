@@ -25,7 +25,7 @@ import argparse
 import csv
 import json
 import re
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 THIS_REPO = Path(__file__).resolve().parent.parent

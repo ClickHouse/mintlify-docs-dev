@@ -1,0 +1,73 @@
+# Proposal for ClickHouse/airgapped-docs/.github/workflows/docs-deploy.yml
+#
+# This workflow never checks out or executes pull-request content. It sends the
+# registered repository name and immutable head SHA to the central ClickHouse
+# workflow, which validates them against docs/remotes.json. The central pipeline
+# fetches, builds without secrets, and deploys the prebuilt static artifact in
+# separate jobs.
+#
+# DOCS_DISPATCH_TOKEN should be a GitHub App or fine-grained token able to create
+# repository dispatches in ClickHouse/ClickHouse. It needs no Cloudflare access.
+name: Deploy documentation
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request an immutable docs preview
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REMOTE_NAME: clickhouse-private
+          REMOTE_REPOSITORY: ${{ github.repository }}
+        run: |
+          jq -n \
+            --arg name "$REMOTE_NAME" \
+            --arg repository "$REMOTE_REPOSITORY" \
+            --arg ref "$HEAD_SHA" \
+            --arg pr "$PR_NUMBER" \
+            '{
+              event_type: "docs-remote-deploy",
+              client_payload: {
+                locale: "en",
+                remote_name: $name,
+                remote_repository: $repository,
+                remote_ref: $ref,
+                preview_alias: ("private-pr-" + $pr)
+              }
+            }' |
+            gh api --method POST repos/ClickHouse/ClickHouse/dispatches --input -
+
+  production:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request the English production deployment
+        env:
+          GH_TOKEN: ${{ secrets.DOCS_DISPATCH_TOKEN }}
+          REMOTE_NAME: clickhouse-private
+          REMOTE_REPOSITORY: ${{ github.repository }}
+        run: |
+          jq -n \
+            --arg name "$REMOTE_NAME" \
+            --arg repository "$REMOTE_REPOSITORY" \
+            '{
+              event_type: "docs-remote-deploy",
+              client_payload: {
+                locale: "en",
+                remote_name: $name,
+                remote_repository: $repository
+              }
+            }' |
+            gh api --method POST repos/ClickHouse/ClickHouse/dispatches --input -

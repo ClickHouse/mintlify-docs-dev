@@ -11,7 +11,7 @@ doc_type: 'guide'
 
 ```sql
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONEachRow)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONEachRow)
 LIMIT 5
 ```
 
@@ -45,7 +45,7 @@ LIMIT 5
 
 ```sql
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONAsObject)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONAsObject)
 LIMIT 5
 ```
 
@@ -72,7 +72,7 @@ ENGINE = MergeTree
 ORDER BY tuple();
 
 INSERT INTO pypi SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONAsObject)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONAsObject)
 LIMIT 5;
 
 SELECT *
@@ -93,7 +93,7 @@ LIMIT 2;
 
 ```sql
 SELECT count()
-FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', 'JSONEachRow')
+FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', NOSIGN, 'JSONEachRow')
 ```
 
 ```response
@@ -110,7 +110,7 @@ You can specify the structure manually: (in file/uri bluesky/file_0001.json.gz).
 
 ```sql
 SELECT count()
-FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', 'JSONAsObject')
+FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', NOSIGN, 'JSONAsObject')
 ```
 
 ```response
@@ -125,7 +125,7 @@ FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.j
   ## JSONオブジェクトの配列
 </div>
 
-JSONデータで最も一般的な形式の1つは、[この例](/ja/assets/list.json)のように、JSON 配列の中にJSON オブジェクトのリストを含むものです:
+JSONデータで最も一般的な形式の1つは、[この例](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json)のように、JSON 配列の中にJSON オブジェクトのリストを含むものです:
 
 ```bash
 > cat list.json
@@ -157,7 +157,7 @@ ENGINE = MergeTree
 ORDER BY tuple(month, path)
 ```
 
-JSONオブジェクトのリストをインポートするには、[`JSONEachRow`](/ja/reference/formats/JSON/JSONEachRow) フォーマットを使用できます ([list.json](/ja/assets/list.json) ファイルからデータを挿入します) :
+JSONオブジェクトのリストをインポートするには、[`JSONEachRow`](/ja/reference/formats/JSON/JSONEachRow) フォーマットを使用できます ([list.json](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json) ファイルからデータを挿入します) :
 
 ```sql
 INSERT INTO sometable
@@ -184,7 +184,7 @@ FROM sometable
   ## JSON オブジェクトのキー
 </div>
 
-場合によっては、JSON オブジェクト のリストは、配列の要素ではなくオブジェクトのプロパティとしてエンコードされることがあります (例については [objects.json](/ja/assets/objects.json) を参照してください) :
+場合によっては、JSON オブジェクト のリストは、配列の要素ではなくオブジェクトのプロパティとしてエンコードされることがあります (例については [objects.json](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/objects.json) を参照してください) :
 
 ```bash
 cat objects.json
@@ -225,7 +225,7 @@ SELECT * FROM sometable;
   ### 親オブジェクトのキー値を指定する
 </div>
 
-親オブジェクトのキーの値もテーブルに保存したいとします。この場合、キー値の保存先となるカラム名を指定するには、[次のオプション](/ja/reference/settings/formats#format_json_object_each_row_column_for_object_name)を使用できます。
+親オブジェクトのキーの値もテーブルに保存したいとします。この場合、キー値の保存先となるカラム名を指定するには、[次のオプション](/ja/reference/settings/formats/format#format_json_object_each_row_column_for_object_name)を使用できます。
 
 ```sql
 SET format_json_object_each_row_column_for_object_name = 'id'
@@ -251,7 +251,7 @@ SELECT * FROM file('objects.json', JSONObjectEachRow)
   ## JSON配列
 </div>
 
-容量を節約するために、JSONファイルがオブジェクトではなく配列としてエンコードされている場合があります。この場合は、[JSON配列のリスト](/ja/assets/arrays.jsonl)を扱います。
+容量を節約するために、JSONファイルがオブジェクトではなく配列としてエンコードされている場合があります。この場合は、[JSON配列のリスト](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/arrays.jsonl)を扱います。
 
 ```bash
 cat arrays.json
@@ -281,7 +281,7 @@ SELECT * FROM sometable
   ### JSON配列から個々のカラムをインポートする
 </div>
 
-場合によっては、データが行単位ではなくカラム単位でエンコードされることがあります。この場合、親のJSONオブジェクトには値を格納したカラムが含まれます。[次のファイル](/ja/assets/columns.json)を見てみましょう。
+場合によっては、データが行単位ではなくカラム単位でエンコードされることがあります。この場合、親のJSONオブジェクトには値を格納したカラムが含まれます。[次のファイル](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/columns.json)を見てみましょう。
 
 ```bash
 cat columns.json
@@ -309,7 +309,7 @@ SELECT * FROM file('columns.json', JSONColumns)
 └────────────────────────────┴────────────┴──────┘
 ```
 
-オブジェクトではなく[カラムの配列](/ja/assets/columns-array.json)を扱う場合は、[`JSONCompactColumns`](/ja/reference/formats/JSON/JSONCompactColumns)フォーマットによる、よりコンパクトな形式もサポートされています。
+オブジェクトではなく[カラムの配列](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/columns-array.json)を扱う場合は、[`JSONCompactColumns`](/ja/reference/formats/JSON/JSONCompactColumns)フォーマットによる、よりコンパクトな形式もサポートされています。
 
 ```sql
 SELECT * FROM file('columns-array.json', JSONCompactColumns)
@@ -327,7 +327,7 @@ SELECT * FROM file('columns-array.json', JSONCompactColumns)
   ## JSON オブジェクトをパースせずに保存する
 </div>
 
-JSON オブジェクトをパースせず、単一の `String` (または `JSON`) カラムに保存したいケースもあります。これは、構造が異なる JSON オブジェクトのリストを扱う場合に便利です。たとえば、[このファイル](/ja/assets/custom.json) には、1 つの親配列の中に複数の異なる JSON オブジェクトが含まれています。
+JSON オブジェクトをパースせず、単一の `String` (または `JSON`) カラムに保存したいケースもあります。これは、構造が異なる JSON オブジェクトのリストを扱う場合に便利です。たとえば、[このファイル](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/custom.json) には、1 つの親配列の中に複数の異なる JSON オブジェクトが含まれています。
 
 ```bash
 cat custom.json
@@ -383,7 +383,7 @@ FROM events
   ## ネストされたオブジェクトのスキーマ
 </div>
 
-[ネストされた JSON オブジェクト](/ja/assets/list-nested.json) を扱う場合は、明示的にスキーマを定義し、複合型 ([`Array`](/ja/reference/data-types/array)、[`JSON`](/ja/guides/clickhouse/data-formats/json/intro)、[`Tuple`](/ja/reference/data-types/tuple)) を使用してデータを読み込むことができます。
+[ネストされた JSON オブジェクト](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list-nested.json) を扱う場合は、明示的にスキーマを定義し、複合型 ([`Array`](/ja/reference/data-types/array)、[`JSON`](/ja/guides/clickhouse/data-formats/json/intro)、[`Tuple`](/ja/reference/data-types/tuple)) を使用してデータを読み込むことができます。
 
 ```sql
 SELECT *
@@ -401,7 +401,7 @@ LIMIT 1
   ## ネストされたJSONオブジェクトへのアクセス
 </div>
 
-[以下の設定オプション](/ja/reference/settings/formats#input_format_import_nested_json)を有効にすると、[ネストされたJSONキー](/ja/assets/list-nested.json)を参照できます。
+[以下の設定オプション](/ja/reference/settings/formats/input-format#input_format_import_nested_json)を有効にすると、[ネストされたJSONキー](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list-nested.json)を参照できます。
 
 ```sql
 SET input_format_import_nested_json = 1
@@ -439,7 +439,7 @@ ENGINE = MergeTree
 ORDER BY path
 ```
 
-3 つのカラムを持つ [元の JSON データ](/ja/assets/list.json) は、このテーブルにそのまま挿入できます:
+3 つのカラムを持つ [元の JSON データ](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json) は、このテーブルにそのまま挿入できます:
 
 ```sql
 INSERT INTO shorttable FROM INFILE 'list.json' FORMAT JSONEachRow;
@@ -454,7 +454,7 @@ SELECT * FROM shorttable
 └───────────────────────────┴──────┘
 ```
 
-ClickHouse はインポート時に不明なカラムを無視します。この動作は、設定オプション [input&#95;format&#95;skip&#95;unknown&#95;fields](/ja/reference/settings/formats#input_format_skip_unknown_fields) で無効にできます。
+ClickHouse はインポート時に不明なカラムを無視します。この動作は、設定オプション [input&#95;format&#95;skip&#95;unknown&#95;fields](/ja/reference/settings/formats/input-format#input_format_skip_unknown_fields) で無効にできます。
 
 ```sql
 SET input_format_skip_unknown_fields = 0;
@@ -475,7 +475,7 @@ ClickHouse は、JSON とテーブルのカラム構造が一致しない場合�
 
 ClickHouse では、[BSON](https://bsonspec.org/) でエンコードされたファイルへのデータのエクスポートと、そこからのデータのインポートが可能です。このフォーマットは、一部の DBMS、たとえば [MongoDB](https://github.com/mongodb/mongo) データベースで使用されています。
 
-BSON データをインポートするには、[BSONEachRow](/ja/reference/formats/BSONEachRow) フォーマットを使用します。[この BSON ファイル](/ja/assets/data.bson) からデータをインポートしてみましょう。
+BSON データをインポートするには、[BSONEachRow](/ja/reference/formats/BSONEachRow) フォーマットを使用します。[この BSON ファイル](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/data.bson) からデータをインポートしてみましょう。
 
 ```sql
 SELECT * FROM file('data.bson', BSONEachRow)

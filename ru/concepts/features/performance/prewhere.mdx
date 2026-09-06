@@ -19,7 +19,7 @@ import { Image } from "/snippets/ru/components/Image.jsx";
 
 Для начала рассмотрим, как обрабатывается запрос к таблице [uk&#95;price&#95;paid&#95;simple](/ru/concepts/core-concepts/parts) без использования PREWHERE:
 
-<Image img="/images/guides/best-practices/prewhere_01.gif" size="md" alt="Обработка запроса без оптимизации PREWHERE" />
+<Image img="/images/guides/best-practices/prewhere_01.webp" size="md" alt="Обработка запроса без оптимизации PREWHERE" />
 
 <br />
 
@@ -45,7 +45,7 @@ import { Image } from "/snippets/ru/components/Image.jsx";
 
 Первые три шага обработки такие же, как и раньше:
 
-<Image img="/images/guides/best-practices/prewhere_02.gif" size="md" alt="Обработка запроса с оптимизацией PREWHERE" />
+<Image img="/images/guides/best-practices/prewhere_02.webp" size="md" alt="Обработка запроса с оптимизацией PREWHERE" />
 
 <br />
 
@@ -66,7 +66,7 @@ ClickHouse начинает обработку PREWHERE с ① чтения вы
 
 В нашем примере все выбранные гранулы подходят, поэтому ② для обработки выбираются соответствующие им позиционно выровненные гранулы следующего столбца фильтра — `date`:
 
-<Image img="/images/guides/best-practices/prewhere_03.gif" size="md" alt="Шаг 1: Фильтрация по town" />
+<Image img="/images/guides/best-practices/prewhere_03.webp" size="md" alt="Шаг 1: Фильтрация по town" />
 
 <br />
 
@@ -77,7 +77,7 @@ ClickHouse начинает обработку PREWHERE с ① чтения вы
 
 В этом случае две из трёх гранул содержат подходящие строки, поэтому ② для дальнейшей обработки выбираются только их позиционно выровненные гранулы из следующего столбца фильтра — `price`:
 
-<Image img="/images/guides/best-practices/prewhere_04.gif" size="md" alt="Шаг 2: Фильтрация по date" />
+<Image img="/images/guides/best-practices/prewhere_04.webp" size="md" alt="Шаг 2: Фильтрация по date" />
 
 <br />
 
@@ -88,7 +88,7 @@ ClickHouse начинает обработку PREWHERE с ① чтения вы
 
 Только одна из двух гранул содержит подходящие строки, поэтому ② для дальнейшей обработки нужно загрузить только её позиционно выровненную гранулу из столбца `SELECT` — `street`:
 
-<Image img="/images/guides/best-practices/prewhere_05.gif" size="md" alt="Шаг 2: Фильтрация по price" />
+<Image img="/images/guides/best-practices/prewhere_05.webp" size="md" alt="Шаг 2: Фильтрация по price" />
 
 <br />
 
@@ -106,7 +106,7 @@ ClickHouse начинает обработку PREWHERE с ① чтения вы
   ## Оптимизация PREWHERE применяется автоматически
 </div>
 
-Предложение PREWHERE можно добавить вручную, как показано в примере выше. Однако писать PREWHERE вручную не требуется. Когда включена настройка [`optimize_move_to_prewhere`](/ru/reference/settings/session-settings#optimize_move_to_prewhere) (по умолчанию `true`), ClickHouse автоматически переносит условия фильтрации из WHERE в PREWHERE, отдавая приоритет тем, которые сильнее всего сокращают объем чтения.
+Предложение PREWHERE можно добавить вручную, как показано в примере выше. Однако писать PREWHERE вручную не требуется. Когда включена настройка [`optimize_move_to_prewhere`](/ru/reference/settings/session-settings/optimize-move-to-prewhere#optimize_move_to_prewhere) (по умолчанию `true`), ClickHouse автоматически переносит условия фильтрации из WHERE в PREWHERE, отдавая приоритет тем, которые сильнее всего сокращают объем чтения.
 
 Идея состоит в том, что столбцы меньшего размера сканируются быстрее, и к моменту обработки более крупных столбцов большинство гранул уже отфильтровано. Поскольку во всех столбцах одинаковое количество строк, размер столбца в первую очередь определяется его типом данных: например, столбец `UInt8` обычно значительно меньше, чем столбец `String`.
 

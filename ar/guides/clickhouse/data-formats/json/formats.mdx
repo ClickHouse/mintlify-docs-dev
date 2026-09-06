@@ -11,7 +11,7 @@ doc_type: 'guide'
 
 ```sql
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONEachRow)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONEachRow)
 LIMIT 5
 ```
 
@@ -35,7 +35,7 @@ LIMIT 5
   ## قراءة JSON ككائن
 </div>
 
-تُظهر أمثلتنا السابقة كيف يقرأ `JSONEachRow` تنسيق newline-delimited JSON، بحيث يُقرأ كل سطر ككائن منفصل يُربَط بصف في جدول، ويُربَط كل مفتاح بعمود. وهذا مثالي في الحالات التي تكون فيها بنية JSON معروفة ويكون لكل عمود نوع واحد فقط.
+تُظهر أمثلتنا السابقة كيف يقرأ `JSONEachRow` تنسيق JSON مفصول بأسطر جديدة، بحيث يُقرأ كل سطر ككائن منفصل يُربَط بصف في جدول، ويُربَط كل مفتاح بعمود. وهذا مثالي في الحالات التي تكون فيها بنية JSON معروفة ويكون لكل عمود نوع واحد فقط.
 
 في المقابل، يتعامل `JSONAsObject` مع كل سطر على أنه كائن `JSON` واحد ويخزّنه في عمود واحد من النوع [`JSON`](/ar/reference/data-types/newjson)، مما يجعله أنسب لحمولات JSON المتداخلة وللحالات التي تكون فيها المفاتيح ديناميكية وقد تحتمل أكثر من نوع واحد.
 
@@ -45,7 +45,7 @@ LIMIT 5
 
 ```sql
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONAsObject)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONAsObject)
 LIMIT 5
 ```
 
@@ -72,7 +72,7 @@ ENGINE = MergeTree
 ORDER BY tuple();
 
 INSERT INTO pypi SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONAsObject)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONAsObject)
 LIMIT 5;
 
 SELECT *
@@ -93,7 +93,7 @@ LIMIT 2;
 
 ```sql
 SELECT count()
-FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', 'JSONEachRow')
+FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', NOSIGN, 'JSONEachRow')
 ```
 
 ```response
@@ -110,7 +110,7 @@ You can specify the structure manually: (in file/uri bluesky/file_0001.json.gz).
 
 ```sql
 SELECT count()
-FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', 'JSONAsObject')
+FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', NOSIGN, 'JSONAsObject')
 ```
 
 ```response
@@ -125,7 +125,7 @@ FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.j
   ## مصفوفة من كائنات JSON
 </div>
 
-من أكثر أشكال بيانات JSON شيوعًا أن تكون هناك قائمة من كائنات JSON ضمن مصفوفة JSON، كما في [هذا المثال](/ar/assets/list.json):
+من أكثر أشكال بيانات JSON شيوعًا أن تكون هناك قائمة من كائنات JSON ضمن مصفوفة JSON، كما في [هذا المثال](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json):
 
 ```bash
 > cat list.json
@@ -157,7 +157,7 @@ ENGINE = MergeTree
 ORDER BY tuple(month, path)
 ```
 
-لاستيراد قائمة من كائنات JSON، يمكن استخدام تنسيق [`JSONEachRow`](/ar/reference/formats/JSON/JSONEachRow) (لإدراج البيانات من ملف [list.json](/ar/assets/list.json)):
+لاستيراد قائمة من كائنات JSON، يمكن استخدام تنسيق [`JSONEachRow`](/ar/reference/formats/JSON/JSONEachRow) (لإدراج البيانات من ملف [list.json](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json)):
 
 ```sql
 INSERT INTO sometable
@@ -184,7 +184,7 @@ FROM sometable
   ## مفاتيح كائنات JSON
 </div>
 
-في بعض الحالات، يمكن ترميز قائمة من كائنات JSON كخصائص للكائن بدلًا من عناصر في المصفوفة (راجع [objects.json](/ar/assets/objects.json) للاطلاع على مثال):
+في بعض الحالات، يمكن ترميز قائمة من كائنات JSON كخصائص للكائن بدلًا من عناصر في المصفوفة (راجع [objects.json](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/objects.json) للاطلاع على مثال):
 
 ```bash
 cat objects.json
@@ -225,7 +225,7 @@ SELECT * FROM sometable;
   ### تحديد قيم مفاتيح الكائن الأب
 </div>
 
-لنفترض أننا نريد أيضًا حفظ القيم الموجودة في مفاتيح الكائن الأب داخل الجدول. في هذه الحالة، يمكننا استخدام [الخيار التالي](/ar/reference/settings/formats#format_json_object_each_row_column_for_object_name) لتحديد اسم العمود الذي نريد حفظ قيم المفاتيح فيه:
+لنفترض أننا نريد أيضًا حفظ القيم الموجودة في مفاتيح الكائن الأب داخل الجدول. في هذه الحالة، يمكننا استخدام [الخيار التالي](/ar/reference/settings/formats/format#format_json_object_each_row_column_for_object_name) لتحديد اسم العمود الذي نريد حفظ قيم المفاتيح فيه:
 
 ```sql
 SET format_json_object_each_row_column_for_object_name = 'id'
@@ -251,7 +251,7 @@ SELECT * FROM file('objects.json', JSONObjectEachRow)
   ## مصفوفات JSON
 </div>
 
-أحيانًا، لتوفير المساحة، تُرمَّز ملفات JSON على هيئة مصفوفات بدلًا من كائنات. في هذه الحالة، نتعامل مع [قائمة من مصفوفات JSON](/ar/assets/arrays.jsonl):
+أحيانًا، لتوفير المساحة، تُرمَّز ملفات JSON على هيئة مصفوفات بدلًا من كائنات. في هذه الحالة، نتعامل مع [قائمة من مصفوفات JSON](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/arrays.jsonl):
 
 ```bash
 cat arrays.json
@@ -281,7 +281,7 @@ SELECT * FROM sometable
   ### استيراد أعمدة منفردة من مصفوفات JSON
 </div>
 
-في بعض الحالات، يمكن ترميز البيانات على مستوى الأعمدة بدلًا من الصفوف. في هذه الحالة، يحتوي كائن JSON رئيسي على أعمدة تتضمن قيمًا. ألقِ نظرة على [الملف التالي](/ar/assets/columns.json):
+في بعض الحالات، يمكن ترميز البيانات على مستوى الأعمدة بدلًا من الصفوف. في هذه الحالة، يحتوي كائن JSON رئيسي على أعمدة تتضمن قيمًا. ألقِ نظرة على [الملف التالي](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/columns.json):
 
 ```bash
 cat columns.json
@@ -309,7 +309,7 @@ SELECT * FROM file('columns.json', JSONColumns)
 └────────────────────────────┴────────────┴──────┘
 ```
 
-كما يُدعَم أيضًا تنسيق أكثر إحكامًا عند التعامل مع [مصفوفة من الأعمدة](/ar/assets/columns-array.json) بدلًا من كائن، باستخدام تنسيق [`JSONCompactColumns`](/ar/reference/formats/JSON/JSONCompactColumns):
+كما يُدعَم أيضًا تنسيق أكثر إحكامًا عند التعامل مع [مصفوفة من الأعمدة](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/columns-array.json) بدلًا من كائن، باستخدام تنسيق [`JSONCompactColumns`](/ar/reference/formats/JSON/JSONCompactColumns):
 
 ```sql
 SELECT * FROM file('columns-array.json', JSONCompactColumns)
@@ -327,7 +327,7 @@ SELECT * FROM file('columns-array.json', JSONCompactColumns)
   ## حفظ كائنات JSON بدلًا من تحليلها
 </div>
 
-قد تكون هناك حالات ترغب فيها في حفظ كائنات JSON في عمود `String` واحد (أو `JSON`) بدلًا من تحليلها. وقد يكون ذلك مفيدًا عند التعامل مع قائمة من كائنات JSON ذات بُنى مختلفة. لنأخذ [هذا الملف](/ar/assets/custom.json) على سبيل المثال، حيث لدينا عدة كائنات JSON مختلفة داخل قائمة رئيسية:
+قد تكون هناك حالات ترغب فيها في حفظ كائنات JSON في عمود `String` واحد (أو `JSON`) بدلًا من تحليلها. وقد يكون ذلك مفيدًا عند التعامل مع قائمة من كائنات JSON ذات بُنى مختلفة. لنأخذ [هذا الملف](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/custom.json) على سبيل المثال، حيث لدينا عدة كائنات JSON مختلفة داخل قائمة رئيسية:
 
 ```bash
 cat custom.json
@@ -383,7 +383,7 @@ FROM events
   ## مخطط الكائنات المتداخلة
 </div>
 
-في الحالات التي نتعامل فيها مع [كائنات JSON المتداخلة](/ar/assets/list-nested.json)، يمكننا أيضًا تحديد مخطط صريح واستخدام الأنواع المعقدة ([`Array`](/ar/reference/data-types/array)، [`JSON`](/ar/guides/clickhouse/data-formats/json/intro) أو [`Tuple`](/ar/reference/data-types/tuple)) لتحميل البيانات:
+في الحالات التي نتعامل فيها مع [كائنات JSON المتداخلة](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list-nested.json)، يمكننا أيضًا تحديد مخطط صريح واستخدام الأنواع المعقدة ([`Array`](/ar/reference/data-types/array)، [`JSON`](/ar/guides/clickhouse/data-formats/json/intro) أو [`Tuple`](/ar/reference/data-types/tuple)) لتحميل البيانات:
 
 ```sql
 SELECT *
@@ -401,7 +401,7 @@ LIMIT 1
   ## الوصول إلى كائنات JSON المتداخلة
 </div>
 
-يمكن الإشارة إلى [مفاتيح JSON المتداخلة](/ar/assets/list-nested.json) عبر تفعيل [خيار الإعدادات التالي](/ar/reference/settings/formats#input_format_import_nested_json):
+يمكن الإشارة إلى [مفاتيح JSON المتداخلة](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list-nested.json) عبر تفعيل [خيار الإعدادات التالي](/ar/reference/settings/formats/input-format#input_format_import_nested_json):
 
 ```sql
 SET input_format_import_nested_json = 1
@@ -439,7 +439,7 @@ ENGINE = MergeTree
 ORDER BY path
 ```
 
-لا يزال بإمكاننا إدراج [بيانات JSON الأصلية](/ar/assets/list.json) ذات الأعمدة الثلاثة في هذا الجدول:
+لا يزال بإمكاننا إدراج [بيانات JSON الأصلية](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json) ذات الأعمدة الثلاثة في هذا الجدول:
 
 ```sql
 INSERT INTO shorttable FROM INFILE 'list.json' FORMAT JSONEachRow;
@@ -454,7 +454,7 @@ SELECT * FROM shorttable
 └───────────────────────────┴──────┘
 ```
 
-سيتجاهل ClickHouse الأعمدة غير المعروفة أثناء الاستيراد. يمكن إيقاف هذا السلوك باستخدام خيار الإعدادات ‏[input&#95;format&#95;skip&#95;unknown&#95;fields](/ar/reference/settings/formats#input_format_skip_unknown_fields):
+سيتجاهل ClickHouse الأعمدة غير المعروفة أثناء الاستيراد. يمكن إيقاف هذا السلوك باستخدام خيار الإعدادات ‏[input&#95;format&#95;skip&#95;unknown&#95;fields](/ar/reference/settings/formats/input-format#input_format_skip_unknown_fields):
 
 ```sql
 SET input_format_skip_unknown_fields = 0;
@@ -475,7 +475,7 @@ Code: 117. DB::Exception: Unknown field found while parsing JSONEachRow format: 
 
 يتيح ClickHouse تصدير البيانات إلى ملفات مُشفَّرة بتنسيق [BSON](https://bsonspec.org/) واستيرادها منها. يُستخدم هذا التنسيق في بعض نظم إدارة قواعد البيانات، مثل [MongoDB](https://github.com/mongodb/mongo).
 
-لاستيراد بيانات BSON، نستخدم تنسيق [BSONEachRow](/ar/reference/formats/BSONEachRow). لنستورد البيانات من [ملف BSON هذا](/ar/assets/data.bson):
+لاستيراد بيانات BSON، نستخدم تنسيق [BSONEachRow](/ar/reference/formats/BSONEachRow). لنستورد البيانات من [ملف BSON هذا](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/data.bson):
 
 ```sql
 SELECT * FROM file('data.bson', BSONEachRow)

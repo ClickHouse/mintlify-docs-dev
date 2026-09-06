@@ -11,7 +11,7 @@ Les exemples précédents de chargement de données JSON supposent l’utilisati
 
 ```sql
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONEachRow)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONEachRow)
 LIMIT 5
 ```
 
@@ -45,7 +45,7 @@ Comparez l’exemple ci-dessus avec la requête suivante, qui lit les mêmes don
 
 ```sql
 SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONAsObject)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONAsObject)
 LIMIT 5
 ```
 
@@ -72,7 +72,7 @@ ENGINE = MergeTree
 ORDER BY tuple();
 
 INSERT INTO pypi SELECT *
-FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', JSONAsObject)
+FROM s3('https://datasets-documentation.s3.eu-west-3.amazonaws.com/pypi/json/*.json.gz', NOSIGN, JSONAsObject)
 LIMIT 5;
 
 SELECT *
@@ -93,7 +93,7 @@ Le format `JSONAsObject` peut également être utile pour lire du JSON délimit�
 
 ```sql
 SELECT count()
-FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', 'JSONEachRow')
+FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', NOSIGN, 'JSONEachRow')
 ```
 
 ```response
@@ -110,7 +110,7 @@ You can specify the structure manually: (in file/uri bluesky/file_0001.json.gz).
 
 ```sql
 SELECT count()
-FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', 'JSONAsObject')
+FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.json.gz', NOSIGN, 'JSONAsObject')
 ```
 
 ```response
@@ -125,7 +125,7 @@ FROM s3('https://clickhouse-public-datasets.s3.amazonaws.com/bluesky/file_0001.j
   ## Tableau d’objets JSON
 </div>
 
-L’une des formes les plus courantes de données JSON est une liste d’objets JSON dans un tableau JSON, comme dans [cet exemple](/fr/assets/list.json) :
+L’une des formes les plus courantes de données JSON est une liste d’objets JSON dans un tableau JSON, comme dans [cet exemple](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json) :
 
 ```bash
 > cat list.json
@@ -157,7 +157,7 @@ ENGINE = MergeTree
 ORDER BY tuple(month, path)
 ```
 
-Pour importer une liste d’objets JSON, nous pouvons utiliser le format [`JSONEachRow`](/fr/reference/formats/JSON/JSONEachRow) (en insérant les données à partir du fichier [list.json](/fr/assets/list.json)) :
+Pour importer une liste d’objets JSON, nous pouvons utiliser le format [`JSONEachRow`](/fr/reference/formats/JSON/JSONEachRow) (en insérant les données à partir du fichier [list.json](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json)) :
 
 ```sql
 INSERT INTO sometable
@@ -184,7 +184,7 @@ FROM sometable
   ## Clés des objets JSON
 </div>
 
-Dans certains cas, la liste d’objets JSON peut être encodée sous forme de propriétés d’objet plutôt que comme éléments de tableau (voir par exemple [objects.json](/fr/assets/objects.json)) :
+Dans certains cas, la liste d’objets JSON peut être encodée sous forme de propriétés d’objet plutôt que comme éléments de tableau (voir par exemple [objects.json](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/objects.json)) :
 
 ```bash
 cat objects.json
@@ -225,7 +225,7 @@ SELECT * FROM sometable;
   ### Spécifier les valeurs de clé de l’objet parent
 </div>
 
-Supposons que nous voulions également enregistrer dans la table les valeurs associées aux clés de l’objet parent. Dans ce cas, nous pouvons utiliser [l’option suivante](/fr/reference/settings/formats#format_json_object_each_row_column_for_object_name) pour définir le nom de la colonne dans laquelle ces valeurs de clé doivent être enregistrées :
+Supposons que nous voulions également enregistrer dans la table les valeurs associées aux clés de l’objet parent. Dans ce cas, nous pouvons utiliser [l’option suivante](/fr/reference/settings/formats/format#format_json_object_each_row_column_for_object_name) pour définir le nom de la colonne dans laquelle ces valeurs de clé doivent être enregistrées :
 
 ```sql
 SET format_json_object_each_row_column_for_object_name = 'id'
@@ -251,7 +251,7 @@ Notez que la colonne `id` a bien été renseignée avec les valeurs de clé.
   ## Tableaux JSON
 </div>
 
-Parfois, pour gagner de l&#39;espace, les fichiers JSON sont encodés sous forme de tableaux plutôt que d&#39;objets. Dans ce cas, il s&#39;agit d&#39;une [liste de tableaux JSON](/fr/assets/arrays.jsonl) :
+Parfois, pour gagner de l’espace, les fichiers JSON sont encodés sous forme de tableaux plutôt que d’objets. Dans ce cas, il s’agit d’une [liste de tableaux JSON](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/arrays.jsonl) :
 
 ```bash
 cat arrays.json
@@ -281,7 +281,7 @@ SELECT * FROM sometable
   ### Importation de colonnes individuelles à partir de tableaux JSON
 </div>
 
-Dans certains cas, les données peuvent être encodées en colonnes plutôt qu’en lignes. Dans ce cas, un objet JSON parent contient des colonnes avec leurs valeurs. Consultez le [fichier suivant](/fr/assets/columns.json) :
+Dans certains cas, les données peuvent être encodées en colonnes plutôt qu’en lignes. Dans ce cas, un objet JSON parent contient des colonnes avec leurs valeurs. Consultez le [fichier suivant](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/columns.json) :
 
 ```bash
 cat columns.json
@@ -309,7 +309,7 @@ SELECT * FROM file('columns.json', JSONColumns)
 └────────────────────────────┴────────────┴──────┘
 ```
 
-Un format plus compact est également pris en charge lorsqu&#39;on manipule un [tableau de colonnes](/fr/assets/columns-array.json) plutôt qu&#39;un objet, avec le format [`JSONCompactColumns`](/fr/reference/formats/JSON/JSONCompactColumns) :
+Un format plus compact est également pris en charge lorsqu&#39;on manipule un [tableau de colonnes](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/columns-array.json) plutôt qu&#39;un objet, avec le format [`JSONCompactColumns`](/fr/reference/formats/JSON/JSONCompactColumns) :
 
 ```sql
 SELECT * FROM file('columns-array.json', JSONCompactColumns)
@@ -327,7 +327,7 @@ SELECT * FROM file('columns-array.json', JSONCompactColumns)
   ## Stocker des objets JSON au lieu de les analyser
 </div>
 
-Dans certains cas, vous souhaiterez peut-être stocker des objets JSON dans une seule colonne `String` (ou `JSON`) plutôt que de les analyser. Cela peut être utile lorsque vous traitez une liste d’objets JSON aux structures différentes. Prenons [ce fichier](/fr/assets/custom.json) comme exemple, où plusieurs objets JSON différents sont contenus dans une liste racine :
+Dans certains cas, vous souhaiterez peut-être stocker des objets JSON dans une seule colonne `String` (ou `JSON`) plutôt que de les analyser. Cela peut être utile lorsque vous traitez une liste d’objets JSON aux structures différentes. Prenons [ce fichier](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/custom.json) comme exemple, où plusieurs objets JSON différents sont contenus dans une liste racine :
 
 ```bash
 cat custom.json
@@ -383,7 +383,7 @@ Notez que `JSONAsString` fonctionne parfaitement avec des fichiers au format JSO
   ## Schéma pour les objets imbriqués
 </div>
 
-Lorsque nous traitons des [objets JSON imbriqués](/fr/assets/list-nested.json), nous pouvons également définir un schéma explicite et utiliser des types complexes ([`Array`](/fr/reference/data-types/array), [`JSON`](/fr/guides/clickhouse/data-formats/json/intro) ou [`Tuple`](/fr/reference/data-types/tuple)) pour charger les données :
+Lorsque nous traitons des [objets JSON imbriqués](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list-nested.json), nous pouvons également définir un schéma explicite et utiliser des types complexes ([`Array`](/fr/reference/data-types/array), [`JSON`](/fr/guides/clickhouse/data-formats/json/intro) ou [`Tuple`](/fr/reference/data-types/tuple)) pour charger les données :
 
 ```sql
 SELECT *
@@ -401,13 +401,13 @@ LIMIT 1
   ## Accéder aux objets JSON imbriqués
 </div>
 
-Nous pouvons faire référence aux [clés JSON imbriquées](/fr/assets/list-nested.json) en activant [l’option de réglage suivante](/fr/reference/settings/formats#input_format_import_nested_json) :
+Nous pouvons faire référence aux [clés JSON imbriquées](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list-nested.json) en activant [l’option de réglage suivante](/fr/reference/settings/formats/input-format#input_format_import_nested_json) :
 
 ```sql
 SET input_format_import_nested_json = 1
 ```
 
-Cela nous permet de référencer les clés d’objets JSON imbriqués à l’aide de la notation par points (n’oubliez pas de les entourer d’accents graves pour que cela fonctionne) :
+Cela nous permet de référencer les clés d’objets JSON imbriqués à l’aide de la notation pointée (n’oubliez pas de les entourer d’accents graves pour que cela fonctionne) :
 
 ```sql
 SELECT *
@@ -439,7 +439,7 @@ ENGINE = MergeTree
 ORDER BY path
 ```
 
-Il est toujours possible d’insérer les [données JSON d’origine](/fr/assets/list.json) avec 3 colonnes dans cette table :
+Il est toujours possible d’insérer les [données JSON d’origine](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/list.json) avec 3 colonnes dans cette table :
 
 ```sql
 INSERT INTO shorttable FROM INFILE 'list.json' FORMAT JSONEachRow;
@@ -454,7 +454,7 @@ SELECT * FROM shorttable
 └───────────────────────────┴──────┘
 ```
 
-ClickHouse ignorera les colonnes inconnues lors de l’importation. Ce comportement peut être désactivé à l’aide de l’option de paramètre [input&#95;format&#95;skip&#95;unknown&#95;fields](/fr/reference/settings/formats#input_format_skip_unknown_fields) :
+ClickHouse ignorera les colonnes inconnues lors de l’importation. Ce comportement peut être désactivé à l’aide de l’option de paramètre [input&#95;format&#95;skip&#95;unknown&#95;fields](/fr/reference/settings/formats/input-format#input_format_skip_unknown_fields) :
 
 ```sql
 SET input_format_skip_unknown_fields = 0;
@@ -475,7 +475,7 @@ ClickHouse lèvera des exceptions si le JSON et la structure des colonnes de la 
 
 ClickHouse permet d’exporter des données vers des fichiers encodés en [BSON](https://bsonspec.org/) et d’importer des données à partir de ceux-ci. Ce format est utilisé par certains SGBD, par exemple la base de données [MongoDB](https://github.com/mongodb/mongo).
 
-Pour importer des données BSON, nous utilisons le format [BSONEachRow](/fr/reference/formats/BSONEachRow). Importons des données à partir de [ce fichier BSON](/fr/assets/data.bson) :
+Pour importer des données BSON, nous utilisons le format [BSONEachRow](/fr/reference/formats/BSONEachRow). Importons des données à partir de [ce fichier BSON](https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/data.bson) :
 
 ```sql
 SELECT * FROM file('data.bson', BSONEachRow)

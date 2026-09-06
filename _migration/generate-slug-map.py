@@ -31,12 +31,7 @@ from pathlib import Path
 
 THIS_REPO = Path(__file__).resolve().parent.parent
 DEFAULT_DOCUSAURUS = Path.home() / "Desktop" / "clickhouse-docs"
-# Localised content is handled by the translation bot and must never be
-# migrated — walking it into the slug map makes every English slug "ambiguous"
-# because each language tree carries a duplicate copy. Keep this list in sync
-# with the top-level (and snippets/) language directories in the repo.
-LANG_DIRS = {"ar", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh"}
-SKIP_DIRS = {"node_modules", ".git", "i18n", ".claude", "scripts", "snippets", *LANG_DIRS}
+SKIP_DIRS = {"node_modules", ".git", "build", "i18n", ".claude", "scripts", "snippets"}
 EXTS = (".md", ".mdx")
 SLUG_RE = re.compile(r"^slug:\s*['\"]?(\S+?)['\"]?\s*$", re.MULTILINE)
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---", re.DOTALL)
@@ -111,6 +106,8 @@ def file_to_url_path(rel_path: Path) -> str:
     stem_path = str(rel_path.with_suffix("")).replace("\\", "/")
     if stem_path == "index":
         return "/"
+    if stem_path.endswith("/index"):
+        stem_path = stem_path[: -len("/index")]
     return "/" + stem_path
 
 
