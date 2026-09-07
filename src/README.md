@@ -48,6 +48,12 @@ Production source topology lives only in `remotes.json`; production fetches each
 registered repository from `main`. Remote CI supplies the registered name,
 repository, and exceptional immutable SHA only when requesting a preview.
 
+Remote repositories create previews through
+`.github/workflows/remote-docs-preview.yml`. The caller invokes the reusable
+workflow manually with a pull request number. It mints a repository-scoped
+GitHub App token and passes the resolved immutable head SHA to a Vercel build;
+the caller never checks out or compiles the remote pull request.
+
 The website Worker routes `/docs/<locale>/*` and
 `/docs/_astro-<locale>/*` to `clickhouse-docs-<locale>`. The English Worker
 handles the remaining `/docs/*` paths, including shared images and Nimbus assets.
