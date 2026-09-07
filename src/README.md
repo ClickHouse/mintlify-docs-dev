@@ -11,6 +11,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 |---|---|
 | `pnpm install` | Node 24, pnpm 10. |
 | `pnpm build` | Fetches registered sources, builds one locale, then prunes `.mdx` twins, rebases URLs, generates `__redirects`, nests under `dist/docs`, and enforces the Worker asset limits. |
+| `pnpm run build:vercel` | Uses the calling repository's short-lived GitHub App token to fetch private sources, removes it, then builds the Vercel output. |
 | `pnpm dev` | Astro dev server (`/docs/...`). |
 | `pnpm check:mdx` | Compiles every MDX file with Sätteri and reports undefined components; seconds, no build. |
 | `pnpm measure` | Page weight, anchor parity, base-path check, URL parity vs the live Mintlify sitemap (needs a nested build in `$DOCS_OUT_DIR`). |
@@ -28,6 +29,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 | `DOCS_REMOTE_NAME`, `DOCS_REMOTE_REPOSITORY`, `DOCS_REMOTE_REF` | CI-only tuple selecting one registered remote at an immutable commit for an English pull-request preview. |
 | `DOCS_REMOTES_PREFETCHED=1` | Requires the remote mounts and fetch-state files supplied by the credentialed CI fetch job. |
 | `DOCS_PREVIEW_ALIAS` | Lowercase Cloudflare alias used by `pnpm run deploy:preview`. |
+| `DOCS_REMOTE_TOKEN` | Short-lived GitHub App installation token supplied only to one Vercel deployment by the approved calling-repository workflow. It is not passed to Astro. |
 | `DOCS_OUT_DIR`, `DOCS_CACHE_DIR` | Isolated output and cache directories (parallel builds never share `dist/`). |
 | `NODE_OPTIONS=--max-old-space-size=8192` | Recommended for full builds (peak RSS ~3 GB). |
 
