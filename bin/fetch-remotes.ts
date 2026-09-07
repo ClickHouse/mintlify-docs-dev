@@ -30,6 +30,9 @@ function copyTree(src: string, dst: string) {
   for (const e of fs.readdirSync(src, { withFileTypes: true })) {
     if (e.name === ".git" || e.name === "node_modules" || e.name === ".idea") continue;
     const s = path.join(src, e.name), d = path.join(dst, e.name);
+    if (e.isSymbolicLink()) {
+      throw new Error(`fetch-remotes: symbolic links are not allowed in remote content: ${s}`);
+    }
     if (e.isDirectory()) { fs.mkdirSync(d, { recursive: true }); n += copyTree(s, d); }
     else if (/\.(mdx?|json|png|jpe?g|gif|svg|webp)$/i.test(e.name)) { fs.copyFileSync(s, d); n++; }
   }
@@ -168,7 +171,7 @@ for (const r of manifest.remotes) {
 
     if (!source) {
       throw new Error(
-        `fetch-remotes: private remote ${r.name} (${r.repo}@${ref}) requires GH_TOKEN/GITHUB_TOKEN or an explicit false entry in the preview scope`,
+        `fetch-remotes: private remote ${r.name} (${r.repo}@${ref}) requires GH_TOKEN/GITHUB_TOKEN; Vercel must use pnpm run build:vercel with DOCS_REMOTE_TOKEN supplied by the calling workflow`,
       );
     }
     if (!fs.existsSync(source)) throw new Error(`fetch-remotes: source path does not exist for ${r.name}: ${source}`);
