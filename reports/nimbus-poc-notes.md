@@ -238,15 +238,15 @@ before the `clickhouse-docs` Worker exists. Coordinated with the session working
 
 ## P4 status (search, 2026-09-03)
 
-- `src/scripts/inkeep.ts` replaces the dormant Pagefind dialog with the hosted Inkeep
-  search-only modal. It binds Inkeep directly to the Nimbus `[data-search-trigger]`
-  controls (including its `Cmd-K` / `Ctrl-K` behavior), so no Mintlify element IDs or
-  global customisation files are required.
+- `src/components/InkeepSearch.tsx` replaces the dormant Pagefind dialog with Inkeep's
+  official `@inkeep/cxkit-react` search-only modal. The component is bundled with Nimbus,
+  persisted across Astro route changes, and delegates the `[data-search-trigger]` controls
+  plus `Cmd-K` / `Ctrl-K`, so no Mintlify element IDs, global customisation files, or
+  runtime CDN bootstrap are required.
 - The migration retains the existing public browser-key selection, canonicalises results from
   the old preview host to `https://clickhouse.com/docs/`, preserves the five top-level result
-  tabs and Docs sub-area filters, follows the site dark-mode class, and hides Inkeep chat so
-  Kapa remains the sole Ask AI surface. It intentionally marks search unavailable if the hosted
-  script cannot load rather than substituting an unrelated local index.
+  tabs and Docs sub-area filters, follows the site dark-mode class, and uses Inkeep's search-only
+  component so Kapa remains the sole Ask AI surface.
 - `src/scripts/kapa.ts` loads the existing Kapa Ask AI widget with its stable GA-derived visitor
   identifier, hidden launcher, public configuration, and iOS 16.4 compatibility guard.
   `AskAiButton.astro` adds a native header control which opens Kapa; an early click is held until
