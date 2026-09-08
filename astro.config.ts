@@ -10,6 +10,7 @@ import { SATTERI_FEATURES } from "./src/plugins/satteri-features";
 import { readScope } from "./src/lib/scope";
 import type { HastPluginDefinition } from "satteri";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
 // Sidebar generated from docs.json + navigation.json by bin/gen-sidebar.ts
 // (prebuild). Falls back to Nimbus's filesystem sidebar when absent.
@@ -30,6 +31,10 @@ const buildAssetsDirectory = buildScope.locale === "en"
   ? "_astro"
   : `_astro-${buildScope.locale.toLowerCase()}`;
 const nimbusTableScroll = tableScroll() as unknown as HastPluginDefinition;
+// `@tanem/svg-injector` (via Inkeep) imports `tslib`. Rolldown does not
+// consistently follow that package's nested pnpm link on Vercel, so resolve
+// the browser-safe ESM entry from the application's direct dependency.
+const tslibModule = fileURLToPath(import.meta.resolve("tslib"));
 
 const nimbusConfig = defineNimbusConfig({
   site: "https://clickhouse.com",
@@ -103,6 +108,9 @@ export default defineConfig({
       jsxDev: false,
     },
     plugins: [tailwindcss(), mintlifySnippets()],
-    resolve: { dedupe: ["react", "react-dom"] },
+    resolve: {
+      alias: { tslib: tslibModule },
+      dedupe: ["react", "react-dom"],
+    },
   },
 });
