@@ -191,8 +191,23 @@ export default function InkeepSearch() {
   // island is persisted. Delegate from `document` so every newly rendered
   // header, homepage, and sidebar trigger opens the same modal immediately.
   useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!event.isPrimary || event.button !== 0) return;
+      if (
+        !(event.target as Element | null)?.closest(
+          `${SEARCH_TRIGGER}[data-sidebar-tool]`,
+        )
+      )
+        return;
+      setIsOpen(true);
+    };
     const handleClick = (event: MouseEvent) => {
-      if (!(event.target as Element | null)?.closest(SEARCH_TRIGGER)) return;
+      const trigger = (event.target as Element | null)?.closest(SEARCH_TRIGGER);
+      if (!trigger) return;
+      // Pointer activation of the compact sidebar control is handled on
+      // pointerdown so the modal starts painting before pointerup. Keep click
+      // for keyboard activation, whose synthetic click has detail === 0.
+      if (trigger.hasAttribute("data-sidebar-tool") && event.detail > 0) return;
       event.preventDefault();
       setIsOpen(true);
     };
@@ -204,9 +219,11 @@ export default function InkeepSearch() {
       setIsOpen((open) => !open);
     };
 
+    document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("click", handleClick);
     document.addEventListener("keydown", handleKeydown);
     return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleKeydown);
     };

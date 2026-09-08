@@ -75,8 +75,25 @@ function openKapa(): void {
   window.Kapa.open({ mode: "ai" });
 }
 
+document.addEventListener("pointerdown", (event) => {
+  if (!event.isPrimary || event.button !== 0) return;
+  if (
+    !(event.target as Element | null)?.closest(
+      "[data-kapa-trigger][data-sidebar-tool]",
+    )
+  )
+    return;
+  openKapa();
+});
+
 document.addEventListener("click", (event) => {
-  if (!(event.target as Element | null)?.closest("[data-kapa-trigger]")) return;
+  const trigger = (event.target as Element | null)?.closest(
+    "[data-kapa-trigger]",
+  );
+  if (!trigger) return;
+  // Pointer activation of the sidebar control opens on pointerdown; retain
+  // click for keyboard activation and non-sidebar triggers.
+  if (trigger.hasAttribute("data-sidebar-tool") && event.detail > 0) return;
   event.preventDefault();
   openKapa();
 });
