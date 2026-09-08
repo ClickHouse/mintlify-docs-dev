@@ -7,6 +7,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { interpolateDocsVariables, readDocsVariables } from "../src/lib/docs-variables.ts";
 import { readScope } from "../src/lib/scope.ts";
 
 interface RemoteAsset { source: string; mount: string }
@@ -27,6 +28,36 @@ function relativeManifestPath(value: string, field: string): string {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function interpolateRemoteVariables(remote: Remote): { files: number; replacements: number } {
+  const directory = path.join(root, remote.mount);
+  const configFile = path.join(directory, "docs.json");
+  if (!fs.existsSync(configFile)) return { files: 0, replacements: 0 };
+
+  const config = JSON.parse(fs.readFileSync(configFile, "utf8")) as { variables?: unknown };
+  const variables = readDocsVariables(config.variables, `${remote.name}/docs.json`);
+  if (!variables) return { files: 0, replacements: 0 };
+
+  let files = 0;
+  let replacements = 0;
+  const visit = (current: string): void => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const file = path.join(current, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (/\.mdx?$/.test(entry.name)) {
+        const original = fs.readFileSync(file, "utf8");
+        const result = interpolateDocsVariables(original, variables, path.relative(root, file));
+        if (result.replacements) {
+          fs.writeFileSync(file, result.content);
+          files++;
+          replacements += result.replacements;
+        }
+      }
+    }
+  };
+  visit(directory);
+  return { files, replacements };
 }
 
 function rewriteRemoteAssetUrls(remote: Remote): number {
@@ -103,6 +134,13 @@ for (const remote of manifest.remotes) {
   if (state.skipped) {
     if (state.reason === "excluded-from-untrusted-vercel-preview") continue;
     throw new Error(`prepare-public: remote "${remote.name}" was omitted but its assets were requested`);
+  }
+
+  const interpolatedVariables = interpolateRemoteVariables(remote);
+  if (interpolatedVariables.replacements) {
+    console.log(
+      `prepare-public: interpolated ${interpolatedVariables.replacements} ${remote.name} variable references in ${interpolatedVariables.files} files`,
+    );
   }
 
   const rewrittenAssetReferences = rewriteRemoteAssetUrls(remote);
