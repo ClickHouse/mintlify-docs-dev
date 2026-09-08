@@ -11,7 +11,10 @@ declare global {
 
 const SCRIPT_ID = "kapa-widget-script";
 const SCRIPT_URL = "https://widget.kapa.ai/kapa-widget.bundle.js";
+const OPEN_RETRY_INTERVAL_MS = 50;
+const OPEN_RETRY_LIMIT = 60;
 let pendingOpen = false;
+let openRetryTimer: number | undefined;
 
 function cookie(name: string): string | undefined {
   const prefix = `${name}=`;
@@ -67,24 +70,47 @@ function boot(): void {
 }
 
 function openKapa(): void {
-  if (!window.Kapa) {
-    pendingOpen = true;
+  if (window.Kapa) {
+    if (openRetryTimer !== undefined) {
+      window.clearInterval(openRetryTimer);
+      openRetryTimer = undefined;
+    }
+    pendingOpen = false;
+    window.Kapa.open({ mode: "ai" });
     return;
   }
-  pendingOpen = false;
-  window.Kapa.open({ mode: "ai" });
+
+  pendingOpen = true;
+  boot();
+  if (openRetryTimer !== undefined) return;
+
+  let attempts = 0;
+  openRetryTimer = window.setInterval(() => {
+    attempts += 1;
+    if (window.Kapa) {
+      openKapa();
+    } else if (attempts >= OPEN_RETRY_LIMIT) {
+      window.clearInterval(openRetryTimer);
+      openRetryTimer = undefined;
+      pendingOpen = false;
+    }
+  }, OPEN_RETRY_INTERVAL_MS);
 }
 
-document.addEventListener("pointerdown", (event) => {
-  if (!event.isPrimary || event.button !== 0) return;
-  if (
-    !(event.target as Element | null)?.closest(
-      "[data-kapa-trigger][data-sidebar-tool]",
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    if (
+      !(event.target as Element | null)?.closest(
+        "[data-kapa-trigger][data-sidebar-tool]",
+      )
     )
-  )
-    return;
-  openKapa();
-});
+      return;
+    openKapa();
+  },
+  true,
+);
 
 document.addEventListener("click", (event) => {
   const trigger = (event.target as Element | null)?.closest(

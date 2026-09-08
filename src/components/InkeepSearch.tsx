@@ -225,7 +225,7 @@ export default function InkeepSearch() {
       setIsOpen(false);
     };
 
-    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("pointerdown", handlePointerDown, true);
     document.addEventListener("click", handleClick);
     document.addEventListener("keydown", handleKeydown);
     document.addEventListener(
@@ -233,7 +233,7 @@ export default function InkeepSearch() {
       handleBeforePreparation,
     );
     return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
       document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleKeydown);
       document.removeEventListener(
