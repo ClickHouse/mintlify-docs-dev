@@ -1,24 +1,113 @@
 // Fetches docs owned by other repositories into their mount directories so the
 // primary collection builds them at their current URLs. Sources, in order:
-//   1. a GitHub tarball authenticated by GH_TOKEN / GITHUB_TOKEN,
-//   2. a shallow GitHub SSH checkout for local development.
+//   1. a GitHub tarball authenticated by a Vercel Connect token,
+//   2. a GitHub tarball authenticated by GH_TOKEN / GITHUB_TOKEN outside Vercel,
+//   3. an anonymous GitHub tarball for public repositories,
+//   4. a shallow GitHub SSH checkout for local development.
 // Production always reads each repository's `main` branch. A pull-request
 // preview may replace exactly one source with an immutable commit SHA and omits
-// the other remote sources. Private remotes fail closed without credentials.
+// the other remote sources. Standard Vercel previews deliberately omit private
+// sources; only production and the `remote-preview` custom environment may use
+// Vercel Connect. Remote content is copied but never parsed or imported here.
 // Usage: node bin/fetch-remotes.ts
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { getToken } from "@vercel/connect";
 import { readScope } from "../src/lib/scope.ts";
 
-interface RemoteAsset { source: string; mount: string }
-interface Remote { name: string; repo: string; path: string; mount: string; assets?: RemoteAsset[]; private?: boolean }
+interface Remote { name: string; repo: string; path: string; mount: string; private?: boolean }
 const root = process.cwd();
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "remotes.json"), "utf8")) as { remotes: Remote[] };
 const scope = readScope(root);
 const stateDir = path.join(root, ".remote");
 const usePrefetchedRemotes = process.env.DOCS_REMOTES_PREFETCHED === "1";
+const vercelTarget = (process.env.VERCEL_TARGET_ENV ?? process.env.VERCEL_ENV ?? "").trim();
+if (process.env.VERCEL === "1" && !vercelTarget) {
+  throw new Error(
+    "fetch-remotes: VERCEL_TARGET_ENV/VERCEL_ENV is required; enable Vercel system environment variables",
+  );
+}
+const isUntrustedVercelPreview = process.env.VERCEL === "1"
+  && vercelTarget !== "production"
+  && vercelTarget !== "remote-preview";
 fs.mkdirSync(stateDir, { recursive: true });
+
+type Authentication = "anonymous" | "environment-token" | "vercel-connect";
+
+async function githubAuthentication(remote: Remote, repository: string): Promise<{
+  authentication: Authentication;
+  token?: string;
+}> {
+  const environmentToken = (process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? "").trim();
+  if (environmentToken) {
+    if (process.env.VERCEL === "1") {
+      throw new Error(
+        "fetch-remotes: GH_TOKEN/GITHUB_TOKEN must not be passed to Vercel; configure Vercel Connect instead",
+      );
+    }
+    return { authentication: "environment-token", token: environmentToken };
+  }
+
+  const connector = (process.env.DOCS_GITHUB_CONNECTOR ?? "").trim();
+  const oidcToken = (process.env.VERCEL_OIDC_TOKEN ?? "").trim();
+  if (connector && remote.private) {
+    if (!oidcToken) {
+      throw new Error(
+        "fetch-remotes: VERCEL_OIDC_TOKEN is required when DOCS_GITHUB_CONNECTOR is configured",
+      );
+    }
+    if (isUntrustedVercelPreview) {
+      throw new Error(
+        `fetch-remotes: Vercel Connect is not allowed in the ${vercelTarget || "unknown"} environment`,
+      );
+    }
+    const token = await getToken(connector, {
+      subject: { type: "app" },
+      authorizationDetails: [
+        {
+          type: "github_app_installation",
+          repositories: [repository],
+          permissions: ["contents:read"],
+        },
+      ],
+    });
+    return { authentication: "vercel-connect", token };
+  }
+
+  return { authentication: "anonymous" };
+}
+
+async function downloadGitHubArchive(
+  remote: Remote,
+  repository: string,
+  ref: string,
+  destination: string,
+): Promise<Authentication> {
+  let { authentication, token } = await githubAuthentication(remote, repository);
+  try {
+    if (remote.private && !token) {
+      throw new Error(
+        `fetch-remotes: private remote ${remote.name} requires Vercel Connect or an explicit GitHub token`,
+      );
+    }
+    const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(
+      `https://api.github.com/repos/${repository}/tarball/${encodeURIComponent(ref)}`,
+      { headers, redirect: "follow" },
+    );
+    if (!response.ok) {
+      throw new Error(
+        `fetch-remotes: GitHub archive request failed for ${repository}@${ref}: ${response.status} ${response.statusText}`,
+      );
+    }
+    fs.writeFileSync(destination, Buffer.from(await response.arrayBuffer()));
+    return authentication;
+  } finally {
+    token = undefined;
+  }
+}
 
 function cleanMount(mount: string) {
   fs.rmSync(mount, { recursive: true, force: true });
@@ -37,48 +126,6 @@ function copyTree(src: string, dst: string) {
     else if (/\.(mdx?|json|png|jpe?g|gif|svg|webp)$/i.test(e.name)) { fs.copyFileSync(s, d); n++; }
   }
   return n;
-}
-
-function relativeManifestPath(value: string, field: string): string {
-  const normalized = value.replaceAll("\\", "/").replace(/^\/+|\/+$/g, "");
-  if (!normalized || normalized.split("/").includes("..")) {
-    throw new Error(`fetch-remotes: ${field} must be a non-empty relative path`);
-  }
-  return normalized;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function rewriteAssetUrls(directory: string, remote: Remote): number {
-  const assets = (remote.assets ?? []).map((asset, index) => ({
-    source: relativeManifestPath(asset.source, `${remote.name}.assets[${index}].source`),
-    mount: relativeManifestPath(asset.mount, `${remote.name}.assets[${index}].mount`),
-  }));
-  if (!assets.length) return 0;
-
-  let changed = 0;
-  const visit = (current: string) => {
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const file = path.join(current, entry.name);
-      if (entry.isDirectory()) visit(file);
-      else if (/\.mdx?$/.test(entry.name)) {
-        const original = fs.readFileSync(file, "utf8");
-        let rewritten = original;
-        for (const asset of assets) {
-          const pattern = new RegExp(`(^|[^A-Za-z0-9/_-])/${escapeRegExp(asset.source)}/`, "gm");
-          rewritten = rewritten.replace(pattern, (_match, prefix: string) => `${prefix}/${asset.mount}/`);
-        }
-        if (rewritten !== original) {
-          fs.writeFileSync(file, rewritten);
-          changed++;
-        }
-      }
-    }
-  };
-  visit(directory);
-  return changed;
 }
 
 const remoteNames = new Set(manifest.remotes.map((remote) => remote.name));
@@ -101,54 +148,72 @@ for (const r of manifest.remotes) {
     continue;
   }
 
+  if (isUntrustedVercelPreview && r.private) {
+    if (selectedPreview) {
+      throw new Error(
+        `fetch-remotes: private remote ${r.name} previews must target the remote-preview Vercel environment`,
+      );
+    }
+    cleanMount(mount);
+    const reason = "excluded-from-untrusted-vercel-preview";
+    fs.writeFileSync(
+      path.join(stateDir, `${r.name}.json`),
+      JSON.stringify({ name: r.name, repo: r.repo, ref: "main", skipped: true, reason }, null, 2),
+    );
+    console.log(`fetch-remotes: ${r.name} omitted by build scope (${reason})`);
+    continue;
+  }
+
   if (selectedPreview && selectedPreview.repository !== r.repo) {
     throw new Error(
       `fetch-remotes: repository "${selectedPreview.repository}" is not registered for remote "${r.name}"`,
     );
   }
   const ref = selectedPreview?.ref ?? "main";
+  const sourceRepository = selectedPreview?.sourceRepository ?? r.repo;
   if (usePrefetchedRemotes) {
     const stateFile = path.join(stateDir, `${r.name}.json`);
     if (!fs.existsSync(stateFile)) throw new Error(`fetch-remotes: prefetched state missing for ${r.name}`);
     const state = JSON.parse(fs.readFileSync(stateFile, "utf8")) as {
       name?: string;
       repo?: string;
+      sourceRepository?: string;
       ref?: string;
       skipped?: boolean;
     };
-    if (state.skipped || state.name !== r.name || state.repo !== r.repo || state.ref !== ref) {
-      throw new Error(`fetch-remotes: prefetched state for ${r.name} does not match ${r.repo}@${ref}`);
+    if (
+      state.skipped
+      || state.name !== r.name
+      || state.repo !== r.repo
+      || (state.sourceRepository ?? state.repo) !== sourceRepository
+      || state.ref !== ref
+    ) {
+      throw new Error(`fetch-remotes: prefetched state for ${r.name} does not match ${sourceRepository}@${ref}`);
     }
     if (!fs.existsSync(mount)) throw new Error(`fetch-remotes: prefetched mount missing for ${r.name}: ${mount}`);
-    console.log(`fetch-remotes: ${r.name} using prefetched artifact ${r.repo}@${ref}`);
+    console.log(`fetch-remotes: ${r.name} using prefetched artifact ${sourceRepository}@${ref}`);
     continue;
   }
 
-  const token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
   let source: string | null = null;
   let sourceKind: "github-api" | "github-ssh" | null = null;
+  let authentication: Authentication | "ssh" | null = null;
   let temporaryDirectory: string | null = null;
   let commit = "unknown";
 
   try {
-    if (token || !r.private) {
+    const canUseGitHubApi = Boolean(
+      process.env.GH_TOKEN
+      || process.env.GITHUB_TOKEN
+      || process.env.DOCS_GITHUB_CONNECTOR
+      || process.env.VERCEL_OIDC_TOKEN
+      || !r.private,
+    );
+    if (canUseGitHubApi) {
       const tmp = fs.mkdtempSync(path.join(stateDir, `${r.name}-`));
       temporaryDirectory = tmp;
       const tar = path.join(tmp, "src.tgz");
-      const headers = token ? ["-H", `Authorization: Bearer ${token}`] : [];
-      execFileSync(
-        "curl",
-        [
-          "-sSfL",
-          ...headers,
-          "-H",
-          "Accept: application/vnd.github+json",
-          `https://api.github.com/repos/${r.repo}/tarball/${encodeURIComponent(ref)}`,
-          "-o",
-          tar,
-        ],
-        { stdio: "inherit" },
-      );
+      authentication = await downloadGitHubArchive(r, sourceRepository, ref, tar);
       execFileSync("tar", ["-xzf", tar, "-C", tmp]);
       const extracted = fs.readdirSync(tmp).find((directory) => directory !== "src.tgz");
       if (!extracted) throw new Error(`fetch-remotes: archive for ${r.name} contained no root directory`);
@@ -161,29 +226,29 @@ for (const r of manifest.remotes) {
       const checkout = path.join(tmp, "checkout");
       execFileSync(
         "git",
-        ["clone", "--depth", "1", "--branch", ref, `git@github.com:${r.repo}.git`, checkout],
+        ["clone", "--depth", "1", "--branch", ref, `git@github.com:${sourceRepository}.git`, checkout],
         { stdio: "inherit" },
       );
       source = path.join(checkout, r.path);
       sourceKind = "github-ssh";
+      authentication = "ssh";
       commit = execFileSync("git", ["-C", checkout, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
     }
 
     if (!source) {
       throw new Error(
-        `fetch-remotes: private remote ${r.name} (${r.repo}@${ref}) requires GH_TOKEN/GITHUB_TOKEN; Vercel must use pnpm run build:vercel with DOCS_REMOTE_TOKEN supplied by the calling workflow`,
+        `fetch-remotes: private remote ${r.name} (${sourceRepository}@${ref}) requires Vercel Connect, GH_TOKEN/GITHUB_TOKEN, or local SSH access`,
       );
     }
     if (!fs.existsSync(source)) throw new Error(`fetch-remotes: source path does not exist for ${r.name}: ${source}`);
 
     cleanMount(mount);
     const files = copyTree(source, mount);
-    const rewrittenAssetReferences = rewriteAssetUrls(mount, r);
     fs.writeFileSync(
       path.join(stateDir, `${r.name}.json`),
-      JSON.stringify({ name: r.name, repo: r.repo, ref, source: sourceKind, commit, fetchedAt: new Date().toISOString(), files, rewrittenAssetReferences }, null, 2),
+      JSON.stringify({ name: r.name, repo: r.repo, sourceRepository, ref, source: sourceKind, authentication, commit, fetchedAt: new Date().toISOString(), files }, null, 2),
     );
-    console.log(`fetch-remotes: ${r.name} <- ${sourceKind} ${r.repo}@${ref} (${commit.slice(0, 12)}): ${files} files into ${r.mount}`);
+    console.log(`fetch-remotes: ${r.name} <- ${sourceKind}/${authentication} ${sourceRepository}@${ref} (${commit.slice(0, 12)}): ${files} files into ${r.mount}`);
   } finally {
     if (temporaryDirectory) fs.rmSync(temporaryDirectory, { recursive: true, force: true });
   }

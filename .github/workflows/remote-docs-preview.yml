@@ -133,15 +133,21 @@ jobs:
           fi
 
           head_sha="$(gh api "repos/$SOURCE_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .head.sha)"
+          head_repository="$(gh api "repos/$SOURCE_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .head.repo.full_name)"
           if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ ]]; then
             echo "GitHub returned an invalid pull request head SHA." >&2
             exit 1
           fi
+          if [[ ! "$head_repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "GitHub returned an invalid pull request head repository." >&2
+            exit 1
+          fi
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "head_repository=$head_repository" >> "$GITHUB_OUTPUT"
 
-      # The CLI uploads only the trusted Nimbus source. Vercel fetches the
-      # selected remote and builds it using the short-lived installation token.
-      # Do not add --no-wait: the App token is revoked when this job finishes.
+      # The CLI uploads only the trusted Nimbus source. The Vercel deployment
+      # exchanges its own OIDC identity for a short-lived, repository-scoped
+      # token through Vercel Connect. The Actions token never enters the build.
       - name: Deploy and wait for the preview
         id: deploy
         working-directory: site
@@ -149,7 +155,7 @@ jobs:
           DOCS_REMOTE_NAME: ${{ inputs.remote_name }}
           DOCS_REMOTE_REF: ${{ steps.pull-request.outputs.head_sha }}
           DOCS_REMOTE_REPOSITORY: ${{ inputs.source_repository }}
-          DOCS_REMOTE_TOKEN: ${{ steps.source-token.outputs.token }}
+          DOCS_REMOTE_SOURCE_REPOSITORY: ${{ steps.pull-request.outputs.head_repository }}
           PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
           VERCEL_ORG_ID: ${{ inputs.vercel_org_id || vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id || vars.VERCEL_PROJECT_ID }}
@@ -159,13 +165,15 @@ jobs:
             vercel deploy \
               --yes \
               --archive=tgz \
+              --target=remote-preview \
               --token "$VERCEL_TOKEN" \
               --build-env "DOCS_LOCALE=en" \
               --build-env "DOCS_REMOTE_NAME=$DOCS_REMOTE_NAME" \
               --build-env "DOCS_REMOTE_REPOSITORY=$DOCS_REMOTE_REPOSITORY" \
+              --build-env "DOCS_REMOTE_SOURCE_REPOSITORY=$DOCS_REMOTE_SOURCE_REPOSITORY" \
               --build-env "DOCS_REMOTE_REF=$DOCS_REMOTE_REF" \
-              --build-env "DOCS_REMOTE_TOKEN=$DOCS_REMOTE_TOKEN" \
               --meta "sourceRepository=$DOCS_REMOTE_REPOSITORY" \
+              --meta "sourceHeadRepository=$DOCS_REMOTE_SOURCE_REPOSITORY" \
               --meta "pullRequest=$PULL_REQUEST_NUMBER" \
               --meta "approvedSha=$DOCS_REMOTE_REF"
           )"
@@ -179,6 +187,7 @@ jobs:
         if: github.repository == inputs.source_repository
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
           PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
         run: |

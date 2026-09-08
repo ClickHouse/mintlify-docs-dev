@@ -7,12 +7,16 @@ interface Remote { name: string; repo: string }
 const root = process.cwd();
 const name = (process.env.DOCS_REMOTE_NAME ?? "").trim();
 const repo = (process.env.DOCS_REMOTE_REPOSITORY ?? "").trim();
+const sourceRepo = (process.env.DOCS_REMOTE_SOURCE_REPOSITORY ?? "").trim() || repo;
 const ref = (process.env.DOCS_REMOTE_REF ?? "").trim().toLowerCase();
 if (!name || !repo || !ref) {
   throw new Error("write-remote-preview-scope: DOCS_REMOTE_NAME, DOCS_REMOTE_REPOSITORY and DOCS_REMOTE_REF are required");
 }
 if (!/^[0-9a-f]{40}$/.test(ref)) {
   throw new Error("write-remote-preview-scope: DOCS_REMOTE_REF must be an immutable 40-character commit SHA");
+}
+if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(sourceRepo)) {
+  throw new Error("write-remote-preview-scope: DOCS_REMOTE_SOURCE_REPOSITORY must use the owner/name form");
 }
 
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "remotes.json"), "utf8")) as { remotes: Remote[] };
@@ -28,6 +32,7 @@ const scope = {
   remotePreview: {
     name: remote.name,
     repository: remote.repo,
+    sourceRepository: sourceRepo,
     ref,
   },
 };

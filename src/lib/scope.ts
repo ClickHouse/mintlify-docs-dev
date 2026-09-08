@@ -13,6 +13,7 @@
  *     "remotePreview": {
  *       "name": "clickhouse-private",
  *       "repository": "ClickHouse/airgapped-docs",
+ *       "sourceRepository": "contributor/airgapped-docs",
  *       "ref": "<40-character commit SHA>"
  *     }
  *   }
@@ -26,7 +27,10 @@ export type BuildLocale = "en" | Locale;
 
 export interface RemotePreview {
   name: string;
+  /** Registered upstream repository from remotes.json. */
   repository: string;
+  /** Repository that owns the immutable preview SHA; differs for fork PRs. */
+  sourceRepository: string;
   ref: string;
 }
 
@@ -69,14 +73,21 @@ function parseRemotePreview(value: unknown, source: string): RemotePreview | und
   const candidate = value as Record<string, unknown>;
   const name = typeof candidate.name === "string" ? candidate.name.trim() : "";
   const repository = typeof candidate.repository === "string" ? candidate.repository.trim() : "";
+  const sourceRepository = typeof candidate.sourceRepository === "string"
+    ? candidate.sourceRepository.trim()
+    : repository;
   const ref = typeof candidate.ref === "string" ? candidate.ref.trim().toLowerCase() : "";
-  if (!name || !repository || !ref) {
+  if (!name || !repository || !sourceRepository || !ref) {
     throw new Error(`${source} must contain non-empty name, repository and ref values`);
+  }
+  const repositoryPattern = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+  if (!repositoryPattern.test(repository) || !repositoryPattern.test(sourceRepository)) {
+    throw new Error(`${source} repositories must use the owner/name form`);
   }
   if (!/^[0-9a-f]{40}$/.test(ref)) {
     throw new Error(`${source}.ref must be an immutable 40-character commit SHA`);
   }
-  return { name, repository, ref };
+  return { name, repository, sourceRepository, ref };
 }
 
 function parseReference(value: unknown, source: string): boolean {
@@ -101,6 +112,7 @@ export function readScope(root = process.cwd()): BuildScope {
   const envReference = (process.env.DOCS_REFERENCE ?? "").trim().toLowerCase();
   const envRemoteName = (process.env.DOCS_REMOTE_NAME ?? "").trim();
   const envRemoteRepository = (process.env.DOCS_REMOTE_REPOSITORY ?? "").trim();
+  const envRemoteSourceRepository = (process.env.DOCS_REMOTE_SOURCE_REPOSITORY ?? "").trim();
   const envRemoteRef = (process.env.DOCS_REMOTE_REF ?? "").trim();
   const file = path.join(root, ".preview-scope.json");
   const fileScope = fs.existsSync(file)
@@ -112,6 +124,11 @@ export function readScope(root = process.cwd()): BuildScope {
   if (hasRemoteEnvironment && !remoteEnvironmentValues.every(Boolean)) {
     throw new Error(
       "DOCS_REMOTE_NAME, DOCS_REMOTE_REPOSITORY and DOCS_REMOTE_REF must be set together",
+    );
+  }
+  if (envRemoteSourceRepository && !hasRemoteEnvironment) {
+    throw new Error(
+      "DOCS_REMOTE_SOURCE_REPOSITORY requires DOCS_REMOTE_NAME, DOCS_REMOTE_REPOSITORY and DOCS_REMOTE_REF",
     );
   }
 
@@ -129,7 +146,12 @@ export function readScope(root = process.cwd()): BuildScope {
       : true;
   const remotePreview = hasRemoteEnvironment
     ? parseRemotePreview(
-        { name: envRemoteName, repository: envRemoteRepository, ref: envRemoteRef },
+        {
+          name: envRemoteName,
+          repository: envRemoteRepository,
+          sourceRepository: envRemoteSourceRepository || envRemoteRepository,
+          ref: envRemoteRef,
+        },
         "remote preview environment",
       )
     : parseRemotePreview(fileScope?.remotePreview, ".preview-scope.json remotePreview");

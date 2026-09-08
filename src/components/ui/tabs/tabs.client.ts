@@ -4,6 +4,41 @@ import { mount, initTabs } from "@cloudflare/nimbus-docs/client";
 
 const TRIGGER_CLASS =
   "inline-flex shrink-0 cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium leading-6 whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground aria-selected:text-primary focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]";
+const MINTLIFY_ICON_CDN =
+  "https://d3gk2c5xim1je2.cloudfront.net/fontawesome/v7.2.0";
+
+function appendIcon(button: HTMLButtonElement, icon: string): void {
+  const isImage =
+    icon.startsWith("/") ||
+    icon.startsWith("http://") ||
+    icon.startsWith("https://") ||
+    icon.startsWith("data:");
+  if (isImage) {
+    const image = document.createElement("img");
+    image.src = icon;
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
+    image.className = "h-4 w-4 shrink-0 object-contain";
+    button.append(image);
+    return;
+  }
+
+  // Bare names are Mintlify Font Awesome icons, not relative image paths.
+  // Match Mintlify's masked-icon treatment so they inherit each tab's active
+  // or inactive text colour. AWS is the only branded tab icon in the source.
+  const family = icon === "aws" ? "brands" : "regular";
+  const url = `${MINTLIFY_ICON_CDN}/${family}/${encodeURIComponent(icon)}.svg`;
+  const mask = document.createElement("span");
+  mask.setAttribute("aria-hidden", "true");
+  mask.className = "block h-4 w-4 shrink-0";
+  mask.style.backgroundColor = "currentColor";
+  mask.style.setProperty(
+    "-webkit-mask",
+    `url("${url}") center / contain no-repeat`,
+  );
+  mask.style.mask = `url("${url}") center / contain no-repeat`;
+  button.append(mask);
+}
 
 let counter = 0;
 
@@ -11,7 +46,9 @@ function initTabContainer(container: HTMLElement): () => void {
   const id = `nb-tabs-${counter++}`;
   const syncKey = container.dataset.nbSyncKey;
   const tablist = container.querySelector<HTMLElement>("[role=tablist]");
-  const indicator = container.querySelector<HTMLElement>("[data-nb-tabs-indicator]");
+  const indicator = container.querySelector<HTMLElement>(
+    "[data-nb-tabs-indicator]",
+  );
 
   // Scope to this container so a nested <Tabs>'s triggers don't flip the
   // parent into manual mode (or vice-versa), independent of mount order.
@@ -34,14 +71,7 @@ function initTabContainer(container: HTMLElement): () => void {
       btn.type = "button";
       btn.className = TRIGGER_CLASS;
       const icon = panel.dataset.nbTabIcon;
-      if (icon) {
-        const image = document.createElement("img");
-        image.src = icon;
-        image.alt = "";
-        image.setAttribute("aria-hidden", "true");
-        image.className = "h-4 w-4 shrink-0 object-contain";
-        btn.append(image);
-      }
+      if (icon) appendIcon(btn, icon);
       btn.append(document.createTextNode(label));
       btn.setAttribute("data-nb-tabs-trigger", "");
 
@@ -74,8 +104,9 @@ function initTabContainer(container: HTMLElement): () => void {
     // scrollIntoView, which would also scroll the page vertically).
     onActivate: (index) => {
       if (!tablist) return;
-      const trigger =
-        tablist.querySelectorAll<HTMLElement>("[data-nb-tabs-trigger]")[index];
+      const trigger = tablist.querySelectorAll<HTMLElement>(
+        "[data-nb-tabs-trigger]",
+      )[index];
       if (!trigger) return;
       const left = trigger.offsetLeft;
       const right = left + trigger.offsetWidth;
@@ -95,12 +126,16 @@ function initTabContainer(container: HTMLElement): () => void {
     )
       .filter((t) => t.closest("[data-nb-tabs]") === container)
       .map((t) => (t.textContent ?? "").trim());
-    const dupes = [...new Set(labels.filter((l, i) => labels.indexOf(l) !== i))];
+    const dupes = [
+      ...new Set(labels.filter((l, i) => labels.indexOf(l) !== i)),
+    ];
     if (dupes.length) {
       console.warn(
         `[nimbus] <Tabs syncKey="${syncKey}"> has duplicate tab labels (${dupes
           .map((d) => `"${d}"`)
-          .join(", ")}). Sync is keyed by label, so a duplicate activates the ` +
+          .join(
+            ", ",
+          )}). Sync is keyed by label, so a duplicate activates the ` +
           `first match. Give each tab a unique label.`,
       );
     }
@@ -110,7 +145,9 @@ function initTabContainer(container: HTMLElement): () => void {
     instance.destroy();
     // Remove synthesized triggers so re-mount doesn't double up.
     if (synthesize && tablist) {
-      tablist.querySelectorAll("[data-nb-tabs-trigger]").forEach((b) => b.remove());
+      tablist
+        .querySelectorAll("[data-nb-tabs-trigger]")
+        .forEach((b) => b.remove());
     }
   };
 }

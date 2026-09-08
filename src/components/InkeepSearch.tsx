@@ -1,39 +1,17 @@
-/**
- * Nimbus-owned Inkeep bootstrap.
- *
- * Inkeep's `cxkit-mintlify` package provides the hosted search index.  Keep
- * the integration here instead of serving the former Mintlify customization:
- * the Nimbus search trigger has no Mintlify-specific IDs and page transitions
- * must not register a second keyboard shortcut on every navigation.
- */
-
-export {};
-
-declare global {
-  interface Window {
-    Inkeep?: {
-      ModalSearchAndChat?: (settings: Record<string, unknown>) => {
-        update: (settings: Record<string, unknown>) => void;
-      };
-    };
-  }
-}
+import {
+  InkeepModalSearch,
+  type InkeepModalSearchProps,
+} from "@inkeep/cxkit-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const SEARCH_TRIGGER = "[data-search-trigger]";
-const SCRIPT_ID = "inkeep-cxkit-script";
-const STYLE_ID = "inkeep-no-shift-style";
-const SCRIPT_URL =
-  "https://cdn.jsdelivr.net/npm/@inkeep/cxkit-mintlify@0.5/dist/index.js";
 
-// These browser-facing keys are deliberately public.  The staging key selects
-// the preview index; all other hosts use the production/local index as the
-// legacy docs site did.
+// These browser-facing keys are deliberately public. The staging key selects
+// the legacy Mintlify preview index; all other hosts use the production index.
 const STAGING_API_KEY = "d3e2792740610240ff7bcf2c2a78a33012812eb4f3e34d54";
 const DEFAULT_API_KEY = "b25e5cf856ec9da60d250578b59dace8417359feeedcbc6b";
-const PREVIEW_URL =
+const MINTLIFY_PREVIEW_URL =
   /^https?:\/\/private-7c7dfe99\.mintlify\.(?:app|site)\/(?:docs(?:\/|(?=[?#]|$)))?/;
-let searchWidget: { update: (settings: Record<string, unknown>) => void } | undefined;
-let pendingOpen = false;
 
 const topLevelTabs = ["Docs", "Changelogs", "Blogs", "Website", "GitHub"];
 const docsSubareas = [
@@ -103,94 +81,53 @@ function twoRowTabCss(): string {
   ].join("");
 }
 
-function setUnavailable(): void {
-  for (const trigger of document.querySelectorAll<HTMLElement>(
-    SEARCH_TRIGGER,
-  )) {
-    trigger.setAttribute("aria-disabled", "true");
-    trigger.title = "Search is temporarily unavailable.";
+function usePreviewOrigin(url: string): string {
+  if (!/(?:^|\.)vercel\.app$/.test(window.location.hostname)) return url;
+
+  try {
+    const source = new URL(url);
+    if (
+      source.hostname !== "clickhouse.com" ||
+      !source.pathname.startsWith("/docs")
+    )
+      return url;
+    return new URL(
+      `${source.pathname}${source.search}${source.hash}`,
+      window.location.origin,
+    ).href;
+  } catch {
+    return url;
   }
 }
 
-function setTriggersBusy(busy: boolean): void {
-  for (const trigger of document.querySelectorAll<HTMLElement>(SEARCH_TRIGGER)) {
-    if (busy) trigger.setAttribute("aria-busy", "true");
-    else trigger.removeAttribute("aria-busy");
-  }
-}
-
-function openSearch(): void {
-  if (!searchWidget) {
-    pendingOpen = true;
-    setTriggersBusy(true);
-    return;
-  }
-  pendingOpen = false;
-  setTriggersBusy(false);
-  searchWidget.update({ modalSettings: { isOpen: true } });
-}
-
-// Own disclosure through one document-level listener. The document survives
-// Astro route swaps, so newly rendered sidebar buttons work immediately and
-// do not wait for the hosted widget to rediscover them.
-document.addEventListener("click", (event) => {
-  if (!(event.target as Element | null)?.closest(SEARCH_TRIGGER)) return;
-  event.preventDefault();
-  openSearch();
-});
-
-document.addEventListener("keydown", (event) => {
-  if (event.defaultPrevented) return;
-  if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
-  event.preventDefault();
-  openSearch();
-});
-
-function injectNoShiftStyle(): void {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent =
-    "html body[data-scroll-locked] { padding-right: 0 !important; margin-right: 0 !important; }";
-  document.head.appendChild(style);
-}
-
-function initialize(): void {
-  const modal = window.Inkeep?.ModalSearchAndChat;
-  if (!modal) {
-    setUnavailable();
-    return;
-  }
-
+function searchProps(): InkeepModalSearchProps {
   const initialQuery =
     new URLSearchParams(window.location.search).get("q") ?? "";
   const apiKey = /\.mintlify\.(?:app|site)$/.test(window.location.hostname)
     ? STAGING_API_KEY
     : DEFAULT_API_KEY;
 
-  searchWidget = modal({
-    defaultView: "search",
+  return {
     modalSettings: {
-      // Disclosure is delegated above so it keeps working across Astro swaps.
-      triggerSelector: "[data-inkeep-library-trigger]",
-      shortcutKey: null,
-      isOpen: Boolean(initialQuery),
-      onOpenChange: (isOpen: boolean) => {
-        searchWidget?.update({ modalSettings: { isOpen } });
-      },
+      triggerSelector: SEARCH_TRIGGER,
+      shortcutKey: "k",
+      defaultOpen: Boolean(initialQuery),
     },
     baseSettings: {
       apiKey,
       primaryBrandColor: "#fdff75",
       organizationDisplayName: "ClickHouse",
-      transformSource: (source: Record<string, unknown>) => {
-        let url = typeof source.url === "string" ? source.url : "";
-        const isPreview = PREVIEW_URL.test(url);
-        if (isPreview)
-          url = url.replace(PREVIEW_URL, "https://clickhouse.com/docs/");
+      transformSource: (source) => {
+        let url = source.url;
+        const isMintlifyPreview = MINTLIFY_PREVIEW_URL.test(url);
+        if (isMintlifyPreview)
+          url = url.replace(
+            MINTLIFY_PREVIEW_URL,
+            "https://clickhouse.com/docs/",
+          );
 
         const tabs: string[] = [];
-        if (isPreview || /clickhouse\.com\/docs(\/|$)/.test(url)) {
+        if (isMintlifyPreview || /clickhouse\.com\/docs(\/|$)/.test(url)) {
           if (/\/resources\/changelogs(\/|$)/.test(url))
             tabs.push("Changelogs");
           else {
@@ -206,23 +143,23 @@ function initialize(): void {
           tabs.push("Website");
         }
 
-        return { ...source, tabs, url };
+        return { tabs, url: usePreviewOrigin(url) };
       },
       colorMode: {
         sync: {
           target: document.documentElement,
           attributes: ["class"],
-          isDarkMode: (attributes: Record<string, string> | undefined) =>
+          isDarkMode: (attributes) =>
             attributes?.class?.includes("dark") ?? false,
         },
       },
       theme: {
         styles: [
           {
-            key: "hide-inkeep-ai-chat",
+            key: "no-scrollbar-layout-shift",
             type: "style",
             value:
-              ".ikp-view_toggle, .ikp-ai-ask-ai-trigger { display: none !important; }",
+              "html body[data-scroll-locked] { padding-right: 0 !important; margin-right: 0 !important; }",
           },
           {
             key: "dark-search-overlay",
@@ -239,28 +176,84 @@ function initialize(): void {
       defaultQuery: initialQuery,
       debounceTimeMs: 300,
       maxResults: 20,
-      shouldShowContentSnippets: true,
-      contentSnippetLength: 200,
-      shouldHighlightMatches: true,
       tabs: [...topLevelTabs, ...docsSubareas],
     },
-  });
-
-  if (pendingOpen) openSearch();
+  };
 }
 
-function boot(): void {
-  injectNoShiftStyle();
-  if (document.getElementById(SCRIPT_ID)) return;
+export default function InkeepSearch() {
+  const [isOpen, setIsOpen] = useState(() =>
+    Boolean(new URLSearchParams(window.location.search).get("q")),
+  );
+  const handleOpenChange = useCallback((open: boolean) => setIsOpen(open), []);
 
-  const script = document.createElement("script");
-  script.id = SCRIPT_ID;
-  script.src = SCRIPT_URL;
-  script.onload = initialize;
-  script.onerror = setUnavailable;
-  document.head.appendChild(script);
+  // Astro replaces the page controls during client-side navigation. Delegate
+  // from `document` so every trigger rendered for this route opens the modal.
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!event.isPrimary || event.button !== 0) return;
+      if (
+        !(event.target as Element | null)?.closest(
+          `${SEARCH_TRIGGER}[data-sidebar-tool]`,
+        )
+      )
+        return;
+      setIsOpen(true);
+    };
+    const handleClick = (event: MouseEvent) => {
+      const trigger = (event.target as Element | null)?.closest(SEARCH_TRIGGER);
+      if (!trigger) return;
+      // Pointer activation of the compact sidebar control is handled on
+      // pointerdown so the modal starts painting before pointerup. Keep click
+      // for keyboard activation, whose synthetic click has detail === 0.
+      if (trigger.hasAttribute("data-sidebar-tool") && event.detail > 0) return;
+      event.preventDefault();
+      setIsOpen(true);
+    };
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k")
+        return;
+      event.preventDefault();
+      setIsOpen((open) => !open);
+    };
+    const handleBeforePreparation = () => {
+      // Close the modal before route preparation so an in-flight opening
+      // animation cannot carry its scroll lock into the incoming page.
+      setIsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleKeydown);
+    document.addEventListener(
+      "astro:before-preparation",
+      handleBeforePreparation,
+    );
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKeydown);
+      document.removeEventListener(
+        "astro:before-preparation",
+        handleBeforePreparation,
+      );
+    };
+  }, []);
+
+  // The Inkeep configuration is sizeable. Keeping its object identity stable
+  // avoids making the widget re-process the complete theme and search setup
+  // whenever opening or closing the modal.
+  const props = useMemo(() => searchProps(), []);
+  const modalSettings = useMemo(
+    () => ({
+      isOpen,
+      onOpenChange: handleOpenChange,
+      shortcutKey: null,
+      triggerSelector: "[data-inkeep-library-trigger]",
+    }),
+    [handleOpenChange, isOpen],
+  );
+
+  return <InkeepModalSearch {...props} modalSettings={modalSettings} />;
 }
-
-if (document.readyState === "loading")
-  document.addEventListener("DOMContentLoaded", boot, { once: true });
-else boot();

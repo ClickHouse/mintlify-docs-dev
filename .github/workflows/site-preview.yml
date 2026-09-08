@@ -1,0 +1,144 @@
+name: Deploy Nimbus site preview
+
+run-name: Preview Nimbus PR #${{ inputs.pull_request_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Open pull request to preview
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: nimbus-site-preview-${{ inputs.pull_request_number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Build on Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Require a trusted manual invocation
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]]; then
+            echo "Run this workflow from the repository's default branch." >&2
+            exit 1
+          fi
+
+      - name: Resolve the pull request head
+        id: pull-request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          state="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .state)"
+          if [[ "$state" != "open" ]]; then
+            echo "Pull request $PULL_REQUEST_NUMBER is not open." >&2
+            exit 1
+          fi
+
+          head_sha="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .head.sha)"
+          head_repository="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .head.repo.full_name)"
+          if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "GitHub returned an invalid pull request head SHA." >&2
+            exit 1
+          fi
+          if [[ ! "$head_repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "GitHub returned an invalid pull request head repository." >&2
+            exit 1
+          fi
+
+          if [[ "$head_repository" == "$GITHUB_REPOSITORY" ]]; then
+            target="remote-preview"
+            trust="trusted-branch"
+          else
+            target="preview"
+            trust="untrusted-fork"
+          fi
+
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "head_repository=$head_repository" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "trust=$trust" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the pull request revision
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.pull-request.outputs.head_repository }}
+          ref: ${{ steps.pull-request.outputs.head_sha }}
+          path: site
+          persist-credentials: false
+
+      - name: Reject symbolic links in uploaded source
+        run: |
+          symlink="$(find site -type l -print -quit)"
+          if [[ -n "$symlink" ]]; then
+            echo "Fork and branch previews may not upload symbolic links: $symlink" >&2
+            exit 1
+          fi
+
+      - name: Verify the checked-out revision
+        working-directory: site
+        env:
+          EXPECTED_SHA: ${{ steps.pull-request.outputs.head_sha }}
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "$actual_sha" != "$EXPECTED_SHA" ]]; then
+            echo "Checked out $actual_sha instead of approved revision $EXPECTED_SHA." >&2
+            exit 1
+          fi
+
+      - name: Install the Vercel CLI
+        run: npm install --global vercel@59.11.7
+
+      # Do not install dependencies or run repository code in this job. The
+      # source is uploaded to Vercel, where standard Preview has no Connect
+      # attachment and trusted branches use the remote-preview environment.
+      - name: Deploy and wait for the preview
+        id: deploy
+        working-directory: site
+        env:
+          APPROVED_SHA: ${{ steps.pull-request.outputs.head_sha }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+          SOURCE_REPOSITORY: ${{ steps.pull-request.outputs.head_repository }}
+          TRUST: ${{ steps.pull-request.outputs.trust }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_TARGET: ${{ steps.pull-request.outputs.target }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          preview_url="$(
+            vercel deploy \
+              --yes \
+              --archive=tgz \
+              --target="$VERCEL_TARGET" \
+              --token "$VERCEL_TOKEN" \
+              --build-env "DOCS_LOCALE=en" \
+              --meta "sourceRepository=$SOURCE_REPOSITORY" \
+              --meta "pullRequest=$PULL_REQUEST_NUMBER" \
+              --meta "approvedSha=$APPROVED_SHA" \
+              --meta "trust=$TRUST"
+          )"
+          if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "Vercel returned an invalid preview URL." >&2
+            exit 1
+          fi
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+
+      - name: Add the preview link to the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+          TRUST: ${{ steps.pull-request.outputs.trust }}
+        run: |
+          gh pr comment "$PULL_REQUEST_NUMBER" --body "Nimbus documentation preview ($TRUST): $PREVIEW_URL"
