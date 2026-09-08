@@ -52,7 +52,9 @@ Remote repositories create previews through
 `.github/workflows/remote-docs-preview.yml`. The caller invokes the reusable
 workflow manually with a pull request number. It mints a repository-scoped
 GitHub App token and passes the resolved immutable head SHA to a Vercel build;
-the caller never checks out or compiles the remote pull request.
+the caller never checks out or compiles the remote pull request. Maintainers can
+also run the workflow directly from the `mintlify-docs-dev` Actions page by
+providing the registered source, repository, and open pull request number.
 
 The website Worker routes `/docs/<locale>/*` and
 `/docs/_astro-<locale>/*` to `clickhouse-docs-<locale>`. The English Worker
