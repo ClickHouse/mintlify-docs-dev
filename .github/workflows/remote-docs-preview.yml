@@ -1,0 +1,156 @@
+name: Deploy remote documentation preview
+
+on:
+  workflow_call:
+    inputs:
+      remote_name:
+        description: Source name registered in remotes.json
+        required: true
+        type: string
+      pull_request_number:
+        description: Open pull request in the calling repository
+        required: true
+        type: number
+      vercel_org_id:
+        description: Vercel organization ID
+        required: true
+        type: string
+      vercel_project_id:
+        description: Vercel project ID
+        required: true
+        type: string
+    secrets:
+      WORKFLOW_AUTH_PUBLIC_APP_ID:
+        required: true
+      WORKFLOW_AUTH_PUBLIC_PRIVATE_KEY:
+        required: true
+      VERCEL_TOKEN:
+        required: true
+    outputs:
+      preview_url:
+        description: URL of the completed Vercel preview
+        value: ${{ jobs.preview.outputs.preview_url }}
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: remote-docs-preview-${{ github.repository }}-${{ inputs.pull_request_number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Build on Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
+    steps:
+      - name: Require a trusted manual invocation
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]]; then
+            echo "Run this workflow from the calling repository's default branch." >&2
+            exit 1
+          fi
+
+      - name: Resolve the pull request head
+        id: pull-request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          state="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .state)"
+          if [[ "$state" != "open" ]]; then
+            echo "Pull request $PULL_REQUEST_NUMBER is not open." >&2
+            exit 1
+          fi
+
+          head_sha="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .head.sha)"
+          if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "GitHub returned an invalid pull request head SHA." >&2
+            exit 1
+          fi
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the trusted documentation site
+        uses: actions/checkout@v6
+        with:
+          repository: ClickHouse/mintlify-docs-dev
+          ref: codex/nimbus-deploy
+          path: site
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Validate the registered source
+        working-directory: site
+        env:
+          DOCS_LOCALE: en
+          DOCS_REMOTE_NAME: ${{ inputs.remote_name }}
+          DOCS_REMOTE_REPOSITORY: ${{ github.repository }}
+          DOCS_REMOTE_REF: ${{ steps.pull-request.outputs.head_sha }}
+          DOCS_PREVIEW_ALIAS: pr-${{ inputs.pull_request_number }}
+        run: node bin/validate-deploy-request.ts
+
+      - name: Install the Vercel CLI
+        run: npm install --global vercel@59.11.7
+
+      - name: Mint a source-repository token
+        id: source-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.WORKFLOW_AUTH_PUBLIC_APP_ID }}
+          private-key: ${{ secrets.WORKFLOW_AUTH_PUBLIC_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: read
+
+      # The CLI uploads only the trusted Nimbus source. Vercel fetches the
+      # selected remote and builds it using the short-lived installation token.
+      # Do not add --no-wait: the App token is revoked when this job finishes.
+      - name: Deploy and wait for the preview
+        id: deploy
+        working-directory: site
+        env:
+          DOCS_REMOTE_NAME: ${{ inputs.remote_name }}
+          DOCS_REMOTE_REF: ${{ steps.pull-request.outputs.head_sha }}
+          DOCS_REMOTE_REPOSITORY: ${{ github.repository }}
+          DOCS_REMOTE_TOKEN: ${{ steps.source-token.outputs.token }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+          VERCEL_ORG_ID: ${{ inputs.vercel_org_id }}
+          VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          preview_url="$(
+            vercel deploy \
+              --yes \
+              --archive=tgz \
+              --token "$VERCEL_TOKEN" \
+              --build-env "DOCS_LOCALE=en" \
+              --build-env "DOCS_REMOTE_NAME=$DOCS_REMOTE_NAME" \
+              --build-env "DOCS_REMOTE_REPOSITORY=$DOCS_REMOTE_REPOSITORY" \
+              --build-env "DOCS_REMOTE_REF=$DOCS_REMOTE_REF" \
+              --build-env "DOCS_REMOTE_TOKEN=$DOCS_REMOTE_TOKEN" \
+              --meta "sourceRepository=$DOCS_REMOTE_REPOSITORY" \
+              --meta "pullRequest=$PULL_REQUEST_NUMBER" \
+              --meta "approvedSha=$DOCS_REMOTE_REF"
+          )"
+          if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "Vercel returned an invalid preview URL." >&2
+            exit 1
+          fi
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+
+      - name: Add the preview link to the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+        run: |
+          gh pr comment "$PULL_REQUEST_NUMBER" --body "Documentation preview: $PREVIEW_URL"
