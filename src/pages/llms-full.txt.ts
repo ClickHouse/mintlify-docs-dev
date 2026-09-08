@@ -1,11 +1,11 @@
-import { getPreparedLlmsArtifact } from "@cloudflare/nimbus-docs/build";
-import { prepareAgentMarkdown } from "../lib/agent-links";
+import { config } from "virtual:nimbus/config";
+import { englishCorpusEntries, renderCorpusIndex, sectionsOf } from "../lib/corpus";
 
 export const prerender = true;
 
 export async function GET() {
-  const artifact = await getPreparedLlmsArtifact({ scope: "site", surface: "full" });
-  return new Response(prepareAgentMarkdown(artifact.body), {
-    headers: { "Content-Type": artifact.mediaType },
+  const sections = sectionsOf(await englishCorpusEntries());
+  return new Response(renderCorpusIndex(config.title, sections, "", "llms.txt"), {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
   });
 }

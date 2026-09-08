@@ -28,9 +28,9 @@ for (const name of fs.readdirSync(outDir)) {
 execFileSync(process.execPath, [path.join(root, "bin/gen-redirects.ts"), outDir], { stdio: "inherit" });
 fs.copyFileSync(path.join(root, ".assetsignore"), path.join(outDir, ".assetsignore"));
 
-// Workers static assets: 25 MiB per file, 100k files per version. Vercel does
-// not share that asset limit, and Nimbus's required site-wide llms-full.txt
-// may exceed it, so enforce this only for Worker builds.
+// Workers static assets: 25 MiB per file, 100k files per version. Agent corpora
+// target 24 MiB and split recursively, while this remains a final guard for all
+// generated assets. Vercel does not share the per-file limit.
 if (process.env.VERCEL !== "1") {
   const limit = 25 * 1024 * 1024;
   const oversized: string[] = [];
