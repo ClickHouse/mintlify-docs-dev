@@ -3,6 +3,8 @@ import {
   getPreparedMarkdownStaticPaths,
   type PreparedMarkdownReference,
 } from "@cloudflare/nimbus-docs/build";
+import { absolutizeAgentMarkdownLinks } from "../../lib/agent-links";
+import { withBase } from "../../lib/base";
 
 export const prerender = true;
 
@@ -19,7 +21,8 @@ export async function getStaticPaths() {
 
 export async function GET({ props }: { props: Props }) {
   const artifact = await getPreparedMarkdownArtifact(props.artifact);
-  return new Response(artifact.body, {
+  const pagePath = withBase(artifact.id === "index" ? "/" : `/${artifact.id}/`);
+  return new Response(absolutizeAgentMarkdownLinks(artifact.body, pagePath), {
     headers: { "Content-Type": artifact.mediaType },
   });
 }

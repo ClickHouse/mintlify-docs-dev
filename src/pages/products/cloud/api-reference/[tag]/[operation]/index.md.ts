@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getApiOperation, getApiOperations, renderApiOperationMarkdown } from "@/lib/openapi";
 import { readScope } from "@/lib/scope";
+import { absolutizeAgentMarkdownLinks } from "@/lib/agent-links";
 
 export const prerender = true;
 
@@ -9,7 +10,10 @@ export function getStaticPaths() {
   return getApiOperations("cloud").map((page) => ({ params: { tag: page.tagSlug, operation: page.slug } }));
 }
 
-export const GET: APIRoute = async ({ params }) => new Response(
-  await renderApiOperationMarkdown(getApiOperation("cloud", params.tag!, params.operation!)),
-  { headers: { "Content-Type": "text/markdown; charset=utf-8" } },
-);
+export const GET: APIRoute = async ({ params }) => {
+  const page = getApiOperation("cloud", params.tag!, params.operation!);
+  const markdown = await renderApiOperationMarkdown(page);
+  return new Response(absolutizeAgentMarkdownLinks(markdown, `/docs/${page.route}/`), {
+    headers: { "Content-Type": "text/markdown; charset=utf-8" },
+  });
+};
