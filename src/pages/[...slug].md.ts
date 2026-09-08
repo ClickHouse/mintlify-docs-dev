@@ -1,3 +1,4 @@
+/** Convenience alias: `/<slug>.md` serves the same artifact as `/<slug>/index.md`. */
 import {
   getPreparedMarkdownArtifact,
   getPreparedMarkdownStaticPaths,
@@ -14,7 +15,11 @@ export async function getStaticPaths() {
   return (await getPreparedMarkdownStaticPaths({
     collection: "docs",
     surface: "markdown",
-  })).filter(({ props }) => !props.artifact.id.startsWith("products/cloud/api-reference/"));
+  })).filter(
+    ({ props }) =>
+      props.artifact.id !== "index" &&
+      !props.artifact.id.startsWith("products/cloud/api-reference/"),
+  );
 }
 
 export async function GET({ props }: { props: Props }) {

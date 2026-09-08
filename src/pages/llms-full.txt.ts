@@ -1,12 +1,10 @@
-// Root corpus index: points agents at the per-section corpora (see src/lib/corpus.ts).
-import { config } from "virtual:nimbus/config";
-import { PRIMARY, entriesFor, renderCorpusIndex, sectionsOf } from "../lib/corpus";
+import { getPreparedLlmsArtifact } from "@cloudflare/nimbus-docs/build";
 
 export const prerender = true;
 
 export async function GET() {
-  const sections = sectionsOf(await entriesFor(PRIMARY));
-  return new Response(renderCorpusIndex(config.title, sections, ""), {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  const artifact = await getPreparedLlmsArtifact({ scope: "site", surface: "full" });
+  return new Response(artifact.body, {
+    headers: { "Content-Type": artifact.mediaType },
   });
 }

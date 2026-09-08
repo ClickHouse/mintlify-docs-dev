@@ -1,0 +1,128 @@
+diff --git a/dist/authored-links-BwgpLqQy.js b/dist/authored-links-BwgpLqQy.js
+index ad81e4ef60c1865b2cd8d6918e319780ac0e6d96..099f06dbcfb3d945c9873696f0c891ce9e53c66f 100644
+--- a/dist/authored-links-BwgpLqQy.js
++++ b/dist/authored-links-BwgpLqQy.js
+@@ -35,14 +35,9 @@ function assertCanonicalDestination(destination, source, sourceId, offset) {
+ 	if (!hasCanonicalSegments(destination.split(/[?#]/u, 1)[0] ?? "")) fail("destination escapes its canonical path", source, sourceId, offset);
+ }
+ function buildOffsetMap(source) {
+-	const offsets = [0];
+-	let index = 0;
+-	while (index < source.length) {
+-		const codePoint = source.codePointAt(index);
+-		index += codePoint !== void 0 && codePoint > 65535 ? 2 : 1;
+-		offsets.push(index);
+-	}
+-	return offsets;
++	// Satteri reports offsets in JavaScript UTF-16 code units. Mapping them as
++	// Unicode code points shifts every node after emoji and other astral text.
++	return Array.from({ length: source.length + 1 }, (_value, index) => index);
+ }
+ function nodeRange(node, offsets, source, sourceId) {
+ 	const codePointStart = node.position?.start?.offset;
+@@ -131,6 +126,11 @@ function jsxRangeKey(start, end) {
+ }
+ function staticHrefOffsets(raw, node, source, sourceId, sourceStart, parsedRanges) {
+ 	if (!Array.isArray(node.attributes)) fail("missing JSX attributes", source, sourceId, sourceStart);
++	// Avoid reparsing wrapper components whose attributes cannot contain a
++	// destination. ClickHouse pages commonly nest Markdown tables and other
++	// non-TSX prose inside Tabs, which is valid MDX but cannot be reparsed as
++	// one standalone TypeScript JSX expression.
++	if (!node.attributes.some((value) => value && typeof value === "object" && value.type === "mdxJsxAttribute" && typeof value.name === "string" && isHref(node, value.name))) return [];
+ 	const key = jsxRangeKey(sourceStart, sourceStart + raw.length);
+ 	if (!parsedRanges.has(key)) {
+ 		const parsed = ts.createSourceFile("nimbus-authored-link.tsx", `const element = (${raw});`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+@@ -190,7 +190,16 @@ function normalizeAuthoredLinks(source, options) {
+ 	const prefix = basePrefix(options.base);
+ 	let tree;
+ 	try {
+-		tree = mdxToMdast(source);
++		// ClickHouse prose uses angle-bracket variables such as
++		// `<BACKEND_URL>`. They are placeholders, not JSX elements. Spaces
++		// preserve every source offset used to rewrite links in the original.
++		const parseableSource = source.replace(/<[A-Z][A-Z0-9_]*>/g, (placeholder) => " ".repeat(placeholder.length));
++		tree = mdxToMdast(parseableSource, {
++			features: {
++				headingAttributes: true,
++				math: true
++			}
++		});
+ 	} catch (error) {
+ 		const detail = error instanceof Error ? error.message : String(error);
+ 		const location = detail.match(/^(\d+):(\d+):\s*/);
+diff --git a/dist/build-markdown-CrKbE2To.js b/dist/build-markdown-CrKbE2To.js
+index d44792be78b812141b40845857bb07de4a379b6e..e4752e89fbcc62a7359b535b3e81de8f9899d86e 100644
+--- a/dist/build-markdown-CrKbE2To.js
++++ b/dist/build-markdown-CrKbE2To.js
+@@ -229,14 +229,7 @@ async function scanCodeBlocks(projectRoot, langAlias = {}) {
+ //#endregion
+ //#region src/_internal/build-partials.ts
+ function offsetMap(source) {
+-	const offsets = [0];
+-	let index = 0;
+-	while (index < source.length) {
+-		const codePoint = source.codePointAt(index);
+-		index += codePoint !== void 0 && codePoint > 65535 ? 2 : 1;
+-		offsets.push(index);
+-	}
+-	return offsets;
++	return Array.from({ length: source.length + 1 }, (_value, index) => index);
+ }
+ function range(node, offsets, sourceId) {
+ 	const start = node.position?.start?.offset;
+@@ -254,7 +247,12 @@ function walk(node, callback) {
+ }
+ function parseSource(source, sourceId) {
+ 	try {
+-		return mdxToMdast(source);
++		return mdxToMdast(source, {
++			features: {
++				headingAttributes: true,
++				math: true
++			}
++		});
+ 	} catch (error) {
+ 		throw new Error(`nimbus-docs: failed to parse prepared source for ${sourceId}.`, { cause: error });
+ 	}
+@@ -562,7 +560,12 @@ var StaticExpressionParser = class {
+ */
+ async function mergePartialHeadings(body, astroHeadings, getEntry, render, options) {
+ 	const { mdxToMdast } = await import("satteri");
+-	return mergePartialHeadingsWithParser(body, astroHeadings, getEntry, render, (source) => mdxToMdast(source), options);
++	return mergePartialHeadingsWithParser(body, astroHeadings, getEntry, render, (source) => mdxToMdast(source, {
++		features: {
++			headingAttributes: true,
++			math: true
++		}
++	}), options);
+ }
+ async function mergePartialHeadingsWithParser(body, astroHeadings, getEntry, render, parse, options) {
+ 	return mergePartialHeadingsInternal(body, astroHeadings, getEntry, render, parse, options, /* @__PURE__ */ new Set());
+diff --git a/dist/discoverability-DqMhxV7J.js b/dist/discoverability-DqMhxV7J.js
+index e53fcc6af5afb598c5fce02a08aa4523e3b450d3..8342beea0a67bf7c5c0bc9939058f88896daf440 100644
+--- a/dist/discoverability-DqMhxV7J.js
++++ b/dist/discoverability-DqMhxV7J.js
+@@ -319,8 +319,12 @@ function applyDefaultComponentTransforms(markdown) {
+ 	out = out.replace(/<Tabs\b[^>]*>([\s\S]*?)<\/Tabs>/g, (_match, children) => children.replace(/<TabItem\b([^>]*)>([\s\S]*?)<\/TabItem>/g, (_tabMatch, rawAttrs, tabChildren) => {
+ 		return `### ${asTitle(parseAttrs(rawAttrs).label, "Option")}\n\n${cleanChildren(tabChildren)}`;
+ 	}));
+-	out = out.replace(/<([A-Z][A-Za-z0-9]*)\b[^>]*>([\s\S]*?)<\/\1>/g, "$2");
+-	out = out.replace(/<([A-Z][A-Za-z0-9]*)\b[^>]*\/>/g, "");
++	let previous;
++	do {
++		previous = out;
++		out = out.replace(/<([A-Z][A-Za-z0-9]*)\b[^>]*>([\s\S]*?)<\/\1>/g, "$2");
++		out = out.replace(/<([A-Z][A-Za-z0-9]*)\b[^>]*\/>/g, "");
++	} while (out !== previous);
+ 	return out;
+ }
+ function applyCustomComponentTransforms(markdown, componentMap, base) {
+@@ -368,7 +372,7 @@ function renderEntryAsMarkdown(entry, options = {}) {
+ 	if (options.componentMap) markdown = applyCustomComponentTransforms(markdown, options.componentMap, options.base ?? "/");
+ 	markdown = applyDefaultComponentTransforms(markdown);
+ 	markdown = protectedCode.restore(markdown);
+-	return markdown.replace(/^[ \t]+(- (?:\*\*|\[))/gm, "$1").replace(/^[ \t]+(\d+\. \*\*)/gm, "$1").replace(/^[ \t]+(### )/gm, "$1").replace(/^[ \t]+(```)/gm, "$1").replace(/^[ \t]+$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
++	return markdown.replace(/^import\s.+\sfrom\s+["'][^"']+["'];?\s*$/gm, "").replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/^[ \t]+(- (?:\*\*|\[))/gm, "$1").replace(/^[ \t]+(\d+\. \*\*)/gm, "$1").replace(/^[ \t]+(### )/gm, "$1").replace(/^[ \t]+(```)/gm, "$1").replace(/^[ \t]+$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+ }
+ 
+ //#endregion

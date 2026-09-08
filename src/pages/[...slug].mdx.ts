@@ -1,3 +1,4 @@
+/** Convenience alias: `/<slug>.mdx` serves the same source as `/<slug>/index.mdx`. */
 import {
   getPreparedMarkdownArtifact,
   getPreparedMarkdownStaticPaths,
@@ -13,8 +14,12 @@ interface Props {
 export async function getStaticPaths() {
   return (await getPreparedMarkdownStaticPaths({
     collection: "docs",
-    surface: "markdown",
-  })).filter(({ props }) => !props.artifact.id.startsWith("products/cloud/api-reference/"));
+    surface: "source",
+  })).filter(
+    ({ props }) =>
+      props.artifact.id !== "index" &&
+      !props.artifact.id.startsWith("products/cloud/api-reference/"),
+  );
 }
 
 export async function GET({ props }: { props: Props }) {
