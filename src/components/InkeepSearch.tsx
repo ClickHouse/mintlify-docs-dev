@@ -167,12 +167,6 @@ function searchProps(): InkeepModalSearchProps {
             value:
               ".dark\\:bg-overlay-dark { background-color: rgba(0, 0, 0, 0.75) !important; }",
           },
-          {
-            key: "instant-modal",
-            type: "style",
-            value:
-              ".ikp-modal__overlay, .ikp-modal__overlay > [role='dialog'] { animation: none !important; transition: none !important; }",
-          },
           { key: "two-row-docs-tabs", type: "style", value: twoRowTabCss() },
         ],
       },
