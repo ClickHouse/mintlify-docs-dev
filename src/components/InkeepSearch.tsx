@@ -218,14 +218,28 @@ export default function InkeepSearch() {
       event.preventDefault();
       setIsOpen((open) => !open);
     };
+    const handleBeforePreparation = () => {
+      // The island persists across Astro routes. Close the modal before route
+      // preparation so an in-flight opening animation cannot attach its scroll
+      // lock to the incoming page after the body has been swapped.
+      setIsOpen(false);
+    };
 
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("click", handleClick);
     document.addEventListener("keydown", handleKeydown);
+    document.addEventListener(
+      "astro:before-preparation",
+      handleBeforePreparation,
+    );
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleKeydown);
+      document.removeEventListener(
+        "astro:before-preparation",
+        handleBeforePreparation,
+      );
     };
   }, []);
 
