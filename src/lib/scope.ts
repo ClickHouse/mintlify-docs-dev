@@ -12,8 +12,8 @@
  *     "reference": false,
  *     "remotePreview": {
  *       "name": "clickhouse-private",
- *       "repository": "ClickHouse/airgapped-docs",
- *       "sourceRepository": "contributor/airgapped-docs",
+ *       "repository": "ClickHouse/airgap-docs",
+ *       "sourceRepository": "contributor/airgap-docs",
  *       "ref": "<40-character commit SHA>"
  *     }
  *   }

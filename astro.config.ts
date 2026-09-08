@@ -31,6 +31,9 @@ const buildAssetsDirectory = buildScope.locale === "en"
   ? "_astro"
   : `_astro-${buildScope.locale.toLowerCase()}`;
 const nimbusTableScroll = tableScroll() as unknown as HastPluginDefinition;
+const remoteMounts = (JSON.parse(fs.readFileSync(new URL("./remotes.json", import.meta.url), "utf8")) as {
+  remotes: Array<{ mount: string }>;
+}).remotes.map(({ mount }) => mount);
 // Inkeep's dependency tree imports `tslib` from several packages. Vercel's
 // pnpm install does not expose those transitive links to Rolldown, so use the
 // vendored ESM runtime instead of relying on node_modules symlink layout.
@@ -91,7 +94,7 @@ export default defineConfig({
         // Nimbus). Nimbus's own hast plugins must be re-added here.
         processor: satteri({
           features: SATTERI_FEATURES,
-          hastPlugins: [nimbusTableScroll, rebaseUrls({ base: BASE }), mermaidBlocks()],
+          hastPlugins: [nimbusTableScroll, rebaseUrls({ base: BASE, remoteMounts }), mermaidBlocks()],
         }),
       },
     }),

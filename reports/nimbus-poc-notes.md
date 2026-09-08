@@ -152,7 +152,7 @@ sitemap canonical is `/folder`; the build emits `/folder` and redirects `/folder
 
 `remotes.json` + `bin/fetch-remotes.ts` copy another repository's docs into a mount directory
 under `docs/` (contents gitignored; committed `images/` kept), so the primary collection builds
-them at their current URLs. `ClickHouse/airgapped-docs` (40 pages) mounts at
+them at their current URLs. `ClickHouse/airgap-docs` (40 pages) mounts at
 `products/clickhouse-private`, and `bin/gen-sidebar.ts` expands the Mintlify `sourceRef`
 group from the remote's own `docs.json`. Locally the fetcher uses a GitHub token
 or SSH. On Vercel, production and the `remote-preview` Custom Environment exchange
