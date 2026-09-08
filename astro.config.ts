@@ -9,7 +9,6 @@ import { mermaidBlocks } from "./src/plugins/satteri-mermaid";
 import { SATTERI_FEATURES } from "./src/plugins/satteri-features";
 import { readScope } from "./src/lib/scope";
 import type { HastPluginDefinition } from "satteri";
-import type { Plugin } from "vite";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -32,23 +31,10 @@ const buildAssetsDirectory = buildScope.locale === "en"
   ? "_astro"
   : `_astro-${buildScope.locale.toLowerCase()}`;
 const nimbusTableScroll = tableScroll() as unknown as HastPluginDefinition;
-// `@tanem/svg-injector` (via Inkeep) imports one helper from `tslib`. Vercel's
-// pnpm install does not expose that transitive package to Rolldown, so use the
-// small repository-owned implementation instead of relying on node_modules
-// symlink layout.
-const tslibModule = fileURLToPath(new URL("./src/shims/tslib.ts", import.meta.url));
-
-function tanemTslibShim(): Plugin {
-  return {
-    name: "clickhouse:tanem-tslib-shim",
-    enforce: "pre",
-    resolveId(source, importer) {
-      if (source === "tslib" && importer?.includes("@tanem/svg-injector")) {
-        return tslibModule;
-      }
-    },
-  };
-}
+// Inkeep's dependency tree imports `tslib` from several packages. Vercel's
+// pnpm install does not expose those transitive links to Rolldown, so use the
+// vendored ESM runtime instead of relying on node_modules symlink layout.
+const tslibModule = fileURLToPath(new URL("./src/shims/tslib.mjs", import.meta.url));
 
 const nimbusConfig = defineNimbusConfig({
   site: "https://clickhouse.com",
@@ -121,7 +107,10 @@ export default defineConfig({
       jsxImportSource: "react",
       jsxDev: false,
     },
-    plugins: [tanemTslibShim(), tailwindcss(), mintlifySnippets()],
-    resolve: { dedupe: ["react", "react-dom"] },
+    plugins: [tailwindcss(), mintlifySnippets()],
+    resolve: {
+      alias: { tslib: tslibModule },
+      dedupe: ["react", "react-dom"],
+    },
   },
 });
