@@ -154,9 +154,12 @@ sitemap canonical is `/folder`; the build emits `/folder` and redirects `/folder
 under `docs/` (contents gitignored; committed `images/` kept), so the primary collection builds
 them at their current URLs. `ClickHouse/airgapped-docs` (40 pages) mounts at
 `products/clickhouse-private`, and `bin/gen-sidebar.ts` expands the Mintlify `sourceRef`
-group from the remote's own `docs.json`. Locally the fetcher uses a checkout path
-(`DOCS_REMOTE_CLICKHOUSE_PRIVATE_PATH`); in CI a tarball with `GH_TOKEN`. Private remotes are
-skipped, and reported, when neither is available (fork previews).
+group from the remote's own `docs.json`. Locally the fetcher uses a GitHub token
+or SSH. On Vercel, production and the `remote-preview` Custom Environment exchange
+their deployment OIDC identity for a short-lived, repository-scoped token through
+Vercel Connect. Standard Preview deployments fetch public sources anonymously and
+omit private remotes. The OIDC identity and provider token are removed before any
+remote Markdown or MDX is parsed.
 
 ## Preview scope (P3)
 

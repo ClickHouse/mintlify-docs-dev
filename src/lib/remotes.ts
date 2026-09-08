@@ -12,6 +12,7 @@ interface RemoteDefinition {
 interface RemoteState {
   name: string;
   repo: string;
+  sourceRepository?: string;
   ref: string;
   skipped?: boolean;
 }
@@ -77,8 +78,9 @@ export function getRemoteEditUrl(entry: ContentEntry, root = process.cwd()): str
 
   const relativePath = sourcePathWithinMount(entry, remote.mount);
   const sourcePath = path.posix.join(remote.path === "." ? "" : trimSlashes(remote.path), relativePath);
+  const sourceRepository = state.sourceRepository ?? remote.repo;
   return remote.editPattern
-    .replaceAll("{repo}", remote.repo)
+    .replaceAll("{repo}", sourceRepository)
     .replaceAll("{ref}", state.ref)
     .replaceAll("{path}", sourcePath);
 }

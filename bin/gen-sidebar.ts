@@ -145,7 +145,16 @@ if (scope.remotePreview && !previewRemote) {
 }
 
 function remoteIsOmitted(remote: (typeof remotes)[number]): boolean {
-  return Boolean(previewRemote && previewRemote.name !== remote.name);
+  if (previewRemote && previewRemote.name !== remote.name) return true;
+  const stateFile = path.join(root, ".remote", `${remote.name}.json`);
+  if (!fs.existsSync(stateFile)) return false;
+  const state = readJson(stateFile) as Obj;
+  if (!state.skipped) return false;
+  const reason = String(state.reason ?? "");
+  if (reason !== "excluded-from-remote-preview" && reason !== "excluded-from-untrusted-vercel-preview") {
+    throw new Error(`gen-sidebar: remote ${remote.name} has an unknown omission reason: ${reason}`);
+  }
+  return true;
 }
 
 /** Prefix every page path in a remote navigation tree with its mount directory. */

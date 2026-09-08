@@ -12,6 +12,7 @@ const root = process.cwd();
 const locale = (process.env.DOCS_LOCALE ?? "").trim();
 const name = (process.env.DOCS_REMOTE_NAME ?? "").trim();
 const repository = (process.env.DOCS_REMOTE_REPOSITORY ?? "").trim();
+const sourceRepository = (process.env.DOCS_REMOTE_SOURCE_REPOSITORY ?? "").trim();
 const ref = (process.env.DOCS_REMOTE_REF ?? "").trim().toLowerCase();
 const previewAlias = (process.env.DOCS_PREVIEW_ALIAS ?? "").trim().toLowerCase();
 const validLocales = new Set(["en", ...ALL_LOCALES.map((candidate) => candidate.toLowerCase())]);
@@ -38,6 +39,12 @@ if (remoteValues.some(Boolean) && !remoteValues.every(Boolean)) {
 }
 if (ref && !remoteValues.every(Boolean)) {
   throw new Error("validate-deploy-request: a remote preview requires its registered name and repository");
+}
+if (sourceRepository && !ref) {
+  throw new Error("validate-deploy-request: DOCS_REMOTE_SOURCE_REPOSITORY requires a remote preview");
+}
+if (sourceRepository && !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(sourceRepository)) {
+  throw new Error("validate-deploy-request: DOCS_REMOTE_SOURCE_REPOSITORY must use the owner/name form");
 }
 
 if (name) {
