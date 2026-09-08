@@ -187,9 +187,8 @@ export default function InkeepSearch() {
   );
   const handleOpenChange = useCallback((open: boolean) => setIsOpen(open), []);
 
-  // Astro replaces the page controls during client-side navigation while this
-  // island is persisted. Delegate from `document` so every newly rendered
-  // header, homepage, and sidebar trigger opens the same modal immediately.
+  // Astro replaces the page controls during client-side navigation. Delegate
+  // from `document` so every trigger rendered for this route opens the modal.
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
       if (!event.isPrimary || event.button !== 0) return;
@@ -219,9 +218,8 @@ export default function InkeepSearch() {
       setIsOpen((open) => !open);
     };
     const handleBeforePreparation = () => {
-      // The island persists across Astro routes. Close the modal before route
-      // preparation so an in-flight opening animation cannot attach its scroll
-      // lock to the incoming page after the body has been swapped.
+      // Close the modal before route preparation so an in-flight opening
+      // animation cannot carry its scroll lock into the incoming page.
       setIsOpen(false);
     };
 
