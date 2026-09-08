@@ -60,25 +60,30 @@ function rewriteRemoteAssetUrls(remote: Remote): number {
   return changed;
 }
 
-function link(source: string, destination: string): void {
+function materialize(source: string, destination: string): void {
   if (!fs.existsSync(source)) throw new Error(`prepare-public: asset source does not exist: ${source}`);
-  if (fs.existsSync(destination) || fs.lstatSync(path.dirname(destination), { throwIfNoEntry: false })?.isSymbolicLink()) {
+  if (fs.existsSync(destination)) {
     throw new Error(`prepare-public: asset destination collides: ${destination}`);
   }
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   const resolvedSource = fs.realpathSync(source);
-  fs.symlinkSync(path.relative(path.dirname(destination), resolvedSource), destination);
+  const sourceStat = fs.statSync(resolvedSource);
+  if (sourceStat.isDirectory()) {
+    fs.cpSync(resolvedSource, destination, { recursive: true, dereference: true });
+  } else {
+    fs.copyFileSync(resolvedSource, destination);
+  }
 }
 
 fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 
 if (scope.remotePreview) {
-  link(path.join(root, "public", "favicon.svg"), path.join(output, "favicon.svg"));
-  link(path.join(root, "images", "icons"), path.join(output, "images", "icons"));
+  materialize(path.join(root, "public", "favicon.svg"), path.join(output, "favicon.svg"));
+  materialize(path.join(root, "images", "icons"), path.join(output, "images", "icons"));
 } else {
   for (const entry of fs.readdirSync(path.join(root, "public"))) {
-    link(path.join(root, "public", entry), path.join(output, entry));
+    materialize(path.join(root, "public", entry), path.join(output, entry));
   }
 }
 
@@ -108,7 +113,7 @@ for (const remote of manifest.remotes) {
   for (const [index, asset] of (remote.assets ?? []).entries()) {
     const source = relativeManifestPath(asset.source, `${remote.name}.assets[${index}].source`);
     const mount = relativeManifestPath(asset.mount, `${remote.name}.assets[${index}].mount`);
-    link(path.join(root, remote.mount, source), path.join(output, mount));
+    materialize(path.join(root, remote.mount, source), path.join(output, mount));
   }
 }
 
