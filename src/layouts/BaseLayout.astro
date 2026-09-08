@@ -69,6 +69,7 @@ const llmsUrl = Astro.site
       (() => {
         const KEY = "ui-mode";
         const media = window.matchMedia("(prefers-color-scheme: dark)");
+        let inputModality = "keyboard";
 
         const readPref = () => {
           try {
@@ -101,6 +102,10 @@ const llmsUrl = Astro.site
           });
         };
 
+        const applyInputModality = (targetDocument = document) => {
+          targetDocument.documentElement.dataset.inputModality = inputModality;
+        };
+
         const carrySidebarScroll = (targetDocument) => {
           const current = document.querySelector("#desktop-sidebar .ch-sidebar-scroll");
           const incoming = targetDocument.querySelector("#desktop-sidebar .ch-sidebar-scroll");
@@ -123,16 +128,36 @@ const llmsUrl = Astro.site
         };
 
         applyTheme();
+        applyInputModality();
+        document.addEventListener(
+          "pointerdown",
+          () => {
+            inputModality = "pointer";
+            applyInputModality();
+          },
+          true,
+        );
+        document.addEventListener(
+          "keydown",
+          (event) => {
+            if (event.metaKey || event.ctrlKey || event.altKey) return;
+            inputModality = "keyboard";
+            applyInputModality();
+          },
+          true,
+        );
         // ClientRouter replaces every <html> attribute with the attributes from
         // the incoming server document. Stamp the saved theme onto that
         // detached document before the swap so no frame renders with the light
         // color tokens while navigating in dark mode.
         document.addEventListener("astro:before-swap", (event) => {
           applyTheme(event.newDocument);
+          applyInputModality(event.newDocument);
           carrySidebarScroll(event.newDocument);
         });
         document.addEventListener("astro:after-swap", () => {
           applyTheme();
+          applyInputModality();
           restoreSidebarScroll();
         });
         media.addEventListener("change", () => {
