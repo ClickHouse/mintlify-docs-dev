@@ -236,7 +236,7 @@ banner injection, immutable caching for `/docs/_astro/*`), `env.ts` `DOCS?: Fetc
 With the binding absent the dispatcher falls back to the Mintlify path, so it is safe to merge
 before the `clickhouse-docs` Worker exists. Coordinated with the session working in that repo.
 
-## P4 status (search, 2026-09-03)
+## P4 status (search, 2026-09-08)
 
 - `src/components/InkeepSearch.tsx` replaces the dormant Pagefind dialog with Inkeep's
   official `@inkeep/cxkit-react` search-only modal. The component is bundled with Nimbus,
