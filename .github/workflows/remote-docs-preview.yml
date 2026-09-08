@@ -1,6 +1,22 @@
 name: Deploy remote documentation preview
 
 on:
+  workflow_dispatch:
+    inputs:
+      remote_name:
+        description: Source name registered in remotes.json
+        required: true
+        default: clickhouse-private
+        type: string
+      source_repository:
+        description: Repository containing the pull request
+        required: true
+        default: ClickHouse/airgapped-docs
+        type: string
+      pull_request_number:
+        description: Open pull request to preview
+        required: true
+        type: string
   workflow_call:
     inputs:
       remote_name:
@@ -11,6 +27,10 @@ on:
         description: Open pull request in the calling repository
         required: true
         type: number
+      source_repository:
+        description: Repository containing the pull request
+        required: true
+        type: string
       vercel_org_id:
         description: Vercel organization ID
         required: true
@@ -36,7 +56,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: remote-docs-preview-${{ github.repository }}-${{ inputs.pull_request_number }}
+  group: remote-docs-preview-${{ inputs.source_repository }}-${{ inputs.pull_request_number }}
   cancel-in-progress: true
 
 jobs:
@@ -49,37 +69,24 @@ jobs:
     steps:
       - name: Require a trusted manual invocation
         env:
+          CALLING_REPOSITORY: ${{ github.repository }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          SOURCE_REPOSITORY: ${{ inputs.source_repository }}
         run: |
           if [[ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]]; then
             echo "Run this workflow from the calling repository's default branch." >&2
             exit 1
           fi
-
-      - name: Resolve the pull request head
-        id: pull-request
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
-        run: |
-          state="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .state)"
-          if [[ "$state" != "open" ]]; then
-            echo "Pull request $PULL_REQUEST_NUMBER is not open." >&2
+          if [[ "$CALLING_REPOSITORY" != "ClickHouse/mintlify-docs-dev" && "$SOURCE_REPOSITORY" != "$CALLING_REPOSITORY" ]]; then
+            echo "A remote caller may request a preview only for its own repository." >&2
             exit 1
           fi
-
-          head_sha="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .head.sha)"
-          if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "GitHub returned an invalid pull request head SHA." >&2
-            exit 1
-          fi
-          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
 
       - name: Check out the trusted documentation site
         uses: actions/checkout@v6
         with:
           repository: ClickHouse/mintlify-docs-dev
-          ref: codex/nimbus-deploy
+          ref: main
           path: site
           persist-credentials: false
 
@@ -93,9 +100,9 @@ jobs:
         env:
           DOCS_LOCALE: en
           DOCS_REMOTE_NAME: ${{ inputs.remote_name }}
-          DOCS_REMOTE_REPOSITORY: ${{ github.repository }}
-          DOCS_REMOTE_REF: ${{ steps.pull-request.outputs.head_sha }}
-          DOCS_PREVIEW_ALIAS: pr-${{ inputs.pull_request_number }}
+          DOCS_REMOTE_REPOSITORY: ${{ inputs.source_repository }}
+          DOCS_REMOTE_REF: 0000000000000000000000000000000000000000
+          DOCS_PREVIEW_ALIAS: manual-validation
         run: node bin/validate-deploy-request.ts
 
       - name: Install the Vercel CLI
@@ -107,9 +114,30 @@ jobs:
         with:
           app-id: ${{ secrets.WORKFLOW_AUTH_PUBLIC_APP_ID }}
           private-key: ${{ secrets.WORKFLOW_AUTH_PUBLIC_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
+          owner: ClickHouse
+          repositories: ${{ inputs.source_repository }}
           permission-contents: read
+          permission-pull-requests: read
+
+      - name: Resolve the pull request head
+        id: pull-request
+        env:
+          GH_TOKEN: ${{ steps.source-token.outputs.token }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+          SOURCE_REPOSITORY: ${{ inputs.source_repository }}
+        run: |
+          state="$(gh api "repos/$SOURCE_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .state)"
+          if [[ "$state" != "open" ]]; then
+            echo "Pull request $PULL_REQUEST_NUMBER is not open." >&2
+            exit 1
+          fi
+
+          head_sha="$(gh api "repos/$SOURCE_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .head.sha)"
+          if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "GitHub returned an invalid pull request head SHA." >&2
+            exit 1
+          fi
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
 
       # The CLI uploads only the trusted Nimbus source. Vercel fetches the
       # selected remote and builds it using the short-lived installation token.
@@ -120,11 +148,11 @@ jobs:
         env:
           DOCS_REMOTE_NAME: ${{ inputs.remote_name }}
           DOCS_REMOTE_REF: ${{ steps.pull-request.outputs.head_sha }}
-          DOCS_REMOTE_REPOSITORY: ${{ github.repository }}
+          DOCS_REMOTE_REPOSITORY: ${{ inputs.source_repository }}
           DOCS_REMOTE_TOKEN: ${{ steps.source-token.outputs.token }}
           PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
-          VERCEL_ORG_ID: ${{ inputs.vercel_org_id }}
-          VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id }}
+          VERCEL_ORG_ID: ${{ inputs.vercel_org_id || vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id || vars.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           preview_url="$(
@@ -148,9 +176,21 @@ jobs:
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
 
       - name: Add the preview link to the pull request
+        if: github.repository == inputs.source_repository
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
           PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
         run: |
           gh pr comment "$PULL_REQUEST_NUMBER" --body "Documentation preview: $PREVIEW_URL"
+
+      - name: Show the directly requested preview
+        if: github.repository != inputs.source_repository
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+          SOURCE_REPOSITORY: ${{ inputs.source_repository }}
+        run: |
+          echo "### Documentation preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[$SOURCE_REPOSITORY PR #$PULL_REQUEST_NUMBER]($PREVIEW_URL)" >> "$GITHUB_STEP_SUMMARY"
