@@ -4,14 +4,9 @@ import { mount, initTabs } from "@cloudflare/nimbus-docs/client";
 
 const TRIGGER_CLASS =
   "inline-flex shrink-0 cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium leading-6 whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground aria-selected:text-primary focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]";
-const MINTLIFY_ICON_CDN =
-  "https://d3gk2c5xim1je2.cloudfront.net/fontawesome/v7.2.0";
-
 function appendIcon(button: HTMLButtonElement, icon: string): void {
   const isImage =
     icon.startsWith("/") ||
-    icon.startsWith("http://") ||
-    icon.startsWith("https://") ||
     icon.startsWith("data:");
   if (isImage) {
     const image = document.createElement("img");
@@ -23,21 +18,9 @@ function appendIcon(button: HTMLButtonElement, icon: string): void {
     return;
   }
 
-  // Bare names are Mintlify Font Awesome icons, not relative image paths.
-  // Match Mintlify's masked-icon treatment so they inherit each tab's active
-  // or inactive text colour. AWS is the only branded tab icon in the source.
-  const family = icon === "aws" ? "brands" : "regular";
-  const url = `${MINTLIFY_ICON_CDN}/${family}/${encodeURIComponent(icon)}.svg`;
-  const mask = document.createElement("span");
-  mask.setAttribute("aria-hidden", "true");
-  mask.className = "block h-4 w-4 shrink-0";
-  mask.style.backgroundColor = "currentColor";
-  mask.style.setProperty(
-    "-webkit-mask",
-    `url("${url}") center / contain no-repeat`,
-  );
-  mask.style.mask = `url("${url}") center / contain no-repeat`;
-  button.append(mask);
+  // Named icons are normally rendered into the initial HTML. If a custom
+  // integration supplies panels only at runtime, keep its label usable
+  // without introducing a runtime dependency on an external icon service.
 }
 
 let counter = 0;
