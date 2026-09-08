@@ -8,7 +8,7 @@ import { getCollection, type CollectionEntry, type CollectionKey } from "astro:c
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "virtual:nimbus/config";
-import { absolutizeAgentMarkdownLinks } from "./agent-links";
+import { prepareAgentMarkdown } from "./agent-links";
 import { withBase } from "./base";
 
 export const PRIMARY = "docs";
@@ -97,7 +97,7 @@ export function renderCorpus(entries: IndexedEntry[], title: string, indexPath: 
   const sorted = [...entries].sort((a, b) => a.url.localeCompare(b.url));
   const blocks = sorted.map((i) => {
     const url = new URL(withBase(i.url), config.site).href;
-    const markdown = absolutizeAgentMarkdownLinks(cleanMarkdown(i.entry), withBase(i.url));
+    const markdown = prepareAgentMarkdown(cleanMarkdown(i.entry), withBase(i.url));
     return `# ${i.title}\n\nSource: ${url}\n\n${markdown}\n`;
   });
   return [

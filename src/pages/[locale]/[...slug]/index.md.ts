@@ -7,7 +7,7 @@ import { config } from "virtual:nimbus/config";
 import { withBase } from "../../../lib/base";
 import { ACTIVE_LOCALES, localeCollectionName } from "../../../content.config";
 import { localeRouteName } from "../../../util/locales";
-import { absolutizeAgentMarkdownLinks } from "../../../lib/agent-links";
+import { prepareAgentMarkdown } from "../../../lib/agent-links";
 
 export const prerender = true;
 
@@ -38,8 +38,7 @@ export async function GET({ props, params }: { props: Props; params: { locale: s
     "---",
     "",
     "> Documentation Index",
-    `> Fetch the complete documentation index at: ${new URL(withBase(`/${params.locale}/llms.txt`), config.site).href}`,
-    "> Use this file to discover all available pages before exploring further.",
+    "> A complete documentation index can be fetched from [https://clickhouse.com/docs/llms.txt](https://clickhouse.com/docs/llms.txt)",
     "",
     `# ${title}`,
     "",
@@ -49,7 +48,7 @@ export async function GET({ props, params }: { props: Props; params: { locale: s
     "",
   ].join("\n");
   const pagePath = withBase(`/${params.locale}/${entry.id}/`);
-  return new Response(absolutizeAgentMarkdownLinks(body, pagePath), {
+  return new Response(prepareAgentMarkdown(body, pagePath), {
     headers: { "Content-Type": "text/markdown; charset=utf-8" },
   });
 }

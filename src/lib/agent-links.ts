@@ -2,6 +2,16 @@ const SITE_ORIGIN = "https://clickhouse.com";
 const DOCS_BASE = "/docs";
 
 const ABSOLUTE_SCHEME = /^[a-z][a-z0-9+.-]*:/iu;
+const DOCUMENTATION_INDEX_URL = `${SITE_ORIGIN}${DOCS_BASE}/llms.txt`;
+
+/** Replace Nimbus's generic two-line discovery prompt with ClickHouse's canonical index link. */
+export function prepareAgentMarkdown(markdown: string, pagePath?: string): string {
+  const withIndexLink = markdown.replace(
+    /> Fetch the complete documentation index at: [^\n]+\n> Use this file to discover all available pages before exploring further\./g,
+    `> A complete documentation index can be fetched from [${DOCUMENTATION_INDEX_URL}](${DOCUMENTATION_INDEX_URL})`,
+  );
+  return absolutizeAgentMarkdownLinks(withIndexLink, pagePath);
+}
 
 /**
  * Make links in agent-facing Markdown self-contained. Unlike a browser, an
