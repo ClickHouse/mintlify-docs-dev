@@ -1,5 +1,8 @@
-import { InkeepModalSearch, type InkeepModalSearchProps } from "@inkeep/cxkit-react";
-import { useCallback, useEffect, useState } from "react";
+import {
+  InkeepModalSearch,
+  type InkeepModalSearchProps,
+} from "@inkeep/cxkit-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const SEARCH_TRIGGER = "[data-search-trigger]";
 
@@ -83,16 +86,23 @@ function usePreviewOrigin(url: string): string {
 
   try {
     const source = new URL(url);
-    if (source.hostname !== "clickhouse.com" || !source.pathname.startsWith("/docs"))
+    if (
+      source.hostname !== "clickhouse.com" ||
+      !source.pathname.startsWith("/docs")
+    )
       return url;
-    return new URL(`${source.pathname}${source.search}${source.hash}`, window.location.origin).href;
+    return new URL(
+      `${source.pathname}${source.search}${source.hash}`,
+      window.location.origin,
+    ).href;
   } catch {
     return url;
   }
 }
 
 function searchProps(): InkeepModalSearchProps {
-  const initialQuery = new URLSearchParams(window.location.search).get("q") ?? "";
+  const initialQuery =
+    new URLSearchParams(window.location.search).get("q") ?? "";
   const apiKey = /\.mintlify\.(?:app|site)$/.test(window.location.hostname)
     ? STAGING_API_KEY
     : DEFAULT_API_KEY;
@@ -111,11 +121,15 @@ function searchProps(): InkeepModalSearchProps {
         let url = source.url;
         const isMintlifyPreview = MINTLIFY_PREVIEW_URL.test(url);
         if (isMintlifyPreview)
-          url = url.replace(MINTLIFY_PREVIEW_URL, "https://clickhouse.com/docs/");
+          url = url.replace(
+            MINTLIFY_PREVIEW_URL,
+            "https://clickhouse.com/docs/",
+          );
 
         const tabs: string[] = [];
         if (isMintlifyPreview || /clickhouse\.com\/docs(\/|$)/.test(url)) {
-          if (/\/resources\/changelogs(\/|$)/.test(url)) tabs.push("Changelogs");
+          if (/\/resources\/changelogs(\/|$)/.test(url))
+            tabs.push("Changelogs");
           else {
             tabs.push("Docs");
             const subarea = docsSubarea(url);
@@ -135,7 +149,8 @@ function searchProps(): InkeepModalSearchProps {
         sync: {
           target: document.documentElement,
           attributes: ["class"],
-          isDarkMode: (attributes) => attributes?.class?.includes("dark") ?? false,
+          isDarkMode: (attributes) =>
+            attributes?.class?.includes("dark") ?? false,
         },
       },
       theme: {
@@ -152,6 +167,12 @@ function searchProps(): InkeepModalSearchProps {
             value:
               ".dark\\:bg-overlay-dark { background-color: rgba(0, 0, 0, 0.75) !important; }",
           },
+          {
+            key: "instant-modal",
+            type: "style",
+            value:
+              ".ikp-modal__overlay, .ikp-modal__overlay > [role='dialog'] { animation: none !important; transition: none !important; }",
+          },
           { key: "two-row-docs-tabs", type: "style", value: twoRowTabCss() },
         ],
       },
@@ -167,8 +188,8 @@ function searchProps(): InkeepModalSearchProps {
 }
 
 export default function InkeepSearch() {
-  const [isOpen, setIsOpen] = useState(
-    () => Boolean(new URLSearchParams(window.location.search).get("q")),
+  const [isOpen, setIsOpen] = useState(() =>
+    Boolean(new URLSearchParams(window.location.search).get("q")),
   );
   const handleOpenChange = useCallback((open: boolean) => setIsOpen(open), []);
 
@@ -183,7 +204,8 @@ export default function InkeepSearch() {
     };
     const handleKeydown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k")
+        return;
       event.preventDefault();
       setIsOpen((open) => !open);
     };
@@ -196,12 +218,19 @@ export default function InkeepSearch() {
     };
   }, []);
 
-  const props = searchProps();
-  props.modalSettings = {
-    isOpen,
-    onOpenChange: handleOpenChange,
-    shortcutKey: null,
-    triggerSelector: "[data-inkeep-library-trigger]",
-  };
-  return <InkeepModalSearch {...props} />;
+  // The Inkeep configuration is sizeable. Keeping its object identity stable
+  // avoids making the widget re-process the complete theme and search setup
+  // whenever opening or closing the modal.
+  const props = useMemo(() => searchProps(), []);
+  const modalSettings = useMemo(
+    () => ({
+      isOpen,
+      onOpenChange: handleOpenChange,
+      shortcutKey: null,
+      triggerSelector: "[data-inkeep-library-trigger]",
+    }),
+    [handleOpenChange, isOpen],
+  );
+
+  return <InkeepModalSearch {...props} modalSettings={modalSettings} />;
 }
