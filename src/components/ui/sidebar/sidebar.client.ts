@@ -157,6 +157,18 @@ function initPersistence(root: HTMLElement): (() => void) | null {
     root;
   const hash = root.dataset.nbSidebarHash ?? "";
 
+  function handleDisclosureClick(event: MouseEvent): void {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const trigger = target.closest<HTMLElement>("[data-nb-collapsible-trigger]");
+    if (!trigger || !root.contains(trigger)) return;
+    const group = trigger.closest<HTMLElement>("[data-nb-sidebar-group]");
+    if (!group || group.hasAttribute("data-nb-opened-by-filter")) return;
+    group.setAttribute("data-nb-sidebar-user-toggled", "");
+  }
+
+  root.addEventListener("click", handleDisclosureClick);
+
   function readPreviousOpenState(): Record<string, boolean> | null {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -177,13 +189,15 @@ function initPersistence(root: HTMLElement): (() => void) | null {
       const trigger = ownedTrigger(group);
       const key = groupKey(group);
       const containsActivePage = Boolean(group.querySelector("[aria-current='page']"));
+      const userToggled = group.hasAttribute("data-nb-sidebar-user-toggled");
       // Fixed section headings have no disclosure trigger and always remain
       // open. Recording them as open also repairs state written by older code.
       // A group on the active route is forced open so the current page stays
       // visible. Do not mistake that temporary expansion for user intent:
       // preserve the previous preference, or the authored default on the
-      // first visit.
-      if (trigger && containsActivePage) {
+      // first visit. Once the user toggles it, the visible state is their new
+      // preference and must win over the automatic active-route expansion.
+      if (trigger && containsActivePage && !userToggled) {
         const previousValue = previousOpen?.[key];
         open[key] = typeof previousValue === "boolean"
           ? previousValue
@@ -226,6 +240,7 @@ function initPersistence(root: HTMLElement): (() => void) | null {
 
   return () => {
     observer.disconnect();
+    root.removeEventListener("click", handleDisclosureClick);
     document.removeEventListener("visibilitychange", handleVisibility);
     document.removeEventListener("astro:before-swap", save);
     window.removeEventListener("pagehide", save);
