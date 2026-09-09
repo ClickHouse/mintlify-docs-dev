@@ -116,8 +116,8 @@ Vercel must be provisioned as follows:
 7. Keep standard Preview free of secrets and privileged integrations. Every
    base-repository pull request builds from the primary repository's synthetic
    merge ref in this environment and omits registered remotes.
-8. Add `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` as GitHub Actions variables and
-   `VERCEL_TOKEN` as a GitHub Actions secret.
+8. Add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as GitHub
+   Actions secrets.
 9. Keep the Vercel build command as `pnpm run build:vercel` and the output
    directory as `dist`.
 
