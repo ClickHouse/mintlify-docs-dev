@@ -10,6 +10,7 @@ import { SATTERI_FEATURES } from "./src/plugins/satteri-features";
 import { readScope } from "./src/lib/scope";
 import type { HastPluginDefinition } from "satteri";
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 // Sidebar generated from docs.json + navigation.json by bin/gen-sidebar.ts
@@ -38,6 +39,16 @@ const remoteMounts = (JSON.parse(fs.readFileSync(new URL("./remotes.json", impor
 // pnpm install does not expose those transitive links to Rolldown, so use the
 // vendored ESM runtime instead of relying on node_modules symlink layout.
 const tslibModule = fileURLToPath(new URL("./src/shims/tslib.mjs", import.meta.url));
+
+function markdownSnippet(relativePath: string) {
+  const source = fs.readFileSync(new URL(relativePath, import.meta.url), "utf8")
+    .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "")
+    .trim();
+  return {
+    revision: createHash("sha256").update(source).digest("hex"),
+    render: () => source,
+  };
+}
 
 const nimbusConfig = defineNimbusConfig({
   site: "https://clickhouse.com",
@@ -96,6 +107,23 @@ export default defineConfig({
           features: SATTERI_FEATURES,
           hastPlugins: [nimbusTableScroll, rebaseUrls({ base: BASE, remoteMounts }), mermaidBlocks()],
         }),
+        // The prepared Markdown surfaces are for agents rather than the web
+        // renderer. Preserve agent-only content and reduce the path selector
+        // to readable Markdown instead of emitting project-specific JSX.
+        componentMap: {
+          Visibility: {
+            revision: "clickhouse-visibility-v1",
+            render: ({ attrs, children }) => attrs.for === "agents" ? children : "",
+          },
+          View: {
+            revision: "clickhouse-view-v1",
+            render: ({ attrs, children }) =>
+              typeof attrs.title === "string" ? `**${attrs.title}**\n\n${children}` : children,
+          },
+          // This page imports a reusable MDX dataset setup block. Generated
+          // Markdown must inline it because an agent cannot execute imports.
+          NYCTaxiExampleDataset: markdownSnippet("./snippets/_nyc_taxi_example_dataset.mdx"),
+        },
       },
     }),
   ],

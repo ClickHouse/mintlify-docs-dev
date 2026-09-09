@@ -2,6 +2,7 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 import { defineDocSchema } from "@cloudflare/nimbus-docs/schemas";
+import { withNimbusMarkdown } from "@cloudflare/nimbus-docs/content";
 import { readScope } from "./lib/scope";
 import { staleSiblingPages } from "./lib/stale-siblings";
 import fs from "node:fs";
@@ -151,11 +152,11 @@ function treePattern(baseDir: string): string[] {
 function localeCollection(locale: (typeof LOCALES)[number]) {
   const active = ACTIVE_LOCALES.includes(locale);
   return defineCollection({
-    loader: glob({
+    loader: withNimbusMarkdown(glob({
       base: `./${locale}`,
       pattern: active ? treePattern(`./${locale}`) : "__inactive_locale__/**/*.{md,mdx}",
       generateId: pathId,
-    }),
+    })),
     schema,
   });
 }
@@ -166,20 +167,24 @@ const partialSchema = z.object({
 
 export const collections = {
   docs: defineCollection({
-    loader: glob({ base: ".", pattern: treePattern("."), generateId: pathId }),
+    loader: withNimbusMarkdown(glob({ base: ".", pattern: treePattern("."), generateId: pathId })),
     // Non-strict: the content carries Docusaurus-era keys we do not model.
     schema,
   }),
   changelog: defineCollection({
-    loader: glob({
+    loader: withNimbusMarkdown(glob({
       base: ".remote/changelog",
       pattern: scope.remotePreview ? "__remote_preview_excludes_changelog__/**/*.mdx" : "**/*.mdx",
       generateId: pathId,
-    }),
+    })),
     schema: changelogSchema,
   }),
   partials: defineCollection({
-    loader: glob({ base: "./src/content/partials", pattern: "**/*.{md,mdx}", generateId: pathId }),
+    loader: withNimbusMarkdown(glob({
+      base: "./src/content/partials",
+      pattern: "**/*.{md,mdx}",
+      generateId: pathId,
+    })),
     schema: partialSchema,
   }),
   ar: localeCollection("ar"),
