@@ -150,6 +150,9 @@ jobs:
           HEAD_SHA: ${{ steps.pull-request.outputs.head_sha }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
           TRANSLATION_SCOPE: ${{ steps.translations.outputs.scope }}
+          TRANSLATION_SUMMARY: ${{ steps.translations.outputs.summary }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TRUST: ${{ steps.pull-request.outputs.trust }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -157,6 +160,29 @@ jobs:
         run: |
           repository_owner="${GITHUB_REPOSITORY%%/*}"
           repository_name="${GITHUB_REPOSITORY#*/}"
+
+          update_preview_comment() {
+            deployment_status="$1"
+            updated_at="$(date -u '+%Y-%m-%d %H:%M UTC')"
+            marker="<!-- nimbus-site-preview -->"
+            docs_url="${preview_url%/}/docs"
+            body="$(printf '🕵 %s\n\n| Preview | Deployment | Components | Updated (UTC) |\n| --- | --- | --- | --- |\n| [Docs preview](%s) | [%s](%s) | %s | %s |' \
+              "$marker" \
+              "$docs_url" \
+              "$deployment_status" \
+              "$preview_url" \
+              "$TRANSLATION_SUMMARY" \
+              "$updated_at")"
+            comment_id="$({
+              gh api --paginate "repos/$GH_REPO/issues/$PULL_REQUEST_NUMBER/comments" \
+                --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$marker\")) | .id"
+            } | tail -n 1)"
+            if [[ -n "$comment_id" ]]; then
+              gh api --method PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$body" >/dev/null
+            else
+              gh pr comment "$PULL_REQUEST_NUMBER" --body "$body"
+            fi
+          }
 
           if ! project_response="$(
             curl --silent --show-error --fail-with-body \
@@ -225,6 +251,11 @@ jobs:
           preview_url="https://${deployment_url#https://}"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
           echo "Vercel deployment: $preview_url"
+          if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "Vercel returned an invalid preview URL." >&2
+            exit 1
+          fi
+          update_preview_comment "🟠 Building"
 
           for _ in {1..360}; do
             if ! deployment_response="$(
@@ -232,6 +263,7 @@ jobs:
                 --header "Authorization: Bearer $VERCEL_TOKEN" \
                 "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
             )"; then
+              update_preview_comment "🔴 Failed"
               printf '%s\n' "$deployment_response" >&2
               exit 1
             fi
@@ -242,6 +274,7 @@ jobs:
                 break
                 ;;
               ERROR|CANCELED|DELETED|BLOCKED)
+                update_preview_comment "🔴 Failed"
                 jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Vercel deployment did not complete")' \
                   <<< "$deployment_response" >&2
                 exit 1
@@ -250,6 +283,7 @@ jobs:
                 sleep 10
                 ;;
               *)
+                update_preview_comment "🔴 Failed"
                 echo "Unexpected Vercel deployment state: $ready_state" >&2
                 exit 1
                 ;;
@@ -257,33 +291,8 @@ jobs:
           done
 
           if [[ "$ready_state" != "READY" ]]; then
+            update_preview_comment "🔴 Failed"
             echo "Timed out waiting for Vercel deployment $deployment_id." >&2
             exit 1
           fi
-          if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
-            echo "Vercel returned an invalid preview URL." >&2
-            exit 1
-          fi
-
-      - name: Add the preview link to the pull request
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
-          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
-          TRANSLATION_SUMMARY: ${{ steps.translations.outputs.summary }}
-          TRUST: ${{ steps.pull-request.outputs.trust }}
-        run: |
-          marker="<!-- nimbus-site-preview -->"
-          body="$(printf '%s\n%s' \
-            "$marker" \
-            "Nimbus documentation preview ($TRUST, $TRANSLATION_SUMMARY): $PREVIEW_URL")"
-          comment_id="$({
-            gh api --paginate "repos/$GH_REPO/issues/$PULL_REQUEST_NUMBER/comments" \
-              --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$marker\")) | .id"
-          } | tail -n 1)"
-          if [[ -n "$comment_id" ]]; then
-            gh api --method PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$body" >/dev/null
-          else
-            gh pr comment "$PULL_REQUEST_NUMBER" --body "$body"
-          fi
+          update_preview_comment "🟢 Ready"
