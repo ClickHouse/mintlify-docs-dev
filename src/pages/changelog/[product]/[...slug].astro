@@ -6,12 +6,17 @@ import { readScope } from "../../../lib/scope";
 
 export const prerender = true;
 export async function getStaticPaths() {
-  if (readScope().remotePreview) return [];
+  const scope = readScope();
+  if (!scope.emitEnglish || scope.remotePreview) return [];
   const entries = await getCollection("changelog");
   return entries.map((entry) => {
     const [product, ...slug] = entry.id.split("/");
     if (!product || !slug.length) throw new Error(`Invalid changelog id: ${entry.id}`);
-    return { params: { product, slug: slug.join("/") }, props: { entry } };
+    return {
+      params: { product, slug: slug.join("/") },
+      props: { entry },
+      cacheKey: entry.digest,
+    };
   });
 }
 

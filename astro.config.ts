@@ -25,9 +25,8 @@ import { clickhouseSqlTransformer } from "./src/plugins/shiki-clickhouse-sql";
 // The site is served at clickhouse.com/docs behind the website Worker.
 export const BASE = "/docs";
 const buildScope = readScope();
-// Locale Workers share public images and Nimbus's static CSS through the
-// English Worker, but their compiled chunks must never collide. The website
-// router sends /docs/_astro-<locale>/* to the matching locale Worker.
+// Locale build shards share public images from the English output, but their
+// compiled chunks must never collide when all shards are merged.
 const buildAssetsDirectory = buildScope.locale === "en"
   ? "_astro"
   : `_astro-${buildScope.locale.toLowerCase()}`;
@@ -39,6 +38,10 @@ const remoteMounts = (JSON.parse(fs.readFileSync(new URL("./remotes.json", impor
 // pnpm install does not expose those transitive links to Rolldown, so use the
 // vendored ESM runtime instead of relying on node_modules symlink layout.
 const tslibModule = fileURLToPath(new URL("./src/shims/tslib.mjs", import.meta.url));
+const activeHomepageModule = fileURLToPath(new URL(
+  `./src/generated/homepage/${buildScope.locale.toLowerCase()}.jsx`,
+  import.meta.url,
+));
 
 function markdownSnippet(relativePath: string) {
   const source = fs.readFileSync(new URL(relativePath, import.meta.url), "utf8")
@@ -73,13 +76,16 @@ export default defineConfig({
   base: BASE,
   output: "static",
   build: { assets: buildAssetsDirectory },
-  publicDir: "./.remote/public-build",
-  // Overridable so parallel builds (CI shards, concurrent sessions) never
+  publicDir: process.env.DOCS_SKIP_PUBLIC === "1" ? "./.remote/public-empty" : "./.remote/public-build",
+  // Overridable so sequential locale shards and concurrent sessions never
   // share an output directory or the content-layer cache.
   outDir: process.env.DOCS_OUT_DIR ?? "./dist",
   cacheDir: process.env.DOCS_CACHE_DIR ?? "./node_modules/.astro",
   trailingSlash: "ignore",
   prefetch: { prefetchAll: true, defaultStrategy: "hover" },
+  experimental: {
+    incrementalBuild: true,
+  },
   markdown: {
     // Mermaid fences are rendered client-side (src/plugins/satteri-mermaid.ts).
     syntaxHighlight: { type: "shiki", excludeLangs: ["mermaid"] },
@@ -140,7 +146,7 @@ export default defineConfig({
     },
     plugins: [tailwindcss(), mintlifySnippets()],
     resolve: {
-      alias: { tslib: tslibModule },
+      alias: { tslib: tslibModule, "@active-homepage": activeHomepageModule },
       dedupe: ["react", "react-dom"],
     },
   },

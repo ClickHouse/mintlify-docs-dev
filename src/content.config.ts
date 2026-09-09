@@ -131,11 +131,15 @@ export type LocaleCollectionName = "ar" | "es" | "fr" | "ja" | "ko" | "pt-br" | 
 
 /**
  * Locales come from the build scope (`DOCS_LOCALES` for a combined Vercel
- * artifact, `DOCS_LOCALE` for one locale Worker, or `.preview-scope.json` for
+ * artifact, `DOCS_LOCALE` for one locale shard, or `.preview-scope.json` for
  * remote previews; see src/lib/scope.ts). Collection names deliberately avoid
  * the `docs-<x>` prefix, which Nimbus reserves for versions.
  */
 export const ACTIVE_LOCALES: string[] = [...scope.locales];
+/** Locales present in the final merged artifact and exposed by language links. */
+export const AVAILABLE_LOCALES: string[] = [...scope.availableLocales];
+/** English routes are emitted only by the English build shard. */
+export const EMIT_ENGLISH = scope.emitEnglish;
 
 /**
  * Collection names are lowercase even when the canonical URL segment is not.
@@ -168,14 +172,18 @@ const partialSchema = z.object({
 
 export const collections = {
   docs: defineCollection({
-    loader: withNimbusMarkdown(glob({ base: ".", pattern: treePattern("."), generateId: pathId })),
+    loader: withNimbusMarkdown(glob({
+      base: ".",
+      pattern: EMIT_ENGLISH ? treePattern(".") : "__inactive_english__/**/*.{md,mdx}",
+      generateId: pathId,
+    })),
     // Non-strict: the content carries Docusaurus-era keys we do not model.
     schema,
   }),
   changelog: defineCollection({
     loader: withNimbusMarkdown(glob({
       base: ".remote/changelog",
-      pattern: scope.remotePreview ? "__remote_preview_excludes_changelog__/**/*.mdx" : "**/*.mdx",
+      pattern: !EMIT_ENGLISH || scope.remotePreview ? "__inactive_changelog__/**/*.mdx" : "**/*.mdx",
       generateId: pathId,
     })),
     schema: changelogSchema,

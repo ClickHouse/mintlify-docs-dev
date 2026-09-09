@@ -41,6 +41,74 @@ function siblingKeys(labels: string[]): string[] {
 
 export type LazyGroup = { key: string; label: string; items: ConfigItem[]; path: string[] };
 
+type ConfigGroup = Extract<ConfigItem, { items: ConfigItem[] }>;
+type NavigationLocation = {
+  tabIndex: number;
+  railItems: ConfigItem[];
+  railPath: string[];
+};
+type NavigationIndex = {
+  locations: Map<string, NavigationLocation>;
+  tabs: ConfigGroup[];
+  firstLinks: string[];
+};
+
+const navigationIndexes = new WeakMap<ConfigItem[], NavigationIndex>();
+const normPath = (value: string): string => value.replace(/\/+$/, "") || "/";
+
+function internalLinks(nodes: ConfigItem[]): string[] {
+  const links: string[] = [];
+  for (const node of nodes) {
+    if ("items" in node) links.push(...internalLinks(node.items));
+    else if (!/^(https?:)?\/\//.test(node.link)) links.push(normPath(withBase(node.link)));
+  }
+  return links;
+}
+
+/** Index every page's rail selection once instead of rescanning the tree per page. */
+function navigationIndex(items: ConfigItem[]): NavigationIndex {
+  const cached = navigationIndexes.get(items);
+  if (cached) return cached;
+
+  const tabs = items.filter((item): item is ConfigGroup => "items" in item);
+  const locations = new Map<string, NavigationLocation>();
+  tabs.forEach((tab, tabIndex) => {
+    const tabLocation = { tabIndex, railItems: tab.items, railPath: [] };
+    for (const link of internalLinks(tab.items)) locations.set(link, tabLocation);
+
+    const topGroups = tab.items.filter((item): item is ConfigGroup => "items" in item);
+    const topKeys = siblingKeys(topGroups.map((group) => group.label));
+    topGroups.forEach((topGroup, topIndex) => {
+      const topLocation = {
+        tabIndex,
+        railItems: topGroup.items,
+        railPath: [topKeys[topIndex]],
+      };
+      for (const link of internalLinks(topGroup.items)) locations.set(link, topLocation);
+
+      if (tab.label !== "Solutions") return;
+      const productGroups = topGroup.items.filter((item): item is ConfigGroup => "items" in item);
+      const productKeys = siblingKeys(productGroups.map((group) => group.label));
+      productGroups.forEach((productGroup, productIndex) => {
+        const productLocation = {
+          tabIndex,
+          railItems: productGroup.items,
+          railPath: [topKeys[topIndex], productKeys[productIndex]],
+        };
+        for (const link of internalLinks(productGroup.items)) locations.set(link, productLocation);
+      });
+    });
+  });
+
+  const index = {
+    locations,
+    tabs,
+    firstLinks: tabs.map((tab) => internalLinks(tab.items)[0] ?? "/"),
+  };
+  navigationIndexes.set(items, index);
+  return index;
+}
+
 /** Every group in the config tree with its fragment key. Tabs are skipped. */
 export function collectGroups(items: ConfigItem[], path: string[] = [], out: LazyGroup[] = [], depth = 0): LazyGroup[] {
   const groups = items.filter((i): i is Extract<ConfigItem, { items: ConfigItem[] }> => "items" in i);
@@ -108,44 +176,19 @@ export function assignLazyKeys<T extends SidebarItem>(items: T[], path: string[]
  * lazy fragments (`/nav/<locale>/...`).
  */
 export function buildRailFromConfig(items: ConfigItem[], currentPath: string, keyPrefix: string[] = []): SidebarItem[] {
-  const norm = (p: string) => p.replace(/\/+$/, "") || "/";
-  const target = norm(currentPath);
-  const tabs = items.filter((i): i is Extract<ConfigItem, { items: ConfigItem[] }> => "items" in i);
-  const contains = (nodes: ConfigItem[]): boolean =>
-    nodes.some((n) => ("items" in n ? contains(n.items) : norm(withBase(n.link)) === target));
-  const tab = tabs.find((t) => contains(t.items)) ?? tabs[0];
-  if (!tab) return [];
-
-  const groupsWithKeys = (nodes: ConfigItem[]) => {
-    const groups = nodes.filter((i): i is Extract<ConfigItem, { items: ConfigItem[] }> => "items" in i);
-    const keys = siblingKeys(groups.map((group) => group.label));
-    return groups.map((group, index) => ({ group, key: keys[index] }));
-  };
-
-  // Database, Integrations, and Resources expose their direct groups in the
-  // top menu. Solutions adds a presentational section level (ClickHouse Cloud
-  // and Open source), so select its actual product entry one level deeper.
-  const topMatch = groupsWithKeys(tab.items).find(({ group }) => contains(group.items));
-  let railItems = tab.items;
-  let railPath = keyPrefix;
-  if (topMatch) {
-    railItems = topMatch.group.items;
-    railPath = [...keyPrefix, topMatch.key];
-    if (tab.label === "Solutions") {
-      const productMatch = groupsWithKeys(topMatch.group.items).find(({ group }) => contains(group.items));
-      if (productMatch) {
-        railItems = productMatch.group.items;
-        railPath = [...railPath, productMatch.key];
-      }
-    }
-  }
+  const target = normPath(currentPath);
+  const index = navigationIndex(items);
+  const location = index.locations.get(target);
+  const railItems = location?.railItems ?? index.tabs[0]?.items;
+  if (!railItems) return [];
+  const railPath = [...keyPrefix, ...(location?.railPath ?? [])];
 
   const rendered = toRendered(railItems, railPath);
   const mark = (nodes: SidebarItem[]): boolean => {
     let any = false;
     for (const n of nodes) {
       if (n.type === "link") {
-        if (norm(n.href) === target) { (n as { isCurrent?: boolean }).isCurrent = true; any = true; }
+        if (normPath(n.href) === target) { (n as { isCurrent?: boolean }).isCurrent = true; any = true; }
       } else if (n.type === "group") {
         const hit = mark(n.children);
         if (hit) { n.collapsed = false; any = true; }
@@ -159,18 +202,12 @@ export function buildRailFromConfig(items: ConfigItem[], currentPath: string, ke
 
 /** Top-level sections (tabs) for the header, from the generated config tree. */
 export function sectionsFromConfig(items: ConfigItem[], currentPath: string): Array<{ label: string; href: string; isActive: boolean }> {
-  const norm = (p: string) => p.replace(/\/+$/, "") || "/";
-  const target = norm(currentPath);
-  const firstLink = (nodes: ConfigItem[]): string | undefined => {
-    for (const n of nodes) {
-      if ("items" in n) { const l = firstLink(n.items); if (l) return l; }
-      else if (!/^(https?:)?\/\//.test(n.link)) return n.link;
-    }
-    return undefined;
-  };
-  const contains = (nodes: ConfigItem[]): boolean =>
-    nodes.some((n) => ("items" in n ? contains(n.items) : norm(withBase(n.link)) === target));
-  return items
-    .filter((i): i is Extract<ConfigItem, { items: ConfigItem[] }> => "items" in i)
-    .map((t) => ({ label: t.label, href: withBase(firstLink(t.items) ?? "/"), isActive: contains(t.items) }));
+  const target = normPath(currentPath);
+  const index = navigationIndex(items);
+  const activeTab = index.locations.get(target)?.tabIndex ?? -1;
+  return index.tabs.map((tab, tabIndex) => ({
+    label: tab.label,
+    href: index.firstLinks[tabIndex],
+    isActive: tabIndex === activeTab,
+  }));
 }

@@ -2,11 +2,16 @@
 import { config } from "virtual:nimbus/config";
 import { englishCorpusEntries, sectionsOf } from "../../lib/corpus";
 import { withBase } from "../../lib/base";
+import { EMIT_ENGLISH } from "../../content.config";
 
 export const prerender = true;
 
 export async function getStaticPaths() {
-  return sectionsOf(await englishCorpusEntries()).map((section) => ({ params: { section } }));
+  if (!EMIT_ENGLISH) return [];
+  return sectionsOf(await englishCorpusEntries()).map((section) => ({
+    params: { section },
+    cacheKey: `llms-full-pointer:${section}`,
+  }));
 }
 
 export async function GET({ params }: { params: { section: string } }) {

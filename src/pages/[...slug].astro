@@ -13,7 +13,7 @@ import {
 import { components } from "../components";
 import { withBase, stripBase } from "../lib/base";
 import { buildRailFromConfig, type ConfigItem } from "../lib/sidebar-lazy";
-import { ACTIVE_LOCALES, localeCollectionName } from "../content.config";
+import { AVAILABLE_LOCALES, EMIT_ENGLISH, localeCollectionName } from "../content.config";
 import { localeRouteName } from "../util/locales";
 import { getRemoteEditUrl } from "../lib/remotes";
 import navigation from "../generated/sidebar.items.json";
@@ -21,6 +21,7 @@ import type { GetStaticPaths } from "astro";
 
 export const prerender = true;
 export const getStaticPaths: GetStaticPaths = async (options) => {
+  if (!EMIT_ENGLISH) return [];
   const paths = await getDocsStaticPaths(options);
   return paths.filter(({ params }) => {
     const slug = params.slug;
@@ -69,17 +70,17 @@ const toc = tocOn && effectiveTocConfig !== false ? getTOC(headings, effectiveTo
 const layoutMode = entry.data.mode === "custom" || entry.data.mode === "wide" ? entry.data.mode : "doc";
 const data = entry.data as { title?: string; sidebarTitle?: string };
 const pageTitle = data.title ?? data.sidebarTitle ?? entry.id.split("/").pop() ?? entry.id;
-const markdownPath = withBase(`/${entry.id}/index.md`);
+const markdownPath = withBase(`/${entry.id}.md`);
 const markdownUrl = Astro.site ? new URL(markdownPath, Astro.site).href : markdownPath;
 // No per-page OG cards yet (canvaskit); fall back to the site image.
 const socialImage = entry.data.socialImage;
 // hreflang alternates for the translated (or English-fallback) copies of this page.
 const HREFLANG: Record<string, string> = { "pt-br": "pt-BR" };
-const alternates = Astro.site && ACTIVE_LOCALES.length && entry.id !== "index"
+const alternates = Astro.site && AVAILABLE_LOCALES.length && entry.id !== "index"
   ? [
       { hreflang: "en", href: new URL(withBase(`/${entry.id}/`), Astro.site).href },
       { hreflang: "x-default", href: new URL(withBase(`/${entry.id}/`), Astro.site).href },
-      ...ACTIVE_LOCALES.map((l) => ({ hreflang: HREFLANG[localeCollectionName(l)] ?? l, href: new URL(withBase(`/${localeRouteName(l)}/${entry.id}/`), Astro.site!).href })),
+      ...AVAILABLE_LOCALES.map((l) => ({ hreflang: HREFLANG[localeCollectionName(l)] ?? l, href: new URL(withBase(`/${localeRouteName(l)}/${entry.id}/`), Astro.site!).href })),
     ]
   : [];
 ---
@@ -107,7 +108,7 @@ const alternates = Astro.site && ACTIVE_LOCALES.length && entry.id !== "index"
   lang="en"
   alternates={alternates}
   currentLocale="en"
-  activeLocales={ACTIVE_LOCALES}
+  activeLocales={AVAILABLE_LOCALES}
 >
   <Content components={components} />
 </DocsLayout>

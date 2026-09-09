@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import {
   buildApiModel,
   getApiPageProps,
@@ -101,6 +102,18 @@ export interface ApiOperationPage {
   sourceUrl: string;
   editUrl?: string;
   badge?: string;
+}
+
+const documentDigestCache = new WeakMap<OpenApiDocument, string>();
+
+/** Invalidate every operation when its shared OpenAPI document changes. */
+export function apiPageCacheKey(page: ApiOperationPage): string {
+  let digest = documentDigestCache.get(page.document);
+  if (!digest) {
+    digest = createHash("sha256").update(JSON.stringify(page.document)).digest("hex");
+    documentDigestCache.set(page.document, digest);
+  }
+  return `${digest}:${page.method}:${page.path}`;
 }
 
 const COLLECTIONS: Record<ApiCollection, { file: string; directory: string; sourceUrl: string; editUrl?: string }> = {
@@ -287,7 +300,7 @@ export async function getRoutedApiOperation(
     view: {
       ...page,
       href,
-      markdownHref: `${href}/index.md`,
+      markdownHref: `${href}.md`,
     },
   };
 }
