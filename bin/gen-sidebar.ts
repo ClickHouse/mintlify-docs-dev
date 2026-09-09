@@ -137,8 +137,6 @@ const remotes: Array<{ name: string; label: string; repo: string; mount: string;
       sourceRef: r.repo,
     }))
   : [];
-// The Mintlify config still says `ClickHouse/airgap-docs`; the repository is `airgapped-docs`.
-for (const r of remotes) if (r.repo === "ClickHouse/airgapped-docs") r.sourceRef = "ClickHouse/airgap-docs";
 const previewRemote = scope.remotePreview ? remotes.find((remote) => remote.name === scope.remotePreview?.name) : undefined;
 if (scope.remotePreview && !previewRemote) {
   throw new Error(`gen-sidebar: preview scope names unknown remote "${scope.remotePreview.name}"`);

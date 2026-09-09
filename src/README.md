@@ -40,7 +40,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 - `src/content.config.ts`: `docs` (English, path-derived ids) and one collection per locale (`es`, `pt-br`, ...).
 - `src/pages/[...slug].astro`, `src/pages/[locale]/[...slug].astro`: page routes (locale pages fall back to English).
 - `src/pages/nav/[...key].astro`: lazy sidebar fragments; `src/lib/sidebar-lazy.ts`.
-- `src/pages/**/llms*.txt.ts`, `**/index.md.ts`: agent surfaces (chunked corpora in `src/lib/corpus.ts`).
+- `src/pages/**/llms*.txt.ts`, `**/index.md.ts`: agent surfaces. The root `llms-full.txt` links to full-text, top-level-section `llms.txt` files; `src/lib/corpus.ts` recursively subdivides any corpus that reaches 24 MiB.
 - `src/components/compat/`: Mintlify component names on Nimbus components; `react/` shims for snippet JSX.
 - `bin/`: generators and measurement scripts; `worker/`: Cloudflare Worker; `wrangler.jsonc`.
 - `src/generated/` (gitignored): sidebar items, import index, island wrappers.

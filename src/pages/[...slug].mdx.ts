@@ -1,10 +1,9 @@
+/** Convenience alias: `/<slug>.mdx` serves the same source as `/<slug>/index.mdx`. */
 import {
   getPreparedMarkdownArtifact,
   getPreparedMarkdownStaticPaths,
   type PreparedMarkdownReference,
 } from "@cloudflare/nimbus-docs/build";
-import { prepareAgentMarkdown } from "../../lib/agent-links";
-import { withBase } from "../../lib/base";
 
 export const prerender = true;
 
@@ -15,14 +14,17 @@ interface Props {
 export async function getStaticPaths() {
   return (await getPreparedMarkdownStaticPaths({
     collection: "docs",
-    surface: "markdown",
-  })).filter(({ props }) => !props.artifact.id.startsWith("products/cloud/api-reference/"));
+    surface: "source",
+  })).filter(
+    ({ props }) =>
+      props.artifact.id !== "index" &&
+      !props.artifact.id.startsWith("products/cloud/api-reference/"),
+  );
 }
 
 export async function GET({ props }: { props: Props }) {
   const artifact = await getPreparedMarkdownArtifact(props.artifact);
-  const pagePath = withBase(artifact.id === "index" ? "/" : `/${artifact.id}/`);
-  return new Response(prepareAgentMarkdown(artifact.body, pagePath), {
+  return new Response(artifact.body, {
     headers: { "Content-Type": artifact.mediaType },
   });
 }
