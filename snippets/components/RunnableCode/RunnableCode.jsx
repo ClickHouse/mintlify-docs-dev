@@ -35,7 +35,7 @@ export const RunnableCode = ({ children, run = false, showStats = true }) => {
 
   useEffect(() => {
     if (codeRef.current) {
-      const block = codeRef.current.querySelector('.code-block');
+      const block = codeRef.current.querySelector('.code-block, .nb-code-figure');
       if (block) {
         block.style.marginBottom = '0';
         block.style.marginTop = '0';
@@ -222,26 +222,16 @@ export const RunnableCode = ({ children, run = false, showStats = true }) => {
   };
 
   return (
-    <div className="not-prose" style={{ margin: '1rem 0', width: '100%', boxSizing: 'border-box', contain: 'inline-size' }}>
+    <div className="not-prose ch-runnable-code">
 
       {/* Code display + action bar */}
       <div>
-        <div ref={codeRef}>
+        <div ref={codeRef} className="ch-runnable-code__source">
           {children}
         </div>
 
         {/* Action bar */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '6px 12px',
-          backgroundColor: headerBg,
-          borderWidth: '0 1px 1px 1px',
-          borderStyle: 'solid',
-          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(11,11,11,0.1)',
-          borderRadius: '0 0 4px 4px',
-        }}>
+        <div className="ch-runnable-code__actions">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {results && (
               <button
