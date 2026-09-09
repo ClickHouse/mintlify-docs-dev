@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-const publicRoot = path.resolve(fileURLToPath(new URL("../../.remote/public-build/", import.meta.url)));
+// Astro bundles this module into its prerender directory, so `import.meta.url`
+// no longer points back into `src` during a production build.
+const publicRoot = path.resolve(process.cwd(), ".remote/public-build");
 const cache = new Map<string, string>();
 const mimeTypes: Record<string, string> = {
   ".avif": "image/avif",
