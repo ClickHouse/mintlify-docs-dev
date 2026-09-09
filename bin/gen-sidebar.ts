@@ -195,7 +195,7 @@ function noteOrder(groupPath: string, pages: string[]) {
 
 // ---------------------------------------------------------------- conversion
 type NimbusItem =
-  | { label: string; link: string; badge?: NavBadge; icon?: string }
+  | { label: string; link: string; badge?: NavBadge; icon?: string; hidden?: boolean }
   | { label: string; items: NimbusItem[]; collapsed?: boolean; segment?: string; landing?: string; icon?: string };
 
 function convertPages(pages: Json[], groupPath: string): NimbusItem[] {
@@ -222,8 +222,7 @@ function convertPages(pages: Json[], groupPath: string): NimbusItem[] {
       const info = pageInfo(p);
       if (!info.exists) missing.push(`${groupPath}: ${p}`);
       seenPages.add(p);
-      if (info.hidden) continue;
-      out.push({ label: info.label, link: pageLink(p), badge: info.badge, icon: info.icon });
+      out.push({ label: info.label, link: pageLink(p), badge: info.badge, icon: info.icon, hidden: info.hidden || undefined });
       continue;
     }
     if (p && typeof p === "object") {

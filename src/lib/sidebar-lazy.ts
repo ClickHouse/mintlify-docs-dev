@@ -17,7 +17,7 @@ export const LAZY_MIN_CHILDREN = 6;
 export const TAB_LABELS = new Set(["Home", "Database", "Solutions", "Integrations", "Resources"]);
 
 export type ConfigItem =
-  | { label: string; link: string; badge?: import("@cloudflare/nimbus-docs/types").SidebarBadge; icon?: string }
+  | { label: string; link: string; badge?: import("@cloudflare/nimbus-docs/types").SidebarBadge; icon?: string; hidden?: boolean }
   | { label: string; items: ConfigItem[]; collapsed?: boolean; segment?: string; landing?: string; icon?: string };
 
 export function slugifyLabel(label: string): string {
@@ -61,7 +61,7 @@ export function toRendered(items: ConfigItem[], path: string[]): SidebarItem[] {
   const groups = items.filter((i): i is Extract<ConfigItem, { items: ConfigItem[] }> => "items" in i);
   const keys = siblingKeys(groups.map((g) => g.label));
   let gi = 0;
-  return items.map((item, order) => {
+  return items.flatMap((item, order) => {
     if ("items" in item) {
       const key = [...path, keys[gi++]].join("/");
       const group = {
@@ -75,12 +75,15 @@ export function toRendered(items: ConfigItem[], path: string[]): SidebarItem[] {
         icon: item.icon,
       } as SidebarItem & { _lazyKey?: string };
       group._lazyKey = key;
-      return group;
+      return [group];
     }
+    if (item.hidden) return [];
     const href = /^(https?:)?\/\//.test(item.link) ? item.link : withBase(item.link);
-    return /^(https?:)?\/\//.test(item.link)
-      ? ({ type: "external", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem)
-      : ({ type: "link", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem);
+    return [
+      /^(https?:)?\/\//.test(item.link)
+        ? ({ type: "external", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem)
+        : ({ type: "link", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem),
+    ];
   });
 }
 
@@ -167,7 +170,7 @@ export function sectionsFromConfig(items: ConfigItem[], currentPath: string): Ar
   const firstLink = (nodes: ConfigItem[]): string | undefined => {
     for (const n of nodes) {
       if ("items" in n) { const l = firstLink(n.items); if (l) return l; }
-      else if (!/^(https?:)?\/\//.test(n.link)) return n.link;
+      else if (!n.hidden && !/^(https?:)?\/\//.test(n.link)) return n.link;
     }
     return undefined;
   };
