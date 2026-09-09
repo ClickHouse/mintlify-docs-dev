@@ -157,14 +157,40 @@ function initPersistence(root: HTMLElement): (() => void) | null {
     root;
   const hash = root.dataset.nbSidebarHash ?? "";
 
+  function readPreviousOpenState(): Record<string, boolean> | null {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const previous = JSON.parse(raw) as Partial<SidebarState>;
+      if (previous.hash !== hash || !previous.open || Array.isArray(previous.open)) return null;
+      return previous.open;
+    } catch {
+      return null;
+    }
+  }
+
   function readState(): SidebarState {
     const groups = root.querySelectorAll<HTMLElement>("[data-nb-sidebar-group]");
     const open: Record<string, boolean> = {};
+    const previousOpen = readPreviousOpenState();
     groups.forEach((group) => {
       const trigger = ownedTrigger(group);
+      const key = groupKey(group);
+      const containsActivePage = Boolean(group.querySelector("[aria-current='page']"));
       // Fixed section headings have no disclosure trigger and always remain
       // open. Recording them as open also repairs state written by older code.
-      open[groupKey(group)] = !trigger || trigger.getAttribute("data-nb-state") === "open";
+      // A group on the active route is forced open so the current page stays
+      // visible. Do not mistake that temporary expansion for user intent:
+      // preserve the previous preference, or the authored default on the
+      // first visit.
+      if (trigger && containsActivePage) {
+        const previousValue = previousOpen?.[key];
+        open[key] = typeof previousValue === "boolean"
+          ? previousValue
+          : group.dataset.nbSidebarPreferredOpen === "true";
+      } else {
+        open[key] = !trigger || trigger.getAttribute("data-nb-state") === "open";
+      }
     });
     return { hash, open, scroll: scrollHost.scrollTop };
   }

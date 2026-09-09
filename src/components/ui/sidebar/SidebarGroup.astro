@@ -69,7 +69,11 @@ function hasActiveDescendant(items: SidebarItem[]): boolean {
 }
 
 const hasActive = Boolean(indexIsCurrent) || hasActiveDescendant(items);
-const isOpen = Boolean(section || hasActive || collapsed === false || collapsed === undefined);
+// Active routes must be visible even when their group is authored as
+// collapsed. Keep that temporary expansion separate from the state that the
+// persistence layer carries to the next route.
+const preferredOpen = Boolean(section || collapsed === false || collapsed === undefined);
+const isOpen = Boolean(hasActive || preferredOpen);
 // Collapsed groups off the active path ship a placeholder instead of their
 // subtree; sidebar-lazy.client.ts fetches the prebuilt fragment on expand.
 const lazy = !isOpen && Boolean(lazyKey) && items.length >= LAZY_MIN_CHILDREN;
@@ -93,6 +97,7 @@ const iconName = icon && !icon.startsWith("/")
   class={cn("group/accordion", className)}
   open={isOpen}
   data-nb-sidebar-group
+  data-nb-sidebar-preferred-open={preferredOpen ? "true" : "false"}
   {...attrs}
 >
   {section ? (
