@@ -17,7 +17,7 @@ export const LAZY_MIN_CHILDREN = 6;
 export const TAB_LABELS = new Set(["Home", "Database", "Solutions", "Integrations", "Resources"]);
 
 export type ConfigItem =
-  | { label: string; link: string; badge?: import("@cloudflare/nimbus-docs/types").SidebarBadge }
+  | { label: string; link: string; badge?: import("@cloudflare/nimbus-docs/types").SidebarBadge; icon?: string }
   | { label: string; items: ConfigItem[]; collapsed?: boolean; segment?: string; landing?: string; icon?: string };
 
 export function slugifyLabel(label: string): string {
@@ -79,8 +79,8 @@ export function toRendered(items: ConfigItem[], path: string[]): SidebarItem[] {
     }
     const href = /^(https?:)?\/\//.test(item.link) ? item.link : withBase(item.link);
     return /^(https?:)?\/\//.test(item.link)
-      ? ({ type: "external", label: item.label, href, order, badge: item.badge } as SidebarItem)
-      : ({ type: "link", label: item.label, href, order, badge: item.badge } as SidebarItem);
+      ? ({ type: "external", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem)
+      : ({ type: "link", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem);
   });
 }
 
