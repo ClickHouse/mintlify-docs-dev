@@ -9,6 +9,7 @@
  *
  *   {
  *     "locale": "en",
+ *     "remotes": true,
  *     "reference": false,
  *     "remotePreview": {
  *       "name": "clickhouse-private",
@@ -41,6 +42,8 @@ export interface BuildScope {
   locales: Locale[];
   /** Whether `reference/**` is part of the build. */
   reference: boolean;
+  /** Whether registered remote sources participate in this build. */
+  remotes: boolean;
   /** Build only this registered remote at an immutable preview revision. */
   remotePreview?: RemotePreview;
   source: "env" | "file" | "default";
@@ -48,6 +51,7 @@ export interface BuildScope {
 
 interface ScopeFile {
   locale?: unknown;
+  remotes?: unknown;
   reference?: unknown;
   remotePreview?: unknown;
 }
@@ -128,9 +132,25 @@ function parseReference(value: unknown, source: string): boolean {
   }
 }
 
+function parseRemotes(value: unknown, source: string): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") {
+    throw new Error(`${source} must be all or none`);
+  }
+  switch (value.trim().toLowerCase()) {
+    case "all":
+      return true;
+    case "none":
+      return false;
+    default:
+      throw new Error(`${source} must be all or none`);
+  }
+}
+
 export function readScope(root = process.cwd()): BuildScope {
   const envLocale = (process.env.DOCS_LOCALE ?? "").trim();
   const envLocales = (process.env.DOCS_LOCALES ?? "").trim();
+  const envRemotes = (process.env.DOCS_REMOTES ?? "").trim();
   const envReference = (process.env.DOCS_REFERENCE ?? "").trim().toLowerCase();
   const envRemoteName = (process.env.DOCS_REMOTE_NAME ?? "").trim();
   const envRemoteRepository = (process.env.DOCS_REMOTE_REPOSITORY ?? "").trim();
@@ -191,6 +211,11 @@ export function readScope(root = process.cwd()): BuildScope {
     : fileScope?.reference !== undefined
       ? parseReference(fileScope.reference, ".preview-scope.json reference")
       : true;
+  const remotes = envRemotes
+    ? parseRemotes(envRemotes, "DOCS_REMOTES")
+    : fileScope?.remotes !== undefined
+      ? parseRemotes(fileScope.remotes, ".preview-scope.json remotes")
+      : true;
   const remotePreview = hasRemoteEnvironment
     ? parseRemotePreview(
         {
@@ -206,11 +231,18 @@ export function readScope(root = process.cwd()): BuildScope {
   if (remotePreview && (locale !== "en" || locales.length > 0)) {
     throw new Error("Remote pull-request previews are English-only; omit DOCS_LOCALES");
   }
-  if (envLocale || envLocales || envReference || hasRemoteEnvironment) source = "env";
+  if (remotePreview && !remotes) {
+    throw new Error("Remote pull-request previews require DOCS_REMOTES=all");
+  }
+  if (isVercelProduction && !remotes) {
+    throw new Error("Vercel production builds require DOCS_REMOTES=all");
+  }
+  if (envLocale || envLocales || envRemotes || envReference || hasRemoteEnvironment) source = "env";
   return {
     locale,
     locales,
     reference,
+    remotes,
     remotePreview,
     source,
   };

@@ -132,7 +132,10 @@ for (const remote of manifest.remotes) {
     throw new Error(`prepare-public: fetch state for remote "${remote.name}" does not match remotes.json`);
   }
   if (state.skipped) {
-    if (state.reason === "excluded-from-untrusted-vercel-preview") continue;
+    if (
+      state.reason === "excluded-from-base-preview"
+      || state.reason === "excluded-from-untrusted-vercel-preview"
+    ) continue;
     throw new Error(`prepare-public: remote "${remote.name}" was omitted but its assets were requested`);
   }
 
@@ -155,4 +158,9 @@ for (const remote of manifest.remotes) {
   }
 }
 
-console.log(`prepare-public: ${scope.remotePreview ? `remote preview ${scope.remotePreview.name}` : "full site"} -> ${path.relative(root, output)}`);
+const scopeLabel = scope.remotePreview
+  ? `source preview ${scope.remotePreview.name}`
+  : scope.remotes
+    ? "full site"
+    : "base preview";
+console.log(`prepare-public: ${scopeLabel} -> ${path.relative(root, output)}`);

@@ -4,6 +4,23 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      vercel_org_id:
+        description: Vercel organization ID
+        required: true
+        type: string
+      vercel_project_id:
+        description: Vercel project ID
+        required: true
+        type: string
+    secrets:
+      VERCEL_TOKEN:
+        required: true
+    outputs:
+      production_url:
+        description: URL of the completed Vercel production deployment
+        value: ${{ jobs.production.outputs.production_url }}
 
 permissions:
   contents: read
@@ -17,6 +34,8 @@ jobs:
     name: Build on Vercel
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    outputs:
+      production_url: ${{ steps.deploy.outputs.production_url }}
     steps:
       - name: Require the default branch for manual production deployments
         if: github.event_name == 'workflow_dispatch'
@@ -28,16 +47,32 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve the trusted documentation site revision
+        id: site
+        env:
+          SITE_REPOSITORY: ClickHouse/mintlify-docs-dev
+        run: |
+          if [[ "$GITHUB_REPOSITORY" == "$SITE_REPOSITORY" ]]; then
+            site_sha="$GITHUB_SHA"
+          else
+            site_sha="$({
+              git ls-remote "https://github.com/$SITE_REPOSITORY.git" refs/heads/main
+            } | awk 'NR == 1 { print $1 }')"
+          fi
+          if [[ ! "$site_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Could not resolve the trusted documentation site revision." >&2
+            exit 1
+          fi
+          echo "sha=$site_sha" >> "$GITHUB_OUTPUT"
+
       - name: Trigger and wait for the Vercel production deployment
         id: deploy
         env:
-          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          SITE_SHA: ${{ steps.site.outputs.sha }}
+          VERCEL_ORG_ID: ${{ inputs.vercel_org_id || vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id || vars.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          repository_owner="${GITHUB_REPOSITORY%%/*}"
-          repository_name="${GITHUB_REPOSITORY#*/}"
-
           if ! project_response="$(
             curl --silent --show-error --fail-with-body \
               --header "Authorization: Bearer $VERCEL_TOKEN" \
@@ -50,26 +85,32 @@ jobs:
 
           payload="$(
             jq --null-input \
-              --arg approved_sha "$GITHUB_SHA" \
+              --arg approved_sha "$SITE_SHA" \
               --arg project_id "$VERCEL_PROJECT_ID" \
               --arg project_name "$project_name" \
-              --arg repository "$repository_name" \
-              --arg repository_owner "$repository_owner" \
+              --arg triggering_repository "$GITHUB_REPOSITORY" \
+              --arg triggering_sha "$GITHUB_SHA" \
               '{
                 name: $project_name,
                 project: $project_id,
                 target: "production",
                 gitSource: {
                   type: "github",
-                  org: $repository_owner,
-                  repo: $repository,
+                  org: "ClickHouse",
+                  repo: "mintlify-docs-dev",
                   ref: "main",
                   sha: $approved_sha
                 },
-                build: {env: {DOCS_LOCALES: "all"}},
+                build: {env: {
+                  DOCS_LOCALES: "all",
+                  DOCS_REMOTES: "all"
+                }},
                 meta: {
-                  sourceRepository: ($repository_owner + "/" + $repository),
+                  buildScope: "production",
+                  sourceRepository: "ClickHouse/mintlify-docs-dev",
                   approvedSha: $approved_sha,
+                  triggeringRepository: $triggering_repository,
+                  triggeringSha: $triggering_sha,
                   translations: "all"
                 }
               }'

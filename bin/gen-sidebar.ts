@@ -150,7 +150,11 @@ function remoteIsOmitted(remote: (typeof remotes)[number]): boolean {
   const state = readJson(stateFile) as Obj;
   if (!state.skipped) return false;
   const reason = String(state.reason ?? "");
-  if (reason !== "excluded-from-remote-preview" && reason !== "excluded-from-untrusted-vercel-preview") {
+  if (
+    reason !== "excluded-from-base-preview"
+    && reason !== "excluded-from-remote-preview"
+    && reason !== "excluded-from-untrusted-vercel-preview"
+  ) {
     throw new Error(`gen-sidebar: remote ${remote.name} has an unknown omission reason: ${reason}`);
   }
   return true;

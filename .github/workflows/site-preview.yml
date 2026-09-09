@@ -74,10 +74,8 @@ jobs:
           fi
 
           if [[ "$head_repository" == "$GITHUB_REPOSITORY" ]]; then
-            custom_environment="remote-preview"
             trust="trusted-branch"
           else
-            custom_environment=""
             trust="untrusted-fork"
           fi
 
@@ -85,7 +83,6 @@ jobs:
           echo "head_repository=$head_repository" >> "$GITHUB_OUTPUT"
           echo "merge_ref=$merge_ref" >> "$GITHUB_OUTPUT"
           echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
-          echo "custom_environment=$custom_environment" >> "$GITHUB_OUTPUT"
           echo "trust=$trust" >> "$GITHUB_OUTPUT"
 
       - name: Select translated collections from pull request labels
@@ -148,7 +145,6 @@ jobs:
         id: deploy
         env:
           APPROVED_SHA: ${{ steps.pull-request.outputs.merge_sha }}
-          CUSTOM_ENVIRONMENT: ${{ steps.pull-request.outputs.custom_environment }}
           GIT_REF: ${{ steps.pull-request.outputs.merge_ref }}
           HEAD_REPOSITORY: ${{ steps.pull-request.outputs.head_repository }}
           HEAD_SHA: ${{ steps.pull-request.outputs.head_sha }}
@@ -175,7 +171,6 @@ jobs:
           payload="$(
             jq --null-input \
               --arg approved_sha "$APPROVED_SHA" \
-              --arg custom_environment "$CUSTOM_ENVIRONMENT" \
               --arg git_ref "$GIT_REF" \
               --arg head_repository "$HEAD_REPOSITORY" \
               --arg head_sha "$HEAD_SHA" \
@@ -196,8 +191,12 @@ jobs:
                   ref: $git_ref,
                   sha: $approved_sha
                 },
-                build: {env: {DOCS_LOCALES: $translations}},
+                build: {env: {
+                  DOCS_LOCALES: $translations,
+                  DOCS_REMOTES: "none"
+                }},
                 meta: {
+                  buildScope: "base-preview",
                   sourceRepository: ($repository_owner + "/" + $repository),
                   pullRequestHeadRepository: $head_repository,
                   pullRequestHeadSha: $head_sha,
@@ -206,9 +205,7 @@ jobs:
                   trust: $trust,
                   translations: $translations
                 }
-              } + if $custom_environment == "" then {} else {
-                customEnvironmentSlugOrId: $custom_environment
-              } end'
+              }'
           )"
 
           if ! deployment_response="$(
