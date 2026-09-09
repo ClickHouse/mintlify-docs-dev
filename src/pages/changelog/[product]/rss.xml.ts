@@ -1,15 +1,23 @@
 import { getCollection } from "astro:content";
 import { changelogPath, entriesForProduct, productTitle, type ChangelogEntry } from "../../../lib/changelog";
 import { readScope } from "../../../lib/scope";
+import { createHash } from "node:crypto";
 
 function xml(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 
 export async function getStaticPaths() {
-  if (readScope().remotePreview) return [];
+  const scope = readScope();
+  if (!scope.emitEnglish || scope.remotePreview) return [];
   const entries = await getCollection("changelog");
-  return ["cloud", "oss"].map((product) => ({ params: { product }, props: { entries: entriesForProduct(entries, product) } }));
+  return ["cloud", "oss"].map((product) => {
+    const productEntries = entriesForProduct(entries, product);
+    const cacheKey = createHash("sha256")
+      .update(productEntries.map((entry) => `${entry.id}:${entry.digest}`).join("\n"))
+      .digest("hex");
+    return { params: { product }, props: { entries: productEntries }, cacheKey };
+  });
 }
 
 export function GET({ params, props }: { params: { product: string }; props: { entries: ChangelogEntry[] } }) {

@@ -6,22 +6,18 @@
  */
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Header from "../../components/Header.astro";
-import HomepageAr from "../../generated/homepage/ar.jsx";
-import HomepageEs from "../../generated/homepage/es.jsx";
-import HomepageFr from "../../generated/homepage/fr.jsx";
-import HomepageJa from "../../generated/homepage/ja.jsx";
-import HomepageKo from "../../generated/homepage/ko.jsx";
-import HomepagePtBr from "../../generated/homepage/pt-br.jsx";
-import HomepageRu from "../../generated/homepage/ru.jsx";
-import HomepageZh from "../../generated/homepage/zh.jsx";
+import ActiveHomepage from "@active-homepage";
 import { config } from "virtual:nimbus/config";
-import { ACTIVE_LOCALES, localeCollectionName } from "../../content.config";
+import { ACTIVE_LOCALES, AVAILABLE_LOCALES, localeCollectionName } from "../../content.config";
 import { localeInfo, localeRouteName } from "../../util/locales";
 
 export const prerender = true;
 
 export function getStaticPaths() {
-  return ACTIVE_LOCALES.map((locale) => ({ params: { locale: localeRouteName(locale) } }));
+  return ACTIVE_LOCALES.map((locale) => ({
+    params: { locale: localeRouteName(locale) },
+    cacheKey: `homepage:${locale}`,
+  }));
 }
 
 const locale = Astro.params.locale as string;
@@ -33,15 +29,8 @@ if (!["ar", "es", "fr", "ja", "ko", "pt-br", "ru", "zh"].includes(localeCode)) {
 ---
 
 <BaseLayout title={config.title} description={config.description} lang={info.hreflang}>
-  <Header showSidebar={false} currentLocale={locale} activeLocales={ACTIVE_LOCALES} homepage />
+  <Header showSidebar={false} currentLocale={locale} activeLocales={AVAILABLE_LOCALES} homepage />
   <div class="ch-homepage">
-    {localeCode === "ar" && <HomepageAr client:load />}
-    {localeCode === "es" && <HomepageEs client:load />}
-    {localeCode === "fr" && <HomepageFr client:load />}
-    {localeCode === "ja" && <HomepageJa client:load />}
-    {localeCode === "ko" && <HomepageKo client:load />}
-    {localeCode === "pt-br" && <HomepagePtBr client:load />}
-    {localeCode === "ru" && <HomepageRu client:load />}
-    {localeCode === "zh" && <HomepageZh client:load />}
+    <ActiveHomepage client:load />
   </div>
 </BaseLayout>

@@ -1,11 +1,11 @@
 /**
- * Build scope for Vercel's combined site and independently deployed locale
- * Workers.
+ * Build scope for Vercel's combined site and its isolated locale build shards.
  *
  * `DOCS_LOCALES` keeps English active and adds zero, one, several, or every
  * translated collection to the same Vercel artifact. Vercel production always
  * builds every translation, even when the variable is omitted. `DOCS_LOCALE`
- * retains the singular build contract used by locale Workers.
+ * selects one internal child build; `bin/vercel-build.ts` runs those children
+ * sequentially and merges their outputs.
  *
  *   {
  *     "locale": "en",
@@ -36,10 +36,14 @@ export interface RemotePreview {
 }
 
 export interface BuildScope {
-  /** Primary locale; non-English only for a singular locale Worker build. */
+  /** Primary locale; non-English only inside a locale build shard. */
   locale: BuildLocale;
   /** Non-English collections included in this artifact. */
   locales: Locale[];
+  /** Locales linked by the shared chrome, even when built in another shard. */
+  availableLocales: Locale[];
+  /** Whether this shard emits the English routes and English-only surfaces. */
+  emitEnglish: boolean;
   /** Whether `reference/**` is part of the build. */
   reference: boolean;
   /** Whether registered remote sources participate in this build. */
@@ -150,6 +154,8 @@ function parseRemotes(value: unknown, source: string): boolean {
 export function readScope(root = process.cwd()): BuildScope {
   const envLocale = (process.env.DOCS_LOCALE ?? "").trim();
   const envLocales = (process.env.DOCS_LOCALES ?? "").trim();
+  const envAvailableLocales = (process.env.DOCS_AVAILABLE_LOCALES ?? "").trim();
+  const envEmitEnglish = (process.env.DOCS_EMIT_ENGLISH ?? "").trim();
   const envRemotes = (process.env.DOCS_REMOTES ?? "").trim();
   const envReference = (process.env.DOCS_REFERENCE ?? "").trim().toLowerCase();
   const envRemoteName = (process.env.DOCS_REMOTE_NAME ?? "").trim();
@@ -183,6 +189,7 @@ export function readScope(root = process.cwd()): BuildScope {
     .trim()
     .toLowerCase();
   const isVercelProduction = process.env.VERCEL === "1" && vercelTarget === "production";
+  const isBuildShard = process.env.DOCS_BUILD_SHARD === "1";
 
   const locale = envLocales
     ? "en"
@@ -197,7 +204,7 @@ export function readScope(root = process.cwd()): BuildScope {
       ? []
       : [locale];
 
-  if (isVercelProduction) {
+  if (isVercelProduction && !isBuildShard) {
     if (locale !== "en") {
       throw new Error("Vercel production builds use DOCS_LOCALES=all, not DOCS_LOCALE");
     }
@@ -205,6 +212,15 @@ export function readScope(root = process.cwd()): BuildScope {
       throw new Error("Vercel production builds must include every translation with DOCS_LOCALES=all");
     }
     locales = [...ALL_LOCALES];
+  }
+  const availableLocales = envAvailableLocales
+    ? parseLocales(envAvailableLocales, "DOCS_AVAILABLE_LOCALES")
+    : [...locales];
+  const emitEnglish = envEmitEnglish
+    ? parseReference(envEmitEnglish, "DOCS_EMIT_ENGLISH")
+    : locale === "en";
+  if (!emitEnglish && locale === "en") {
+    throw new Error("DOCS_EMIT_ENGLISH=false requires a non-English DOCS_LOCALE shard");
   }
   const reference = envReference
     ? parseReference(envReference, "DOCS_REFERENCE")
@@ -237,10 +253,12 @@ export function readScope(root = process.cwd()): BuildScope {
   if (isVercelProduction && !remotes) {
     throw new Error("Vercel production builds require DOCS_REMOTES=all");
   }
-  if (envLocale || envLocales || envRemotes || envReference || hasRemoteEnvironment) source = "env";
+  if (envLocale || envLocales || envAvailableLocales || envEmitEnglish || envRemotes || envReference || hasRemoteEnvironment) source = "env";
   return {
     locale,
     locales,
+    availableLocales,
+    emitEnglish,
     reference,
     remotes,
     remotePreview,

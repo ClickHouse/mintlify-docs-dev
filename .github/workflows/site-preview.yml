@@ -1,6 +1,6 @@
-name: Deploy Nimbus site preview
+name: Deploy docs preview
 
-run-name: Preview Nimbus PR #${{ github.event.pull_request.number || inputs.pull_request_number }}
+run-name: Deploy docs preview for PR #${{ github.event.pull_request.number || inputs.pull_request_number }}
 
 on:
   pull_request_target:
@@ -30,6 +30,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
+      # A superseding run may start after GitHub terminated the previous runner
+      # before its EXIT trap completed. Clear that stale state before any
+      # validation in this run can fail.
+      - name: Clear an interrupted preview status
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
+        run: |
+          marker="<!-- nimbus-site-preview -->"
+          comment_id="$({
+            gh api --paginate "repos/$GH_REPO/issues/$PULL_REQUEST_NUMBER/comments" \
+              --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$marker\")) | .id"
+          } | tail -n 1)"
+          if [[ -z "$comment_id" ]]; then
+            exit 0
+          fi
+
+          body="$(gh api "repos/$GH_REPO/issues/comments/$comment_id" --jq .body)"
+          if [[ "$body" != *"🟡 Building"* ]]; then
+            exit 0
+          fi
+
+          updated_at="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          body="$(jq -nr --arg body "$body" --arg updated_at "$updated_at" \
+            '$body | gsub("🟡 Building"; "🔴 Failed") | sub("\\| [^|\\n]+ \\|$"; "| \($updated_at) |")')"
+          gh api --method PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$body" >/dev/null
+
       - name: Require a trusted manual invocation
         if: github.event_name == 'workflow_dispatch'
         env:
@@ -150,6 +179,9 @@ jobs:
           HEAD_SHA: ${{ steps.pull-request.outputs.head_sha }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
           TRANSLATION_SCOPE: ${{ steps.translations.outputs.scope }}
+          TRANSLATION_SUMMARY: ${{ steps.translations.outputs.summary }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TRUST: ${{ steps.pull-request.outputs.trust }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -157,6 +189,60 @@ jobs:
         run: |
           repository_owner="${GITHUB_REPOSITORY%%/*}"
           repository_name="${GITHUB_REPOSITORY#*/}"
+
+          update_preview_comment() {
+            local deployment_status="$1"
+            local updated_at="$(date -u '+%Y-%m-%d %H:%M UTC')"
+            local marker="<!-- nimbus-site-preview -->"
+            local docs_url="${preview_url%/}/docs"
+            local body
+            local comment_id
+            body="$(printf '🕵 %s\n\n| Preview | Deployment | Components | Updated (UTC) |\n| --- | --- | --- | --- |\n| [Docs preview](%s) | [%s](%s) | %s | %s |' \
+              "$marker" \
+              "$docs_url" \
+              "$deployment_status" \
+              "$preview_url" \
+              "$TRANSLATION_SUMMARY" \
+              "$updated_at")"
+            if ! comment_id="$({
+              gh api --paginate "repos/$GH_REPO/issues/$PULL_REQUEST_NUMBER/comments" \
+                --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$marker\")) | .id"
+            } | tail -n 1)"; then
+              return 1
+            fi
+            if [[ -n "$comment_id" ]]; then
+              gh api --method PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$body" >/dev/null
+            else
+              gh pr comment "$PULL_REQUEST_NUMBER" --body "$body"
+            fi
+          }
+
+          update_preview_comment_with_retry() {
+            local deployment_status="$1"
+            local attempt
+            for attempt in 1 2 3; do
+              if update_preview_comment "$deployment_status"; then
+                return 0
+              fi
+              echo "::warning::Unable to update the preview comment (attempt $attempt of 3)."
+              if (( attempt < 3 )); then
+                sleep 2
+              fi
+            done
+            return 1
+          }
+
+          preview_finished=false
+          finalize_preview_comment() {
+            local exit_code=$?
+            trap - EXIT
+            if [[ "$preview_finished" != true ]]; then
+              if ! update_preview_comment_with_retry "🔴 Failed"; then
+                echo "::warning::Unable to mark the preview comment as failed."
+              fi
+            fi
+            exit "$exit_code"
+          }
 
           if ! project_response="$(
             curl --silent --show-error --fail-with-body \
@@ -225,8 +311,20 @@ jobs:
           preview_url="https://${deployment_url#https://}"
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
           echo "Vercel deployment: $preview_url"
+          if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "Vercel returned an invalid preview URL." >&2
+            exit 1
+          fi
+          trap finalize_preview_comment EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+          if ! update_preview_comment_with_retry "🟡 Building"; then
+            echo "::warning::Unable to mark the preview comment as building."
+          fi
 
-          for _ in {1..360}; do
+          # Leave five minutes for the EXIT trap to update the comment before
+          # the 60-minute job timeout terminates the runner.
+          for _ in {1..330}; do
             if ! deployment_response="$(
               curl --silent --show-error --fail-with-body \
                 --header "Authorization: Bearer $VERCEL_TOKEN" \
@@ -260,30 +358,7 @@ jobs:
             echo "Timed out waiting for Vercel deployment $deployment_id." >&2
             exit 1
           fi
-          if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
-            echo "Vercel returned an invalid preview URL." >&2
-            exit 1
+          if ! update_preview_comment_with_retry "🟢 Ready"; then
+            echo "::warning::Unable to mark the preview comment as ready."
           fi
-
-      - name: Add the preview link to the pull request
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
-          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
-          TRANSLATION_SUMMARY: ${{ steps.translations.outputs.summary }}
-          TRUST: ${{ steps.pull-request.outputs.trust }}
-        run: |
-          marker="<!-- nimbus-site-preview -->"
-          body="$(printf '%s\n%s' \
-            "$marker" \
-            "Nimbus documentation preview ($TRUST, $TRANSLATION_SUMMARY): $PREVIEW_URL")"
-          comment_id="$({
-            gh api --paginate "repos/$GH_REPO/issues/$PULL_REQUEST_NUMBER/comments" \
-              --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$marker\")) | .id"
-          } | tail -n 1)"
-          if [[ -n "$comment_id" ]]; then
-            gh api --method PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$body" >/dev/null
-          else
-            gh pr comment "$PULL_REQUEST_NUMBER" --body "$body"
-          fi
+          preview_finished=true
