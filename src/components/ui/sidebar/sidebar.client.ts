@@ -157,54 +157,14 @@ function initPersistence(root: HTMLElement): (() => void) | null {
     root;
   const hash = root.dataset.nbSidebarHash ?? "";
 
-  function handleDisclosureClick(event: MouseEvent): void {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const trigger = target.closest<HTMLElement>("[data-nb-collapsible-trigger]");
-    if (!trigger || !root.contains(trigger)) return;
-    const group = trigger.closest<HTMLElement>("[data-nb-sidebar-group]");
-    if (!group || group.hasAttribute("data-nb-opened-by-filter")) return;
-    group.setAttribute("data-nb-sidebar-user-toggled", "");
-  }
-
-  root.addEventListener("click", handleDisclosureClick);
-
-  function readPreviousOpenState(): Record<string, boolean> | null {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const previous = JSON.parse(raw) as Partial<SidebarState>;
-      if (previous.hash !== hash || !previous.open || Array.isArray(previous.open)) return null;
-      return previous.open;
-    } catch {
-      return null;
-    }
-  }
-
   function readState(): SidebarState {
     const groups = root.querySelectorAll<HTMLElement>("[data-nb-sidebar-group]");
     const open: Record<string, boolean> = {};
-    const previousOpen = readPreviousOpenState();
     groups.forEach((group) => {
       const trigger = ownedTrigger(group);
-      const key = groupKey(group);
-      const containsActivePage = Boolean(group.querySelector("[aria-current='page']"));
-      const userToggled = group.hasAttribute("data-nb-sidebar-user-toggled");
       // Fixed section headings have no disclosure trigger and always remain
       // open. Recording them as open also repairs state written by older code.
-      // A group on the active route is forced open so the current page stays
-      // visible. Do not mistake that temporary expansion for user intent:
-      // preserve the previous preference, or the authored default on the
-      // first visit. Once the user toggles it, the visible state is their new
-      // preference and must win over the automatic active-route expansion.
-      if (trigger && containsActivePage && !userToggled) {
-        const previousValue = previousOpen?.[key];
-        open[key] = typeof previousValue === "boolean"
-          ? previousValue
-          : group.dataset.nbSidebarPreferredOpen === "true";
-      } else {
-        open[key] = !trigger || trigger.getAttribute("data-nb-state") === "open";
-      }
+      open[groupKey(group)] = !trigger || trigger.getAttribute("data-nb-state") === "open";
     });
     return { hash, open, scroll: scrollHost.scrollTop };
   }
@@ -240,7 +200,6 @@ function initPersistence(root: HTMLElement): (() => void) | null {
 
   return () => {
     observer.disconnect();
-    root.removeEventListener("click", handleDisclosureClick);
     document.removeEventListener("visibilitychange", handleVisibility);
     document.removeEventListener("astro:before-swap", save);
     window.removeEventListener("pagehide", save);

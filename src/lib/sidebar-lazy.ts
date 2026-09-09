@@ -151,9 +151,8 @@ export function buildRailFromConfig(items: ConfigItem[], currentPath: string, ke
         if (norm(n.href) === target) { (n as { isCurrent?: boolean }).isCurrent = true; any = true; }
       } else if (n.type === "group") {
         const hit = mark(n.children);
-        // SidebarGroup opens active ancestors itself. Do not overwrite the
-        // authored collapsed value: persistence needs that original value to
-        // distinguish a temporary active-route expansion from user intent.
+        // SidebarGroup uses the active path for the initial server-rendered
+        // state. Do not overwrite the authored collapsed value here.
         if (hit) any = true;
       }
     }
