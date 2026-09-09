@@ -10,7 +10,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 | Command | What it does |
 |---|---|
 | `pnpm install` | Node 24, pnpm 10. |
-| `pnpm build` | Fetches registered sources, builds one locale, then prunes `.mdx` twins, rebases URLs, generates `__redirects`, nests under `dist/docs`, and enforces the Worker asset limits. |
+| `pnpm build` | Fetches registered sources, builds the selected locale scope, then prunes `.mdx` twins, rebases URLs, generates `__redirects`, nests under `dist/docs`, and enforces the Worker asset limits. |
 | `pnpm run build:vercel` | Fetches registered sources using Vercel Connect where required, removes the deployment OIDC identity, then builds the Vercel output. |
 | `pnpm dev` | Astro dev server (`/docs/...`). |
 | `pnpm check:mdx` | Compiles every MDX file with Sätteri and reports undefined components; seconds, no build. |
@@ -26,6 +26,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 |---|---|
 | `DOCS_INCLUDE` | Comma-separated globs restricting the English collection (spikes, scoped previews). |
 | `DOCS_LOCALE` | The one locale Worker to build (`en`, `es`, `pt-BR`, and so on); unset = English. |
+| `DOCS_LOCALES` | Translations to add to the English Vercel artifact: `none`, `all`, or a comma-separated list such as `es,fr`. Vercel production always builds `all`. |
 | `DOCS_REMOTE_NAME`, `DOCS_REMOTE_REPOSITORY`, `DOCS_REMOTE_REF` | CI-only tuple selecting one registered remote at an immutable commit for an English pull-request preview. |
 | `DOCS_REMOTE_SOURCE_REPOSITORY` | CI-derived repository that owns the preview SHA. It defaults to the registered repository and differs only for a fork PR. |
 | `DOCS_REMOTES_PREFETCHED=1` | Requires the remote mounts and fetch-state files supplied by the credentialed CI fetch job. |
@@ -68,25 +69,41 @@ public sources anonymously and omit private sources. Trusted branch previews
 that need the complete site must target the `remote-preview` Custom Environment.
 
 Nimbus application pull requests use `.github/workflows/site-preview.yml`.
-The manually invoked workflow resolves the current head SHA without running
-pull-request code in Actions. A branch in the primary repository is sent to the
-Connect-enabled `remote-preview` environment. A fork is sent to standard
-Preview, where the connector is not attached and private sources are omitted.
+The base-branch workflow resolves the current head SHA without running
+pull-request code in Actions, uploads that revision with the Vercel CLI, and
+updates one preview comment on the pull request. A branch in the primary
+repository is sent to the Connect-enabled `remote-preview` environment. A fork
+is sent to standard Preview, where the connector is not attached and private
+sources are omitted.
+
+Pull-request previews build English only by default. Add
+`docs-translations-all` to include every translated collection, or add one or
+more locale labels such as `docs-translations-es` and
+`docs-translations-pt-br`. Adding or removing one of these labels starts a new
+preview with the resulting locale set. `.github/workflows/site-production.yml`
+deploys `main` through the same Vercel project with English and every
+translation after each merge. Both workflows can also be invoked manually from
+the default branch.
 
 Vercel must be provisioned as follows:
 
-1. Enable automatic System Environment Variables for the project.
-2. Create the `remote-preview` Custom Environment.
-3. Create a Vercel-managed GitHub connector named `clickhouse-docs` and install
+1. Keep the single Git-connected Vercel project, but leave automatic Git
+   deployments disabled as specified in `vercel.json`; GitHub Actions owns both
+   preview and production deployment creation.
+2. Enable automatic System Environment Variables for the project.
+3. Create the `remote-preview` Custom Environment.
+4. Create a Vercel-managed GitHub connector named `clickhouse-docs` and install
    it only for the private repositories registered in `remotes.json` and any
    private forks that are explicitly allowed to receive previews.
-4. Attach `github/clickhouse-docs` to `production` and `remote-preview`. Do not
+5. Attach `github/clickhouse-docs` to `production` and `remote-preview`. Do not
    attach it to standard `preview`.
-5. Set `DOCS_GITHUB_CONNECTOR=github/clickhouse-docs` in `production` and
+6. Set `DOCS_GITHUB_CONNECTOR=github/clickhouse-docs` in `production` and
    `remote-preview`, but not in standard `preview`.
-6. Keep standard Preview free of secrets and privileged integrations: a fork
+7. Keep standard Preview free of secrets and privileged integrations: a fork
    pull request controls the uploaded build source in that environment.
-7. Keep the Vercel build command as `pnpm run build:vercel` and the output
+8. Add `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` as GitHub Actions variables and
+   `VERCEL_TOKEN` as a GitHub Actions secret.
+9. Keep the Vercel build command as `pnpm run build:vercel` and the output
    directory as `dist`.
 
 The website Worker routes `/docs/<locale>/*` and

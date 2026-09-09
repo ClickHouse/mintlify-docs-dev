@@ -1,0 +1,69 @@
+name: Deploy Nimbus site to production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nimbus-site-production
+  cancel-in-progress: false
+
+jobs:
+  production:
+    name: Build on Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Require the default branch for manual production deployments
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]]; then
+            echo "Run this workflow from the repository's default branch." >&2
+            exit 1
+          fi
+
+      - name: Check out the trusted production revision
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install the Vercel CLI
+        run: npm install --global vercel@59.11.7
+
+      - name: Deploy all locales and wait for production
+        id: deploy
+        env:
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          production_url="$(
+            vercel deploy \
+              --yes \
+              --prod \
+              --archive=tgz \
+              --token "$VERCEL_TOKEN" \
+              --build-env "DOCS_LOCALES=all" \
+              --meta "sourceRepository=$GITHUB_REPOSITORY" \
+              --meta "approvedSha=$GITHUB_SHA" \
+              --meta "translations=all"
+          )"
+          if [[ ! "$production_url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "Vercel returned an invalid production URL." >&2
+            exit 1
+          fi
+          echo "production_url=$production_url" >> "$GITHUB_OUTPUT"
+
+      - name: Publish deployment summary
+        env:
+          PRODUCTION_URL: ${{ steps.deploy.outputs.production_url }}
+        run: |
+          echo "### Nimbus production deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "English and all translations: $PRODUCTION_URL" >> "$GITHUB_STEP_SUMMARY"
