@@ -19,39 +19,58 @@ import { components } from "../../components";
 import { getCollection } from "astro:content";
 import { Aside } from "@/components/ui/aside";
 import { withBase, stripBase } from "../../lib/base";
-import { buildRailFromConfig, sectionsFromConfig, type ConfigItem } from "../../lib/sidebar-lazy";
-import fs from "node:fs";
-import path from "node:path";
-import { ACTIVE_LOCALES, localeCollectionName, type LocaleCollectionName } from "../../content.config";
+import { buildRailFromConfig, sectionsFromConfig } from "../../lib/sidebar-lazy";
+import {
+  ACTIVE_LOCALES,
+  AVAILABLE_LOCALES,
+  EMIT_ENGLISH,
+  SECTIONS,
+  localeCollectionName,
+  type LocaleCollectionName,
+} from "../../content.config";
 import { localeRouteName } from "../../util/locales";
 import { getRemoteEditUrl } from "../../lib/remotes";
+import { loadGeneratedNavigation } from "../../lib/sidebar-navigation.server";
+import { translatedPageIds } from "../../lib/locale-content.server";
 
 export const prerender = true;
 
 export async function getStaticPaths() {
   const paths: Array<{ params: { locale: string; slug: string | undefined }; props: unknown; cacheKey?: string }> = [];
-  const english = await getCollection("docs");
   for (const sourceLocale of ACTIVE_LOCALES) {
     const collection = localeCollectionName(sourceLocale);
     const locale = localeRouteName(sourceLocale);
+    const navigationDigest = loadGeneratedNavigation(sourceLocale).digest;
     const localePaths = (await getCollectionStaticPaths(collection)({} as never)) as Array<{
       params: { slug?: string };
-      props: { entry: { id: string } };
+      props: { entry: { id: string; digest?: string } };
       cacheKey?: string;
     }>;
-    const translated = new Set<string>();
     for (const p of localePaths) {
-      translated.add(p.props.entry.id);
-      paths.push({ params: { locale, slug: p.params.slug }, props: p.props, cacheKey: p.cacheKey });
-    }
-    // English fallback: every English page exists under every locale prefix.
-    for (const e of english) {
-      if (translated.has(e.id) || e.id === "index") continue;
       paths.push({
-        params: { locale, slug: e.id },
-        props: { entry: e, fallback: true },
-        cacheKey: `fallback:${String((e as { digest?: string }).digest ?? e.id)}`,
+        params: { locale, slug: p.params.slug },
+        props: p.props,
+        cacheKey: `${p.cacheKey ?? p.props.entry.digest ?? p.props.entry.id}:nav:${navigationDigest}`,
       });
+    }
+  }
+
+  // The English shard alone emits missing-translation fallbacks. Locale
+  // shards therefore compile only their translated collection, never English.
+  if (EMIT_ENGLISH && AVAILABLE_LOCALES.length) {
+    const english = await getCollection("docs");
+    for (const sourceLocale of AVAILABLE_LOCALES) {
+      const locale = localeRouteName(sourceLocale);
+      const translated = translatedPageIds(sourceLocale, SECTIONS);
+      const navigationDigest = loadGeneratedNavigation(sourceLocale).digest;
+      for (const entry of english) {
+        if (translated.has(entry.id) || entry.id === "index") continue;
+        paths.push({
+          params: { locale, slug: entry.id },
+          props: { entry, fallback: true },
+          cacheKey: `fallback:${String(entry.digest ?? entry.id)}:nav:${navigationDigest}`,
+        });
+      }
     }
   }
   return paths;
@@ -69,9 +88,7 @@ const { sidebar: sidebarOn, tableOfContents: tocOn } = await getRouteFlags(entry
 
 // Locale rail: from the locale's generated navigation (labels and /<locale>/
 // links), falling back to the English tree when a locale file is absent.
-const localeItemsFile = path.join(process.cwd(), "src/generated", `sidebar.items.${ACTIVE_LOCALES.find((l) => localeCollectionName(l) === localeCode) ?? localeParam}.json`);
-const englishItemsFile = path.join(process.cwd(), "src/generated", "sidebar.items.json");
-const navItems = JSON.parse(fs.readFileSync(fs.existsSync(localeItemsFile) ? localeItemsFile : englishItemsFile, "utf8")) as ConfigItem[];
+const navItems = loadGeneratedNavigation(localeParam).items;
 const sidebar = sidebarOn ? buildRailFromConfig(navItems, browserPath, [localeParam]) : false;
 const sections = sectionsFromConfig(navItems, browserPath);
 const prevNext = await getPrevNext(browserPath, {
@@ -95,7 +112,7 @@ const layoutMode = entry.data.mode === "custom" ? "custom" : "doc";
 const data = entry.data as { title?: string; sidebarTitle?: string };
 const pageTitle = data.title ?? data.sidebarTitle ?? entry.id.split("/").pop() ?? entry.id;
 const markdownUrl = Astro.site
-  ? new URL(withBase(`/${localeParam}/${entry.id}/index.md`), Astro.site).href
+  ? new URL(withBase(`/${entry.id}.md`), Astro.site).href
   : undefined;
 // Untranslated pages point search engines at the English original.
 const canonicalUrl = fallback && Astro.site ? new URL(withBase(`/${entry.id}/`), Astro.site).href : undefined;
@@ -105,7 +122,7 @@ const alternates = Astro.site
   ? [
       { hreflang: "en", href: new URL(withBase(`/${entry.id}/`), Astro.site).href },
       { hreflang: "x-default", href: new URL(withBase(`/${entry.id}/`), Astro.site).href },
-      ...ACTIVE_LOCALES.map((l) => ({ hreflang: HREFLANG[localeCollectionName(l)] ?? l, href: new URL(withBase(`/${localeRouteName(l)}/${entry.id}/`), Astro.site!).href })),
+      ...AVAILABLE_LOCALES.map((l) => ({ hreflang: HREFLANG[localeCollectionName(l)] ?? l, href: new URL(withBase(`/${localeRouteName(l)}/${entry.id}/`), Astro.site!).href })),
     ]
   : [];
 const htmlLang = HREFLANG[localeCode] ?? localeParam;
@@ -137,7 +154,7 @@ const fallbackNotice = NOT_TRANSLATED[localeCode] ?? { label: "Note", title: "No
   canonicalUrl={canonicalUrl}
   sections={sections}
   currentLocale={localeParam}
-  activeLocales={ACTIVE_LOCALES}
+  activeLocales={AVAILABLE_LOCALES}
   searchable={entry.data.searchable}
   noindex={entry.data.noindex}
   markdownUrl={markdownUrl}

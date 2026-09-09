@@ -1,8 +1,10 @@
-name: Deploy Nimbus site preview
+name: Deploy docs preview
 
-run-name: Preview Nimbus PR #${{ inputs.pull_request_number }}
+run-name: Deploy docs preview for PR #${{ github.event.pull_request.number || inputs.pull_request_number }}
 
 on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
   workflow_dispatch:
     inputs:
       pull_request_number:
@@ -15,16 +17,50 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: nimbus-site-preview-${{ inputs.pull_request_number }}
+  group: nimbus-site-preview-${{ github.event.pull_request.number || inputs.pull_request_number }}
   cancel-in-progress: true
 
 jobs:
   preview:
     name: Build on Vercel
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.action != 'labeled' && github.event.action != 'unlabeled') ||
+      startsWith(github.event.label.name, 'docs-translations-')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
+      # A superseding run may start after GitHub terminated the previous runner
+      # before its EXIT trap completed. Clear that stale state before any
+      # validation in this run can fail.
+      - name: Clear an interrupted preview status
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
+        run: |
+          marker="<!-- nimbus-site-preview -->"
+          comment_id="$({
+            gh api --paginate "repos/$GH_REPO/issues/$PULL_REQUEST_NUMBER/comments" \
+              --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$marker\")) | .id"
+          } | tail -n 1)"
+          if [[ -z "$comment_id" ]]; then
+            exit 0
+          fi
+
+          body="$(gh api "repos/$GH_REPO/issues/comments/$comment_id" --jq .body)"
+          if [[ "$body" != *"🟡 Building"* ]]; then
+            exit 0
+          fi
+
+          updated_at="$(date -u '+%Y-%m-%d %H:%M UTC')"
+          body="$(jq -nr --arg body "$body" --arg updated_at "$updated_at" \
+            '$body | gsub("🟡 Building"; "🔴 Failed") | sub("\\| [^|\\n]+ \\|$"; "| \($updated_at) |")')"
+          gh api --method PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$body" >/dev/null
+
       - name: Require a trusted manual invocation
+        if: github.event_name == 'workflow_dispatch'
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
@@ -33,11 +69,11 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve the pull request head
+      - name: Resolve the pull request revision
         id: pull-request
         env:
           GH_TOKEN: ${{ github.token }}
-          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
         run: |
           state="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER" --jq .state)"
           if [[ "$state" != "open" ]]; then
@@ -56,89 +92,273 @@ jobs:
             exit 1
           fi
 
+          merge_ref="refs/pull/$PULL_REQUEST_NUMBER/merge"
+          merge_sha="$({
+            git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "$merge_ref"
+          } | awk 'NR == 1 { print $1 }')"
+          if [[ ! "$merge_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "GitHub did not expose a merge revision for pull request $PULL_REQUEST_NUMBER." >&2
+            echo "Resolve any merge conflicts before requesting a preview." >&2
+            exit 1
+          fi
+
           if [[ "$head_repository" == "$GITHUB_REPOSITORY" ]]; then
-            target="remote-preview"
             trust="trusted-branch"
           else
-            target="preview"
             trust="untrusted-fork"
           fi
 
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
           echo "head_repository=$head_repository" >> "$GITHUB_OUTPUT"
-          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "merge_ref=$merge_ref" >> "$GITHUB_OUTPUT"
+          echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
           echo "trust=$trust" >> "$GITHUB_OUTPUT"
 
-      - name: Check out the pull request revision
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ steps.pull-request.outputs.head_repository }}
-          ref: ${{ steps.pull-request.outputs.head_sha }}
-          path: site
-          persist-credentials: false
-
-      - name: Reject symbolic links in uploaded source
-        run: |
-          symlink="$(find site -type l -print -quit)"
-          if [[ -n "$symlink" ]]; then
-            echo "Fork and branch previews may not upload symbolic links: $symlink" >&2
-            exit 1
-          fi
-
-      - name: Verify the checked-out revision
-        working-directory: site
+      - name: Select translated collections from pull request labels
+        id: translations
         env:
-          EXPECTED_SHA: ${{ steps.pull-request.outputs.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
         run: |
-          actual_sha="$(git rev-parse HEAD)"
-          if [[ "$actual_sha" != "$EXPECTED_SHA" ]]; then
-            echo "Checked out $actual_sha instead of approved revision $EXPECTED_SHA." >&2
-            exit 1
+          mapfile -t labels < <(
+            gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PULL_REQUEST_NUMBER/labels" --jq '.[].name'
+          )
+          known_locales=(ar es fr ja ko pt-BR ru zh)
+          selected_locales=()
+          include_all=false
+
+          for label in "${labels[@]}"; do
+            normalized="${label,,}"
+            if [[ "$normalized" == "docs-translations-all" ]]; then
+              include_all=true
+              continue
+            fi
+            if [[ "$normalized" != docs-translations-* ]]; then
+              continue
+            fi
+
+            matched=false
+            for locale in "${known_locales[@]}"; do
+              if [[ "$normalized" == "docs-translations-${locale,,}" ]]; then
+                selected_locales+=("$locale")
+                matched=true
+                break
+              fi
+            done
+            if [[ "$matched" != true ]]; then
+              echo "Unknown translation preview label: $label" >&2
+              echo "Use docs-translations-all or docs-translations-{ar,es,fr,ja,ko,pt-BR,ru,zh}." >&2
+              exit 1
+            fi
+          done
+
+          if [[ "$include_all" == true ]]; then
+            locale_scope="all"
+            locale_summary="English and all translations"
+          elif (( ${#selected_locales[@]} > 0 )); then
+            locale_scope="$(IFS=,; echo "${selected_locales[*]}")"
+            locale_summary="English and $locale_scope"
+          else
+            locale_scope="none"
+            locale_summary="English only"
           fi
 
-      - name: Install the Vercel CLI
-        run: npm install --global vercel@59.11.7
+          echo "scope=$locale_scope" >> "$GITHUB_OUTPUT"
+          echo "summary=$locale_summary" >> "$GITHUB_OUTPUT"
 
-      # Do not install dependencies or run repository code in this job. The
-      # source is uploaded to Vercel, where standard Preview has no Connect
-      # attachment and trusted branches use the remote-preview environment.
-      - name: Deploy and wait for the preview
+      # GitHub owns refs/pull/<number>/merge in the primary repository, even
+      # when the pull request head is in a fork. Vercel fetches that immutable
+      # revision through the project's Git connection; Actions never checks
+      # out, executes, archives, or uploads pull-request-controlled files.
+      - name: Trigger and wait for the Vercel preview
         id: deploy
-        working-directory: site
         env:
-          APPROVED_SHA: ${{ steps.pull-request.outputs.head_sha }}
-          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
-          SOURCE_REPOSITORY: ${{ steps.pull-request.outputs.head_repository }}
+          APPROVED_SHA: ${{ steps.pull-request.outputs.merge_sha }}
+          GIT_REF: ${{ steps.pull-request.outputs.merge_ref }}
+          HEAD_REPOSITORY: ${{ steps.pull-request.outputs.head_repository }}
+          HEAD_SHA: ${{ steps.pull-request.outputs.head_sha }}
+          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
+          TRANSLATION_SCOPE: ${{ steps.translations.outputs.scope }}
+          TRANSLATION_SUMMARY: ${{ steps.translations.outputs.summary }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TRUST: ${{ steps.pull-request.outputs.trust }}
-          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-          VERCEL_TARGET: ${{ steps.pull-request.outputs.target }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          preview_url="$(
-            vercel deploy \
-              --yes \
-              --archive=tgz \
-              --target="$VERCEL_TARGET" \
-              --token "$VERCEL_TOKEN" \
-              --build-env "DOCS_LOCALE=en" \
-              --meta "sourceRepository=$SOURCE_REPOSITORY" \
-              --meta "pullRequest=$PULL_REQUEST_NUMBER" \
-              --meta "approvedSha=$APPROVED_SHA" \
-              --meta "trust=$TRUST"
+          repository_owner="${GITHUB_REPOSITORY%%/*}"
+          repository_name="${GITHUB_REPOSITORY#*/}"
+
+          update_preview_comment() {
+            local deployment_status="$1"
+            local updated_at="$(date -u '+%Y-%m-%d %H:%M UTC')"
+            local marker="<!-- nimbus-site-preview -->"
+            local docs_url="${preview_url%/}/docs"
+            local body
+            local comment_id
+            body="$(printf '🕵 %s\n\n| Preview | Deployment | Components | Updated (UTC) |\n| --- | --- | --- | --- |\n| [Docs preview](%s) | [%s](%s) | %s | %s |' \
+              "$marker" \
+              "$docs_url" \
+              "$deployment_status" \
+              "$preview_url" \
+              "$TRANSLATION_SUMMARY" \
+              "$updated_at")"
+            if ! comment_id="$({
+              gh api --paginate "repos/$GH_REPO/issues/$PULL_REQUEST_NUMBER/comments" \
+                --jq ".[] | select(.user.login == \"github-actions[bot]\") | select(.body | contains(\"$marker\")) | .id"
+            } | tail -n 1)"; then
+              return 1
+            fi
+            if [[ -n "$comment_id" ]]; then
+              gh api --method PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$body" >/dev/null
+            else
+              gh pr comment "$PULL_REQUEST_NUMBER" --body "$body"
+            fi
+          }
+
+          update_preview_comment_with_retry() {
+            local deployment_status="$1"
+            local attempt
+            for attempt in 1 2 3; do
+              if update_preview_comment "$deployment_status"; then
+                return 0
+              fi
+              echo "::warning::Unable to update the preview comment (attempt $attempt of 3)."
+              if (( attempt < 3 )); then
+                sleep 2
+              fi
+            done
+            return 1
+          }
+
+          preview_finished=false
+          finalize_preview_comment() {
+            local exit_code=$?
+            trap - EXIT
+            if [[ "$preview_finished" != true ]]; then
+              if ! update_preview_comment_with_retry "🔴 Failed"; then
+                echo "::warning::Unable to mark the preview comment as failed."
+              fi
+            fi
+            exit "$exit_code"
+          }
+
+          if ! project_response="$(
+            curl --silent --show-error --fail-with-body \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$project_response" >&2
+            exit 1
+          fi
+          project_name="$(jq -er .name <<< "$project_response")"
+
+          payload="$(
+            jq --null-input \
+              --arg approved_sha "$APPROVED_SHA" \
+              --arg git_ref "$GIT_REF" \
+              --arg head_repository "$HEAD_REPOSITORY" \
+              --arg head_sha "$HEAD_SHA" \
+              --arg project_id "$VERCEL_PROJECT_ID" \
+              --arg project_name "$project_name" \
+              --arg pull_request "$PULL_REQUEST_NUMBER" \
+              --arg repository "$repository_name" \
+              --arg repository_owner "$repository_owner" \
+              --arg translations "$TRANSLATION_SCOPE" \
+              --arg trust "$TRUST" \
+              '{
+                name: $project_name,
+                project: $project_id,
+                gitSource: {
+                  type: "github",
+                  org: $repository_owner,
+                  repo: $repository,
+                  ref: $git_ref,
+                  sha: $approved_sha
+                },
+                build: {env: {
+                  DOCS_LOCALES: $translations,
+                  DOCS_REMOTES: "none"
+                }},
+                meta: {
+                  buildScope: "base-preview",
+                  sourceRepository: ($repository_owner + "/" + $repository),
+                  pullRequestHeadRepository: $head_repository,
+                  pullRequestHeadSha: $head_sha,
+                  pullRequest: $pull_request,
+                  approvedSha: $approved_sha,
+                  trust: $trust,
+                  translations: $translations
+                }
+              }'
           )"
+
+          if ! deployment_response="$(
+            curl --silent --show-error --fail-with-body \
+              --request POST \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$payload" \
+              "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$deployment_response" >&2
+            exit 1
+          fi
+
+          deployment_id="$(jq -er .id <<< "$deployment_response")"
+          deployment_url="$(jq -er .url <<< "$deployment_response")"
+          preview_url="https://${deployment_url#https://}"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "Vercel deployment: $preview_url"
           if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
             echo "Vercel returned an invalid preview URL." >&2
             exit 1
           fi
-          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          trap finalize_preview_comment EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+          if ! update_preview_comment_with_retry "🟡 Building"; then
+            echo "::warning::Unable to mark the preview comment as building."
+          fi
 
-      - name: Add the preview link to the pull request
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
-          PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
-          TRUST: ${{ steps.pull-request.outputs.trust }}
-        run: |
-          gh pr comment "$PULL_REQUEST_NUMBER" --body "Nimbus documentation preview ($TRUST): $PREVIEW_URL"
+          # Leave five minutes for the EXIT trap to update the comment before
+          # the 60-minute job timeout terminates the runner.
+          for _ in {1..330}; do
+            if ! deployment_response="$(
+              curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
+            )"; then
+              printf '%s\n' "$deployment_response" >&2
+              exit 1
+            fi
+
+            ready_state="$(jq -er .readyState <<< "$deployment_response")"
+            case "$ready_state" in
+              READY)
+                break
+                ;;
+              ERROR|CANCELED|DELETED|BLOCKED)
+                jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Vercel deployment did not complete")' \
+                  <<< "$deployment_response" >&2
+                exit 1
+                ;;
+              QUEUED|INITIALIZING|BUILDING)
+                sleep 10
+                ;;
+              *)
+                echo "Unexpected Vercel deployment state: $ready_state" >&2
+                exit 1
+                ;;
+            esac
+          done
+
+          if [[ "$ready_state" != "READY" ]]; then
+            echo "Timed out waiting for Vercel deployment $deployment_id." >&2
+            exit 1
+          fi
+          if ! update_preview_comment_with_retry "🟢 Ready"; then
+            echo "::warning::Unable to mark the preview comment as ready."
+          fi
+          preview_finished=true

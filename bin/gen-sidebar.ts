@@ -16,7 +16,8 @@ type Obj = { [k: string]: Json };
 
 const root = process.cwd();
 // `--locale es` generates one locale; without it, English plus every locale in
-// the single non-English `DOCS_LOCALE`, which is what `prebuild` relies on.
+// every non-English collection selected by `DOCS_LOCALES`, which is what
+// Vercel's combined production and label-selected preview builds rely on.
 const localeArg = process.argv.indexOf("--locale");
 const scope = readScope(root);
 if (localeArg < 0 && !process.env.__GEN_SIDEBAR_CHILD) {
@@ -153,7 +154,11 @@ function remoteIsOmitted(remote: (typeof remotes)[number]): boolean {
   const state = readJson(stateFile) as Obj;
   if (!state.skipped) return false;
   const reason = String(state.reason ?? "");
-  if (reason !== "excluded-from-remote-preview" && reason !== "excluded-from-untrusted-vercel-preview") {
+  if (
+    reason !== "excluded-from-base-preview"
+    && reason !== "excluded-from-remote-preview"
+    && reason !== "excluded-from-untrusted-vercel-preview"
+  ) {
     throw new Error(`gen-sidebar: remote ${remote.name} has an unknown omission reason: ${reason}`);
   }
   return true;

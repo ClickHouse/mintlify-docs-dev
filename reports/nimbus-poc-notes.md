@@ -156,7 +156,7 @@ them at their current URLs. `ClickHouse/airgap-docs` (40 pages) mounts at
 `products/clickhouse-private`, and `bin/gen-sidebar.ts` expands the Mintlify `sourceRef`
 group from the remote's own `docs.json`. The preparation step also replaces the
 remote's declared `{{variable}}` references before MDX compilation. Locally the
-fetcher uses a GitHub token or SSH. On Vercel, production and the `remote-preview`
+fetcher uses a GitHub token or SSH. On Vercel, production and the `connect-preview`
 Custom Environment exchange
 their deployment OIDC identity for a short-lived, repository-scoped token through
 Vercel Connect. Standard Preview deployments fetch public sources anonymously and

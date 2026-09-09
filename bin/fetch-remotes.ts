@@ -4,11 +4,11 @@
 //   2. a GitHub tarball authenticated by GH_TOKEN / GITHUB_TOKEN outside Vercel,
 //   3. an anonymous GitHub tarball for public repositories,
 //   4. a shallow GitHub SSH checkout for local development.
-// Production always reads each repository's `main` branch. A pull-request
-// preview may replace exactly one source with an immutable commit SHA and omits
-// the other remote sources. Standard Vercel previews deliberately omit private
-// sources; only production and the `remote-preview` custom environment may use
-// Vercel Connect. Remote content is copied but never parsed or imported here.
+// Production always reads each repository's `main` branch. A source-repository
+// preview replaces exactly one source with an immutable commit SHA and omits
+// the other remote sources. Base-repository previews omit every remote. Only
+// production and the `connect-preview` custom environment may use Vercel
+// Connect. Remote content is copied but never parsed or imported here.
 // Usage: node bin/fetch-remotes.ts
 import fs from "node:fs";
 import path from "node:path";
@@ -28,9 +28,9 @@ if (process.env.VERCEL === "1" && !vercelTarget) {
     "fetch-remotes: VERCEL_TARGET_ENV/VERCEL_ENV is required; enable Vercel system environment variables",
   );
 }
-const isUntrustedVercelPreview = process.env.VERCEL === "1"
+const isCredentialFreeVercelEnvironment = process.env.VERCEL === "1"
   && vercelTarget !== "production"
-  && vercelTarget !== "remote-preview";
+  && vercelTarget !== "connect-preview";
 fs.mkdirSync(stateDir, { recursive: true });
 
 type Authentication = "anonymous" | "environment-token" | "vercel-connect";
@@ -57,7 +57,7 @@ async function githubAuthentication(remote: Remote, repository: string): Promise
         "fetch-remotes: VERCEL_OIDC_TOKEN is required when DOCS_GITHUB_CONNECTOR is configured",
       );
     }
-    if (isUntrustedVercelPreview) {
+    if (isCredentialFreeVercelEnvironment) {
       throw new Error(
         `fetch-remotes: Vercel Connect is not allowed in the ${vercelTarget || "unknown"} environment`,
       );
@@ -135,6 +135,17 @@ if (scope.remotePreview && !remoteNames.has(scope.remotePreview.name)) {
 
 for (const r of manifest.remotes) {
   const mount = path.join(root, r.mount);
+  if (!scope.remotes) {
+    cleanMount(mount);
+    const reason = "excluded-from-base-preview";
+    fs.writeFileSync(
+      path.join(stateDir, `${r.name}.json`),
+      JSON.stringify({ name: r.name, repo: r.repo, ref: "main", skipped: true, reason }, null, 2),
+    );
+    console.log(`fetch-remotes: ${r.name} omitted by build scope (${reason})`);
+    continue;
+  }
+
   const selectedPreview = scope.remotePreview?.name === r.name ? scope.remotePreview : undefined;
   const excludedFromRemotePreview = Boolean(scope.remotePreview && !selectedPreview);
   if (excludedFromRemotePreview) {
@@ -148,10 +159,10 @@ for (const r of manifest.remotes) {
     continue;
   }
 
-  if (isUntrustedVercelPreview && r.private) {
+  if (isCredentialFreeVercelEnvironment && r.private) {
     if (selectedPreview) {
       throw new Error(
-        `fetch-remotes: private remote ${r.name} previews must target the remote-preview Vercel environment`,
+        `fetch-remotes: private remote ${r.name} previews must target the connect-preview Vercel environment`,
       );
     }
     cleanMount(mount);

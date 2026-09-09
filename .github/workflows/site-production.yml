@@ -1,0 +1,177 @@
+name: Deploy Nimbus site to production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      VERCEL_TOKEN:
+        required: true
+      VERCEL_ORG_ID:
+        required: true
+      VERCEL_PROJECT_ID:
+        required: true
+    outputs:
+      production_url:
+        description: URL of the completed Vercel production deployment
+        value: ${{ jobs.production.outputs.production_url }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nimbus-site-production
+  cancel-in-progress: false
+
+jobs:
+  production:
+    name: Build on Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    outputs:
+      production_url: ${{ steps.deploy.outputs.production_url }}
+    steps:
+      - name: Require the default branch for manual production deployments
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ]]; then
+            echo "Run this workflow from the repository's default branch." >&2
+            exit 1
+          fi
+
+      - name: Resolve the trusted documentation site revision
+        id: site
+        env:
+          SITE_REPOSITORY: ClickHouse/mintlify-docs-dev
+        run: |
+          if [[ "$GITHUB_REPOSITORY" == "$SITE_REPOSITORY" ]]; then
+            site_sha="$GITHUB_SHA"
+          else
+            site_sha="$({
+              git ls-remote "https://github.com/$SITE_REPOSITORY.git" refs/heads/main
+            } | awk 'NR == 1 { print $1 }')"
+          fi
+          if [[ ! "$site_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Could not resolve the trusted documentation site revision." >&2
+            exit 1
+          fi
+          echo "sha=$site_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger and wait for the Vercel production deployment
+        id: deploy
+        env:
+          SITE_SHA: ${{ steps.site.outputs.sha }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if ! project_response="$(
+            curl --silent --show-error --fail-with-body \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$project_response" >&2
+            exit 1
+          fi
+          project_name="$(jq -er .name <<< "$project_response")"
+
+          payload="$(
+            jq --null-input \
+              --arg approved_sha "$SITE_SHA" \
+              --arg project_id "$VERCEL_PROJECT_ID" \
+              --arg project_name "$project_name" \
+              --arg triggering_repository "$GITHUB_REPOSITORY" \
+              --arg triggering_sha "$GITHUB_SHA" \
+              '{
+                name: $project_name,
+                project: $project_id,
+                target: "production",
+                gitSource: {
+                  type: "github",
+                  org: "ClickHouse",
+                  repo: "mintlify-docs-dev",
+                  ref: "main",
+                  sha: $approved_sha
+                },
+                build: {env: {
+                  DOCS_LOCALES: "all",
+                  DOCS_REMOTES: "all"
+                }},
+                meta: {
+                  buildScope: "production",
+                  sourceRepository: "ClickHouse/mintlify-docs-dev",
+                  approvedSha: $approved_sha,
+                  triggeringRepository: $triggering_repository,
+                  triggeringSha: $triggering_sha,
+                  translations: "all"
+                }
+              }'
+          )"
+
+          if ! deployment_response="$(
+            curl --silent --show-error --fail-with-body \
+              --request POST \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$payload" \
+              "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$deployment_response" >&2
+            exit 1
+          fi
+
+          deployment_id="$(jq -er .id <<< "$deployment_response")"
+          deployment_url="$(jq -er .url <<< "$deployment_response")"
+          production_url="https://${deployment_url#https://}"
+          echo "production_url=$production_url" >> "$GITHUB_OUTPUT"
+          echo "Vercel deployment: $production_url"
+
+          for _ in {1..720}; do
+            if ! deployment_response="$(
+              curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
+            )"; then
+              printf '%s\n' "$deployment_response" >&2
+              exit 1
+            fi
+
+            ready_state="$(jq -er .readyState <<< "$deployment_response")"
+            case "$ready_state" in
+              READY)
+                break
+                ;;
+              ERROR|CANCELED|DELETED|BLOCKED)
+                jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Vercel deployment did not complete")' \
+                  <<< "$deployment_response" >&2
+                exit 1
+                ;;
+              QUEUED|INITIALIZING|BUILDING)
+                sleep 10
+                ;;
+              *)
+                echo "Unexpected Vercel deployment state: $ready_state" >&2
+                exit 1
+                ;;
+            esac
+          done
+
+          if [[ "$ready_state" != "READY" ]]; then
+            echo "Timed out waiting for Vercel deployment $deployment_id." >&2
+            exit 1
+          fi
+          if [[ ! "$production_url" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "Vercel returned an invalid production URL." >&2
+            exit 1
+          fi
+
+      - name: Publish deployment summary
+        env:
+          PRODUCTION_URL: ${{ steps.deploy.outputs.production_url }}
+        run: |
+          echo "### Nimbus production deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "English and all translations: $PRODUCTION_URL" >> "$GITHUB_STEP_SUMMARY"

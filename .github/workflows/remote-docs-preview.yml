@@ -11,7 +11,7 @@ on:
       source_repository:
         description: Repository containing the pull request
         required: true
-        default: ClickHouse/airgapped-docs
+        default: ClickHouse/airgap-docs
         type: string
       pull_request_number:
         description: Open pull request to preview
@@ -31,20 +31,16 @@ on:
         description: Repository containing the pull request
         required: true
         type: string
-      vercel_org_id:
-        description: Vercel organization ID
-        required: true
-        type: string
-      vercel_project_id:
-        description: Vercel project ID
-        required: true
-        type: string
     secrets:
       WORKFLOW_AUTH_PUBLIC_APP_ID:
         required: true
       WORKFLOW_AUTH_PUBLIC_PRIVATE_KEY:
         required: true
       VERCEL_TOKEN:
+        required: true
+      VERCEL_ORG_ID:
+        required: true
+      VERCEL_PROJECT_ID:
         required: true
     outputs:
       preview_url:
@@ -105,8 +101,16 @@ jobs:
           DOCS_PREVIEW_ALIAS: manual-validation
         run: node bin/validate-deploy-request.ts
 
-      - name: Install the Vercel CLI
-        run: npm install --global vercel@59.11.7
+      - name: Resolve the trusted documentation site revision
+        id: site
+        working-directory: site
+        run: |
+          site_sha="$(git rev-parse HEAD)"
+          if [[ ! "$site_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Git returned an invalid documentation site SHA." >&2
+            exit 1
+          fi
+          echo "sha=$site_sha" >> "$GITHUB_OUTPUT"
 
       - name: Mint a source-repository token
         id: source-token
@@ -145,43 +149,129 @@ jobs:
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
           echo "head_repository=$head_repository" >> "$GITHUB_OUTPUT"
 
-      # The CLI uploads only the trusted Nimbus source. The Vercel deployment
-      # exchanges its own OIDC identity for a short-lived, repository-scoped
-      # token through Vercel Connect. The Actions token never enters the build.
-      - name: Deploy and wait for the preview
+      # Vercel fetches the trusted Nimbus main revision through the project's
+      # Git connection. The deployment exchanges its own OIDC identity for a
+      # short-lived, repository-scoped token through Vercel Connect; the
+      # Actions token never enters the build.
+      - name: Trigger and wait for the source preview
         id: deploy
-        working-directory: site
         env:
           DOCS_REMOTE_NAME: ${{ inputs.remote_name }}
           DOCS_REMOTE_REF: ${{ steps.pull-request.outputs.head_sha }}
           DOCS_REMOTE_REPOSITORY: ${{ inputs.source_repository }}
           DOCS_REMOTE_SOURCE_REPOSITORY: ${{ steps.pull-request.outputs.head_repository }}
           PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
-          VERCEL_ORG_ID: ${{ inputs.vercel_org_id || vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id || vars.VERCEL_PROJECT_ID }}
+          SITE_SHA: ${{ steps.site.outputs.sha }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          preview_url="$(
-            vercel deploy \
-              --yes \
-              --archive=tgz \
-              --target=remote-preview \
-              --token "$VERCEL_TOKEN" \
-              --build-env "DOCS_LOCALE=en" \
-              --build-env "DOCS_REMOTE_NAME=$DOCS_REMOTE_NAME" \
-              --build-env "DOCS_REMOTE_REPOSITORY=$DOCS_REMOTE_REPOSITORY" \
-              --build-env "DOCS_REMOTE_SOURCE_REPOSITORY=$DOCS_REMOTE_SOURCE_REPOSITORY" \
-              --build-env "DOCS_REMOTE_REF=$DOCS_REMOTE_REF" \
-              --meta "sourceRepository=$DOCS_REMOTE_REPOSITORY" \
-              --meta "sourceHeadRepository=$DOCS_REMOTE_SOURCE_REPOSITORY" \
-              --meta "pullRequest=$PULL_REQUEST_NUMBER" \
-              --meta "approvedSha=$DOCS_REMOTE_REF"
+          if ! project_response="$(
+            curl --silent --show-error --fail-with-body \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$project_response" >&2
+            exit 1
+          fi
+          project_name="$(jq -er .name <<< "$project_response")"
+
+          payload="$(
+            jq --null-input \
+              --arg approved_sha "$DOCS_REMOTE_REF" \
+              --arg project_id "$VERCEL_PROJECT_ID" \
+              --arg project_name "$project_name" \
+              --arg pull_request "$PULL_REQUEST_NUMBER" \
+              --arg remote_name "$DOCS_REMOTE_NAME" \
+              --arg remote_repository "$DOCS_REMOTE_REPOSITORY" \
+              --arg source_repository "$DOCS_REMOTE_SOURCE_REPOSITORY" \
+              --arg site_sha "$SITE_SHA" \
+              '{
+                name: $project_name,
+                project: $project_id,
+                customEnvironmentSlugOrId: "connect-preview",
+                gitSource: {
+                  type: "github",
+                  org: "ClickHouse",
+                  repo: "mintlify-docs-dev",
+                  ref: "main",
+                  sha: $site_sha
+                },
+                build: {env: {
+                  DOCS_LOCALE: "en",
+                  DOCS_REMOTES: "all",
+                  DOCS_REMOTE_NAME: $remote_name,
+                  DOCS_REMOTE_REPOSITORY: $remote_repository,
+                  DOCS_REMOTE_SOURCE_REPOSITORY: $source_repository,
+                  DOCS_REMOTE_REF: $approved_sha
+                }},
+                meta: {
+                  buildScope: "source-preview",
+                  sourceRepository: $remote_repository,
+                  sourceHeadRepository: $source_repository,
+                  pullRequest: $pull_request,
+                  approvedSha: $approved_sha,
+                  siteSha: $site_sha
+                }
+              }'
           )"
+
+          if ! deployment_response="$(
+            curl --silent --show-error --fail-with-body \
+              --request POST \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$payload" \
+              "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$deployment_response" >&2
+            exit 1
+          fi
+
+          deployment_id="$(jq -er .id <<< "$deployment_response")"
+          deployment_url="$(jq -er .url <<< "$deployment_response")"
+          preview_url="https://${deployment_url#https://}"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "Vercel deployment: $preview_url"
+
+          for _ in {1..360}; do
+            if ! deployment_response="$(
+              curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
+            )"; then
+              printf '%s\n' "$deployment_response" >&2
+              exit 1
+            fi
+
+            ready_state="$(jq -er .readyState <<< "$deployment_response")"
+            case "$ready_state" in
+              READY)
+                break
+                ;;
+              ERROR|CANCELED|DELETED|BLOCKED)
+                jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Vercel deployment did not complete")' \
+                  <<< "$deployment_response" >&2
+                exit 1
+                ;;
+              QUEUED|INITIALIZING|BUILDING)
+                sleep 10
+                ;;
+              *)
+                echo "Unexpected Vercel deployment state: $ready_state" >&2
+                exit 1
+                ;;
+            esac
+          done
+
+          if [[ "$ready_state" != "READY" ]]; then
+            echo "Timed out waiting for Vercel deployment $deployment_id." >&2
+            exit 1
+          fi
           if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
             echo "Vercel returned an invalid preview URL." >&2
             exit 1
           fi
-          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
 
       - name: Add the preview link to the pull request
         if: github.repository == inputs.source_repository

@@ -119,7 +119,8 @@ export function renderCorpus(entries: IndexedEntry[], title: string, indexPath: 
 }
 
 function markdownUrl(entry: IndexedEntry): string {
-  return new URL(withBase(`${entry.url.replace(/\/+$/, "")}/index.md`), config.site).href;
+  const route = entry.url.replace(/\/+$/, "");
+  return new URL(withBase(route === "/" ? "/index.md" : `${route}.md`), config.site).href;
 }
 
 function corpusUrl(pathname: string): string {
