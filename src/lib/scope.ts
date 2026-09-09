@@ -1,11 +1,11 @@
 /**
- * Build scope for one independently deployed locale.
+ * Build scope for Vercel's combined site and independently deployed locale
+ * Workers.
  *
- * Production builds select only `DOCS_LOCALE`; every registered remote is
- * fetched from its `main` branch. A remote pull-request preview additionally
- * supplies one registered source and its immutable head SHA. CI may materialise
- * the same values in `.preview-scope.json` between its credentialed fetch job
- * and its unprivileged build job.
+ * `DOCS_LOCALES` keeps English active and adds zero, one, several, or every
+ * translated collection to the same Vercel artifact. Vercel production always
+ * builds every translation, even when the variable is omitted. `DOCS_LOCALE`
+ * retains the singular build contract used by locale Workers.
  *
  *   {
  *     "locale": "en",
@@ -35,9 +35,9 @@ export interface RemotePreview {
 }
 
 export interface BuildScope {
-  /** The locale Worker produced by this build. */
+  /** Primary locale; non-English only for a singular locale Worker build. */
   locale: BuildLocale;
-  /** Non-English collection to build; retained for the Astro route generators. */
+  /** Non-English collections included in this artifact. */
   locales: Locale[];
   /** Whether `reference/**` is part of the build. */
   reference: boolean;
@@ -63,6 +63,27 @@ function parseLocale(value: unknown, source: string): BuildLocale {
     throw new Error(`${source} must be one of: en, ${ALL_LOCALES.join(", ")}`);
   }
   return locale;
+}
+
+function parseLocales(value: unknown, source: string): Locale[] {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${source} must be none, all, or a comma-separated locale list`);
+  }
+
+  const requested = value.trim().toLowerCase();
+  if (requested === "none" || requested === "en") return [];
+  if (requested === "all") return [...ALL_LOCALES];
+
+  const selected = new Set<Locale>();
+  for (const entry of value.split(",")) {
+    const normalized = entry.trim().toLowerCase();
+    const locale = ALL_LOCALES.find((candidate) => candidate.toLowerCase() === normalized);
+    if (!locale) {
+      throw new Error(`${source} must contain only: ${ALL_LOCALES.join(", ")}`);
+    }
+    selected.add(locale);
+  }
+  return ALL_LOCALES.filter((locale) => selected.has(locale));
 }
 
 function parseRemotePreview(value: unknown, source: string): RemotePreview | undefined {
@@ -109,6 +130,7 @@ function parseReference(value: unknown, source: string): boolean {
 
 export function readScope(root = process.cwd()): BuildScope {
   const envLocale = (process.env.DOCS_LOCALE ?? "").trim();
+  const envLocales = (process.env.DOCS_LOCALES ?? "").trim();
   const envReference = (process.env.DOCS_REFERENCE ?? "").trim().toLowerCase();
   const envRemoteName = (process.env.DOCS_REMOTE_NAME ?? "").trim();
   const envRemoteRepository = (process.env.DOCS_REMOTE_REPOSITORY ?? "").trim();
@@ -118,6 +140,10 @@ export function readScope(root = process.cwd()): BuildScope {
   const fileScope = fs.existsSync(file)
     ? (JSON.parse(fs.readFileSync(file, "utf8")) as ScopeFile)
     : null;
+
+  if (envLocale && envLocales) {
+    throw new Error("DOCS_LOCALE and DOCS_LOCALES are mutually exclusive");
+  }
 
   const remoteEnvironmentValues = [envRemoteName, envRemoteRepository, envRemoteRef];
   const hasRemoteEnvironment = remoteEnvironmentValues.some(Boolean);
@@ -133,12 +159,33 @@ export function readScope(root = process.cwd()): BuildScope {
   }
 
   let source: BuildScope["source"] = fileScope ? "file" : "default";
-  const locale = envLocale
-    ? parseLocale(envLocale, "DOCS_LOCALE")
-    : fileScope?.locale !== undefined
-      ? parseLocale(fileScope.locale, ".preview-scope.json locale")
-      : "en";
-  const locales: Locale[] = locale === "en" ? [] : [locale];
+  const vercelTarget = (process.env.VERCEL_TARGET_ENV ?? process.env.VERCEL_ENV ?? "")
+    .trim()
+    .toLowerCase();
+  const isVercelProduction = process.env.VERCEL === "1" && vercelTarget === "production";
+
+  const locale = envLocales
+    ? "en"
+    : envLocale
+      ? parseLocale(envLocale, "DOCS_LOCALE")
+      : fileScope?.locale !== undefined
+        ? parseLocale(fileScope.locale, ".preview-scope.json locale")
+        : "en";
+  let locales: Locale[] = envLocales
+    ? parseLocales(envLocales, "DOCS_LOCALES")
+    : locale === "en"
+      ? []
+      : [locale];
+
+  if (isVercelProduction) {
+    if (locale !== "en") {
+      throw new Error("Vercel production builds use DOCS_LOCALES=all, not DOCS_LOCALE");
+    }
+    if (envLocales && locales.length !== ALL_LOCALES.length) {
+      throw new Error("Vercel production builds must include every translation with DOCS_LOCALES=all");
+    }
+    locales = [...ALL_LOCALES];
+  }
   const reference = envReference
     ? parseReference(envReference, "DOCS_REFERENCE")
     : fileScope?.reference !== undefined
@@ -156,10 +203,10 @@ export function readScope(root = process.cwd()): BuildScope {
       )
     : parseRemotePreview(fileScope?.remotePreview, ".preview-scope.json remotePreview");
 
-  if (remotePreview && locale !== "en") {
-    throw new Error("Remote pull-request previews are English-only; set DOCS_LOCALE=en");
+  if (remotePreview && (locale !== "en" || locales.length > 0)) {
+    throw new Error("Remote pull-request previews are English-only; omit DOCS_LOCALES");
   }
-  if (envLocale || envReference || hasRemoteEnvironment) source = "env";
+  if (envLocale || envLocales || envReference || hasRemoteEnvironment) source = "env";
   return {
     locale,
     locales,

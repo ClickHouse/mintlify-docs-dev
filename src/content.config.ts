@@ -130,9 +130,10 @@ export const LOCALES = ["ar", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh"] as co
 export type LocaleCollectionName = "ar" | "es" | "fr" | "ja" | "ko" | "pt-br" | "ru" | "zh";
 
 /**
- * The locale comes from the build scope (`DOCS_LOCALE` env, or the generated
- * `.preview-scope.json` on preview branches; see src/lib/scope.ts). Collection
- * names deliberately avoid the `docs-<x>` prefix, which Nimbus reserves for versions.
+ * Locales come from the build scope (`DOCS_LOCALES` for a combined Vercel
+ * artifact, `DOCS_LOCALE` for one locale Worker, or `.preview-scope.json` for
+ * remote previews; see src/lib/scope.ts). Collection names deliberately avoid
+ * the `docs-<x>` prefix, which Nimbus reserves for versions.
  */
 export const ACTIVE_LOCALES: string[] = [...scope.locales];
 
