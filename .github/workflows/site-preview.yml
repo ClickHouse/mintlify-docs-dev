@@ -40,7 +40,7 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve the pull request head
+      - name: Resolve the pull request revision
         id: pull-request
         env:
           GH_TOKEN: ${{ github.token }}
@@ -63,17 +63,29 @@ jobs:
             exit 1
           fi
 
+          merge_ref="refs/pull/$PULL_REQUEST_NUMBER/merge"
+          merge_sha="$({
+            git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "$merge_ref"
+          } | awk 'NR == 1 { print $1 }')"
+          if [[ ! "$merge_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "GitHub did not expose a merge revision for pull request $PULL_REQUEST_NUMBER." >&2
+            echo "Resolve any merge conflicts before requesting a preview." >&2
+            exit 1
+          fi
+
           if [[ "$head_repository" == "$GITHUB_REPOSITORY" ]]; then
-            target="remote-preview"
+            custom_environment="remote-preview"
             trust="trusted-branch"
           else
-            target="preview"
+            custom_environment=""
             trust="untrusted-fork"
           fi
 
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
           echo "head_repository=$head_repository" >> "$GITHUB_OUTPUT"
-          echo "target=$target" >> "$GITHUB_OUTPUT"
+          echo "merge_ref=$merge_ref" >> "$GITHUB_OUTPUT"
+          echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+          echo "custom_environment=$custom_environment" >> "$GITHUB_OUTPUT"
           echo "trust=$trust" >> "$GITHUB_OUTPUT"
 
       - name: Select translated collections from pull request labels
@@ -128,75 +140,133 @@ jobs:
           echo "scope=$locale_scope" >> "$GITHUB_OUTPUT"
           echo "summary=$locale_summary" >> "$GITHUB_OUTPUT"
 
-      - name: Check out the pull request revision
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ steps.pull-request.outputs.head_repository }}
-          ref: ${{ steps.pull-request.outputs.head_sha }}
-          path: site
-          persist-credentials: false
-
-      - name: Reject unsafe symbolic links in uploaded source
-        run: |
-          while IFS= read -r -d '' symlink; do
-            relative_path="${symlink#site/}"
-            target="$(readlink "$symlink")"
-            if [[ "$relative_path" == "public/images" && "$target" == "../images" ]]; then
-              continue
-            fi
-            echo "Fork and branch previews may not upload symbolic links: $relative_path -> $target" >&2
-            exit 1
-          done < <(find site -type l -print0)
-
-      - name: Verify the checked-out revision
-        working-directory: site
-        env:
-          EXPECTED_SHA: ${{ steps.pull-request.outputs.head_sha }}
-        run: |
-          actual_sha="$(git rev-parse HEAD)"
-          if [[ "$actual_sha" != "$EXPECTED_SHA" ]]; then
-            echo "Checked out $actual_sha instead of approved revision $EXPECTED_SHA." >&2
-            exit 1
-          fi
-
-      - name: Install the Vercel CLI
-        run: npm install --global vercel@59.11.7
-
-      # Do not install dependencies or run repository code in this job. The
-      # source is uploaded to Vercel, where standard Preview has no Connect
-      # attachment and trusted branches use the remote-preview environment.
-      - name: Deploy and wait for the preview
+      # GitHub owns refs/pull/<number>/merge in the primary repository, even
+      # when the pull request head is in a fork. Vercel fetches that immutable
+      # revision through the project's Git connection; Actions never checks
+      # out, executes, archives, or uploads pull-request-controlled files.
+      - name: Trigger and wait for the Vercel preview
         id: deploy
-        working-directory: site
         env:
-          APPROVED_SHA: ${{ steps.pull-request.outputs.head_sha }}
+          APPROVED_SHA: ${{ steps.pull-request.outputs.merge_sha }}
+          CUSTOM_ENVIRONMENT: ${{ steps.pull-request.outputs.custom_environment }}
+          GIT_REF: ${{ steps.pull-request.outputs.merge_ref }}
+          HEAD_REPOSITORY: ${{ steps.pull-request.outputs.head_repository }}
+          HEAD_SHA: ${{ steps.pull-request.outputs.head_sha }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || inputs.pull_request_number }}
-          SOURCE_REPOSITORY: ${{ steps.pull-request.outputs.head_repository }}
           TRANSLATION_SCOPE: ${{ steps.translations.outputs.scope }}
           TRUST: ${{ steps.pull-request.outputs.trust }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-          VERCEL_TARGET: ${{ steps.pull-request.outputs.target }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          preview_url="$(
-            vercel deploy \
-              --yes \
-              --archive=tgz \
-              --target="$VERCEL_TARGET" \
-              --token "$VERCEL_TOKEN" \
-              --build-env "DOCS_LOCALES=$TRANSLATION_SCOPE" \
-              --meta "sourceRepository=$SOURCE_REPOSITORY" \
-              --meta "pullRequest=$PULL_REQUEST_NUMBER" \
-              --meta "approvedSha=$APPROVED_SHA" \
-              --meta "trust=$TRUST" \
-              --meta "translations=$TRANSLATION_SCOPE"
+          repository_owner="${GITHUB_REPOSITORY%%/*}"
+          repository_name="${GITHUB_REPOSITORY#*/}"
+
+          if ! project_response="$(
+            curl --silent --show-error --fail-with-body \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$project_response" >&2
+            exit 1
+          fi
+          project_name="$(jq -er .name <<< "$project_response")"
+
+          payload="$(
+            jq --null-input \
+              --arg approved_sha "$APPROVED_SHA" \
+              --arg custom_environment "$CUSTOM_ENVIRONMENT" \
+              --arg git_ref "$GIT_REF" \
+              --arg head_repository "$HEAD_REPOSITORY" \
+              --arg head_sha "$HEAD_SHA" \
+              --arg project_id "$VERCEL_PROJECT_ID" \
+              --arg project_name "$project_name" \
+              --arg pull_request "$PULL_REQUEST_NUMBER" \
+              --arg repository "$repository_name" \
+              --arg repository_owner "$repository_owner" \
+              --arg translations "$TRANSLATION_SCOPE" \
+              --arg trust "$TRUST" \
+              '{
+                name: $project_name,
+                project: $project_id,
+                gitSource: {
+                  type: "github",
+                  org: $repository_owner,
+                  repo: $repository,
+                  ref: $git_ref,
+                  sha: $approved_sha
+                },
+                build: {env: {DOCS_LOCALES: $translations}},
+                meta: {
+                  sourceRepository: ($repository_owner + "/" + $repository),
+                  pullRequestHeadRepository: $head_repository,
+                  pullRequestHeadSha: $head_sha,
+                  pullRequest: $pull_request,
+                  approvedSha: $approved_sha,
+                  trust: $trust,
+                  translations: $translations
+                }
+              } + if $custom_environment == "" then {} else {
+                customEnvironmentSlugOrId: $custom_environment
+              } end'
           )"
+
+          if ! deployment_response="$(
+            curl --silent --show-error --fail-with-body \
+              --request POST \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$payload" \
+              "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$deployment_response" >&2
+            exit 1
+          fi
+
+          deployment_id="$(jq -er .id <<< "$deployment_response")"
+          deployment_url="$(jq -er .url <<< "$deployment_response")"
+          preview_url="https://${deployment_url#https://}"
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "Vercel deployment: $preview_url"
+
+          for _ in {1..360}; do
+            if ! deployment_response="$(
+              curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
+            )"; then
+              printf '%s\n' "$deployment_response" >&2
+              exit 1
+            fi
+
+            ready_state="$(jq -er .readyState <<< "$deployment_response")"
+            case "$ready_state" in
+              READY)
+                break
+                ;;
+              ERROR|CANCELED|DELETED|BLOCKED)
+                jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Vercel deployment did not complete")' \
+                  <<< "$deployment_response" >&2
+                exit 1
+                ;;
+              QUEUED|INITIALIZING|BUILDING)
+                sleep 10
+                ;;
+              *)
+                echo "Unexpected Vercel deployment state: $ready_state" >&2
+                exit 1
+                ;;
+            esac
+          done
+
+          if [[ "$ready_state" != "READY" ]]; then
+            echo "Timed out waiting for Vercel deployment $deployment_id." >&2
+            exit 1
+          fi
           if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
             echo "Vercel returned an invalid preview URL." >&2
             exit 1
           fi
-          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
 
       - name: Add the preview link to the pull request
         env:

@@ -69,27 +69,29 @@ public sources anonymously and omit private sources. Trusted branch previews
 that need the complete site must target the `remote-preview` Custom Environment.
 
 Nimbus application pull requests use `.github/workflows/site-preview.yml`.
-The base-branch workflow resolves the current head SHA without running
-pull-request code in Actions, uploads that revision with the Vercel CLI, and
-updates one preview comment on the pull request. A branch in the primary
-repository is sent to the Connect-enabled `remote-preview` environment. A fork
-is sent to standard Preview, where the connector is not attached and private
-sources are omitted.
+The base-branch workflow resolves GitHub's immutable
+`refs/pull/<number>/merge` revision without checking out or running
+pull-request code in Actions. It asks Vercel to fetch that revision through the
+project's Git connection and updates one preview comment on the pull request.
+A branch in the primary repository is sent to the Connect-enabled
+`remote-preview` environment. A fork pull request is still fetched through the
+primary repository's synthetic pull-request ref, but is sent to standard
+Preview, where the connector is not attached and private sources are omitted.
 
 Pull-request previews build English only by default. Add
 `docs-translations-all` to include every translated collection, or add one or
 more locale labels such as `docs-translations-es` and
 `docs-translations-pt-br`. Adding or removing one of these labels starts a new
 preview with the resulting locale set. `.github/workflows/site-production.yml`
-deploys `main` through the same Vercel project with English and every
-translation after each merge. Both workflows can also be invoked manually from
-the default branch.
+asks Vercel to fetch the merged `main` commit through the same Git connection
+and build English with every translation. Both workflows can also be invoked
+manually from the default branch.
 
 Vercel must be provisioned as follows:
 
 1. Keep the single Git-connected Vercel project, but leave automatic Git
-   deployments disabled as specified in `vercel.json`; GitHub Actions owns both
-   preview and production deployment creation.
+   deployments disabled as specified in `vercel.json`; GitHub Actions creates
+   Git-backed preview and production deployments through the Vercel API.
 2. Enable automatic System Environment Variables for the project.
 3. Create the `remote-preview` Custom Environment.
 4. Create a Vercel-managed GitHub connector named `clickhouse-docs` and install
@@ -99,8 +101,9 @@ Vercel must be provisioned as follows:
    attach it to standard `preview`.
 6. Set `DOCS_GITHUB_CONNECTOR=github/clickhouse-docs` in `production` and
    `remote-preview`, but not in standard `preview`.
-7. Keep standard Preview free of secrets and privileged integrations: a fork
-   pull request controls the uploaded build source in that environment.
+7. Keep standard Preview free of secrets and privileged integrations. Fork
+   pull requests build from the primary repository's synthetic merge ref in
+   this environment.
 8. Add `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` as GitHub Actions variables and
    `VERCEL_TOKEN` as a GitHub Actions secret.
 9. Keep the Vercel build command as `pnpm run build:vercel` and the output

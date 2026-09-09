@@ -28,37 +28,109 @@ jobs:
             exit 1
           fi
 
-      - name: Check out the trusted production revision
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Install the Vercel CLI
-        run: npm install --global vercel@59.11.7
-
-      - name: Deploy all locales and wait for production
+      - name: Trigger and wait for the Vercel production deployment
         id: deploy
         env:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          production_url="$(
-            vercel deploy \
-              --yes \
-              --prod \
-              --archive=tgz \
-              --token "$VERCEL_TOKEN" \
-              --build-env "DOCS_LOCALES=all" \
-              --meta "sourceRepository=$GITHUB_REPOSITORY" \
-              --meta "approvedSha=$GITHUB_SHA" \
-              --meta "translations=all"
+          repository_owner="${GITHUB_REPOSITORY%%/*}"
+          repository_name="${GITHUB_REPOSITORY#*/}"
+
+          if ! project_response="$(
+            curl --silent --show-error --fail-with-body \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$project_response" >&2
+            exit 1
+          fi
+          project_name="$(jq -er .name <<< "$project_response")"
+
+          payload="$(
+            jq --null-input \
+              --arg approved_sha "$GITHUB_SHA" \
+              --arg project_id "$VERCEL_PROJECT_ID" \
+              --arg project_name "$project_name" \
+              --arg repository "$repository_name" \
+              --arg repository_owner "$repository_owner" \
+              '{
+                name: $project_name,
+                project: $project_id,
+                target: "production",
+                gitSource: {
+                  type: "github",
+                  org: $repository_owner,
+                  repo: $repository,
+                  ref: "main",
+                  sha: $approved_sha
+                },
+                build: {env: {DOCS_LOCALES: "all"}},
+                meta: {
+                  sourceRepository: ($repository_owner + "/" + $repository),
+                  approvedSha: $approved_sha,
+                  translations: "all"
+                }
+              }'
           )"
+
+          if ! deployment_response="$(
+            curl --silent --show-error --fail-with-body \
+              --request POST \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$payload" \
+              "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
+          )"; then
+            printf '%s\n' "$deployment_response" >&2
+            exit 1
+          fi
+
+          deployment_id="$(jq -er .id <<< "$deployment_response")"
+          deployment_url="$(jq -er .url <<< "$deployment_response")"
+          production_url="https://${deployment_url#https://}"
+          echo "production_url=$production_url" >> "$GITHUB_OUTPUT"
+          echo "Vercel deployment: $production_url"
+
+          for _ in {1..720}; do
+            if ! deployment_response="$(
+              curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
+            )"; then
+              printf '%s\n' "$deployment_response" >&2
+              exit 1
+            fi
+
+            ready_state="$(jq -er .readyState <<< "$deployment_response")"
+            case "$ready_state" in
+              READY)
+                break
+                ;;
+              ERROR|CANCELED|DELETED|BLOCKED)
+                jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Vercel deployment did not complete")' \
+                  <<< "$deployment_response" >&2
+                exit 1
+                ;;
+              QUEUED|INITIALIZING|BUILDING)
+                sleep 10
+                ;;
+              *)
+                echo "Unexpected Vercel deployment state: $ready_state" >&2
+                exit 1
+                ;;
+            esac
+          done
+
+          if [[ "$ready_state" != "READY" ]]; then
+            echo "Timed out waiting for Vercel deployment $deployment_id." >&2
+            exit 1
+          fi
           if [[ ! "$production_url" =~ ^https://[^[:space:]]+$ ]]; then
             echo "Vercel returned an invalid production URL." >&2
             exit 1
           fi
-          echo "production_url=$production_url" >> "$GITHUB_OUTPUT"
 
       - name: Publish deployment summary
         env:
