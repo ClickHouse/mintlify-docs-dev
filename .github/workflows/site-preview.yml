@@ -136,13 +136,17 @@ jobs:
           path: site
           persist-credentials: false
 
-      - name: Reject symbolic links in uploaded source
+      - name: Reject unsafe symbolic links in uploaded source
         run: |
-          symlink="$(find site -type l -print -quit)"
-          if [[ -n "$symlink" ]]; then
-            echo "Fork and branch previews may not upload symbolic links: $symlink" >&2
+          while IFS= read -r -d '' symlink; do
+            relative_path="${symlink#site/}"
+            target="$(readlink "$symlink")"
+            if [[ "$relative_path" == "public/images" && "$target" == "../images" ]]; then
+              continue
+            fi
+            echo "Fork and branch previews may not upload symbolic links: $relative_path -> $target" >&2
             exit 1
-          fi
+          done < <(find site -type l -print0)
 
       - name: Verify the checked-out revision
         working-directory: site
