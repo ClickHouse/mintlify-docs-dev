@@ -64,8 +64,8 @@ const tabs = (lang.tabs ?? []) as Obj[];
 
 // ---------------------------------------------------------------- labels
 type NavBadge = { text: string; variant: "success" | "info" | "warning" | "danger" | "note" };
-const labelCache = new Map<string, { label: string; exists: boolean; badge?: NavBadge }>();
-function pageInfo(page: string): { label: string; exists: boolean; badge?: NavBadge } {
+const labelCache = new Map<string, { label: string; exists: boolean; badge?: NavBadge; icon?: string; hidden?: boolean }>();
+function pageInfo(page: string): { label: string; exists: boolean; badge?: NavBadge; icon?: string; hidden?: boolean } {
   const cached = labelCache.get(page);
   if (cached) return cached;
   // Locale nav references are `es/...`; strip the locale so files resolve.
@@ -81,6 +81,8 @@ function pageInfo(page: string): { label: string; exists: boolean; badge?: NavBa
   const file = localizedFile ?? englishFile;
   let label = rel.split("/").pop() ?? rel;
   let badge: NavBadge | undefined;
+  let icon: string | undefined;
+  let hidden = false;
   if (file) {
     const src = fs.readFileSync(file, "utf8");
     const m = src.match(/^---\r?\n([\s\S]*?)\r?\n---/);
@@ -89,6 +91,8 @@ function pageInfo(page: string): { label: string; exists: boolean; badge?: NavBa
         const fm = (parseYaml(m[1]) ?? {}) as Record<string, unknown>;
         const st = fm.sidebarTitle ?? fm.title;
         if (typeof st === "string" && st.trim()) label = st.trim();
+        if (typeof fm.icon === "string" && fm.icon.trim()) icon = fm.icon.trim();
+        hidden = fm.hidden === true;
         if (typeof fm.openapi === "string") {
           const method = fm.openapi.match(/\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//i)?.[1]?.toLowerCase() as HttpMethod | undefined;
           if (method) badge = { text: method.toUpperCase(), variant: apiMethodVariant(method) };
@@ -98,7 +102,7 @@ function pageInfo(page: string): { label: string; exists: boolean; badge?: NavBa
       }
     }
   }
-  const info = { label, exists: Boolean(file), badge };
+  const info = { label, exists: Boolean(file), badge, icon, hidden };
   labelCache.set(page, info);
   return info;
 }
@@ -196,7 +200,7 @@ function noteOrder(groupPath: string, pages: string[]) {
 
 // ---------------------------------------------------------------- conversion
 type NimbusItem =
-  | { label: string; link: string; badge?: NavBadge }
+  | { label: string; link: string; badge?: NavBadge; icon?: string; hidden?: boolean }
   | { label: string; items: NimbusItem[]; collapsed?: boolean; segment?: string; landing?: string; icon?: string };
 
 function convertPages(pages: Json[], groupPath: string): NimbusItem[] {
@@ -223,7 +227,7 @@ function convertPages(pages: Json[], groupPath: string): NimbusItem[] {
       const info = pageInfo(p);
       if (!info.exists) missing.push(`${groupPath}: ${p}`);
       seenPages.add(p);
-      out.push({ label: info.label, link: pageLink(p), badge: info.badge });
+      out.push({ label: info.label, link: pageLink(p), badge: info.badge, icon: info.icon, hidden: info.hidden || undefined });
       continue;
     }
     if (p && typeof p === "object") {

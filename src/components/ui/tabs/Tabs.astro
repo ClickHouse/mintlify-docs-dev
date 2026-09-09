@@ -8,6 +8,8 @@
  * For manual control: TabsList, TabsTrigger, TabsContent.
  */
 import { cn } from "@/lib/cn";
+import { nextTabId } from "@/lib/tab-id";
+import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
 import type { HTMLAttributes } from "astro/types";
 import TabsList from "./TabsList.astro";
 
@@ -17,6 +19,68 @@ interface Props extends HTMLAttributes<"div"> {
 }
 
 const { syncKey, class: className, ...attrs } = Astro.props;
+const tabsId = nextTabId(Astro.locals);
+
+let renderedContent = await Astro.slots.render("default");
+
+const decodeAttribute = (value: string) => value.replace(
+  /&(?:quot|amp|lt|gt|#39|#x[0-9a-f]+|#\d+);/gi,
+  (entity) => {
+    const named: Record<string, string> = {
+      "&quot;": '"', "&amp;": "&", "&lt;": "<", "&gt;": ">", "&#39;": "'",
+    };
+    const normalized = entity.toLowerCase();
+    if (named[normalized]) return named[normalized];
+    const numeric = normalized.startsWith("&#x")
+      ? Number.parseInt(normalized.slice(3, -1), 16)
+      : Number.parseInt(normalized.slice(2, -1), 10);
+    return Number.isFinite(numeric) ? String.fromCodePoint(numeric) : entity;
+  },
+);
+const readAttribute = (attributes: string, name: string) => {
+  const match = attributes.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`));
+  return match ? decodeAttribute(match[1] ?? "") : undefined;
+};
+
+const tabs: Array<{ label: string; icon?: string; panelId: string }> = [];
+let panelIndex = 0;
+let divDepth = 0;
+renderedContent = renderedContent.replace(
+  /<\/?div\b[^>]*>/g,
+  (tag) => {
+    if (tag.startsWith("</")) {
+      divDepth--;
+      return tag;
+    }
+
+    const isDirectPanel = divDepth === 0 && /\bdata-nb-tabs-content\b/.test(tag);
+    divDepth++;
+    if (!isDirectPanel) return tag;
+
+    const rawAttributes = tag.slice(4, -1);
+    const label = readAttribute(rawAttributes, "data-nb-tab-label");
+    if (!label) return tag;
+    const index = panelIndex++;
+    const panelId = readAttribute(rawAttributes, "id") ?? `${tabsId}-panel-${index}`;
+    tabs.push({
+      label,
+      icon: readAttribute(rawAttributes, "data-nb-tab-icon"),
+      panelId,
+    });
+
+    const additions = [
+      !/(?:^|\s)id=/.test(rawAttributes) && `id="${panelId}"`,
+      !/(?:^|\s)aria-labelledby=/.test(rawAttributes) && `aria-labelledby="${tabsId}-tab-${index}"`,
+      index > 0 && !/(?:^|\s)hidden(?:\s|=|$)/.test(rawAttributes) && "hidden",
+    ].filter(Boolean).join(" ");
+    return additions ? tag.slice(0, -1) + ` ${additions}>` : tag;
+  },
+);
+
+const triggerClass = "inline-flex shrink-0 cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium leading-6 whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground aria-selected:text-primary focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]";
+const isImageIcon = (icon: string) =>
+  icon.startsWith("/") ||
+  icon.startsWith("data:");
 ---
 
 <div
@@ -25,9 +89,40 @@ const { syncKey, class: className, ...attrs } = Astro.props;
   class={cn(className)}
   {...attrs}
 >
-  <TabsList />
+  <TabsList>
+    {tabs.map((tab, index) => (
+      <button
+        role="tab"
+        type="button"
+        id={`${tabsId}-tab-${index}`}
+        aria-controls={tab.panelId}
+        aria-selected={index === 0 ? "true" : "false"}
+        tabindex={index === 0 ? "0" : "-1"}
+        class={triggerClass}
+        data-nb-tabs-trigger
+      >
+        {tab.icon && (isImageIcon(tab.icon) ? (
+          <img
+            src={tab.icon}
+            alt=""
+            aria-hidden="true"
+            width="16"
+            height="16"
+            class="h-4 w-4 shrink-0 object-contain"
+          />
+        ) : (
+          <Icon
+            name={tab.icon === "aws" ? "fa6-brands:aws" : `fa6-solid:${tab.icon}`}
+            aria-hidden="true"
+            class="h-4 w-4 shrink-0"
+          />
+        ))}
+        {tab.label}
+      </button>
+    ))}
+  </TabsList>
   <div class="mt-3">
-    <slot />
+    <Fragment set:html={renderedContent} />
   </div>
 </div>
 

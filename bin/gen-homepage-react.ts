@@ -9,10 +9,13 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { inlinePublicIcon } from "../src/lib/build-icon.ts";
 
 const root = process.cwd();
 const locales = ["en", "ar", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh"];
 const outputDir = path.join(root, "src", "generated", "homepage");
+const mcpIcon = inlinePublicIcon("/images/icons/icon-mcp.svg");
+const mcpMask = /<span\s+aria-hidden="true"\s+className="shrink-0 w-\[15px\] h-\[15px\] bg-current ch-mcp-icon"\s+style=\{\{\s+WebkitMaskImage: `url\(\$\{assetBase\}\/images\/icons\/icon-mcp\.svg\)`,\s+maskImage: `url\(\$\{assetBase\}\/images\/icons\/icon-mcp\.svg\)`,\s+\}\}\s+\/>/g;
 
 function sourcePath(locale: string): string {
   return locale === "en" ? path.join(root, "index.mdx") : path.join(root, locale, "index.mdx");
@@ -56,7 +59,18 @@ function render(locale: string): string {
     .replaceAll(
       "typeof window !== 'undefined' && window.location.pathname.startsWith('/docs') ? '/docs' : ''",
       assetBaseExpression,
+    )
+    .replace(
+      mcpMask,
+      `<img src={${JSON.stringify(mcpIcon)}} alt="" aria-hidden="true" className="shrink-0 w-3.5 h-3.5 bg-transparent" />`,
+    )
+    .replace(
+      /(export const McpLink = \(\{ children \}\) => \{\r?\n)\s+const assetBase = [^\r\n]+;\r?\n/,
+      "$1",
     );
+  if (rewrittenDefinitions.includes("ch-mcp-icon")) {
+    throw new Error(`Could not replace the homepage MCP icon in ${file}`);
+  }
   return `// Generated from ${path.relative(root, file)}; do not edit.\n`
     + `import * as React from "react";\n`
     + `import { useEffect, useRef, useState } from "react";\n\n`

@@ -2,11 +2,11 @@
 /**
  * TabItem — single tab panel in the `<Tabs>` component.
  *
- * The `label` prop is read by `tabs.client.ts` to synthesize the matching
- * trigger button. Each TabItem becomes one `[data-nb-tabs-content]` panel.
+ * The parent `<Tabs>` reads the rendered metadata and emits the matching
+ * trigger into the initial HTML. Each TabItem becomes one panel.
  */
 import { cn } from "@/lib/cn";
-import { withBase } from "@/lib/base";
+import { inlinePublicIcon } from "@/lib/build-icon";
 import type { HTMLAttributes } from "astro/types";
 
 interface Props extends HTMLAttributes<"div"> {
@@ -20,13 +20,27 @@ const { label, icon, class: className, ...attrs } = Astro.props;
 if (!label) {
   throw new Error("Missing required `label` prop on `<TabItem>` component.");
 }
+
+const externalIconAliases: Record<string, string> = {
+  "https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/logo-windsurf.svg": "/images/logo-windsurf.svg",
+  "https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/logo-cursor.png": "/images/logo-cursor.webp",
+  "https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/logo-claudecode-color.svg": "/images/logo-claudecode-color.svg",
+  "https://clickhouse-docs-assets.s3.us-east-1.amazonaws.com/logo-claude.svg": "/images/logo-claude.svg",
+};
+const normalizedIcon = icon ? externalIconAliases[icon] ?? icon : undefined;
+const resolvedIcon = normalizedIcon?.startsWith("/") || normalizedIcon?.startsWith("data:")
+  ? inlinePublicIcon(normalizedIcon)
+  : normalizedIcon;
+if (resolvedIcon?.startsWith("http://") || resolvedIcon?.startsWith("https://")) {
+  throw new Error(`External tab icon URLs are not supported: ${resolvedIcon}`);
+}
 ---
 
 <div
   role="tabpanel"
   data-nb-tabs-content
   data-nb-tab-label={label}
-  data-nb-tab-icon={icon ? withBase(icon) : undefined}
+  data-nb-tab-icon={resolvedIcon}
   class={cn(className)}
   {...attrs}
 >

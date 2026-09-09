@@ -111,11 +111,15 @@ fs.mkdirSync(output, { recursive: true });
 
 if (scope.remotePreview) {
   materialize(path.join(root, "public", "favicon.svg"), path.join(output, "favicon.svg"));
+  materialize(path.join(root, "images", "logo.svg"), path.join(output, "images", "logo.svg"));
   materialize(path.join(root, "images", "icons"), path.join(output, "images", "icons"));
 } else {
   for (const entry of fs.readdirSync(path.join(root, "public"))) {
+    if (entry === "images" || entry === "img") continue;
     materialize(path.join(root, "public", entry), path.join(output, entry));
   }
+  materialize(path.join(root, "images"), path.join(output, "images"));
+  materialize(path.join(root, "img"), path.join(output, "img"));
 }
 
 for (const remote of manifest.remotes) {

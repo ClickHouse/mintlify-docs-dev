@@ -17,7 +17,7 @@ export const LAZY_MIN_CHILDREN = 6;
 export const TAB_LABELS = new Set(["Home", "Database", "Solutions", "Integrations", "Resources"]);
 
 export type ConfigItem =
-  | { label: string; link: string; badge?: import("@cloudflare/nimbus-docs/types").SidebarBadge }
+  | { label: string; link: string; badge?: import("@cloudflare/nimbus-docs/types").SidebarBadge; icon?: string; hidden?: boolean }
   | { label: string; items: ConfigItem[]; collapsed?: boolean; segment?: string; landing?: string; icon?: string };
 
 export function slugifyLabel(label: string): string {
@@ -129,7 +129,7 @@ export function toRendered(items: ConfigItem[], path: string[]): SidebarItem[] {
   const groups = items.filter((i): i is Extract<ConfigItem, { items: ConfigItem[] }> => "items" in i);
   const keys = siblingKeys(groups.map((g) => g.label));
   let gi = 0;
-  return items.map((item, order) => {
+  return items.flatMap((item, order) => {
     if ("items" in item) {
       const key = [...path, keys[gi++]].join("/");
       const group = {
@@ -143,12 +143,15 @@ export function toRendered(items: ConfigItem[], path: string[]): SidebarItem[] {
         icon: item.icon,
       } as SidebarItem & { _lazyKey?: string };
       group._lazyKey = key;
-      return group;
+      return [group];
     }
+    if (item.hidden) return [];
     const href = /^(https?:)?\/\//.test(item.link) ? item.link : withBase(item.link);
-    return /^(https?:)?\/\//.test(item.link)
-      ? ({ type: "external", label: item.label, href, order, badge: item.badge } as SidebarItem)
-      : ({ type: "link", label: item.label, href, order, badge: item.badge } as SidebarItem);
+    return [
+      /^(https?:)?\/\//.test(item.link)
+        ? ({ type: "external", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem)
+        : ({ type: "link", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem),
+    ];
   });
 }
 
@@ -191,7 +194,9 @@ export function buildRailFromConfig(items: ConfigItem[], currentPath: string, ke
         if (normPath(n.href) === target) { (n as { isCurrent?: boolean }).isCurrent = true; any = true; }
       } else if (n.type === "group") {
         const hit = mark(n.children);
-        if (hit) { n.collapsed = false; any = true; }
+        // SidebarGroup uses the active path for the initial server-rendered
+        // state. Do not overwrite the authored collapsed value here.
+        if (hit) any = true;
       }
     }
     return any;

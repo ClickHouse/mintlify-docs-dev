@@ -21,6 +21,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import SidebarChildren from "./SidebarChildren.astro";
 import { Badge } from "@/components/ui/badge";
 import { withBase } from "@/lib/base";
+import { inlinePublicIcon } from "@/lib/build-icon";
 import { LAZY_MIN_CHILDREN } from "@/lib/sidebar-lazy";
 import type { SidebarItem, SidebarBadge } from "@cloudflare/nimbus-docs/types";
 
@@ -69,6 +70,8 @@ function hasActiveDescendant(items: SidebarItem[]): boolean {
 }
 
 const hasActive = Boolean(indexIsCurrent) || hasActiveDescendant(items);
+// This is the first-load state only. After hydration, route changes restore
+// the user's exact disclosure state without opening or closing active groups.
 const isOpen = Boolean(section || hasActive || collapsed === false || collapsed === undefined);
 // Collapsed groups off the active path ship a placeholder instead of their
 // subtree; sidebar-lazy.client.ts fetches the prebuilt fragment on expand.
@@ -87,6 +90,7 @@ const iconName = icon && !icon.startsWith("/")
       ? "ph:network"
       : `ph:${icon}`
   : undefined;
+const imageIcon = icon?.startsWith("/") ? inlinePublicIcon(icon) : undefined;
 ---
 
 <Collapsible
@@ -103,7 +107,7 @@ const iconName = icon && !icon.startsWith("/")
     >
       <span class="flex items-center gap-2 flex-1 min-w-0">
         {icon && (icon.startsWith("/") ? (
-          <img src={withBase(icon)} alt="" aria-hidden="true" class="shrink-0 h-4 w-4" />
+          <img src={imageIcon} alt="" aria-hidden="true" class="shrink-0 h-4 w-4" />
         ) : (
           <Icon name={iconName!} class="shrink-0 h-4 w-4 text-muted-foreground" />
         ))}
@@ -139,7 +143,7 @@ const iconName = icon && !icon.startsWith("/")
       >
         <span class="flex items-center gap-2 flex-1 min-w-0">
           {icon && (icon.startsWith("/") ? (
-            <img src={withBase(icon)} alt="" aria-hidden="true" class="shrink-0 h-4 w-4" />
+            <img src={imageIcon} alt="" aria-hidden="true" class="shrink-0 h-4 w-4" />
           ) : (
             <Icon name={iconName!} class="shrink-0 h-4 w-4 text-muted-foreground" />
           ))}
@@ -185,7 +189,7 @@ const iconName = icon && !icon.startsWith("/")
     >
       <span class="flex items-center gap-2 flex-1 min-w-0">
         {icon && (icon.startsWith("/") ? (
-          <img src={withBase(icon)} alt="" aria-hidden="true" class="shrink-0 h-4 w-4" />
+          <img src={imageIcon} alt="" aria-hidden="true" class="shrink-0 h-4 w-4" />
         ) : (
           <Icon name={iconName!} class="shrink-0 h-4 w-4 text-muted-foreground" />
         ))}

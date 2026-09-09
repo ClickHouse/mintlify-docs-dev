@@ -2,26 +2,33 @@
 /**
  * Mintlify `<Card title icon href horizontal img cta arrow>`. Renders Nimbus's
  * Card, wrapped in a link when `href` is set. Mintlify's named icons are
- * rendered with the same Font Awesome masks as the source site.
+ * resolved from local Iconify collections and inlined during the build.
  */
 import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
-import { withBase } from "@/lib/base";
+import { inlinePublicIcon } from "@/lib/build-icon";
 interface Props { title?: string; icon?: string; href?: string; horizontal?: boolean; img?: string; cta?: string; arrow?: boolean; color?: string }
 const { title = "", href, img, cta, icon, horizontal: _h, arrow: _a, color: _c, ...rest } = Astro.props;
+if (icon?.startsWith("http://") || icon?.startsWith("https://")) {
+  throw new Error(`External card icon URLs are not supported: ${icon}`);
+}
 const isNamedMintlifyIcon = Boolean(icon && !icon.startsWith("/") && !icon.startsWith("http") && !icon.includes(":"));
-const iconName = isNamedMintlifyIcon ? undefined : icon;
-const iconIsImage = Boolean(iconName?.startsWith("/") || iconName?.startsWith("http"));
-const resolvedIconName = iconIsImage && iconName?.startsWith("/") ? withBase(iconName) : iconName;
-const mintlifyIconStyle = isNamedMintlifyIcon
-  ? `--ch-card-icon-mask:url("https://d3gk2c5xim1je2.cloudfront.net/fontawesome/v7.2.0/regular/${icon}.svg")`
-  : undefined;
+const brandIcons = new Set(["docker", "linux", "redhat", "ubuntu"]);
+const phosphorIcons = new Set(["browser", "function"]);
+const iconName = isNamedMintlifyIcon
+  ? brandIcons.has(icon!)
+    ? `fa6-brands:${icon}`
+    : phosphorIcons.has(icon!)
+      ? `ph:${icon}`
+      : `fa6-solid:${icon}`
+  : icon;
+const iconIsImage = Boolean(iconName?.startsWith("/") || iconName?.startsWith("data:"));
+const resolvedIconName = iconIsImage && iconName ? inlinePublicIcon(iconName) : iconName;
 ---
 
 {href ? (
   <a href={href} class="ch-card-link">
     <article class="ch-doc-card" {...rest}>
       {img && <img src={img} alt="" class="ch-card-img" />}
-      {isNamedMintlifyIcon && <span aria-hidden="true" class="ch-card-icon ch-card-icon-mask" style={mintlifyIconStyle}></span>}
       {resolvedIconName && (iconIsImage ? <img src={resolvedIconName} alt="" class="ch-card-icon" /> : <Icon name={resolvedIconName} class="ch-card-icon" />)}
       <h2>{title}</h2>
       <slot />
@@ -31,7 +38,6 @@ const mintlifyIconStyle = isNamedMintlifyIcon
 ) : (
   <article class="ch-doc-card" {...rest}>
     {img && <img src={img} alt="" class="ch-card-img" />}
-    {isNamedMintlifyIcon && <span aria-hidden="true" class="ch-card-icon ch-card-icon-mask" style={mintlifyIconStyle}></span>}
     {resolvedIconName && (iconIsImage ? <img src={resolvedIconName} alt="" class="ch-card-icon" /> : <Icon name={resolvedIconName} class="ch-card-icon" />)}
     <h2>{title}</h2>
     <slot />
