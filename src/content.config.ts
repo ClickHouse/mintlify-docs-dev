@@ -140,6 +140,10 @@ export const ACTIVE_LOCALES: string[] = [...scope.locales];
 export const AVAILABLE_LOCALES: string[] = [...scope.availableLocales];
 /** English routes are emitted only by the English build shard. */
 export const EMIT_ENGLISH = scope.emitEnglish;
+/** English content may also be loaded solely to emit untranslated locale fallbacks. */
+export const LOAD_ENGLISH = scope.loadEnglish;
+/** Missing translations are emitted by the artifact which owns locale routes. */
+export const EMIT_LOCALE_FALLBACKS = scope.emitLocaleFallbacks;
 
 /**
  * Collection names are lowercase even when the canonical URL segment is not.
@@ -174,7 +178,7 @@ export const collections = {
   docs: defineCollection({
     loader: withNimbusMarkdown(glob({
       base: ".",
-      pattern: EMIT_ENGLISH ? treePattern(".") : "__inactive_english__/**/*.{md,mdx}",
+      pattern: LOAD_ENGLISH ? treePattern(".") : "__inactive_english__/**/*.{md,mdx}",
       generateId: pathId,
     })),
     // Non-strict: the content carries Docusaurus-era keys we do not model.

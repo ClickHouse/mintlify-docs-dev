@@ -4,7 +4,20 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      deployment_scope:
+        description: Documentation applications to deploy
+        required: true
+        default: all
+        type: choice
+        options: [all, english, translations]
   workflow_call:
+    inputs:
+      deployment_scope:
+        description: Documentation applications to deploy
+        required: false
+        default: english
+        type: string
     secrets:
       VERCEL_TOKEN:
         required: true
@@ -60,29 +73,92 @@ jobs:
           fi
           echo "sha=$site_sha" >> "$GITHUB_OUTPUT"
 
-      - name: Trigger and wait for the Vercel production deployment
+      - name: Select production applications
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_SCOPE: ${{ inputs.deployment_scope }}
+        run: |
+          scope="$REQUESTED_SCOPE"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_call" && -z "$scope" ]]; then
+            scope="english"
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && -z "$scope" ]]; then
+            scope="all"
+          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            scope=""
+            deploy_english=false
+            deploy_translations=false
+            before="${{ github.event.before }}"
+            if [[ "$before" =~ ^0+$ ]]; then
+              scope="all"
+            else
+              mapfile -t changed_files < <(
+                gh api --paginate "repos/$GITHUB_REPOSITORY/compare/$before...$GITHUB_SHA" --jq '.files[].filename'
+              )
+              for file in "${changed_files[@]}"; do
+                case "$file" in
+                  ar/*|es/*|fr/*|ja/*|ko/*|pt-BR/*|ru/*|zh/*)
+                    deploy_translations=true
+                    ;;
+                  src/*|bin/*|snippets/*|.github/*|astro.config.*|package.json|pnpm-lock.yaml|vercel.json|microfrontends.json|docs.json|navigation.json|remotes.json)
+                    deploy_english=true
+                    deploy_translations=true
+                    ;;
+                  *)
+                    deploy_english=true
+                    ;;
+                esac
+              done
+              if [[ "$deploy_english" == true && "$deploy_translations" == true ]]; then
+                scope="all"
+              elif [[ "$deploy_translations" == true ]]; then
+                scope="translations"
+              else
+                scope="english"
+              fi
+            fi
+          fi
+
+          case "$scope" in
+            all) echo "english=true" >> "$GITHUB_OUTPUT"; echo "translations=true" >> "$GITHUB_OUTPUT" ;;
+            english) echo "english=true" >> "$GITHUB_OUTPUT"; echo "translations=false" >> "$GITHUB_OUTPUT" ;;
+            translations) echo "english=false" >> "$GITHUB_OUTPUT"; echo "translations=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "deployment_scope must be all, english or translations" >&2; exit 1 ;;
+          esac
+          echo "name=$scope" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger and wait for the Vercel production deployments
         id: deploy
         env:
+          DEPLOY_ENGLISH: ${{ steps.scope.outputs.english }}
+          DEPLOY_TRANSLATIONS: ${{ steps.scope.outputs.translations }}
           SITE_SHA: ${{ steps.site.outputs.sha }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TRANSLATIONS_PROJECT_ID: ${{ vars.VERCEL_TRANSLATIONS_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          if ! project_response="$(
-            curl --silent --show-error --fail-with-body \
+          project_name() {
+            local project_id="$1"
+            local response
+            response="$(curl --silent --show-error --fail-with-body \
               --header "Authorization: Bearer $VERCEL_TOKEN" \
-              "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID"
-          )"; then
-            printf '%s\n' "$project_response" >&2
-            exit 1
-          fi
-          project_name="$(jq -er .name <<< "$project_response")"
+              "https://api.vercel.com/v9/projects/$project_id?teamId=$VERCEL_ORG_ID")"
+            jq -er .name <<< "$response"
+          }
 
-          payload="$(
-            jq --null-input \
+          create_deployment() {
+            local project_id="$1"
+            local deploy_target="$2"
+            local locales="$3"
+            local project_name_value="$4"
+            local payload
+            payload="$(jq --null-input \
               --arg approved_sha "$SITE_SHA" \
-              --arg project_id "$VERCEL_PROJECT_ID" \
-              --arg project_name "$project_name" \
+              --arg deploy_target "$deploy_target" \
+              --arg locales "$locales" \
+              --arg project_id "$project_id" \
+              --arg project_name "$project_name_value" \
               --arg triggering_repository "$GITHUB_REPOSITORY" \
               --arg triggering_sha "$GITHUB_SHA" \
               '{
@@ -97,82 +173,108 @@ jobs:
                   sha: $approved_sha
                 },
                 build: {env: {
-                  DOCS_LOCALES: "all",
+                  DOCS_DEPLOY_TARGET: $deploy_target,
+                  DOCS_LOCALES: $locales,
+                  DOCS_AVAILABLE_LOCALES: "all",
                   DOCS_REMOTES: "all",
                   VERCEL_BUILD_SYSTEM_REPORT: "1"
                 }},
                 meta: {
-                  buildScope: "production",
+                  buildScope: ($deploy_target + "-production"),
                   sourceRepository: "ClickHouse/mintlify-docs-dev",
                   approvedSha: $approved_sha,
                   triggeringRepository: $triggering_repository,
                   triggeringSha: $triggering_sha,
-                  translations: "all"
+                  translations: $locales
                 }
-              }'
-          )"
-
-          if ! deployment_response="$(
+              }')"
             curl --silent --show-error --fail-with-body \
               --request POST \
               --header "Authorization: Bearer $VERCEL_TOKEN" \
               --header "Content-Type: application/json" \
               --data "$payload" \
               "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
-          )"; then
-            printf '%s\n' "$deployment_response" >&2
-            exit 1
+          }
+
+          english_id=""
+          english_url=""
+          english_state="SKIPPED"
+          translations_id=""
+          translations_url=""
+          translations_state="SKIPPED"
+
+          if [[ "$DEPLOY_ENGLISH" == "true" ]]; then
+            english_project_name="$(project_name "$VERCEL_PROJECT_ID")"
+            english_response="$(create_deployment "$VERCEL_PROJECT_ID" english none "$english_project_name")"
+            english_id="$(jq -er .id <<< "$english_response")"
+            english_host="$(jq -er .url <<< "$english_response")"
+            english_url="https://${english_host#https://}"
+            english_state="BUILDING"
+            echo "English Vercel deployment: $english_url"
           fi
 
-          deployment_id="$(jq -er .id <<< "$deployment_response")"
-          deployment_url="$(jq -er .url <<< "$deployment_response")"
-          production_url="https://${deployment_url#https://}"
-          echo "production_url=$production_url" >> "$GITHUB_OUTPUT"
-          echo "Vercel deployment: $production_url"
-
-          for _ in {1..720}; do
-            if ! deployment_response="$(
-              curl --silent --show-error --fail-with-body \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
-                "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
-            )"; then
-              printf '%s\n' "$deployment_response" >&2
+          if [[ "$DEPLOY_TRANSLATIONS" == "true" ]]; then
+            if [[ -z "$VERCEL_TRANSLATIONS_PROJECT_ID" ]]; then
+              echo "Translation deployment requires the VERCEL_TRANSLATIONS_PROJECT_ID repository variable." >&2
               exit 1
             fi
+            translations_project_name="$(project_name "$VERCEL_TRANSLATIONS_PROJECT_ID")"
+            translations_response="$(create_deployment "$VERCEL_TRANSLATIONS_PROJECT_ID" translations all "$translations_project_name")"
+            translations_id="$(jq -er .id <<< "$translations_response")"
+            translations_host="$(jq -er .url <<< "$translations_response")"
+            translations_url="https://${translations_host#https://}"
+            translations_state="BUILDING"
+            echo "Translations Vercel deployment: $translations_url"
+          fi
 
-            ready_state="$(jq -er .readyState <<< "$deployment_response")"
-            case "$ready_state" in
-              READY)
-                break
-                ;;
-              ERROR|CANCELED|DELETED|BLOCKED)
-                jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Vercel deployment did not complete")' \
-                  <<< "$deployment_response" >&2
+          for _ in {1..720}; do
+            if [[ "$english_state" == "BUILDING" ]]; then
+              response="$(curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$english_id?teamId=$VERCEL_ORG_ID")"
+              english_state="$(jq -er .readyState <<< "$response")"
+              if [[ "$english_state" =~ ^(ERROR|CANCELED|DELETED|BLOCKED)$ ]]; then
+                jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "English deployment did not complete")' <<< "$response" >&2
                 exit 1
-                ;;
-              QUEUED|INITIALIZING|BUILDING)
-                sleep 10
-                ;;
-              *)
-                echo "Unexpected Vercel deployment state: $ready_state" >&2
+              fi
+              [[ "$english_state" =~ ^(QUEUED|INITIALIZING)$ ]] && english_state="BUILDING"
+            fi
+
+            if [[ "$translations_state" == "BUILDING" ]]; then
+              response="$(curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$translations_id?teamId=$VERCEL_ORG_ID")"
+              translations_state="$(jq -er .readyState <<< "$response")"
+              if [[ "$translations_state" =~ ^(ERROR|CANCELED|DELETED|BLOCKED)$ ]]; then
+                jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Translations deployment did not complete")' <<< "$response" >&2
                 exit 1
-                ;;
-            esac
+              fi
+              [[ "$translations_state" =~ ^(QUEUED|INITIALIZING)$ ]] && translations_state="BUILDING"
+            fi
+
+            if [[ "$english_state" =~ ^(READY|SKIPPED)$ && "$translations_state" =~ ^(READY|SKIPPED)$ ]]; then
+              break
+            fi
+            sleep 10
           done
 
-          if [[ "$ready_state" != "READY" ]]; then
-            echo "Timed out waiting for Vercel deployment $deployment_id." >&2
+          if [[ ! "$english_state" =~ ^(READY|SKIPPED)$ || ! "$translations_state" =~ ^(READY|SKIPPED)$ ]]; then
+            echo "Timed out waiting for the Vercel production deployments." >&2
             exit 1
           fi
-          if [[ ! "$production_url" =~ ^https://[^[:space:]]+$ ]]; then
-            echo "Vercel returned an invalid production URL." >&2
-            exit 1
-          fi
+          production_url="${english_url:-$translations_url}"
+          echo "production_url=$production_url" >> "$GITHUB_OUTPUT"
+          echo "english_url=$english_url" >> "$GITHUB_OUTPUT"
+          echo "translations_url=$translations_url" >> "$GITHUB_OUTPUT"
 
       - name: Publish deployment summary
         env:
-          PRODUCTION_URL: ${{ steps.deploy.outputs.production_url }}
+          DEPLOYMENT_SCOPE: ${{ steps.scope.outputs.name }}
+          ENGLISH_URL: ${{ steps.deploy.outputs.english_url }}
+          TRANSLATIONS_URL: ${{ steps.deploy.outputs.translations_url }}
         run: |
           echo "### Nimbus production deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "English and all translations: $PRODUCTION_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Scope: $DEPLOYMENT_SCOPE" >> "$GITHUB_STEP_SUMMARY"
+          [[ -n "$ENGLISH_URL" ]] && echo "- English: $ENGLISH_URL" >> "$GITHUB_STEP_SUMMARY"
+          [[ -n "$TRANSLATIONS_URL" ]] && echo "- Translations: $TRANSLATIONS_URL" >> "$GITHUB_STEP_SUMMARY"

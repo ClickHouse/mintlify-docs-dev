@@ -11,7 +11,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 |---|---|
 | `pnpm install` | Node 24, pnpm 10. |
 | `pnpm build` | Fetches registered sources, builds the selected locale scope, rebases URLs, generates `__redirects`, nests under `dist/docs`, and enforces the Worker asset limits. |
-| `pnpm run build:vercel` | Fetches registered sources using Vercel Connect where required, removes the deployment OIDC identity, builds English and requested locales in isolated sequential Astro processes, then merges one Vercel output. |
+| `pnpm run build:vercel` | Fetches registered sources using Vercel Connect where required, removes the deployment OIDC identity, and builds the English, translations, or legacy combined Vercel artifact selected by `DOCS_DEPLOY_TARGET`. |
 | `pnpm dev` | Astro dev server (`/docs/...`). |
 | `pnpm check:mdx` | Compiles every MDX file with Sätteri and reports undefined components; seconds, no build. |
 | `pnpm measure` | Page weight, anchor parity, base-path check, URL parity vs the live Mintlify sitemap (needs a nested build in `$DOCS_OUT_DIR`). |
@@ -24,16 +24,17 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 
 | Variable | Effect |
 |---|---|
+| `DOCS_DEPLOY_TARGET` | Vercel artifact to assemble: `english`, `translations`, or the backward-compatible `combined` default. |
 | `DOCS_INCLUDE` | Comma-separated globs restricting the English collection (spikes, scoped previews). |
 | `DOCS_LOCALE` | A singular locale build (`en`, `es`, `pt-BR`, and so on); normally set only by the Vercel shard orchestrator. |
-| `DOCS_LOCALES` | Translations to add to the English Vercel artifact: `none`, `all`, or a comma-separated list such as `es,fr`. Vercel production always builds `all`. |
+| `DOCS_LOCALES` | Translations included in a `translations` or legacy `combined` artifact: `none`, `all`, or a comma-separated list such as `es,fr`. The translations project uses `all`. |
 | `DOCS_REMOTES` | Registered remote-source scope: `none` for a base-repository preview and `all` for source previews and production. |
 | `DOCS_REMOTE_NAME`, `DOCS_REMOTE_REPOSITORY`, `DOCS_REMOTE_REF` | CI-only tuple selecting one registered remote at an immutable commit for an English pull-request preview. |
 | `DOCS_REMOTE_SOURCE_REPOSITORY` | CI-derived repository that owns the preview SHA. It defaults to the registered repository and differs only for a fork PR. |
 | `DOCS_REMOTES_PREFETCHED=1` | Requires the remote mounts and fetch-state files supplied by the credentialed CI fetch job. |
 | `DOCS_PREVIEW_ALIAS` | Lowercase Cloudflare alias used by `pnpm run deploy:preview`. |
 | `DOCS_GITHUB_CONNECTOR` | Vercel Connect GitHub connector UID, for example `github/clickhouse-docs`. Configure it only for `production` and the `connect-preview` Custom Environment. |
-| `DOCS_OUT_DIR`, `DOCS_CACHE_DIR` | Isolated output and cache directories. Vercel uses one persistent Astro cache per locale under `node_modules/.astro/`. |
+| `DOCS_OUT_DIR`, `DOCS_CACHE_DIR` | Isolated output and cache directories. Vercel uses one persistent Astro cache per deployment target and locale under `node_modules/.astro/`. |
 | `NODE_OPTIONS=--max-old-space-size=8192` | Recommended for full builds. Locale processes run sequentially, so memory is bounded to one content tree at a time. |
 
 ## Layout
@@ -90,42 +91,61 @@ repository calls `.github/workflows/site-production.yml`. The reusable workflow
 builds the latest trusted Nimbus `main` with every registered remote and every
 translation, rather than promoting the source-only preview.
 
-Pull-request previews build English only by default. Add
-`docs-translations-all` to include every translated collection, or add one or
-more locale labels such as `docs-translations-es` and
-`docs-translations-pt-br`. Adding or removing one of these labels starts a new
-preview with the resulting locale set. `.github/workflows/site-production.yml`
-asks Vercel to fetch the merged `main` commit through the same Git connection
-and build English with every translation. Both workflows can also be invoked
-manually from the default branch. `bin/vercel-build.ts` compiles English and
-each requested locale in its own sequential Astro child process, preserving a
-separate incremental cache for each one, and merges the locale routes plus
-their namespaced assets into one deployment.
+Pull-request previews build the English project only by default. The Vercel
+Microfrontends production fallback serves the last promoted translation
+deployment for locale routes. Add `docs-translations-all` (or any legacy
+`docs-translations-<locale>` label) to build the catch-all translations project
+as well. Because all translations are one application, a translation-labelled
+preview always builds every locale; a partial locale artifact would hide the
+other locales rather than falling them back individually.
+
+`.github/workflows/site-production.yml` selects applications from the merged
+paths. English content deploys only the English project, locale-only changes
+deploy only the translations project, and shared renderer or build changes
+deploy both. Reusable invocations from a remote source repository default to
+English. A maintainer can also dispatch `english`, `translations`, or `all`
+manually. Both projects build the same immutable `mintlify-docs-dev` revision.
+When both participate, the workflow creates both Vercel deployments before it
+waits, so their builds run concurrently.
+
+`bin/vercel-build.ts` compiles each requested locale in an isolated sequential
+Astro child process and merges only `/docs/<locale>`, its namespaced
+`/docs/_astro-<locale>` assets, and `/docs/nav/<locale>`. The translations
+project loads English MDX so it can own localized fallback pages, but it does
+not emit English routes or copy the shared image corpus. Consequently a
+translation deployment contains every locale route—including English fallback
+content—and the English deployment owns `/docs`, `/docs/_astro`,
+`/docs/images`, and `/docs/img`.
 
 Vercel must be provisioned as follows:
 
-1. Keep the single Git-connected Vercel project, but leave automatic Git
-   deployments disabled as specified in `vercel.json`; GitHub Actions creates
-   Git-backed preview and production deployments through the Vercel API.
-2. Enable automatic System Environment Variables for the project.
-3. Create the `connect-preview` Custom Environment.
-4. Create a Vercel-managed GitHub connector named `clickhouse-docs` and install
+1. Keep the existing `clickhouse-docs` project and create a second project
+   named exactly `clickhouse-docs-translations`. Connect both to
+   `ClickHouse/mintlify-docs-dev`; `vercel.json` disables automatic Git
+   deployments because GitHub Actions creates the Git-backed deployments.
+2. Give both projects the same build command (`pnpm run build:vercel`), output
+   directory (`dist`), Node version, and automatic System Environment Variables.
+3. Create a Microfrontends group containing both projects. Select
+   `clickhouse-docs` as the default application, set `/docs` as its default
+   route, and set the Preview fallback environment to Production. The routing
+   source of truth is `microfrontends.json`; the existing website Worker needs
+   to route only to the default project.
+4. Create the `connect-preview` Custom Environment on the English project.
+5. Create a Vercel-managed GitHub connector named `clickhouse-docs` and install
    it only for the private repositories registered in `remotes.json` and any
    private forks that are explicitly allowed to receive previews.
-5. Attach `github/clickhouse-docs` to `production` and `connect-preview`. Do not
-   attach it to standard `preview`.
-6. Set `DOCS_GITHUB_CONNECTOR=github/clickhouse-docs` in `production` and
-   `connect-preview`, but not in standard `preview`.
+6. Attach `github/clickhouse-docs` to Production on both projects and to
+   `connect-preview` on the English project. Set
+   `DOCS_GITHUB_CONNECTOR=github/clickhouse-docs` in those environments, but
+   not in standard Preview.
 7. Keep standard Preview free of secrets and privileged integrations. Every
    base-repository pull request builds from the primary repository's synthetic
    merge ref in this environment and omits registered remotes.
 8. Add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as repository
-   secrets under GitHub Actions. Do not store them as repository variables or
-   environment-scoped secrets.
-9. Keep the Vercel build command as `pnpm run build:vercel` and the output
-   directory as `dist`.
-
-The single Vercel project serves English and every selected locale. English
-owns shared public files and `/docs/_astro`; each locale contributes only
-`/docs/<locale>` and its `/docs/_astro-<locale>` asset namespace to the merged
-artifact.
+   secrets under GitHub Actions. Add the translations project's ID as the
+   repository variable `VERCEL_TRANSLATIONS_PROJECT_ID`; project IDs are not
+   credentials. Remote repositories need no new Vercel secret because their
+   reusable production calls deploy English only.
+9. For the initial rollout, manually deploy `translations` first, then deploy
+   `english`. After the translations project has a Production deployment,
+   ordinary English previews can safely use it as their Production fallback.

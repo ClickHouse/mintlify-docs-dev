@@ -124,13 +124,12 @@ jobs:
             gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PULL_REQUEST_NUMBER/labels" --jq '.[].name'
           )
           known_locales=(ar es fr ja ko pt-BR ru zh)
-          selected_locales=()
-          include_all=false
+          include_translations=false
 
           for label in "${labels[@]}"; do
             normalized="${label,,}"
             if [[ "$normalized" == "docs-translations-all" ]]; then
-              include_all=true
+              include_translations=true
               continue
             fi
             if [[ "$normalized" != docs-translations-* ]]; then
@@ -140,7 +139,7 @@ jobs:
             matched=false
             for locale in "${known_locales[@]}"; do
               if [[ "$normalized" == "docs-translations-${locale,,}" ]]; then
-                selected_locales+=("$locale")
+                include_translations=true
                 matched=true
                 break
               fi
@@ -152,12 +151,9 @@ jobs:
             fi
           done
 
-          if [[ "$include_all" == true ]]; then
+          if [[ "$include_translations" == true ]]; then
             locale_scope="all"
             locale_summary="English and all translations"
-          elif (( ${#selected_locales[@]} > 0 )); then
-            locale_scope="$(IFS=,; echo "${selected_locales[*]}")"
-            locale_summary="English and $locale_scope"
           else
             locale_scope="none"
             locale_summary="English only"
@@ -185,6 +181,7 @@ jobs:
           TRUST: ${{ steps.pull-request.outputs.trust }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TRANSLATIONS_PROJECT_ID: ${{ vars.VERCEL_TRANSLATIONS_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           repository_owner="${GITHUB_REPOSITORY%%/*}"
@@ -195,6 +192,10 @@ jobs:
             local updated_at="$(date -u '+%Y-%m-%d %H:%M UTC')"
             local marker="<!-- nimbus-site-preview -->"
             local docs_url="${preview_url%/}/docs"
+            local components="English: $english_state; translations: Production fallback"
+            if [[ -n "${translations_url:-}" ]]; then
+              components="English: $english_state; [translations]($translations_url): $translations_state"
+            fi
             local body
             local comment_id
             body="$(printf '🕵 %s\n\n| Preview | Deployment | Components | Updated (UTC) |\n| --- | --- | --- | --- |\n| [Docs preview](%s) | [%s](%s) | %s | %s |' \
@@ -202,7 +203,7 @@ jobs:
               "$docs_url" \
               "$deployment_status" \
               "$preview_url" \
-              "$TRANSLATION_SUMMARY" \
+              "$components" \
               "$updated_at")"
             if ! comment_id="$({
               gh api --paginate "repos/$GH_REPO/issues/$PULL_REQUEST_NUMBER/comments" \
@@ -254,7 +255,7 @@ jobs:
           fi
           project_name="$(jq -er .name <<< "$project_response")"
 
-          payload="$(
+          english_payload="$(
             jq --null-input \
               --arg approved_sha "$APPROVED_SHA" \
               --arg git_ref "$GIT_REF" \
@@ -265,7 +266,6 @@ jobs:
               --arg pull_request "$PULL_REQUEST_NUMBER" \
               --arg repository "$repository_name" \
               --arg repository_owner "$repository_owner" \
-              --arg translations "$TRANSLATION_SCOPE" \
               --arg trust "$TRUST" \
               '{
                 name: $project_name,
@@ -278,43 +278,122 @@ jobs:
                   sha: $approved_sha
                 },
                 build: {env: {
-                  DOCS_LOCALES: $translations,
+                  DOCS_DEPLOY_TARGET: "english",
+                  DOCS_LOCALES: "none",
+                  DOCS_AVAILABLE_LOCALES: "all",
                   DOCS_REMOTES: "none"
                 }},
                 meta: {
-                  buildScope: "base-preview",
+                  buildScope: "english-preview",
                   sourceRepository: ($repository_owner + "/" + $repository),
                   pullRequestHeadRepository: $head_repository,
                   pullRequestHeadSha: $head_sha,
                   pullRequest: $pull_request,
                   approvedSha: $approved_sha,
-                  trust: $trust,
-                  translations: $translations
+                  trust: $trust
                 }
               }'
           )"
 
-          if ! deployment_response="$(
+          if ! english_response="$(
             curl --silent --show-error --fail-with-body \
               --request POST \
               --header "Authorization: Bearer $VERCEL_TOKEN" \
               --header "Content-Type: application/json" \
-              --data "$payload" \
+              --data "$english_payload" \
               "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
           )"; then
-            printf '%s\n' "$deployment_response" >&2
+            printf '%s\n' "$english_response" >&2
             exit 1
           fi
 
-          deployment_id="$(jq -er .id <<< "$deployment_response")"
-          deployment_url="$(jq -er .url <<< "$deployment_response")"
+          english_id="$(jq -er .id <<< "$english_response")"
+          deployment_url="$(jq -er .url <<< "$english_response")"
           preview_url="https://${deployment_url#https://}"
+          english_state="🟡 Building"
+          translations_state="Production fallback"
+          translations_id=""
+          translations_url=""
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
-          echo "Vercel deployment: $preview_url"
+          echo "English Vercel deployment: $preview_url"
           if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
             echo "Vercel returned an invalid preview URL." >&2
             exit 1
           fi
+
+          if [[ "$TRANSLATION_SCOPE" == "all" ]]; then
+            if [[ -z "$VERCEL_TRANSLATIONS_PROJECT_ID" ]]; then
+              echo "docs-translations-all requires the VERCEL_TRANSLATIONS_PROJECT_ID repository variable." >&2
+              exit 1
+            fi
+            if ! translations_project_response="$(
+              curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v9/projects/$VERCEL_TRANSLATIONS_PROJECT_ID?teamId=$VERCEL_ORG_ID"
+            )"; then
+              printf '%s\n' "$translations_project_response" >&2
+              exit 1
+            fi
+            translations_project_name="$(jq -er .name <<< "$translations_project_response")"
+            translations_payload="$(
+              jq --null-input \
+                --arg approved_sha "$APPROVED_SHA" \
+                --arg git_ref "$GIT_REF" \
+                --arg head_repository "$HEAD_REPOSITORY" \
+                --arg head_sha "$HEAD_SHA" \
+                --arg project_id "$VERCEL_TRANSLATIONS_PROJECT_ID" \
+                --arg project_name "$translations_project_name" \
+                --arg pull_request "$PULL_REQUEST_NUMBER" \
+                --arg repository "$repository_name" \
+                --arg repository_owner "$repository_owner" \
+                --arg trust "$TRUST" \
+                '{
+                  name: $project_name,
+                  project: $project_id,
+                  gitSource: {
+                    type: "github",
+                    org: $repository_owner,
+                    repo: $repository,
+                    ref: $git_ref,
+                    sha: $approved_sha
+                  },
+                  build: {env: {
+                    DOCS_DEPLOY_TARGET: "translations",
+                    DOCS_LOCALES: "all",
+                    DOCS_AVAILABLE_LOCALES: "all",
+                    DOCS_REMOTES: "none"
+                  }},
+                  meta: {
+                    buildScope: "translations-preview",
+                    sourceRepository: ($repository_owner + "/" + $repository),
+                    pullRequestHeadRepository: $head_repository,
+                    pullRequestHeadSha: $head_sha,
+                    pullRequest: $pull_request,
+                    approvedSha: $approved_sha,
+                    trust: $trust,
+                    translations: "all"
+                  }
+                }'
+            )"
+            if ! translations_response="$(
+              curl --silent --show-error --fail-with-body \
+                --request POST \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                --header "Content-Type: application/json" \
+                --data "$translations_payload" \
+                "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
+            )"; then
+              printf '%s\n' "$translations_response" >&2
+              exit 1
+            fi
+            translations_id="$(jq -er .id <<< "$translations_response")"
+            translations_deployment_url="$(jq -er .url <<< "$translations_response")"
+            translations_url="https://${translations_deployment_url#https://}"
+            translations_state="🟡 Building"
+            echo "translations_url=$translations_url" >> "$GITHUB_OUTPUT"
+            echo "Translations Vercel deployment: $translations_url"
+          fi
+
           trap finalize_preview_comment EXIT
           trap 'exit 130' INT
           trap 'exit 143' TERM
@@ -325,37 +404,46 @@ jobs:
           # Leave five minutes for the EXIT trap to update the comment before
           # the 60-minute job timeout terminates the runner.
           for _ in {1..330}; do
-            if ! deployment_response="$(
-              curl --silent --show-error --fail-with-body \
+            if [[ "$english_state" != "🟢 Ready" ]]; then
+              english_response="$(curl --silent --show-error --fail-with-body \
                 --header "Authorization: Bearer $VERCEL_TOKEN" \
-                "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
-            )"; then
-              printf '%s\n' "$deployment_response" >&2
-              exit 1
+                "https://api.vercel.com/v13/deployments/$english_id?teamId=$VERCEL_ORG_ID")"
+              ready_state="$(jq -er .readyState <<< "$english_response")"
+              case "$ready_state" in
+                READY) english_state="🟢 Ready" ;;
+                ERROR|CANCELED|DELETED|BLOCKED)
+                  jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "English deployment did not complete")' <<< "$english_response" >&2
+                  exit 1
+                  ;;
+                QUEUED|INITIALIZING|BUILDING) ;;
+                *) echo "Unexpected English deployment state: $ready_state" >&2; exit 1 ;;
+              esac
             fi
 
-            ready_state="$(jq -er .readyState <<< "$deployment_response")"
-            case "$ready_state" in
-              READY)
-                break
-                ;;
-              ERROR|CANCELED|DELETED|BLOCKED)
-                jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Vercel deployment did not complete")' \
-                  <<< "$deployment_response" >&2
-                exit 1
-                ;;
-              QUEUED|INITIALIZING|BUILDING)
-                sleep 10
-                ;;
-              *)
-                echo "Unexpected Vercel deployment state: $ready_state" >&2
-                exit 1
-                ;;
-            esac
+            if [[ -n "$translations_id" && "$translations_state" != "🟢 Ready" ]]; then
+              translations_response="$(curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$translations_id?teamId=$VERCEL_ORG_ID")"
+              ready_state="$(jq -er .readyState <<< "$translations_response")"
+              case "$ready_state" in
+                READY) translations_state="🟢 Ready" ;;
+                ERROR|CANCELED|DELETED|BLOCKED)
+                  jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Translations deployment did not complete")' <<< "$translations_response" >&2
+                  exit 1
+                  ;;
+                QUEUED|INITIALIZING|BUILDING) ;;
+                *) echo "Unexpected translations deployment state: $ready_state" >&2; exit 1 ;;
+              esac
+            fi
+
+            if [[ "$english_state" == "🟢 Ready" && ( -z "$translations_id" || "$translations_state" == "🟢 Ready" ) ]]; then
+              break
+            fi
+            sleep 10
           done
 
-          if [[ "$ready_state" != "READY" ]]; then
-            echo "Timed out waiting for Vercel deployment $deployment_id." >&2
+          if [[ "$english_state" != "🟢 Ready" || ( -n "$translations_id" && "$translations_state" != "🟢 Ready" ) ]]; then
+            echo "Timed out waiting for the Vercel preview deployments." >&2
             exit 1
           fi
           if ! update_preview_comment_with_retry "🟢 Ready"; then

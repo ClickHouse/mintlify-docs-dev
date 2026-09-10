@@ -109,7 +109,11 @@ function materialize(source: string, destination: string): void {
 fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 
-if (scope.remotePreview) {
+if (scope.deployTarget === "translations") {
+  // Locale routes reference the shared `/docs/images` and `/docs/img` paths,
+  // which the default English application owns. Do not copy that corpus into
+  // the translation project's build workspace or deployment.
+} else if (scope.remotePreview) {
   materialize(path.join(root, "public", "favicon.svg"), path.join(output, "favicon.svg"));
   materialize(path.join(root, "images", "logo.svg"), path.join(output, "images", "logo.svg"));
   materialize(path.join(root, "images", "icons"), path.join(output, "images", "icons"));
@@ -155,10 +159,12 @@ for (const remote of manifest.remotes) {
     console.log(`prepare-public: rewrote asset references in ${rewrittenAssetReferences} ${remote.name} files`);
   }
 
-  for (const [index, asset] of (remote.assets ?? []).entries()) {
-    const source = relativeManifestPath(asset.source, `${remote.name}.assets[${index}].source`);
-    const mount = relativeManifestPath(asset.mount, `${remote.name}.assets[${index}].mount`);
-    materialize(path.join(root, remote.mount, source), path.join(output, mount));
+  if (scope.deployTarget !== "translations") {
+    for (const [index, asset] of (remote.assets ?? []).entries()) {
+      const source = relativeManifestPath(asset.source, `${remote.name}.assets[${index}].source`);
+      const mount = relativeManifestPath(asset.mount, `${remote.name}.assets[${index}].mount`);
+      materialize(path.join(root, remote.mount, source), path.join(output, mount));
+    }
   }
 }
 

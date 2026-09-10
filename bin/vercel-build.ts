@@ -53,16 +53,30 @@ function shardEnvironment(
   locale: "en" | Locale,
   availableLocales: Locale[],
   outDir: string,
+  options: {
+    emitEnglish: boolean;
+    loadEnglish: boolean;
+    emitLocaleFallbacks: boolean;
+    includePublic: boolean;
+  },
 ): NodeJS.ProcessEnv {
   const child = { ...environment };
   delete child.DOCS_LOCALES;
   child.DOCS_BUILD_SHARD = "1";
   child.DOCS_LOCALE = locale;
   child.DOCS_AVAILABLE_LOCALES = availableLocales.join(",") || "none";
-  child.DOCS_EMIT_ENGLISH = locale === "en" ? "true" : "false";
+  child.DOCS_EMIT_ENGLISH = options.emitEnglish ? "true" : "false";
+  child.DOCS_LOAD_ENGLISH = options.loadEnglish ? "true" : "false";
+  child.DOCS_EMIT_LOCALE_FALLBACKS = options.emitLocaleFallbacks ? "true" : "false";
   child.DOCS_OUT_DIR = outDir;
-  child.DOCS_CACHE_DIR = path.join(root, "node_modules", ".astro", locale.toLowerCase());
-  if (locale === "en") delete child.DOCS_SKIP_PUBLIC;
+  child.DOCS_CACHE_DIR = path.join(
+    root,
+    "node_modules",
+    ".astro",
+    child.DOCS_DEPLOY_TARGET ?? "combined",
+    locale.toLowerCase(),
+  );
+  if (options.includePublic) delete child.DOCS_SKIP_PUBLIC;
   else child.DOCS_SKIP_PUBLIC = "1";
   return child;
 }
@@ -75,6 +89,19 @@ function copyDirectory(source: string, destination: string, merge = false): void
     throw new Error(`vercel-build: refusing to overwrite merged output ${path.relative(root, destination)}`);
   }
   fs.cpSync(source, destination, { recursive: true, force: merge, errorOnExist: !merge });
+}
+
+function copyLocaleOutput(locale: Locale, outDir: string, finalOutDir: string): void {
+  const routeName = localeRouteName(locale);
+  copyDirectory(path.join(outDir, routeName), path.join(finalOutDir, routeName), true);
+  copyDirectory(
+    path.join(outDir, `_astro-${locale.toLowerCase()}`),
+    path.join(finalOutDir, `_astro-${locale.toLowerCase()}`),
+  );
+  const localeNavigation = path.join(outDir, "nav", routeName);
+  if (fs.existsSync(localeNavigation)) {
+    copyDirectory(localeNavigation, path.join(finalOutDir, "nav", routeName), true);
+  }
 }
 
 // The fetch child is the only process allowed to see the deployment OIDC
@@ -90,8 +117,19 @@ run("pnpm", ["run", "prepare:site"], cleanEnvironment);
 
 const scope = readScope(root);
 const finalOutDir = path.resolve(root, cleanEnvironment.DOCS_OUT_DIR ?? "dist");
-if (scope.locales.length === 0) {
-  const environment = shardEnvironment(cleanEnvironment, "en", [], finalOutDir);
+if (scope.deployTarget === "english" || (scope.deployTarget === "combined" && scope.locales.length === 0)) {
+  const environment = shardEnvironment(
+    cleanEnvironment,
+    "en",
+    scope.availableLocales,
+    finalOutDir,
+    {
+      emitEnglish: true,
+      loadEnglish: true,
+      emitLocaleFallbacks: scope.deployTarget === "combined" && scope.availableLocales.length > 0,
+      includePublic: true,
+    },
+  );
   run("pnpm", ["exec", "astro", "build"], environment);
   run(process.execPath, ["bin/postbuild.ts"], environment);
   process.exit(0);
@@ -105,12 +143,20 @@ fs.rmSync(shardsRoot, { recursive: true, force: true });
 fs.mkdirSync(shardsRoot, { recursive: true });
 fs.mkdirSync(path.join(root, ".remote", "public-empty"), { recursive: true });
 
-const englishOutDir = path.join(shardsRoot, "en");
-run(
-  "pnpm",
-  ["exec", "astro", "build"],
-  shardEnvironment(cleanEnvironment, "en", scope.locales, englishOutDir),
-);
+let englishOutDir: string | undefined;
+if (scope.deployTarget === "combined") {
+  englishOutDir = path.join(shardsRoot, "en");
+  run(
+    "pnpm",
+    ["exec", "astro", "build"],
+    shardEnvironment(cleanEnvironment, "en", scope.locales, englishOutDir, {
+      emitEnglish: true,
+      loadEnglish: true,
+      emitLocaleFallbacks: true,
+      includePublic: true,
+    }),
+  );
+}
 
 const localeOutputs: Array<{ locale: Locale; outDir: string }> = [];
 for (const locale of scope.locales) {
@@ -118,24 +164,23 @@ for (const locale of scope.locales) {
   run(
     "pnpm",
     ["exec", "astro", "build"],
-    shardEnvironment(cleanEnvironment, locale, scope.locales, outDir),
+    shardEnvironment(cleanEnvironment, locale, scope.locales, outDir, {
+      emitEnglish: false,
+      loadEnglish: scope.deployTarget === "translations",
+      emitLocaleFallbacks: scope.deployTarget === "translations",
+      includePublic: false,
+    }),
   );
   localeOutputs.push({ locale, outDir });
 }
 
 fs.rmSync(finalOutDir, { recursive: true, force: true });
-copyDirectory(englishOutDir, finalOutDir);
+if (englishOutDir) copyDirectory(englishOutDir, finalOutDir);
+else fs.mkdirSync(finalOutDir, { recursive: true });
 for (const { locale, outDir } of localeOutputs) {
-  copyDirectory(
-    path.join(outDir, localeRouteName(locale)),
-    path.join(finalOutDir, localeRouteName(locale)),
-    true,
-  );
-  copyDirectory(
-    path.join(outDir, `_astro-${locale.toLowerCase()}`),
-    path.join(finalOutDir, `_astro-${locale.toLowerCase()}`),
-  );
+  copyLocaleOutput(locale, outDir, finalOutDir);
 }
 
 const postbuildEnvironment = { ...cleanEnvironment, DOCS_OUT_DIR: finalOutDir };
 run(process.execPath, ["bin/postbuild.ts"], postbuildEnvironment);
+fs.rmSync(shardsRoot, { recursive: true, force: true });

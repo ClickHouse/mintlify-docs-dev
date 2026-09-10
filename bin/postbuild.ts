@@ -12,9 +12,12 @@ import { localeRouteName } from "../src/util/locales.ts";
 const root = process.cwd();
 const outDir = path.resolve(root, process.env.DOCS_OUT_DIR ?? "dist");
 const nested = path.join(outDir, "docs");
+const topLevelSiteEntries = fs.existsSync(outDir)
+  ? fs.readdirSync(outDir).filter((name) => name !== "__redirects" && name !== ".assetsignore")
+  : [];
 const alreadyNested = fs.existsSync(nested)
-  && fs.existsSync(path.join(nested, "index.html"))
-  && !fs.existsSync(path.join(outDir, "index.html"));
+  && topLevelSiteEntries.length === 1
+  && topLevelSiteEntries[0] === "docs";
 if (alreadyNested) {
   console.log("postbuild: already nested, nothing to do");
 } else {
