@@ -1,6 +1,7 @@
 import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
+import { microfrontends } from "@vercel/microfrontends/experimental/vite";
 import nimbus, { defineConfig as defineNimbusConfig } from "@cloudflare/nimbus-docs";
 import { tableScroll } from "@cloudflare/nimbus-docs/markdown";
 import { satteri } from "@astrojs/markdown-satteri";
@@ -144,7 +145,7 @@ export default defineConfig({
       jsxImportSource: "react",
       jsxDev: false,
     },
-    plugins: [tailwindcss(), mintlifySnippets()],
+    plugins: [microfrontends(), tailwindcss(), mintlifySnippets()],
     resolve: {
       alias: { tslib: tslibModule, "@active-homepage": activeHomepageModule },
       dedupe: ["react", "react-dom"],

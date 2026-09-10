@@ -1,11 +1,10 @@
 /**
- * Build scope for Vercel's combined site and its isolated locale build shards.
+ * Build scope for Vercel's English, translations, and legacy combined artifacts.
  *
- * `DOCS_LOCALES` keeps English active and adds zero, one, several, or every
- * translated collection to the same Vercel artifact. Vercel production always
- * builds every translation, even when the variable is omitted. `DOCS_LOCALE`
- * selects one internal child build; `bin/vercel-build.ts` runs those children
- * sequentially and merges their outputs.
+ * `DOCS_DEPLOY_TARGET` chooses the artifact. `DOCS_LOCALES` selects the locale
+ * set for a translations or combined artifact, while `DOCS_LOCALE` selects one
+ * internal child build. `bin/vercel-build.ts` runs locale children sequentially
+ * and merges their outputs.
  *
  *   {
  *     "locale": "en",
@@ -25,6 +24,7 @@ import path from "node:path";
 export const ALL_LOCALES = ["ar", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh"] as const;
 export type Locale = (typeof ALL_LOCALES)[number];
 export type BuildLocale = "en" | Locale;
+export type DeployTarget = "combined" | "english" | "translations";
 
 export interface RemotePreview {
   name: string;
@@ -36,6 +36,8 @@ export interface RemotePreview {
 }
 
 export interface BuildScope {
+  /** Vercel artifact assembled by the top-level build orchestrator. */
+  deployTarget: DeployTarget;
   /** Primary locale; non-English only inside a locale build shard. */
   locale: BuildLocale;
   /** Non-English collections included in this artifact. */
@@ -44,6 +46,10 @@ export interface BuildScope {
   availableLocales: Locale[];
   /** Whether this shard emits the English routes and English-only surfaces. */
   emitEnglish: boolean;
+  /** Whether the English collection is loaded, including for locale fallbacks. */
+  loadEnglish: boolean;
+  /** Whether this shard emits English pages missing from its locale collection. */
+  emitLocaleFallbacks: boolean;
   /** Whether `reference/**` is part of the build. */
   reference: boolean;
   /** Whether registered remote sources participate in this build. */
@@ -151,11 +157,28 @@ function parseRemotes(value: unknown, source: string): boolean {
   }
 }
 
+function parseDeployTarget(value: unknown, source: string): DeployTarget {
+  if (typeof value !== "string") {
+    throw new Error(`${source} must be combined, english or translations`);
+  }
+  switch (value.trim().toLowerCase()) {
+    case "combined":
+    case "english":
+    case "translations":
+      return value.trim().toLowerCase() as DeployTarget;
+    default:
+      throw new Error(`${source} must be combined, english or translations`);
+  }
+}
+
 export function readScope(root = process.cwd()): BuildScope {
+  const envDeployTarget = (process.env.DOCS_DEPLOY_TARGET ?? "").trim();
   const envLocale = (process.env.DOCS_LOCALE ?? "").trim();
   const envLocales = (process.env.DOCS_LOCALES ?? "").trim();
   const envAvailableLocales = (process.env.DOCS_AVAILABLE_LOCALES ?? "").trim();
   const envEmitEnglish = (process.env.DOCS_EMIT_ENGLISH ?? "").trim();
+  const envLoadEnglish = (process.env.DOCS_LOAD_ENGLISH ?? "").trim();
+  const envEmitLocaleFallbacks = (process.env.DOCS_EMIT_LOCALE_FALLBACKS ?? "").trim();
   const envRemotes = (process.env.DOCS_REMOTES ?? "").trim();
   const envReference = (process.env.DOCS_REFERENCE ?? "").trim().toLowerCase();
   const envRemoteName = (process.env.DOCS_REMOTE_NAME ?? "").trim();
@@ -190,6 +213,9 @@ export function readScope(root = process.cwd()): BuildScope {
     .toLowerCase();
   const isVercelProduction = process.env.VERCEL === "1" && vercelTarget === "production";
   const isBuildShard = process.env.DOCS_BUILD_SHARD === "1";
+  const deployTarget = envDeployTarget
+    ? parseDeployTarget(envDeployTarget, "DOCS_DEPLOY_TARGET")
+    : "combined";
 
   const locale = envLocales
     ? "en"
@@ -204,7 +230,7 @@ export function readScope(root = process.cwd()): BuildScope {
       ? []
       : [locale];
 
-  if (isVercelProduction && !isBuildShard) {
+  if (isVercelProduction && !isBuildShard && deployTarget === "combined") {
     if (locale !== "en") {
       throw new Error("Vercel production builds use DOCS_LOCALES=all, not DOCS_LOCALE");
     }
@@ -221,6 +247,18 @@ export function readScope(root = process.cwd()): BuildScope {
     : locale === "en";
   if (!emitEnglish && locale === "en") {
     throw new Error("DOCS_EMIT_ENGLISH=false requires a non-English DOCS_LOCALE shard");
+  }
+  const loadEnglish = envLoadEnglish
+    ? parseReference(envLoadEnglish, "DOCS_LOAD_ENGLISH")
+    : emitEnglish;
+  const emitLocaleFallbacks = envEmitLocaleFallbacks
+    ? parseReference(envEmitLocaleFallbacks, "DOCS_EMIT_LOCALE_FALLBACKS")
+    : emitEnglish && availableLocales.length > 0;
+  if (emitEnglish && !loadEnglish) {
+    throw new Error("DOCS_EMIT_ENGLISH=true requires DOCS_LOAD_ENGLISH=true");
+  }
+  if (emitLocaleFallbacks && !loadEnglish) {
+    throw new Error("DOCS_EMIT_LOCALE_FALLBACKS=true requires DOCS_LOAD_ENGLISH=true");
   }
   const reference = envReference
     ? parseReference(envReference, "DOCS_REFERENCE")
@@ -253,12 +291,24 @@ export function readScope(root = process.cwd()): BuildScope {
   if (isVercelProduction && !remotes) {
     throw new Error("Vercel production builds require DOCS_REMOTES=all");
   }
-  if (envLocale || envLocales || envAvailableLocales || envEmitEnglish || envRemotes || envReference || hasRemoteEnvironment) source = "env";
+  if (!isBuildShard && deployTarget === "english" && locales.length > 0) {
+    throw new Error("DOCS_DEPLOY_TARGET=english requires DOCS_LOCALES=none");
+  }
+  if (!isBuildShard && deployTarget === "translations" && locales.length === 0) {
+    throw new Error("DOCS_DEPLOY_TARGET=translations requires DOCS_LOCALES");
+  }
+  if (remotePreview && deployTarget === "translations") {
+    throw new Error("Remote pull-request previews cannot target translations");
+  }
+  if (envDeployTarget || envLocale || envLocales || envAvailableLocales || envEmitEnglish || envLoadEnglish || envEmitLocaleFallbacks || envRemotes || envReference || hasRemoteEnvironment) source = "env";
   return {
+    deployTarget,
     locale,
     locales,
     availableLocales,
     emitEnglish,
+    loadEnglish,
+    emitLocaleFallbacks,
     reference,
     remotes,
     remotePreview,
