@@ -6,6 +6,9 @@ function initPageActions(root: HTMLElement): () => void {
   const checkIcon = root.querySelector<SVGElement>("[data-nb-page-actions-check-icon]");
   const label = root.querySelector<HTMLSpanElement>("[data-nb-page-actions-label]");
   const mdUrl = root.dataset.mdUrl;
+  const copyLabel = root.dataset.copyLabel ?? "Copy page";
+  const copiedLabel = root.dataset.copiedLabel ?? "Copied";
+  const copyFailedLabel = root.dataset.copyFailedLabel ?? "Couldn't copy";
 
   if (!copyBtn || !mdUrl) return () => {};
 
@@ -16,15 +19,15 @@ function initPageActions(root: HTMLElement): () => void {
     if (state === "copied") {
       copyIcon.classList.add("hidden");
       checkIcon.classList.remove("hidden");
-      label.textContent = "Copied";
+      label.textContent = copiedLabel;
     } else {
-      label.textContent = "Couldn't copy";
+      label.textContent = copyFailedLabel;
     }
     if (resetTimer) window.clearTimeout(resetTimer);
     resetTimer = window.setTimeout(() => {
       copyIcon.classList.remove("hidden");
       checkIcon.classList.add("hidden");
-      label.textContent = "Copy page";
+      label.textContent = copyLabel;
     }, 1500);
   }
 

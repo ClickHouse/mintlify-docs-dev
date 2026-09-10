@@ -24,6 +24,7 @@ import { withBase } from "@/lib/base";
 import { inlinePublicIcon } from "@/lib/build-icon";
 import { LAZY_MIN_CHILDREN } from "@/lib/sidebar-lazy";
 import type { SidebarItem, SidebarBadge } from "@cloudflare/nimbus-docs/types";
+import { uiStrings } from "@/lib/ui-strings.server";
 
 interface Props extends HTMLAttributes<"div"> {
   label: string;
@@ -42,6 +43,7 @@ interface Props extends HTMLAttributes<"div"> {
   section?: boolean;
   /** Fragment key: when set and the group is collapsed, children load on demand from /nav/<key>/. */
   lazyKey?: string;
+  currentLocale?: string;
 }
 
 const {
@@ -55,9 +57,12 @@ const {
   icon,
   section = false,
   lazyKey,
+  currentLocale,
   class: className,
   ...attrs
 } = Astro.props;
+const messages = uiStrings(currentLocale);
+const toggleSectionLabel = messages.navigation.toggleSection.replace("{label}", label);
 
 function hasActiveDescendant(items: SidebarItem[]): boolean {
   return items.some((item) =>
@@ -175,7 +180,7 @@ const imageIcon = icon?.startsWith("/") ? inlinePublicIcon(icon) : undefined;
         )}
         data-nb-state={isOpen ? "open" : "closed"}
         aria-expanded={isOpen ? "true" : "false"}
-        aria-label={`Toggle ${label} section`}
+        aria-label={toggleSectionLabel}
       >
         <Icon name="ph:caret-right" class={caretClass} data-nb-caret />
       </CollapsibleTrigger>
@@ -211,10 +216,10 @@ const imageIcon = icon?.startsWith("/") ? inlinePublicIcon(icon) : undefined;
         class="mt-0.5 ml-3 list-none border-l border-border p-0 pl-2"
         data-nb-lazy-src={withBase(`/nav/${lazyKey}/`)}
       >
-        <li class="px-3 py-1 text-xs text-muted-foreground">Loading…</li>
+        <li class="px-3 py-1 text-xs text-muted-foreground">{messages.status.loading}</li>
       </ul>
     ) : (
-      <SidebarChildren items={items} />
+      <SidebarChildren items={items} currentLocale={currentLocale} />
     )}
   </CollapsibleContent>
 </Collapsible>

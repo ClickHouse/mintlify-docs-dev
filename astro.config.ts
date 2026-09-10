@@ -94,7 +94,15 @@ export default defineConfig({
       // Non-standard fence languages used by the generated reference docs.
       langAlias: {
         response: "text", result: "text", results: "text", test: "text", code: "text",
-        SQL: "sql", Python: "python", python3: "python", capnp: "text",
+        default: "text", hexdump: "text", promql: "text", vbnet: "text",
+        SQL: "sql", pgsql: "sql", prql: "sql", "sq;": "sql",
+        Python: "python", python3: "python", pycon: "python",
+        CMake: "cmake", conf: "ini", env: "dotenv",
+        gradle: "groovy", maven: "xml", sbt: "scala",
+        "application/x-ndjson": "json",
+        capnp: "text",
+        // Historical fence typos remain in translated and remote content.
+        javascripton: "json", repsonse: "text",
       },
       transformers: [clickhouseSqlTransformer()],
     },

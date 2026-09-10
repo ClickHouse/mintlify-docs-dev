@@ -14,8 +14,6 @@ import { withBase } from "./base";
 /** Groups with fewer children than this are rendered inline even when collapsed. */
 export const LAZY_MIN_CHILDREN = 6;
 
-export const TAB_LABELS = new Set(["Home", "Database", "Solutions", "Integrations", "Resources"]);
-
 export type ConfigItem =
   | { label: string; link: string; badge?: import("@cloudflare/nimbus-docs/types").SidebarBadge; icon?: string; hidden?: boolean }
   | { label: string; items: ConfigItem[]; collapsed?: boolean; segment?: string; landing?: string; icon?: string };
@@ -86,7 +84,9 @@ function navigationIndex(items: ConfigItem[]): NavigationIndex {
       };
       for (const link of internalLinks(topGroup.items)) locations.set(link, topLocation);
 
-      if (tab.label !== "Solutions") return;
+      // Solutions is the third authored tab. Use its stable position because
+      // GT translates the visible tab label in locale navigation trees.
+      if (tabIndex !== 2) return;
       const productGroups = topGroup.items.filter((item): item is ConfigGroup => "items" in item);
       const productKeys = siblingKeys(productGroups.map((group) => group.label));
       productGroups.forEach((productGroup, productIndex) => {
@@ -156,16 +156,16 @@ export function toRendered(items: ConfigItem[], path: string[]): SidebarItem[] {
 }
 
 /** Annotate Nimbus's rendered tree with the same keys (rail side). */
-export function assignLazyKeys<T extends SidebarItem>(items: T[], path: string[] = []): T[] {
+export function assignLazyKeys<T extends SidebarItem>(items: T[], path: string[] = [], depth = 0): T[] {
   const groups = items.filter((i) => i.type === "group") as Array<Extract<SidebarItem, { type: "group" }>>;
   const keys = siblingKeys(groups.map((g) => g.label));
   let gi = 0;
   return items.map((item) => {
     if (item.type !== "group") return item;
-    const isTab = path.length === 0 && TAB_LABELS.has(item.label);
+    const isTab = depth === 0;
     const key = isTab ? [] : [...path, keys[gi]];
     gi++;
-    const next = { ...item, children: assignLazyKeys(item.children, key) } as T & { _lazyKey?: string };
+    const next = { ...item, children: assignLazyKeys(item.children, key, depth + 1) } as T & { _lazyKey?: string };
     if (!isTab) next._lazyKey = key.join("/");
     return next;
   });

@@ -22,6 +22,7 @@ import type { DocsPageProps } from "@cloudflare/nimbus-docs/types";
 import { getVersionStatus, getVersionAlternates } from "@cloudflare/nimbus-docs";
 import { withBase } from "@/lib/base";
 import { config } from "virtual:nimbus/config";
+import { uiStrings } from "@/lib/ui-strings.server";
 
 import type { Alternate } from "./BaseLayout.astro";
 type Props = Omit<DocsPageProps, "mode"> & {
@@ -91,6 +92,7 @@ const hasPageTitle = Astro.slots.has("page-title");
 const hasContentFooter = Astro.slots.has("content-footer");
 const hasPagination = Astro.slots.has("pagination");
 const pageBreadcrumb = breadcrumbs.length > 1 ? breadcrumbs.at(-2) : breadcrumbs.at(0);
+const messages = uiStrings(currentLocale);
 ---
 
 <BaseLayout title={title} description={description} noindex={noindex || draft} markdownUrl={markdownUrl} socialImage={socialImage} lastUpdated={lastUpdated} head={head} collection={collection} entryId={entryId} lang={lang} alternates={alternates} canonicalUrl={canonicalUrl}>
@@ -104,13 +106,13 @@ const pageBreadcrumb = breadcrumbs.length > 1 ? breadcrumbs.at(-2) : breadcrumbs
               {hasSidebar ? (
                 <slot name="sidebar" />
               ) : (
-                <nav class="ch-sidebar-content" aria-label="Pages">
-                  <div class="ch-sidebar-tools" aria-label="Documentation tools">
-                    {config.search !== false && <SearchTrigger sidebar />}
-                    <AskAiButton sidebar />
+                <nav class="ch-sidebar-content" aria-label={messages.navigation.pages}>
+                  <div class="ch-sidebar-tools" aria-label={messages.navigation.documentationTools}>
+                    {config.search !== false && <SearchTrigger sidebar currentLocale={currentLocale} />}
+                    <AskAiButton sidebar currentLocale={currentLocale} />
                   </div>
-                  <div class="ch-sidebar-filter"><SidebarFilter /></div>
-                  <div class="ch-sidebar-scroll"><Sidebar items={sidebar} persist /></div>
+                  <div class="ch-sidebar-filter"><SidebarFilter currentLocale={currentLocale} /></div>
+                  <div class="ch-sidebar-scroll"><Sidebar items={sidebar} persist currentLocale={currentLocale} /></div>
                 </nav>
               )}
               <LocaleSwitcher sidebar currentLocale={currentLocale} activeLocales={activeLocales} />
@@ -248,7 +250,7 @@ const pageBreadcrumb = breadcrumbs.length > 1 ? breadcrumbs.at(-2) : breadcrumbs
               )}
               {banner && <Banner content={banner.content} variant={banner.type} dismissible={banner.dismissible} />}
               {!isWide && pageBreadcrumb && (
-                <nav class="ch-breadcrumbs" aria-label="Breadcrumb">
+                <nav class="ch-breadcrumbs" aria-label={messages.navigation.breadcrumb}>
                   {pageBreadcrumb.href ? <a href={pageBreadcrumb.href}>{pageBreadcrumb.label}</a> : <span>{pageBreadcrumb.label}</span>}
                 </nav>
               )}
@@ -259,18 +261,18 @@ const pageBreadcrumb = breadcrumbs.length > 1 ? breadcrumbs.at(-2) : breadcrumbs
                   <Fragment>
                     <div class="ch-document-title">
                       <h1 class="text-foreground mb-0 leading-tight [text-wrap:balance]" style={`font-size:var(--nb-h1-size);font-weight:var(--nb-h1-weight);letter-spacing:var(--nb-h1-tracking)`}>{title}</h1>
-                      {draft && <Badge text="Draft" variant="warning" size="medium" />}
+                      {draft && <Badge text={messages.status.draft} variant="warning" size="medium" />}
                     </div>
                     {headings !== false && headings.length > 0 && (
                       <div class="border-border bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-14 z-20 -mx-4 mt-3 border-y px-4 py-2 backdrop-blur lg:-mx-6 lg:px-6 xl:hidden">
-                        <MobileTOC headings={headings} />
+                        <MobileTOC headings={headings} currentLocale={currentLocale} />
                       </div>
                     )}
                     {audience === "human" && (
                       (
                         <div class="mt-3 mb-6 flex items-center gap-3" role="none">
                           <div class="h-px flex-1 bg-border"></div>
-                          <Badge text="For humans" variant="success" size="small" class="font-mono uppercase border border-success/15" />
+                          <Badge text={messages.status.forHumans} variant="success" size="small" class="font-mono uppercase border border-success/15" />
                           <div class="h-px flex-1 bg-border"></div>
                         </div>
                       )
@@ -281,17 +283,18 @@ const pageBreadcrumb = breadcrumbs.length > 1 ? breadcrumbs.at(-2) : breadcrumbs
                   markdownUrl={markdownUrl}
                   lastUpdated={lastUpdated}
                   editUrl={editUrl}
+                  currentLocale={currentLocale}
                   class="ch-title-page-actions"
                 />
                 <div class="ch-title-path-row">
-                  <ViewSwitcher compact showPathCue />
+                  <ViewSwitcher compact showPathCue currentLocale={currentLocale} />
                 </div>
                 <article class="docs-content max-w-none">
                   <slot />
                 </article>
                 {hasContentFooter && <slot name="content-footer" />}
               </div>
-              {hasPagination ? <slot name="pagination" /> : <Pagination prevNext={prevNext} />}
+              {hasPagination ? <slot name="pagination" /> : <Pagination prevNext={prevNext} currentLocale={currentLocale} />}
             </div>
             )}
           </main>
@@ -299,9 +302,9 @@ const pageBreadcrumb = breadcrumbs.length > 1 ? breadcrumbs.at(-2) : breadcrumbs
           {!isWide && headings !== false && (hasToc || headings.length > 0) && (
             <aside data-nb-toc-scroll-host class="ch-page-context">
               <div id="table-of-contents">
-                {hasToc ? <slot name="toc" /> : headings.length > 0 ? <TOC headings={headings} /> : (
+                {hasToc ? <slot name="toc" /> : headings.length > 0 ? <TOC headings={headings} currentLocale={currentLocale} /> : (
                   <div data-ch-dynamic-toc hidden>
-                    <h2>On this page</h2>
+                    <h2>{messages.toc.onThisPage}</h2>
                     <ul></ul>
                   </div>
                 )}
@@ -319,12 +322,12 @@ const pageBreadcrumb = breadcrumbs.length > 1 ? breadcrumbs.at(-2) : breadcrumbs
       data-mobile-sidebar
       data-state="closed"
       class="group fixed inset-0 m-0 h-full w-full max-h-full max-w-full border-0 bg-transparent p-0 [&::backdrop]:bg-transparent"
-      aria-label="Site navigation"
+      aria-label={messages.navigation.site}
     >
       <div data-mobile-sidebar-panel class="h-full w-(--nb-sidebar-width) max-w-[85vw] -translate-x-full overflow-y-auto overscroll-contain border-r border-border bg-card transition-transform duration-250 ease-out group-data-[state=open]:translate-x-0 motion-reduce:transition-none">
         <div class="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-card px-4 py-3">
-          <span class="font-semibold text-sm text-foreground">Navigation</span>
-          <button data-close-sidebar class="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" aria-label="Close sidebar">
+          <span class="font-semibold text-sm text-foreground">{messages.navigation.navigation}</span>
+          <button data-close-sidebar class="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" aria-label={messages.navigation.close}>
             <Icon name="ph:x" class="w-5 h-5" />
           </button>
         </div>

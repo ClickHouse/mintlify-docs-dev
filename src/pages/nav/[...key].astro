@@ -20,7 +20,7 @@ export const partial = true;
 export const prerender = true;
 
 export function getStaticPaths() {
-  const paths: Array<{ params: { key: string }; props: { items: SidebarItem[] }; cacheKey: string }> = [];
+  const paths: Array<{ params: { key: string }; props: { items: SidebarItem[]; locale?: string }; cacheKey: string }> = [];
   const trees: Array<{ prefix: string[]; items: ConfigItem[] }> = EMIT_ENGLISH
     ? [{ prefix: [], items: sidebarItems as ConfigItem[] }]
     : [];
@@ -38,7 +38,7 @@ export function getStaticPaths() {
       const items = toRendered(g.items, g.path);
       paths.push({
         params: { key: g.key },
-        props: { items },
+        props: { items, locale: tree.prefix[0] },
         cacheKey: createHash("sha256").update(JSON.stringify(items)).digest("hex"),
       });
     }
@@ -46,7 +46,7 @@ export function getStaticPaths() {
   return paths;
 }
 
-const { items } = Astro.props;
+const { items, locale } = Astro.props;
 ---
 
-<SidebarChildren items={items} />
+<SidebarChildren items={items} currentLocale={locale} />

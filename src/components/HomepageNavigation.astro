@@ -3,6 +3,7 @@ import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
 import { withBase } from "@/lib/base";
 import { localeRouteName } from "@/util/locales";
 import { readScope } from "@/lib/scope";
+import { uiStrings } from "@/lib/ui-strings.server";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -36,7 +37,8 @@ if (!navigationFile) throw new Error(`Unsupported navigation locale "${currentLo
 const navigation = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "src/generated", navigationFile), "utf8"),
 ) as NavItem[];
-const tabs = navigation.filter((tab) => tab.label !== "Home");
+const tabs = navigation.slice(1);
+const messages = uiStrings(currentLocale);
 const localePrefix = currentLocale.toLowerCase() === "en" ? "" : `/${localeRouteName(currentLocale)}`;
 const currentPath = Astro.url.pathname.replace(/\/+$/, "") || "/";
 const remotePreview = readScope().remotePreview;
@@ -69,15 +71,17 @@ function firstDestination(item: NavItem): string | undefined {
 
 type MenuEntry = { label: string; href?: string; icon?: string; section?: boolean };
 
-const iconPaths: Record<string, Array<string | undefined>> = {
-  Database: ["/images/icons/icon-get-started.svg", "/images/icons/icon-concepts.svg", "/images/icons/icon-guides.svg", "/images/icons/icon-reference.svg"],
-  Solutions: [undefined, "/images/icons/icon-clickhouse-cloud.svg", "/images/icons/icon-postgres.svg", "/images/icons/logo-langfuse.svg", undefined, "/images/icons/icon-clickstack.svg", "/images/icons/icon-agentic-data-stack.svg", "/images/icons/icon-chdb.svg", "/images/icons/icon-kubernetes-operator.svg"],
-  Integrations: [undefined, "/images/icons/icon-clickpipes.svg", "/images/icons/icon-language-clients.svg", "/images/icons/icon-connectors.svg"],
-  Resources: ["/images/icons/icon-support-center.svg", "/images/icons/icon-contribute.svg", "/images/icons/icon-changelogs.svg", "/images/icons/icon-about.svg"],
+const tabKinds = ["database", "solutions", "integrations", "resources"] as const;
+type TabKind = (typeof tabKinds)[number];
+const iconPaths: Record<TabKind, Array<string | undefined>> = {
+  database: ["/images/icons/icon-get-started.svg", "/images/icons/icon-concepts.svg", "/images/icons/icon-guides.svg", "/images/icons/icon-reference.svg"],
+  solutions: [undefined, "/images/icons/icon-clickhouse-cloud.svg", "/images/icons/icon-postgres.svg", "/images/icons/logo-langfuse.svg", undefined, "/images/icons/icon-clickstack.svg", "/images/icons/icon-agentic-data-stack.svg", "/images/icons/icon-chdb.svg", "/images/icons/icon-kubernetes-operator.svg"],
+  integrations: [undefined, "/images/icons/icon-clickpipes.svg", "/images/icons/icon-language-clients.svg", "/images/icons/icon-connectors.svg"],
+  resources: ["/images/icons/icon-support-center.svg", "/images/icons/icon-contribute.svg", "/images/icons/icon-changelogs.svg", "/images/icons/icon-about.svg"],
 };
 
-function menuEntries(tab: NavItem): MenuEntry[] {
-  if (tab.label === "Solutions") {
+function menuEntries(tab: NavItem, kind: TabKind): MenuEntry[] {
+  if (kind === "solutions") {
     return (tab.items ?? []).flatMap((section) => [
       { label: section.label, section: true },
       ...(section.items ?? []).map((item) => ({ label: item.label, href: firstDestination(item) })),
@@ -87,16 +91,18 @@ function menuEntries(tab: NavItem): MenuEntry[] {
 }
 ---
 
-<nav aria-label="Primary navigation" class="ch-header-nav">
+<nav aria-label={messages.navigation.primary} class="ch-header-nav">
   <a
     href={localHref("/")}
     aria-current={homeActive ? "page" : undefined}
     class:list={["ch-nav-tab", homeActive && "active"]}
   >
-    Home
+    {messages.navigation.home}
   </a>
-  {tabs.map((tab) => {
-    const entries = menuEntries(tab).map((entry, index) => ({ ...entry, icon: iconPaths[tab.label]?.[index] }));
+  {tabs.map((tab, tabIndex) => {
+    const kind = tabKinds[tabIndex];
+    if (!kind) return null;
+    const entries = menuEntries(tab, kind).map((entry, index) => ({ ...entry, icon: iconPaths[kind]?.[index] }));
     const active = hasCurrentPage(tab);
     return (
       <div class="ch-nav-dropdown" data-home-menu data-state="closed">
@@ -111,19 +117,19 @@ function menuEntries(tab: NavItem): MenuEntry[] {
           <Icon name="ph:caret-right" class="ch-nav-dropdown-chevron" aria-hidden="true" />
         </button>
         <div
-          class:list={["ch-nav-dropdown-content", `ch-nav-dropdown-content-${tab.label.toLowerCase()}`]}
+          class:list={["ch-nav-dropdown-content", `ch-nav-dropdown-content-${kind}`]}
           data-home-menu-panel
           role="menu"
           aria-label={tab.label}
         >
-          {tab.label === "Solutions" ? (
+          {kind === "solutions" ? (
             <div class="ch-solutions-grid">
               {(tab.items ?? []).map((section, sectionIndex) => (
                 <section class="ch-solutions-column">
                   <div class="ch-nav-dropdown-heading">{section.label}</div>
                   {(section.items ?? []).map((item, itemIndex) => {
                     const iconIndex = sectionIndex === 0 ? itemIndex + 1 : itemIndex + 5;
-                    const icon = iconPaths.Solutions?.[iconIndex];
+                    const icon = iconPaths.solutions?.[iconIndex];
                     return (
                       <a
                         href={localHref(firstDestination(item) ?? "/")}

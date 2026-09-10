@@ -12,6 +12,7 @@ import HomepageNavigation from "./HomepageNavigation.astro";
 import HomepageNavbarCta from "./HomepageNavbarCta.astro";
 import HomepageLogoLight from "../../_site/logo/light.svg";
 import HomepageLogoDark from "../../_site/logo/dark.svg";
+import { uiStrings } from "@/lib/ui-strings.server";
 
 interface Props {
   /** Astro collection id for the current page, forwarded from DocsLayout. */
@@ -42,6 +43,7 @@ const homepagePrefix = currentLocale && currentLocale.toLowerCase() !== "en"
   : "";
 const homepageHref = (href: string) => withBase(`${homepagePrefix}${href === "/" ? "" : href}` || "/");
 const homeHref = readScope().remotePreview ? "https://clickhouse.com/docs/" : homepageHref("/");
+const messages = uiStrings(currentLocale);
 ---
 
 <header class:list={["ch-site-header", homepage ? "ch-site-header-home" : "ch-site-header-docs", !showSidebar && "ch-site-header-full"]}>
@@ -55,27 +57,27 @@ const homeHref = readScope().remotePreview ? "https://clickhouse.com/docs/" : ho
         </a>
       )}
       <div class="ch-brand-controls" transition:persist="brand-controls">
-        <a href={homeHref} class="ch-header-brand" aria-label="ClickHouse Documentation home page">
+        <a href={homeHref} class="ch-header-brand" aria-label={messages.navigation.homeAria}>
           <img src={HomepageLogoLight.src} alt="ClickHouse Docs" class="logo-light" />
           <img src={HomepageLogoDark.src} alt="ClickHouse Docs" class="logo-dark" />
         </a>
-        <ThemeToggle />
+        <ThemeToggle currentLocale={currentLocale} />
       </div>
       <HomepageNavigation currentLocale={currentLocale} homeActive={homepage} />
     </div>
 
     <div class="ch-site-header-actions">
       {homepage ? (
-        <HomepageNavbarCta />
+        <HomepageNavbarCta currentLocale={currentLocale} />
       ) : (
         <>
           <div class="flex items-center gap-2 lg:hidden">
             {activeLocales && activeLocales.length > 0 && <LocaleSwitcher currentLocale={currentLocale} activeLocales={activeLocales} />}
-            {!showSidebar && config.search !== false && <SearchTrigger />}
-            {!showSidebar && <AskAiButton />}
-            <ThemeToggle />
+            {!showSidebar && config.search !== false && <SearchTrigger currentLocale={currentLocale} />}
+            {!showSidebar && <AskAiButton currentLocale={currentLocale} />}
+            <ThemeToggle currentLocale={currentLocale} />
           </div>
-          <HomepageNavbarCta />
+          <HomepageNavbarCta currentLocale={currentLocale} />
         </>
       )}
       {showSidebar && (
@@ -84,7 +86,7 @@ const homeHref = readScope().remotePreview ? "https://clickhouse.com/docs/" : ho
           shape="square"
           size="sm"
           icon="ph:list"
-          aria-label="Open navigation"
+          aria-label={messages.navigation.open}
           data-menu-btn
           class="lg:hidden text-muted-foreground"
         />
