@@ -1,30 +1,46 @@
 ---
 import DocsLayout from "@/layouts/DocsLayout.astro";
 import ApiOperation from "./ApiOperation.astro";
+import { Aside } from "@/components/ui/aside";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { getPrevNext } from "@cloudflare/nimbus-docs";
 import { withBase } from "@/lib/base";
 import { buildRailFromConfig, type ConfigItem } from "@/lib/sidebar-lazy";
+import { loadGeneratedNavigation } from "@/lib/sidebar-navigation.server";
 import { getApiOperations, type RoutedApiOperationPage } from "@/lib/openapi";
+import { AVAILABLE_LOCALES } from "@/content.config";
+import { localeInfo, localePath, notTranslatedNotice } from "@/util/locales";
 import navigation from "@/generated/sidebar.items.json";
 
 interface Props {
   page: RoutedApiOperationPage;
+  currentLocale?: string;
+  activeLocales?: string[];
+  fallback?: boolean;
 }
 
-const { page } = Astro.props;
+const {
+  page,
+  currentLocale = "en",
+  activeLocales = AVAILABLE_LOCALES,
+  fallback = false,
+} = Astro.props;
 const { source, view } = page;
-const browserPath = withBase(`/${source.route}`);
-const sidebar = buildRailFromConfig(navigation as ConfigItem[], browserPath);
+const localized = currentLocale.toLowerCase() !== "en";
+const browserPath = withBase(localePath(`/${source.route}`, currentLocale));
+const navItems = localized
+  ? loadGeneratedNavigation(currentLocale).items
+  : navigation as ConfigItem[];
+const sidebar = buildRailFromConfig(navItems, browserPath, localized ? [currentLocale] : []);
 const prevNext = await getPrevNext(browserPath, { sidebarTree: sidebar });
 const isCloud = source.collection === "cloud";
 const overview = isCloud
-  ? withBase("/products/cloud/features/admin-features/api/api-overview")
-  : withBase("/clickstack/api-reference");
+  ? withBase(localePath("/products/cloud/features/admin-features/api/api-overview", currentLocale))
+  : withBase(localePath("/clickstack/api-reference", currentLocale));
 const firstInTag = getApiOperations(source.collection)
   .find((candidate) => candidate.tagSlug === source.tagSlug) ?? source;
-const tagRoute = withBase(`/${firstInTag.route}`);
+const tagRoute = withBase(localePath(`/${firstInTag.route}`, currentLocale));
 const breadcrumbs = [
   { label: isCloud ? "Cloud API" : "ClickStack", href: overview },
   { label: "API reference", href: overview },
@@ -39,6 +55,21 @@ const headings = [
 ];
 const markdownPath = withBase(`/${source.route}.md`);
 const markdownUrl = Astro.site ? new URL(markdownPath, Astro.site).href : markdownPath;
+const language = localeInfo(currentLocale);
+const canonicalUrl = localized && Astro.site
+  ? new URL(withBase(`/${source.route}/`), Astro.site).href
+  : undefined;
+const alternates = Astro.site
+  ? [
+      { hreflang: "en", href: new URL(withBase(`/${source.route}/`), Astro.site).href },
+      { hreflang: "x-default", href: new URL(withBase(`/${source.route}/`), Astro.site).href },
+      ...activeLocales.map((locale) => ({
+        hreflang: localeInfo(locale).hreflang,
+        href: new URL(withBase(localePath(`/${source.route}/`, locale)), Astro.site!).href,
+      })),
+    ]
+  : [];
+const fallbackNotice = notTranslatedNotice(currentLocale);
 ---
 
 <DocsLayout
@@ -51,9 +82,11 @@ const markdownUrl = Astro.site ? new URL(markdownPath, Astro.site).href : markdo
   mode="wide"
   markdownUrl={markdownUrl}
   editUrl={source.editUrl}
-  lang="en"
-  currentLocale="en"
-  activeLocales={[]}
+  lang={language.hreflang}
+  alternates={alternates}
+  canonicalUrl={canonicalUrl}
+  currentLocale={currentLocale}
+  activeLocales={activeLocales}
 >
   <div slot="page-title" class="ch-api-heading">
     <Breadcrumbs items={breadcrumbs} class="ch-api-breadcrumbs" />
@@ -63,6 +96,11 @@ const markdownUrl = Astro.site ? new URL(markdownPath, Astro.site).href : markdo
       {view.deprecated && <Badge text="Deprecated" variant="warning" size="medium" />}
     </div>
   </div>
+  {fallback && (
+    <Aside type="note" label={fallbackNotice.label} title={fallbackNotice.title}>
+      {fallbackNotice.message}
+    </Aside>
+  )}
   <ApiOperation
     page={view}
     authSchemes={source.document.components?.securitySchemes}

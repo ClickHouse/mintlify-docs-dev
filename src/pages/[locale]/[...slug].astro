@@ -29,7 +29,7 @@ import {
   localeCollectionName,
   type LocaleCollectionName,
 } from "../../content.config";
-import { localeRouteName } from "../../util/locales";
+import { localeRouteName, notTranslatedNotice } from "../../util/locales";
 import { getRemoteEditUrl } from "../../lib/remotes";
 import { loadGeneratedNavigation } from "../../lib/sidebar-navigation.server";
 import { translatedPageIds } from "../../lib/locale-content.server";
@@ -48,6 +48,11 @@ export async function getStaticPaths() {
       cacheKey?: string;
     }>;
     for (const p of localePaths) {
+      const slug = p.params.slug;
+      if (
+        slug?.startsWith("products/cloud/api-reference/")
+        || slug?.startsWith("clickstack/api-reference/")
+      ) continue;
       paths.push({
         params: { locale, slug: p.params.slug },
         props: p.props,
@@ -66,7 +71,12 @@ export async function getStaticPaths() {
       const translated = translatedPageIds(sourceLocale, SECTIONS);
       const navigationDigest = loadGeneratedNavigation(sourceLocale).digest;
       for (const entry of english) {
-        if (translated.has(entry.id) || entry.id === "index") continue;
+        if (
+          translated.has(entry.id)
+          || entry.id === "index"
+          || entry.id.startsWith("products/cloud/api-reference/")
+          || entry.id.startsWith("clickstack/api-reference/")
+        ) continue;
         paths.push({
           params: { locale, slug: entry.id },
           props: { entry, fallback: true },
@@ -128,17 +138,7 @@ const alternates = Astro.site
     ]
   : [];
 const htmlLang = HREFLANG[localeCode] ?? localeParam;
-const NOT_TRANSLATED: Record<string, { label: string; title: string; message: string }> = {
-  ar: { label: "ملاحظة", title: "لم تُترجم بعد", message: "هذه الصفحة لم تُترجم بعد؛ يتم عرض النسخة الإنجليزية." },
-  es: { label: "Nota", title: "Aún no traducida", message: "Esta página aún no está traducida; se muestra la versión en inglés." },
-  fr: { label: "Remarque", title: "Pas encore traduit", message: "Cette page n'est pas encore traduite ; la version anglaise est affichée." },
-  ja: { label: "注記", title: "未翻訳", message: "このページはまだ翻訳されていません。英語版を表示しています。" },
-  ko: { label: "참고", title: "아직 번역되지 않음", message: "이 페이지는 아직 번역되지 않았습니다. 영어 버전이 표시됩니다." },
-  "pt-br": { label: "Observação", title: "Ainda não traduzida", message: "Esta página ainda não foi traduzida; a versão em inglês é exibida." },
-  ru: { label: "Примечание", title: "Перевод пока недоступен", message: "Эта страница ещё не переведена; показана английская версия." },
-  zh: { label: "注意", title: "尚未翻译", message: "此页面尚未翻译，显示的是英文版本。" },
-};
-const fallbackNotice = NOT_TRANSLATED[localeCode] ?? { label: "Note", title: "Not translated yet", message: "This page is not translated yet; the English version is shown." };
+const fallbackNotice = notTranslatedNotice(localeCode);
 ---
 
 <DocsLayout
