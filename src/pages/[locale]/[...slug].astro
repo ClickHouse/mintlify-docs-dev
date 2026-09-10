@@ -24,6 +24,7 @@ import {
   ACTIVE_LOCALES,
   AVAILABLE_LOCALES,
   EMIT_ENGLISH,
+  EMIT_LOCALE_FALLBACKS,
   SECTIONS,
   localeCollectionName,
   type LocaleCollectionName,
@@ -60,11 +61,12 @@ export async function getStaticPaths() {
     }
   }
 
-  // The English shard alone emits missing-translation fallbacks. Locale
-  // shards therefore compile only their translated collection, never English.
-  if (EMIT_ENGLISH && AVAILABLE_LOCALES.length) {
+  // A combined artifact emits every fallback from its English shard. A
+  // translations-only artifact emits fallbacks from each owning locale shard.
+  if (EMIT_LOCALE_FALLBACKS) {
     const english = await getCollection("docs");
-    for (const sourceLocale of AVAILABLE_LOCALES) {
+    const fallbackLocales = EMIT_ENGLISH ? AVAILABLE_LOCALES : ACTIVE_LOCALES;
+    for (const sourceLocale of fallbackLocales) {
       const locale = localeRouteName(sourceLocale);
       const translated = translatedPageIds(sourceLocale, SECTIONS);
       const navigationDigest = loadGeneratedNavigation(sourceLocale).digest;

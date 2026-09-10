@@ -15,9 +15,9 @@ type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
 type Obj = { [k: string]: Json };
 
 const root = process.cwd();
-// `--locale es` generates one locale; without it, English plus every locale in
-// every non-English collection selected by `DOCS_LOCALES`, which is what
-// Vercel's combined production and label-selected preview builds rely on.
+// `--locale es` generates one locale; without it, English plus every locale
+// selected by `DOCS_LOCALES`. Vercel uses that mode before its translations
+// artifact is split into isolated locale build processes.
 const localeArg = process.argv.indexOf("--locale");
 const scope = readScope(root);
 if (localeArg < 0 && !process.env.__GEN_SIDEBAR_CHILD) {
