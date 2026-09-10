@@ -17,10 +17,12 @@ imports as ES modules — a .js import is loaded as a classic script and throws
 
 Usage:
     python _site/scripts/update_kb.py
+    python _site/scripts/update_kb.py --locale es
 """
 
-import re
+import argparse
 import json
+import re
 from pathlib import Path
 from typing import Dict, Any, Tuple
 
@@ -42,6 +44,27 @@ CATEGORY_LABELS = {
     'data-management': 'Data management',
     'setup-installation': 'Setup & installation',
     'general-faqs': 'General & FAQs',
+}
+
+# Category names are structural metadata rather than article frontmatter, so
+# localized indexes need an explicit label for each knowledge-base directory.
+LOCALIZED_CATEGORY_LABELS = {
+    'es': {
+        'performance-optimization': 'Rendimiento y optimización',
+        'cloud-services': 'Cloud',
+        'data-import-export': 'Importación y exportación de datos',
+        'configuration-settings': 'Configuración y ajustes',
+        'integrations': 'Integraciones y bibliotecas de cliente',
+        'troubleshooting': 'Resolución de problemas y errores',
+        'tables-schema': 'Tablas y esquema',
+        'queries-sql': 'Consultas y SQL',
+        'materialized-views': 'Vistas materializadas y proyecciones',
+        'monitoring-debugging': 'Monitorización y depuración',
+        'security': 'Seguridad y control de acceso',
+        'data-management': 'Gestión de datos',
+        'setup-installation': 'Configuración e instalación',
+        'general-faqs': 'General y preguntas frecuentes',
+    },
 }
 
 def parse_frontmatter(content: str) -> Dict[str, Any]:
@@ -79,7 +102,7 @@ def is_article(frontmatter: Dict[str, Any], file_path: Path) -> bool:
     return bool(frontmatter.get('title'))
 
 
-def extract_article(file_path: Path, kb_dir: Path) -> Dict[str, Any]:
+def extract_article(file_path: Path, kb_dir: Path, locale: str) -> Dict[str, Any]:
     """Extract a single article's index entry from its MDX file."""
     content = file_path.read_text(encoding='utf-8')
     frontmatter = parse_frontmatter(content)
@@ -92,12 +115,15 @@ def extract_article(file_path: Path, kb_dir: Path) -> Dict[str, Any]:
     if isinstance(tags, str):
         tags = [tags] if tags else []
 
+    category_labels = LOCALIZED_CATEGORY_LABELS.get(locale, CATEGORY_LABELS)
+    locale_prefix = '' if locale == 'en' else f'/{locale}'
+
     return {
         'id': article_id,
         'title': frontmatter.get('title', ''),
         'description': frontmatter.get('description', ''),
-        'href': '/resources/support-center/knowledge-base/' + article_id,
-        'category': CATEGORY_LABELS.get(
+        'href': locale_prefix + '/resources/support-center/knowledge-base/' + article_id,
+        'category': category_labels.get(
             category_slug,
             category_slug.replace('-', ' ').title()
         ),
@@ -105,7 +131,7 @@ def extract_article(file_path: Path, kb_dir: Path) -> Dict[str, Any]:
     }
 
 
-def build_index(kb_dir: Path) -> Tuple[Dict[str, Any], int]:
+def build_index(kb_dir: Path, locale: str = 'en') -> Tuple[Dict[str, Any], int]:
     files = []
     for file_path in kb_dir.glob('**/*.mdx'):
         # Skip files in underscore-prefixed directories (assets/partials).
@@ -121,7 +147,7 @@ def build_index(kb_dir: Path) -> Tuple[Dict[str, Any], int]:
         if not is_article(frontmatter, file_path):
             skipped += 1
             continue
-        articles.append(extract_article(file_path, kb_dir))
+        articles.append(extract_article(file_path, kb_dir, locale))
 
     articles.sort(key=lambda a: a['title'].lower())
 
@@ -148,16 +174,28 @@ def render_module(index: Dict[str, Any]) -> str:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--locale',
+        default='en',
+        help="Locale to generate (default: en)",
+    )
+    args = parser.parse_args()
+
     project_root = Path(__file__).resolve().parents[2]
-    kb_dir = project_root / 'resources' / 'support-center' / 'knowledge-base'
-    output_path = (project_root / 'snippets' / 'components' / 'KBExplorer'
-                   / 'kb-data.jsx')
+    locale = args.locale
+    locale_root = project_root if locale == 'en' else project_root / locale
+    kb_dir = locale_root / 'resources' / 'support-center' / 'knowledge-base'
+    snippets_root = project_root / 'snippets'
+    if locale != 'en':
+        snippets_root /= locale
+    output_path = snippets_root / 'components' / 'KBExplorer' / 'kb-data.jsx'
 
     if not kb_dir.exists():
         print(f"Error: knowledge-base directory not found: {kb_dir}")
         return 1
 
-    index, skipped = build_index(kb_dir)
+    index, skipped = build_index(kb_dir, locale)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(render_module(index), encoding='utf-8')
 
