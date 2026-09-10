@@ -233,17 +233,157 @@ jobs:
             return 1
           }
 
+          english_id=""
+          translations_id=""
+          preview_url=""
+          translations_url=""
+          english_state="Not started"
+          translations_state="Production fallback"
           preview_finished=false
+
+          cancel_vercel_deployment() {
+            local deployment_id="$1"
+            local deployment_label="$2"
+            local cancel_response
+            local cancel_exit_code
+            local deployment_response
+            local ready_state
+
+            if cancel_response="$(
+              curl --silent --show-error --fail-with-body \
+                --request PATCH \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v12/deployments/$deployment_id/cancel?teamId=$VERCEL_ORG_ID"
+            )"; then
+              echo "Canceled $deployment_label Vercel deployment $deployment_id."
+              return 0
+            else
+              cancel_exit_code=$?
+            fi
+
+            # A deployment can finish between being listed and receiving the
+            # cancellation request. Vercel returns HTTP 400 in that case, so
+            # verify that it is terminal rather than hiding an API failure.
+            if deployment_response="$(
+              curl --silent --show-error --fail-with-body \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
+            )"; then
+              ready_state="$(jq -er .readyState <<< "$deployment_response")"
+              case "$ready_state" in
+                READY|ERROR|CANCELED|DELETED|BLOCKED)
+                  echo "$deployment_label Vercel deployment $deployment_id already reached $ready_state."
+                  return 0
+                  ;;
+              esac
+            fi
+
+            printf '%s\n' "$cancel_response" >&2
+            echo "Unable to cancel $deployment_label Vercel deployment $deployment_id." >&2
+            return "$cancel_exit_code"
+          }
+
+          cancel_superseded_deployments() {
+            local project_id="$1"
+            local build_scope="$2"
+            local deployment_label="$3"
+            local ready_state
+            local until=""
+            local list_response
+            local next
+            local deployment_id
+            local -a request_args
+            local -a deployment_ids
+
+            if [[ -z "$project_id" ]]; then
+              return 0
+            fi
+
+            for ready_state in QUEUED INITIALIZING BUILDING; do
+              until=""
+              while true; do
+                request_args=(
+                  --silent
+                  --show-error
+                  --fail-with-body
+                  --get
+                  --header "Authorization: Bearer $VERCEL_TOKEN"
+                  --data-urlencode "projectId=$project_id"
+                  --data-urlencode "state=$ready_state"
+                  --data-urlencode "limit=100"
+                  --data-urlencode "teamId=$VERCEL_ORG_ID"
+                )
+                if [[ -n "$until" ]]; then
+                  request_args+=(--data-urlencode "until=$until")
+                fi
+
+                if ! list_response="$(
+                  curl "${request_args[@]}" "https://api.vercel.com/v7/deployments"
+                )"; then
+                  printf '%s\n' "$list_response" >&2
+                  echo "Unable to list $deployment_label Vercel deployments." >&2
+                  return 1
+                fi
+
+                mapfile -t deployment_ids < <(
+                  jq -r \
+                    --arg build_scope "$build_scope" \
+                    --arg pull_request "$PULL_REQUEST_NUMBER" \
+                    '.deployments[]
+                      | select((.meta.pullRequest? // "") == $pull_request)
+                      | select((.meta.buildScope? // "") == $build_scope)
+                      | (.uid // .id)' \
+                    <<< "$list_response"
+                )
+                for deployment_id in "${deployment_ids[@]}"; do
+                  cancel_vercel_deployment "$deployment_id" "superseded $deployment_label" || return 1
+                done
+
+                next="$(jq -er '.pagination.next // ""' <<< "$list_response")"
+                if [[ -z "$next" ]]; then
+                  break
+                fi
+                if [[ "$next" == "$until" ]]; then
+                  echo "Vercel returned a repeated pagination cursor while listing $deployment_label deployments." >&2
+                  return 1
+                fi
+                until="$next"
+              done
+            done
+          }
+
           finalize_preview_comment() {
             local exit_code=$?
-            trap - EXIT
+            local cleanup_failed=false
+            trap - EXIT INT TERM
             if [[ "$preview_finished" != true ]]; then
-              if ! update_preview_comment_with_retry "🔴 Failed"; then
+              if [[ -n "$english_id" ]] && ! cancel_vercel_deployment "$english_id" "English"; then
+                cleanup_failed=true
+              fi
+              if [[ -n "$translations_id" ]] && ! cancel_vercel_deployment "$translations_id" "translations"; then
+                cleanup_failed=true
+              fi
+              if [[ -n "$preview_url" ]] && ! update_preview_comment_with_retry "🔴 Failed"; then
                 echo "::warning::Unable to mark the preview comment as failed."
               fi
             fi
+            if [[ "$cleanup_failed" == true && "$exit_code" -eq 0 ]]; then
+              exit_code=1
+            fi
             exit "$exit_code"
           }
+
+          # GitHub's concurrency group stops the superseded Actions run, but
+          # Vercel continues any deployment already created by that runner.
+          # Cancel matching in-progress deployments before creating this run's
+          # replacements. This also covers abrupt runner termination where the
+          # old run's EXIT trap did not execute.
+          cancel_superseded_deployments "$VERCEL_PROJECT_ID" "english-preview" "English"
+          cancel_superseded_deployments "$VERCEL_TRANSLATIONS_PROJECT_ID" "translations-preview" "translations"
+
+          trap finalize_preview_comment EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
 
           if ! project_response="$(
             curl --silent --show-error --fail-with-body \
@@ -312,8 +452,6 @@ jobs:
           preview_url="https://${deployment_url#https://}"
           english_state="🟡 Building"
           translations_state="Production fallback"
-          translations_id=""
-          translations_url=""
           echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
           echo "English Vercel deployment: $preview_url"
           if [[ ! "$preview_url" =~ ^https://[^[:space:]]+$ ]]; then
@@ -394,9 +532,6 @@ jobs:
             echo "Translations Vercel deployment: $translations_url"
           fi
 
-          trap finalize_preview_comment EXIT
-          trap 'exit 130' INT
-          trap 'exit 143' TERM
           if ! update_preview_comment_with_retry "🟡 Building"; then
             echo "::warning::Unable to mark the preview comment as building."
           fi
