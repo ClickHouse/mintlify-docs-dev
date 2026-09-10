@@ -120,7 +120,7 @@ content—and the English deployment owns `/docs`, `/docs/_astro`,
 Vercel must be provisioned as follows:
 
 1. Keep the existing `clickhouse-docs` project and create a second project
-   named exactly `clickhouse-docs-translations`. Connect both to
+   named exactly `clickhouse-docs-i18n`. Connect both to
    `ClickHouse/mintlify-docs-dev`; `vercel.json` disables automatic Git
    deployments because GitHub Actions creates the Git-backed deployments.
 2. Give both projects the same build command (`pnpm run build:vercel`), output
