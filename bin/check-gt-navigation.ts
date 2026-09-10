@@ -6,6 +6,7 @@ const configPath = path.join(repositoryRoot, "gt.config.json");
 const docsPath = path.join(repositoryRoot, "docs.json");
 const translatableKeys = ["group", "tab", "item", "anchor", "dropdown"] as const;
 const expectedSelectors = translatableKeys.map((key) => `$..${key}`);
+const pagePathMatch = "^/?([^\\s]+)$";
 
 function fail(message: string): never {
   throw new Error(`check-gt-navigation: ${message}`);
@@ -55,11 +56,14 @@ function assertTranslationSchema(): void {
   }
 
   const transform = asRecord(languages.transform, "the language navigation path transforms");
-  for (const selector of ["$..pages[*]", "$..root"]) {
-    const rule = asRecord(transform[selector], `the ${selector} transform`);
-    if (rule.match !== "^/?(.*)$" || rule.replace !== "{locale}/$1") {
-      fail(`${selector} must map navigation paths to {locale}/$1`);
-    }
+  const pagesRule = asRecord(transform["$..pages[*]"], "the $..pages[*] transform");
+  if (pagesRule.match !== pagePathMatch || pagesRule.replace !== "{locale}/$1") {
+    fail("$..pages[*] must localize page paths without matching OpenAPI operation pointers");
+  }
+
+  const rootRule = asRecord(transform["$..root"], "the $..root transform");
+  if (rootRule.match !== "^/?(.*)$" || rootRule.replace !== "{locale}/$1") {
+    fail("$..root must map navigation roots to {locale}/$1");
   }
 }
 
