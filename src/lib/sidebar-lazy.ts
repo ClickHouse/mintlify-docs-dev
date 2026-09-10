@@ -57,8 +57,12 @@ const normPath = (value: string): string => value.replace(/\/+$/, "") || "/";
 function internalLinks(nodes: ConfigItem[]): string[] {
   const links: string[] = [];
   for (const node of nodes) {
-    if ("items" in node) links.push(...internalLinks(node.items));
-    else if (!/^(https?:)?\/\//.test(node.link)) links.push(normPath(withBase(node.link)));
+    if ("items" in node) {
+      if (node.landing) links.push(normPath(withBase(node.landing)));
+      links.push(...internalLinks(node.items));
+    } else if (!/^(https?:)?\/\//.test(node.link)) {
+      links.push(normPath(withBase(node.link)));
+    }
   }
   return links;
 }
@@ -82,7 +86,7 @@ function navigationIndex(items: ConfigItem[]): NavigationIndex {
         railItems: topGroup.items,
         railPath: [topKeys[topIndex]],
       };
-      for (const link of internalLinks(topGroup.items)) locations.set(link, topLocation);
+      for (const link of internalLinks([topGroup])) locations.set(link, topLocation);
 
       // Solutions is the third authored tab. Use its stable position because
       // GT translates the visible tab label in locale navigation trees.
@@ -95,7 +99,7 @@ function navigationIndex(items: ConfigItem[]): NavigationIndex {
           railItems: productGroup.items,
           railPath: [topKeys[topIndex], productKeys[productIndex]],
         };
-        for (const link of internalLinks(productGroup.items)) locations.set(link, productLocation);
+        for (const link of internalLinks([productGroup])) locations.set(link, productLocation);
       });
     });
   });
