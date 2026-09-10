@@ -55,6 +55,15 @@ jobs:
             exit 1
           fi
 
+      - name: Check out the production history for change classification
+        if: >-
+          github.repository == 'ClickHouse/mintlify-docs-dev' &&
+          github.event_name == 'push' &&
+          inputs.deployment_scope == ''
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Resolve the trusted documentation site revision
         id: site
         env:
@@ -76,26 +85,28 @@ jobs:
       - name: Select production applications
         id: scope
         env:
-          GH_TOKEN: ${{ github.token }}
           REQUESTED_SCOPE: ${{ inputs.deployment_scope }}
+          SITE_REPOSITORY: ClickHouse/mintlify-docs-dev
         run: |
           scope="$REQUESTED_SCOPE"
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_call" && -z "$scope" ]]; then
-            scope="english"
-          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && -z "$scope" ]]; then
-            scope="all"
-          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            scope=""
+          if [[ -n "$scope" ]]; then
+            # Explicit workflow_dispatch and workflow_call inputs win. Reusable
+            # workflows inherit the caller's event name, so event_name cannot
+            # be used to identify workflow_call safely.
+            :
+          elif [[ "$GITHUB_REPOSITORY" == "$SITE_REPOSITORY" && "$GITHUB_EVENT_NAME" == "push" ]]; then
             deploy_english=false
             deploy_translations=false
             before="${{ github.event.before }}"
             if [[ "$before" =~ ^0+$ ]]; then
               scope="all"
             else
-              mapfile -t changed_files < <(
-                gh api --paginate "repos/$GITHUB_REPOSITORY/compare/$before...$GITHUB_SHA" --jq '.files[].filename'
-              )
+              # The GitHub Compare API truncates the file list at 300 entries.
+              # A full checkout lets Git classify arbitrarily large pushes.
+              changed_file_list="$(git diff --name-only "$before" "$GITHUB_SHA")"
+              mapfile -t changed_files <<< "$changed_file_list"
               for file in "${changed_files[@]}"; do
+                [[ -z "$file" ]] && continue
                 case "$file" in
                   ar/*|es/*|fr/*|ja/*|ko/*|pt-BR/*|ru/*|zh/*)
                     deploy_translations=true
@@ -117,6 +128,10 @@ jobs:
                 scope="english"
               fi
             fi
+          else
+            # Fail closed to the lightweight application for callers created
+            # before deployment_scope was added to the reusable interface.
+            scope="english"
           fi
 
           case "$scope" in
