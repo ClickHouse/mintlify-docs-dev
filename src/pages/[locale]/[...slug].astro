@@ -101,7 +101,12 @@ const { sidebar: sidebarOn, tableOfContents: tocOn } = await getRouteFlags(entry
 // Locale rail: from the locale's generated navigation (labels and /<locale>/
 // links), falling back to the English tree when a locale file is absent.
 const navItems = loadGeneratedNavigation(localeParam).items;
-const sidebar = sidebarOn ? buildRailFromConfig(navItems, browserPath, [localeParam]) : false;
+// Nimbus treats `custom` as a full-canvas route and disables its sidebar.
+// Mintlify customizes only the center content for pages such as the
+// quickstarts explorer, so keep the normal documentation rail there.
+const sidebar = sidebarOn || entry.data.mode === "custom"
+  ? buildRailFromConfig(navItems, browserPath, [localeParam])
+  : false;
 const sections = sectionsFromConfig(navItems, browserPath);
 const prevNext = await getPrevNext(browserPath, {
   sidebarTree: sidebar === false ? [] : sidebar,
@@ -120,7 +125,9 @@ const tocMax = (entry.data as { toc_max_heading_level?: number }).toc_max_headin
 const effectiveTocConfig =
   tocConfig === false ? false : tocMax ? { minHeadingLevel: 2, maxHeadingLevel: Math.max(2, Math.min(6, tocMax)) } : tocConfig;
 const toc = tocOn && effectiveTocConfig !== false ? getTOC(headings, effectiveTocConfig) : false;
-const layoutMode = entry.data.mode === "custom" ? "custom" : "doc";
+const layoutMode = entry.data.mode === "custom" || entry.data.mode === "wide"
+  ? entry.data.mode
+  : "doc";
 const data = entry.data as { title?: string; sidebarTitle?: string };
 const pageTitle = data.title ?? data.sidebarTitle ?? entry.id.split("/").pop() ?? entry.id;
 const markdownUrl = Astro.site
