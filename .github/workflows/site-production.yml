@@ -85,6 +85,7 @@ jobs:
       - name: Select production applications
         id: scope
         env:
+          FORCED_PUSH: ${{ github.event.forced }}
           REQUESTED_SCOPE: ${{ inputs.deployment_scope }}
           SITE_REPOSITORY: ClickHouse/mintlify-docs-dev
         run: |
@@ -98,7 +99,9 @@ jobs:
             deploy_english=false
             deploy_translations=false
             before="${{ github.event.before }}"
-            if [[ "$before" =~ ^0+$ ]]; then
+            if [[ "$before" =~ ^0+$ || "$FORCED_PUSH" == "true" ]]; then
+              # A new branch or rewritten history has no reliable path diff.
+              # Both applications must be refreshed from the new source tree.
               scope="all"
             else
               # The GitHub Compare API truncates the file list at 300 entries.
