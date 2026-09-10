@@ -4,7 +4,14 @@ import path from "node:path";
 const repositoryRoot = process.cwd();
 const configPath = path.join(repositoryRoot, "gt.config.json");
 const docsPath = path.join(repositoryRoot, "docs.json");
-const translatableKeys = ["group", "tab", "item", "anchor", "dropdown"] as const;
+const uiStringsPath = path.join(repositoryRoot, "i18n", "en", "ui.json");
+const translatableKeys = [
+  "group",
+  "tab",
+  "item",
+  "anchor",
+  "dropdown",
+] as const;
 const expectedSelectors = translatableKeys.map((key) => `$..${key}`);
 const pagePathMatch = "^/?([^\\s]+)$";
 
@@ -16,7 +23,10 @@ function readJson(filePath: string): unknown {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function asRecord(value: unknown, description: string): Record<string, unknown> {
+function asRecord(
+  value: unknown,
+  description: string,
+): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     fail(`${description} must be an object`);
   }
@@ -27,21 +37,47 @@ function asRecord(value: unknown, description: string): Record<string, unknown> 
 function assertTranslationSchema(): void {
   const config = asRecord(readJson(configPath), "gt.config.json");
   const options = asRecord(config.options, "gt.config.json options");
-  const jsonSchema = asRecord(options.jsonSchema, "gt.config.json options.jsonSchema");
-  const docsSchema = asRecord(jsonSchema["./docs.json"], "the ./docs.json translation schema");
+  const jsonSchema = asRecord(
+    options.jsonSchema,
+    "gt.config.json options.jsonSchema",
+  );
+  const docsSchema = asRecord(
+    jsonSchema["./docs.json"],
+    "the ./docs.json translation schema",
+  );
+  const files = asRecord(config.files, "gt.config.json files");
+  const jsonFiles = asRecord(files.json, "gt.config.json JSON files");
 
-  if (docsSchema.resolveRefs !== true) {
-    fail("the ./docs.json translation schema must resolve navigation $ref files");
+  if (
+    !Array.isArray(jsonFiles.include) ||
+    !jsonFiles.include.includes("./i18n/[locale]/ui.json")
+  ) {
+    fail("the JSON translation inputs must include ./i18n/[locale]/ui.json");
   }
 
-  const composite = asRecord(docsSchema.composite, "the ./docs.json composite schema");
+  if (docsSchema.resolveRefs !== true) {
+    fail(
+      "the ./docs.json translation schema must resolve navigation $ref files",
+    );
+  }
+
+  const composite = asRecord(
+    docsSchema.composite,
+    "the ./docs.json composite schema",
+  );
   const languages = asRecord(
     composite["$.navigation.languages"],
     "the $.navigation.languages composite schema",
   );
 
-  if (languages.type !== "array" || languages.key !== "$.language" || languages.splitEntries !== true) {
-    fail("the language navigation schema must remain a split array keyed by $.language");
+  if (
+    languages.type !== "array" ||
+    languages.key !== "$.language" ||
+    languages.splitEntries !== true
+  ) {
+    fail(
+      "the language navigation schema must remain a split array keyed by $.language",
+    );
   }
 
   if (!Array.isArray(languages.include)) {
@@ -55,15 +91,54 @@ function assertTranslationSchema(): void {
     }
   }
 
-  const transform = asRecord(languages.transform, "the language navigation path transforms");
-  const pagesRule = asRecord(transform["$..pages[*]"], "the $..pages[*] transform");
-  if (pagesRule.match !== pagePathMatch || pagesRule.replace !== "{locale}/$1") {
-    fail("$..pages[*] must localize page paths without matching OpenAPI operation pointers");
+  const transform = asRecord(
+    languages.transform,
+    "the language navigation path transforms",
+  );
+  const pagesRule = asRecord(
+    transform["$..pages[*]"],
+    "the $..pages[*] transform",
+  );
+  if (
+    pagesRule.match !== pagePathMatch ||
+    pagesRule.replace !== "{locale}/$1"
+  ) {
+    fail(
+      "$..pages[*] must localize page paths without matching OpenAPI operation pointers",
+    );
   }
 
   const rootRule = asRecord(transform["$..root"], "the $..root transform");
   if (rootRule.match !== "^/?(.*)$" || rootRule.replace !== "{locale}/$1") {
     fail("$..root must map navigation roots to {locale}/$1");
+  }
+}
+
+function assertUiStrings(): void {
+  const ui = asRecord(readJson(uiStringsPath), "the English UI dictionary");
+  for (const section of [
+    "account",
+    "actions",
+    "navigation",
+    "search",
+    "status",
+    "theme",
+    "toc",
+  ]) {
+    const messages = asRecord(
+      ui[section],
+      `the English UI dictionary's ${section} section`,
+    );
+    if (Object.keys(messages).length === 0) {
+      fail(`the English UI dictionary's ${section} section must not be empty`);
+    }
+    for (const [key, value] of Object.entries(messages)) {
+      if (typeof value !== "string" || value.trim() === "") {
+        fail(
+          `the English UI dictionary entry ${section}.${key} must be a non-empty string`,
+        );
+      }
+    }
   }
 }
 
@@ -75,7 +150,12 @@ function assertNavigationCoverage(): void {
   }
 
   const english = navigation.languages.find((entry) => {
-    return Boolean(entry && typeof entry === "object" && !Array.isArray(entry) && entry.language === "en");
+    return Boolean(
+      entry &&
+      typeof entry === "object" &&
+      !Array.isArray(entry) &&
+      entry.language === "en",
+    );
   });
   if (!english) {
     fail("docs.json must contain an English navigation entry");
@@ -130,4 +210,5 @@ function assertNavigationCoverage(): void {
 }
 
 assertTranslationSchema();
+assertUiStrings();
 assertNavigationCoverage();
