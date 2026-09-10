@@ -66,17 +66,8 @@ function codeChildren(code: string): HastNode[] {
   const tokens = tokenizeSync(code);
   const lines: HastNode[][] = [[]];
 
-  for (let index = 0; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    let nextSignificantType: number | undefined;
-    for (let next = index + 1; next < tokens.length; next += 1) {
-      if (isSignificant(tokens[next].type)) {
-        nextSignificantType = tokens[next].type;
-        break;
-      }
-    }
-    const className = tokenClass(token.type, token.text, nextSignificantType);
-    const parts = token.text.split("\n");
+  const appendText = (value: string, className?: string) => {
+    const parts = value.split("\n");
     for (let partIndex = 0; partIndex < parts.length; partIndex += 1) {
       if (partIndex > 0) lines.push([]);
       if (!parts[partIndex]) continue;
@@ -92,6 +83,30 @@ function codeChildren(code: string): HastNode[] {
           : text,
       );
     }
+  };
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    let nextSignificantType: number | undefined;
+    for (let next = index + 1; next < tokens.length; next += 1) {
+      if (isSignificant(tokens[next].type)) {
+        nextSignificantType = tokens[next].type;
+        break;
+      }
+    }
+    const className = tokenClass(token.type, token.text, nextSignificantType);
+    appendText(token.text, className);
+  }
+
+  // The server lexer stops after its first error token. SQL examples often
+  // include copied result tables after a query, so preserve the un-tokenized
+  // suffix as plain text instead of silently truncating the code block.
+  const tokenizedPrefix = tokens.map((token) => token.text).join("");
+  if (!code.startsWith(tokenizedPrefix)) {
+    throw new Error("ClickHouse lexer returned tokens that do not match the SQL source");
+  }
+  if (tokenizedPrefix.length < code.length) {
+    appendText(code.slice(tokenizedPrefix.length));
   }
 
   return lines.flatMap((line, index) => [
