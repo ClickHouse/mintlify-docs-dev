@@ -197,10 +197,12 @@ export function buildRailFromConfig(items: ConfigItem[], currentPath: string, ke
       if (n.type === "link") {
         if (normPath(n.href) === target) { (n as { isCurrent?: boolean }).isCurrent = true; any = true; }
       } else if (n.type === "group") {
+        const indexHit = Boolean(n.indexHref && normPath(n.indexHref) === target);
+        if (indexHit) n.indexIsCurrent = true;
         const hit = mark(n.children);
         // SidebarGroup uses the active path for the initial server-rendered
         // state. Do not overwrite the authored collapsed value here.
-        if (hit) any = true;
+        if (indexHit || hit) any = true;
       }
     }
     return any;
