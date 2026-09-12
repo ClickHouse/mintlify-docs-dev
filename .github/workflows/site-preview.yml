@@ -114,7 +114,7 @@ jobs:
           echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
           echo "trust=$trust" >> "$GITHUB_OUTPUT"
 
-      - name: Select translated collections from pull request labels
+      - name: Select translated collections for preview
         id: translations
         env:
           GH_TOKEN: ${{ github.token }}
@@ -123,8 +123,23 @@ jobs:
           mapfile -t labels < <(
             gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PULL_REQUEST_NUMBER/labels" --jq '.[].name'
           )
+          mapfile -t changed_files < <(
+            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER/files" --jq '.[].filename'
+          )
           known_locales=(ar es fr ja ko pt-BR ru zh)
           include_translations=false
+
+          # These files configure both Vercel applications. Always exercise
+          # the translations project when they change, even when the author
+          # did not request a translated-content preview explicitly.
+          for file in "${changed_files[@]}"; do
+            case "$file" in
+              vercel.json|microfrontends.json)
+                include_translations=true
+                echo "Including translations because shared deployment configuration changed: $file"
+                ;;
+            esac
+          done
 
           for label in "${labels[@]}"; do
             normalized="${label,,}"
