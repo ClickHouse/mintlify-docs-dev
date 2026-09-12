@@ -52,12 +52,15 @@ Production source topology lives only in `remotes.json`; production fetches each
 registered repository from `main`. Remote CI supplies the registered name,
 repository, and exceptional immutable SHA only when requesting a preview.
 
-Remote repositories create previews through
-`.github/workflows/remote-docs-preview.yml`. The caller invokes the reusable
-workflow manually with a pull request number. It uses a repository-scoped
-GitHub App token only to resolve the immutable head SHA and the branch or fork
-repository that owns it, then asks Vercel to build trusted Nimbus `main` in the
-`connect-preview` environment. The Vercel build uses
+Remote repositories create previews through the reusable
+`ClickHouse/integrations-shared-workflows/.github/workflows/remote-docs-preview.yml`
+dispatcher. The caller invokes it manually with a pull request number. The
+shared workflow resolves the immutable head SHA, then uses a repository-scoped
+GitHub App token to dispatch `.github/workflows/remote-docs-preview.yml` in this
+repository. Vercel credentials remain available only to this central workflow,
+which verifies that the approved SHA is still the pull request head before it
+asks Vercel to build trusted Nimbus `main` in the `connect-preview` environment.
+The Vercel build uses
 its OIDC identity to request a short-lived, `contents:read` token from Vercel
 Connect for the branch or fork repository. Public repositories are fetched
 anonymously. `bin/fetch-remotes.ts` exits before
@@ -78,13 +81,14 @@ project's Git connection and updates one preview comment on the pull request.
 Both primary-repository branches and forks use standard Preview and omit every
 registered remote source.
 
-Source-repository pull requests use
-`.github/workflows/remote-docs-preview.yml`. Vercel builds trusted Nimbus
-`main`, selects exactly one registered source with `DOCS_REMOTE_*`, and fetches
-the pull request's immutable head revision. Trusted branches and forks have the
-same source-only build scope. They use `connect-preview` so private registered
-sources can obtain a short-lived token; public sources remain anonymously
-fetchable.
+Source-repository pull requests use the shared dispatcher described above. The
+central `.github/workflows/remote-docs-preview.yml` workflow builds trusted
+Nimbus `main`, selects exactly one registered source with `DOCS_REMOTE_*`, and
+fetches the pull request's immutable head revision. Trusted branches and forks
+have the same source-only build scope. They use `connect-preview` so private
+registered sources can obtain a short-lived token; public sources remain
+anonymously fetchable. The central workflow posts the completed preview URL
+back to the source pull request with a short-lived GitHub App token.
 
 After a source-repository change reaches its trusted production branch, that
 repository calls `.github/workflows/site-production.yml`. The reusable workflow

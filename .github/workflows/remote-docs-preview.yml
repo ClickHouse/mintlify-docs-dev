@@ -17,6 +17,11 @@ on:
         description: Open pull request to preview
         required: true
         type: string
+      approved_head_sha:
+        description: Exact pull request head SHA approved by the dispatching workflow
+        required: false
+        default: ""
+        type: string
   workflow_call:
     inputs:
       remote_name:
@@ -30,6 +35,11 @@ on:
       source_repository:
         description: Repository containing the pull request
         required: true
+        type: string
+      approved_head_sha:
+        description: Exact pull request head SHA approved by the dispatching workflow
+        required: false
+        default: ""
         type: string
     secrets:
       WORKFLOW_AUTH_PUBLIC_APP_ID:
@@ -79,7 +89,7 @@ jobs:
           fi
 
       - name: Check out the trusted documentation site
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: ClickHouse/mintlify-docs-dev
           ref: main
@@ -87,7 +97,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
 
@@ -112,21 +122,34 @@ jobs:
           fi
           echo "sha=$site_sha" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve the source repository
+        id: source
+        env:
+          SOURCE_REPOSITORY: ${{ inputs.source_repository }}
+        run: |
+          if [[ ! "$SOURCE_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "Source repository must use the owner/name form." >&2
+            exit 1
+          fi
+          echo "owner=${SOURCE_REPOSITORY%%/*}" >> "$GITHUB_OUTPUT"
+          echo "name=${SOURCE_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+
       - name: Mint a source-repository token
         id: source-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.WORKFLOW_AUTH_PUBLIC_APP_ID }}
           private-key: ${{ secrets.WORKFLOW_AUTH_PUBLIC_PRIVATE_KEY }}
-          owner: ClickHouse
-          repositories: ${{ inputs.source_repository }}
+          owner: ${{ steps.source.outputs.owner }}
+          repositories: ${{ steps.source.outputs.name }}
           permission-contents: read
-          permission-pull-requests: read
+          permission-pull-requests: write
 
       - name: Resolve the pull request head
         id: pull-request
         env:
           GH_TOKEN: ${{ steps.source-token.outputs.token }}
+          APPROVED_HEAD_SHA: ${{ inputs.approved_head_sha }}
           PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
           SOURCE_REPOSITORY: ${{ inputs.source_repository }}
         run: |
@@ -141,6 +164,16 @@ jobs:
           if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ ]]; then
             echo "GitHub returned an invalid pull request head SHA." >&2
             exit 1
+          fi
+          if [[ -n "$APPROVED_HEAD_SHA" ]]; then
+            if [[ ! "$APPROVED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "The dispatching workflow supplied an invalid approved head SHA." >&2
+              exit 1
+            fi
+            if [[ "$head_sha" != "$APPROVED_HEAD_SHA" ]]; then
+              echo "Pull request head changed after preview approval: expected $APPROVED_HEAD_SHA, found $head_sha." >&2
+              exit 1
+            fi
           fi
           if [[ ! "$head_repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
             echo "GitHub returned an invalid pull request head repository." >&2
@@ -402,14 +435,25 @@ jobs:
           deployment_finished=true
 
       - name: Add the preview link to the pull request
-        if: github.repository == inputs.source_repository
         env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ steps.source-token.outputs.token }}
+          GH_REPO: ${{ inputs.source_repository }}
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
           PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
         run: |
-          gh pr comment "$PULL_REQUEST_NUMBER" --body "Documentation preview: $PREVIEW_URL"
+          marker="<!-- nimbus-remote-docs-preview -->"
+          docs_url="${PREVIEW_URL%/}/docs"
+          body="$(printf '%s\n\nDocumentation preview: %s' "$marker" "$docs_url")"
+          comment_id="$(
+            gh api --paginate "repos/$GH_REPO/issues/$PULL_REQUEST_NUMBER/comments" \
+              --jq ".[] | select(.body | contains(\"$marker\")) | .id" \
+              | tail -n 1
+          )"
+          if [[ -n "$comment_id" ]]; then
+            gh api --method PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$body" >/dev/null
+          else
+            gh pr comment "$PULL_REQUEST_NUMBER" --body "$body"
+          fi
 
       - name: Show the directly requested preview
         if: github.repository != inputs.source_repository
