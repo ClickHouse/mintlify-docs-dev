@@ -26,6 +26,22 @@ export type UiStrings = {
     view: string;
     viewMarkdown: string;
   };
+  feedback: {
+    additionalFeedback: string;
+    close: string;
+    confusing: string;
+    error: string;
+    inaccurate: string;
+    missingInformation: string;
+    negativeLabel: string;
+    negativeQuestion: string;
+    other: string;
+    positiveLabel: string;
+    question: string;
+    submit: string;
+    submitting: string;
+    thankYou: string;
+  };
   navigation: {
     breadcrumb: string;
     chooseLanguage: string;
