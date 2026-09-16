@@ -32,7 +32,7 @@ async function sendFeedback(sentiment: Sentiment, reason = "", comment = "") {
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": "application/x-ndjson",
+      "Content-Type": "text/plain",
       "x-clickhouse-user": "docs_feedback",
       "x-clickhouse-key": "",
     },
