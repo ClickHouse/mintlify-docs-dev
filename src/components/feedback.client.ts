@@ -60,6 +60,7 @@ mount("[data-ch-feedback]", (root) => {
   const controller = new AbortController();
   const { signal } = controller;
   let submitted = false;
+  let submitting = false;
 
   const select = (button: HTMLButtonElement) => {
     for (const candidate of [positive, negative]) {
@@ -69,46 +70,57 @@ mount("[data-ch-feedback]", (root) => {
     }
   };
 
+  const syncDisabledState = () => {
+    const disabled = submitted || submitting;
+    positive.disabled = disabled;
+    negative.disabled = disabled;
+    submit.disabled = disabled;
+  };
+
   const finish = () => {
     submitted = true;
-    positive.disabled = true;
-    negative.disabled = true;
+    submitting = false;
+    syncDisabledState();
     question.textContent = root.dataset.thankYouLabel ?? "Thanks for your feedback!";
+    status.textContent = "";
     if (panel.matches(":popover-open")) panel.hidePopover();
   };
 
   const reportError = () => {
+    submitting = false;
+    syncDisabledState();
     status.textContent = root.dataset.errorLabel ?? "Feedback could not be sent. Please try again.";
-    positive.disabled = false;
-    negative.disabled = false;
-    submit.disabled = false;
+  };
+
+  const submitFeedback = (sentiment: Sentiment, reason = "", comment = "") => {
+    if (submitted || submitting) return;
+    submitting = true;
+    syncDisabledState();
+    status.textContent = root.dataset.submittingLabel ?? "Sending…";
+    void sendFeedback(sentiment, reason, comment).then(finish, reportError);
   };
 
   positive.addEventListener("click", () => {
-    if (submitted) return;
+    if (submitted || submitting) return;
     select(positive);
-    positive.disabled = true;
-    negative.disabled = true;
-    void sendFeedback("Positive").then(finish, reportError);
+    submitFeedback("Positive");
   }, { signal });
 
   negative.addEventListener("click", () => {
-    if (!submitted) select(negative);
+    if (!submitted && !submitting) select(negative);
   }, { signal });
 
   close.addEventListener("click", () => panel.hidePopover(), { signal });
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (submitted) return;
+    if (submitted || submitting) return;
     const data = new FormData(form);
-    submit.disabled = true;
-    status.textContent = root.dataset.submittingLabel ?? "Sending…";
-    void sendFeedback(
+    submitFeedback(
       "Negative",
       String(data.get("reason") ?? ""),
       String(data.get("comment") ?? ""),
-    ).then(finish, reportError);
+    );
   }, { signal });
 
   return () => controller.abort();
