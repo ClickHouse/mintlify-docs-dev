@@ -157,6 +157,33 @@ function initPersistence(root: HTMLElement): (() => void) | null {
     root;
   const hash = root.dataset.nbSidebarHash ?? "";
 
+  function handleLandingPageClick(event: MouseEvent): void {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const link = target.closest<HTMLAnchorElement>("[data-nb-sidebar-group-landing] > a");
+    if (!link || !root.contains(link) || link.target === "_blank") return;
+
+    // Selecting a group's landing page also selects that group. Open it before
+    // Astro captures disclosure state for the route swap; unrelated groups
+    // retain the exact state chosen by the user.
+    const group = link.closest<HTMLElement>("[data-nb-sidebar-group]");
+    const trigger = group && ownedTrigger(group);
+    if (trigger?.getAttribute("data-nb-state") === "closed") trigger.click();
+  }
+
+  root.addEventListener("click", handleLandingPageClick);
+
   function readState(): SidebarState {
     const groups = root.querySelectorAll<HTMLElement>("[data-nb-sidebar-group]");
     const open: Record<string, boolean> = {};
@@ -200,6 +227,7 @@ function initPersistence(root: HTMLElement): (() => void) | null {
 
   return () => {
     observer.disconnect();
+    root.removeEventListener("click", handleLandingPageClick);
     document.removeEventListener("visibilitychange", handleVisibility);
     document.removeEventListener("astro:before-swap", save);
     window.removeEventListener("pagehide", save);

@@ -177,7 +177,7 @@ export const KBExplorer = ({ index, featured = [] }) => {
                     </svg>
                   )}
                 </span>
-                <span className="text-sm text-black dark:text-white">{option}</span>
+                <span className="text-sm text-black dark:text-white">{option === "All" ? "Todos" : option}</span>
               </label>
             ))}
           </div>
@@ -298,7 +298,7 @@ export const KBExplorer = ({ index, featured = [] }) => {
                     <div>
                       <div className="space-y-3">
                         <Expandable
-                          label="Category"
+                          label="Categoría"
                           options={categoryOptions}
                           selectedOptions={selectedCategories}
                           onToggle={toggleCategory}
