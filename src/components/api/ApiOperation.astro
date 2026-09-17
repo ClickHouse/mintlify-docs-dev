@@ -1,4 +1,6 @@
 ---
+import ApiPlayground from "./ApiPlayground.astro";
+import type { ApiOperationPage as SourceOperation } from "@/lib/openapi";
 import ApiBody from "@/components/ui/api-layout/ApiBody.astro";
 import type { ApiSecurityScheme } from "@/components/ui/api-layout/auth";
 import { ApiCodeRail } from "@/components/ui/api-code-rail";
@@ -7,22 +9,15 @@ import type { ApiOperationPage } from "@cloudflare/nimbus-docs/api";
 interface Props {
   page: ApiOperationPage;
   authSchemes?: Record<string, ApiSecurityScheme>;
+  source: SourceOperation;
 }
 
-const { page, authSchemes = {} } = Astro.props;
-const editableParameters = page.parameters
-  .filter((group) => group.location === "path" || group.location === "query")
-  .flatMap((group) => group.fields.map((field) => ({ field, location: group.location })));
-const curlSample = page.samples.find((sample) => sample.lang === "curl")?.source ?? "";
+const { page, authSchemes = {}, source } = Astro.props;
 ---
 
 <div
   class="ch-api-operation"
   data-api-operation
-  data-method={page.method}
-  data-base-url={page.server ?? ""}
-  data-path={page.path}
-  data-curl-sample={curlSample}
 >
   <div class="ch-api-reference">
     <div class="ch-api-endpoint">
@@ -36,35 +31,14 @@ const curlSample = page.samples.find((sample) => sample.lang === "curl")?.source
           aria-label="Copy request URL"
         >Copy</button>
       </div>
-      <button type="button" class="ch-api-try" data-api-try aria-expanded="false">
-        <span data-api-try-label>Try it</span>
-        <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 2.25 9 6l-6 3.75z" fill="currentColor" /></svg>
-      </button>
+      <button type="button" class="ch-api-try" data-api-try aria-expanded="false" aria-controls="api-playground-panel" aria-haspopup="dialog">Try it out</button>
     </div>
 
-    <div class="ch-api-try-fields" hidden data-api-try-fields>
-      <label>
-        <span>Base URL</span>
-        <input value={page.server ?? ""} data-api-base />
-      </label>
-      {editableParameters.map(({ field, location }) => (
-        <label>
-          <span>
-            <code>{field.name}</code>
-            <small>{location}</small>
-            <small class:list={{ "is-required": field.required }}>{field.required ? "required" : "optional"}</small>
-          </span>
-          <input
-            placeholder={field.required ? "Required" : "Optional"}
-            data-api-parameter={field.name}
-            data-api-parameter-in={location}
-          />
-        </label>
-      ))}
-    </div>
-
+    <ApiPlayground source={source} />
+    <div class="ch-api-reference-body">
     {page.descriptionHtml && <div class="ch-api-description nb-md" set:html={page.descriptionHtml} />}
     <ApiBody page={page} authSchemes={authSchemes} embedded />
+    </div>
   </div>
 
   {(page.samples.length > 0 || page.responses.some((response) => response.example !== undefined)) && (
@@ -82,82 +56,128 @@ const curlSample = page.samples.find((sample) => sample.lang === "curl")?.source
 
 <script>
   import { mount } from "@cloudflare/nimbus-docs/client";
-
-  mount("[data-api-operation]", (element) => {
-    if (!(element instanceof HTMLElement)) return () => {};
+  mount("[data-api-operation]", container => {
+    const panel = container.querySelector<HTMLDialogElement>('#api-playground-panel')!;
+    const element = container.querySelector<HTMLElement>('[data-playground-root]')!;
+    const specElement = container.querySelector('[data-playground-config]')!;
+    const toggle = container.querySelector<HTMLButtonElement>('[data-api-try]')!;
+    const selector = panel.querySelector<HTMLButtonElement>('[data-playground-endpoint]')!;
+    const config = JSON.parse(specElement.textContent!);
+    let renderEndpoint: (() => void) | undefined;
+    let initialized = false;
+    let root: import("react-dom/client").Root | undefined;
     const controller = new AbortController();
-    let copiedTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const copyText = async (value: string, button: HTMLButtonElement) => {
+    const options = panel.querySelector<HTMLElement>('#playground-endpoints')!;
+    const choices = Array.from(options.querySelectorAll<HTMLButtonElement>('[data-endpoint-value]'));
+    const openOptions = () => {
+      const bounds = selector.getBoundingClientRect();
+      options.style.left = `${bounds.left}px`;
+      options.style.top = `${bounds.bottom + 6}px`;
+      options.style.width = `${Math.min(560, window.innerWidth - bounds.left - 16)}px`;
+      options.style.maxHeight = `${Math.max(120, window.innerHeight - bounds.bottom - 24)}px`;
+      options.showPopover();
+      (choices.find(choice => choice.dataset.endpointValue === selector.value) ?? choices[0])?.focus();
+    };
+    selector.addEventListener('click', () => options.matches(':popover-open') ? options.hidePopover() : openOptions(), { signal: controller.signal });
+    selector.addEventListener('keydown', event => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); openOptions(); }
+    }, { signal: controller.signal });
+    options.addEventListener('toggle', () => selector.setAttribute('aria-expanded', String(options.matches(':popover-open'))), { signal: controller.signal });
+    for (const choice of choices) choice.addEventListener('click', () => {
+      selector.value = choice.dataset.endpointValue!;
+      choices.forEach(item => item.setAttribute('aria-selected', String(item === choice)));
+      options.hidePopover(); renderEndpoint?.(); selector.focus();
+    }, { signal: controller.signal });
+    options.addEventListener('keydown', event => {
+      const index = choices.indexOf(document.activeElement as HTMLButtonElement);
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); options.hidePopover(); selector.focus(); }
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? choices.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length;
+        choices[next]?.focus();
+      }
+    }, { signal: controller.signal });
+    const status = panel.querySelector<HTMLElement>('[data-playground-status]')!;
+    const message = panel.querySelector<HTMLElement>('[data-playground-message]')!;
+    const retry = panel.querySelector<HTMLButtonElement>('[data-playground-retry]')!;
+    let loading = false;
+    const failed = (error: unknown) => {
+      initialized = false;
+      status.hidden = false;
+      retry.hidden = false;
+      message.setAttribute('role', 'alert');
+      message.textContent = `Unable to load API playground: ${error instanceof Error ? error.message : String(error)}`;
+    };
+    const initialize = async () => {
+      if (initialized || loading) return;
+      loading = true;
+      status.hidden = false;
+      retry.hidden = true;
+      message.setAttribute('role', 'status');
+      message.textContent = 'Loading API playground…';
       try {
-        await navigator.clipboard.writeText(value);
+        const [{ createRoot }, { createElement }, { default: Playground }, { flushSync }] = await Promise.all([
+          import('react-dom/client'), import('react'), import('./Playground'), import('react-dom'),
+        ]);
+        if (controller.signal.aborted) return;
+        root?.unmount();
+        root = createRoot(element, { onUncaughtError: failed });
+      renderEndpoint = () => {
+        const endpoint = config.endpoints.find((item: { id: string }) => item.id === selector.value);
+        if (!endpoint) throw new Error('Unknown playground endpoint');
+        const badge = panel.querySelector<HTMLElement>('[data-playground-method]')!;
+        panel.querySelector('[data-playground-endpoint-title]')!.textContent = endpoint.title;
+        badge.textContent = endpoint.method.toUpperCase();
+        badge.className = `pg-method is-${endpoint.method}`;
+        flushSync(() => root!.render(createElement(Playground, { key: endpoint.id, config: { ...config, ...endpoint } })));
+        panel.querySelector('.ch-playground-modal-body')!.scrollTop = 0;
+      };
+        initialized = true;
+        renderEndpoint();
+        status.hidden = initialized;
+      } catch (error) {
+        failed(error);
+      } finally {
+        loading = false;
+      }
+    };
+    retry.addEventListener('click', initialize, { signal: controller.signal });
+    toggle.addEventListener('click', () => {
+      panel.showModal();
+      toggle.setAttribute('aria-expanded', 'true');
+      void initialize();
+    }, { signal: controller.signal });
+    panel.querySelector('[data-playground-close]')!.addEventListener('click', () => panel.close(), { signal: controller.signal });
+    const outsidePanel = (event: PointerEvent | MouseEvent) => {
+      const bounds = panel.getBoundingClientRect();
+      return event.target === panel && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom);
+    };
+    let startedOutside = false;
+    panel.addEventListener('pointerdown', event => { startedOutside = outsidePanel(event); }, { signal: controller.signal });
+    panel.addEventListener('click', event => {
+      if (startedOutside && outsidePanel(event)) panel.close();
+      startedOutside = false;
+    }, { signal: controller.signal });
+
+    panel.addEventListener('close', () => {
+      if (options.matches(':popover-open')) options.hidePopover();
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.focus({ preventScroll: true });
+    }, { signal: controller.signal });
+    return () => { controller.abort(); root?.unmount(); if (panel.open) panel.close(); };
+  });
+  mount("[data-api-copy]", element => {
+    const controller = new AbortController();
+    element.addEventListener("click", async () => {
+      if (!(element instanceof HTMLElement)) return;
+      try {
+        await navigator.clipboard.writeText(element.dataset.apiCopy ?? "");
+        element.textContent = "Copied";
       } catch {
-        return;
+        element.textContent = "Copy failed";
       }
-      const label = button.textContent;
-      button.textContent = "Copied";
-      clearTimeout(copiedTimer);
-      copiedTimer = setTimeout(() => { button.textContent = label; }, 1200);
-    };
-
-    for (const button of element.querySelectorAll<HTMLButtonElement>("[data-api-copy]")) {
-      button.addEventListener(
-        "click",
-        () => void copyText(button.dataset.apiCopy ?? "", button),
-        { signal: controller.signal },
-      );
-    }
-
-    const fields = element.querySelector<HTMLElement>("[data-api-try-fields]");
-    const tryButton = element.querySelector<HTMLButtonElement>("[data-api-try]");
-    tryButton?.addEventListener(
-      "click",
-      () => {
-        if (!fields) return;
-        fields.hidden = !fields.hidden;
-        tryButton.setAttribute("aria-expanded", String(!fields.hidden));
-        const label = tryButton.querySelector<HTMLElement>("[data-api-try-label]");
-        if (label) label.textContent = fields.hidden ? "Try it" : "Close";
-      },
-      { signal: controller.signal },
-    );
-
-    const rebuild = () => {
-      let apiPath = element.dataset.path ?? "";
-      const query = new URLSearchParams();
-      for (const input of element.querySelectorAll<HTMLInputElement>("[data-api-parameter]")) {
-        if (!input.value) continue;
-        const name = input.dataset.apiParameter ?? "";
-        if (input.dataset.apiParameterIn === "path") {
-          apiPath = apiPath.replace(`{${name}}`, encodeURIComponent(input.value));
-        } else {
-          query.set(name, input.value);
-        }
-      }
-
-      const base = element.querySelector<HTMLInputElement>("[data-api-base]")?.value.replace(/\/$/, "")
-        ?? element.dataset.baseUrl
-        ?? "";
-      const queryString = query.size ? `?${query.toString()}` : "";
-      const url = `${base}${apiPath}${queryString}`;
-      const template = element.dataset.curlSample ?? "";
-      const updated = template.split("\n").map((line) => {
-        if (!line.includes("--url")) return line;
-        const indent = line.match(/^\s*/)?.[0] ?? "";
-        return `${indent}--url ${url}${line.trimEnd().endsWith("\\") ? " \\" : ""}`;
-      }).join("\n");
-      const code = element.querySelector<HTMLElement>('[data-nb-lang-panel][data-nb-lang-value="curl"] code');
-      if (code) code.textContent = updated;
-    };
-
-    for (const input of element.querySelectorAll<HTMLInputElement>("[data-api-try-fields] input")) {
-      input.addEventListener("input", rebuild, { signal: controller.signal });
-    }
-
-    return () => {
-      controller.abort();
-      clearTimeout(copiedTimer);
-    };
+    }, { signal: controller.signal });
+    return () => controller.abort();
   });
 </script>
 
@@ -170,6 +190,7 @@ const curlSample = page.samples.find((sample) => sample.lang === "curl")?.source
     margin-top: 1.25rem;
   }
 
+
   .ch-api-reference,
   .ch-api-console {
     min-width: 0;
@@ -180,9 +201,9 @@ const curlSample = page.samples.find((sample) => sample.lang === "curl")?.source
     align-items: center;
     gap: 0.5rem;
     padding: 0.375rem;
-    border: 1px solid var(--border);
+    border: 1px solid var(--color-border);
     border-radius: 0.75rem;
-    background: color-mix(in srgb, var(--muted) 58%, transparent);
+    background: color-mix(in srgb, var(--color-muted) 58%, transparent);
   }
 
   .ch-api-request-line {
@@ -193,9 +214,9 @@ const curlSample = page.samples.find((sample) => sample.lang === "curl")?.source
     align-items: center;
     gap: 0.65rem;
     padding: 0.45rem 0.65rem;
-    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
     border-radius: 0.55rem;
-    background: var(--background);
+    background: var(--color-background);
   }
 
   .ch-api-method {
@@ -230,7 +251,7 @@ const curlSample = page.samples.find((sample) => sample.lang === "curl")?.source
     margin-left: auto;
     border: 0;
     background: transparent;
-    color: var(--muted-foreground);
+    color: var(--color-muted-foreground);
   }
   .ch-api-try {
     display: inline-flex;
@@ -252,73 +273,29 @@ const curlSample = page.samples.find((sample) => sample.lang === "curl")?.source
 
   .ch-api-description {
     margin: 1.15rem 0 1.8rem;
-    color: var(--foreground);
+    color: var(--color-foreground);
     line-height: 1.75;
   }
 
-  .ch-api-try-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.7rem;
-    margin-top: 0.75rem;
-    padding: 0.85rem;
-    border: 1px solid var(--border);
-    border-radius: 0.65rem;
-    background: var(--card);
+  .ch-api-description :global(h2) {
+    margin: 2rem 0 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-foreground);
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.5;
   }
 
-  .ch-api-try-fields label,
-  .ch-api-try-fields label > span {
-    display: flex;
-  }
-
-  .ch-api-try-fields label {
-    min-width: 0;
-    flex-direction: column;
-    gap: 0.35rem;
-    color: var(--muted-foreground);
-    font-size: 0.7rem;
-  }
-
-  .ch-api-try-fields label > span {
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .ch-api-try-fields small {
-    font-size: 0.62rem;
-    color: var(--muted-foreground);
-  }
-
-  .ch-api-try-fields small.is-required { color: var(--danger); }
-  .ch-api-try-fields input {
-    min-width: 0;
-    padding: 0.5rem 0.55rem;
-    border: 1px solid var(--border);
-    border-radius: 0.4rem;
-    background: var(--background);
-    color: var(--foreground);
-    font: inherit;
-  }
-
-  .ch-api-try-fields[hidden] { display: none; }
-  .ch-api-console {
-    position: sticky;
-    top: 5rem;
-    margin-top: -12.35rem;
-  }
+  .ch-api-try { text-decoration: none; }
+  .ch-api-console { position: sticky; top: 5rem; margin-top: -10rem; }
   .ch-api-console :global(.nb-cr-layer) { margin: 0; }
-
   @media (max-width: 79.99rem) {
     .ch-api-operation { grid-template-columns: minmax(0, 1fr); }
     .ch-api-console { position: relative; top: auto; margin-top: 0; }
   }
-
   @media (max-width: 40rem) {
-    .ch-api-endpoint { align-items: stretch; }
     .ch-api-request-line { flex-wrap: wrap; }
     .ch-api-path { order: 2; width: 100%; }
-    .ch-api-copy { margin-left: auto; }
-    .ch-api-try-fields { grid-template-columns: minmax(0, 1fr); }
   }
 </style>

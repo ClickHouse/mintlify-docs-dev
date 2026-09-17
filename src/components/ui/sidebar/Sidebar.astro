@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 import type { HTMLAttributes } from "astro/types";
 import SidebarGroup from "./SidebarGroup.astro";
 import SidebarLink from "./SidebarLink.astro";
+import type { ApiSidebarMetadata } from "@/lib/sidebar-lazy";
 import type { SidebarItem } from "@cloudflare/nimbus-docs/types";
 import { sidebarHash } from "@cloudflare/nimbus-docs";
 
@@ -25,7 +26,7 @@ const { items, persist = false, currentLocale, class: className, ...attrs } = As
 const SIDEBAR_STATE_VERSION = 2;
 const hash = `${SIDEBAR_STATE_VERSION}:${sidebarHash(items)}`;
 type LazyGroup = Extract<SidebarItem, { type: "group" }> & { _lazyKey?: string };
-type IconItem = { icon?: string };
+type IconItem = ApiSidebarMetadata & { icon?: string };
 ---
 
 <div
@@ -55,11 +56,11 @@ type IconItem = { icon?: string };
         </li>
       ) : item.type === "external" ? (
         <li>
-          <SidebarLink label={item.label} href={item.href} badge={item.badge} icon={(item as IconItem).icon} target="_blank" rel="noopener" />
+          <SidebarLink label={item.label} href={item.href} badge={item.badge} icon={(item as IconItem).icon} statusBadge={(item as IconItem).statusBadge} deprecated={(item as IconItem).deprecated} target="_blank" rel="noopener" />
         </li>
       ) : (
         <li>
-          <SidebarLink label={item.label} href={item.href} isCurrent={item.isCurrent} badge={item.badge} icon={(item as IconItem).icon} />
+          <SidebarLink label={item.label} href={item.href} isCurrent={item.isCurrent} badge={item.badge} icon={(item as IconItem).icon} statusBadge={(item as IconItem).statusBadge} deprecated={(item as IconItem).deprecated} />
         </li>
       ),
     )}
