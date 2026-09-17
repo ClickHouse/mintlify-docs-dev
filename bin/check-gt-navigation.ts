@@ -119,6 +119,7 @@ function assertUiStrings(): void {
   for (const section of [
     "account",
     "actions",
+    "feedback",
     "navigation",
     "search",
     "status",
