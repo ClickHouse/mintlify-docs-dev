@@ -47,6 +47,12 @@ const messages = uiStrings(Astro.props.currentLocale);
         target.appendChild(clone);
       }
       target.querySelectorAll("[data-nb-sidebar-persist]").forEach((element) => element.removeAttribute("data-nb-sidebar-persist"));
+      // Cloning copies runtime IDs and binding markers, but not listeners.
+      // Let Nimbus create fresh ARIA targets and bind each copied disclosure.
+      target.querySelectorAll<HTMLElement>("[data-nb-collapsible]").forEach((element) => {
+        delete element.dataset.chBound;
+      });
+      target.querySelectorAll("[data-nb-collapsible-content]").forEach((element) => element.removeAttribute("id"));
       bindCollapsibles(target);
       const cleanups = [...target.querySelectorAll<HTMLElement>("[data-nb-sidebar]")].map(initSidebar);
       return () => cleanups.forEach((cleanup) => cleanup());
