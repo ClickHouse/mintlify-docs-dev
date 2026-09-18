@@ -31,7 +31,7 @@ function groupKey(group: HTMLElement): string {
   return labels.join("\u001f");
 }
 
-function initSidebar(root: HTMLElement): () => void {
+export function initSidebar(root: HTMLElement): () => void {
   const teardowns: Array<() => void> = [];
   const persist = root.hasAttribute("data-nb-sidebar-persist");
 
