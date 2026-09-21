@@ -1,0 +1,29 @@
+---
+import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
+import { loadGeneratedNavigation } from "@/lib/sidebar-navigation.server";
+import { sectionsFromConfig, mobileSectionsFromConfig } from "@/lib/sidebar-lazy";
+import { localeRouteName } from "@/util/locales";
+interface Props { currentLocale?: string; }
+const locale = localeRouteName(Astro.props.currentLocale ?? "en");
+const items = loadGeneratedNavigation(locale).items;
+const path = Astro.url.pathname;
+const menus = [sectionsFromConfig(items, path), mobileSectionsFromConfig(items, path)];
+---
+<div class="mb-4 flex flex-col gap-2" data-mobile-section-selectors>
+  {menus.filter((options) => options.length).map((options) => (
+    <details class="relative" name="mobile-navigation-section">
+      <summary class="flex cursor-pointer list-none items-center justify-between rounded-md border border-border px-3 py-2 text-sm text-foreground hover:bg-accent [&::-webkit-details-marker]:hidden">
+        <span>{(options.find((item) => item.isActive) ?? options[0]).label}</span>
+        <Icon name="ph:caret-down" class="size-4" />
+      </summary>
+      <div class="mt-1 rounded-md border border-border bg-popover p-1">
+        {options.map((item) => (
+          <a href={item.href} aria-current={item.isActive ? "true" : undefined}
+            class:list={["block rounded-sm px-3 py-2 text-sm no-underline hover:bg-accent hover:text-foreground", item.isActive ? "bg-accent text-foreground" : "text-muted-foreground"]}>
+            {item.label}
+          </a>
+        ))}
+      </div>
+    </details>
+  ))}
+</div>

@@ -222,3 +222,25 @@ export function sectionsFromConfig(items: ConfigItem[], currentPath: string): Ar
     isActive: tabIndex === activeTab,
   }));
 }
+
+/** Mobile selectors share the desktop rail's page-to-tab index. */
+export function mobileSectionsFromConfig(items: ConfigItem[], currentPath: string) {
+  const target = normPath(currentPath);
+  const index = navigationIndex(items);
+  const location = index.locations.get(target);
+  if (!location || location.tabIndex === 0) return [];
+  const tab = index.tabs[location.tabIndex];
+  const groups = location.tabIndex === 2
+    ? tab.items.flatMap((item) => "items" in item ? item.items : [item])
+    : tab.items;
+  const destination = (item: ConfigItem): string | undefined => {
+    const href = "link" in item ? item.link : item.landing;
+    if (href) return /^(https?:)?\/\//.test(href) ? href : withBase(href);
+    return "items" in item ? item.items.map(destination).find(Boolean) : undefined;
+  };
+  return groups.map((item) => ({
+    label: item.label,
+    href: destination(item),
+    isActive: internalLinks([item]).includes(target),
+  })).filter((item) => item.href);
+}

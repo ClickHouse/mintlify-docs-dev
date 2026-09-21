@@ -5,7 +5,7 @@
  * Named slots for overrides (all optional, defaults render otherwise):
  *   header, sidebar, toc, page-title, content-footer, pagination
  */
-import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
+import MobileNavigation from "@/components/MobileNavigation.astro";
 import BaseLayout from "./BaseLayout.astro";
 import Header from "@/components/Header.astro";
 import AskAiButton from "@/components/AskAiButton.astro";
@@ -320,28 +320,9 @@ const messages = uiStrings(currentLocale);
 
   {showSidebar && (
     /* Mobile sidebar — native <dialog> for free focus trap, escape, backdrop. */
-    <dialog
-      data-mobile-sidebar
-      data-state="closed"
-      class="group fixed inset-0 m-0 h-full w-full max-h-full max-w-full border-0 bg-transparent p-0 [&::backdrop]:bg-transparent"
-      aria-label={messages.navigation.site}
-    >
-      <div data-mobile-sidebar-panel class="h-full w-(--nb-sidebar-width) max-w-[85vw] -translate-x-full overflow-y-auto overscroll-contain border-r border-border bg-card transition-transform duration-250 ease-out group-data-[state=open]:translate-x-0 motion-reduce:transition-none">
-        <div class="sticky top-0 z-[1] flex items-center justify-between border-b border-border bg-card px-4 py-3">
-          <span class="font-semibold text-sm text-foreground">{messages.navigation.navigation}</span>
-          <button data-close-sidebar class="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" aria-label={messages.navigation.close}>
-            <Icon name="ph:x" class="w-5 h-5" />
-          </button>
-        </div>
-        <nav class="px-4 pb-8 pt-5">
-          {hasSidebar ? <slot name="sidebar" /> : (
-            /* Filled on first open by cloning the desktop rail (see script below),
-               instead of shipping the whole tree a second time. */
-            <div data-nb-drawer-target />
-          )}
-        </nav>
-      </div>
-    </dialog>
+    <MobileNavigation currentLocale={currentLocale} activeLocales={activeLocales}>
+      {hasSidebar ? <slot name="sidebar" /> : <div data-nb-drawer-target />}
+    </MobileNavigation>
   )}
 
   <script>
@@ -376,99 +357,6 @@ const messages = uiStrings(currentLocale);
     document.addEventListener("astro:page-load", initializeDynamicToc);
   </script>
 
-  <script>
-    import { mount, lockScroll, unlockScroll } from "@cloudflare/nimbus-docs/client";
-    import { bindCollapsibles } from "@/components/ui/sidebar/sidebar-lazy.client";
 
-    const CLOSE_DURATION_MS = 250;
-
-    function fillDrawer(dialog: HTMLDialogElement) {
-      const target = dialog.querySelector<HTMLElement>("[data-nb-drawer-target]");
-      const source = document.querySelector<HTMLElement>("#desktop-sidebar nav");
-      if (!target || !source || target.childElementCount > 0) return;
-      for (const child of Array.from(source.children)) {
-        const clone = child.cloneNode(true) as HTMLElement;
-        clone.removeAttribute("data-nb-sidebar-persist");
-        target.appendChild(clone);
-      }
-      bindCollapsibles(target);
-    }
-
-    // mount() re-binds on every astro:page-load and tears down on
-    // astro:before-swap, so the hamburger survives client-side navigation
-    // (a one-shot module script would go dead after the first swap).
-    mount("[data-mobile-sidebar]", (root) => {
-      const menuBtn = document.querySelector<HTMLElement>("[data-menu-btn]");
-      if (!(root instanceof HTMLDialogElement) || !menuBtn) return () => {};
-      const dialog = root;
-
-      const controller = new AbortController();
-      const { signal } = controller;
-      let closeTimer: ReturnType<typeof setTimeout> | undefined;
-
-      const openSidebar = () => {
-        if (closeTimer) {
-          clearTimeout(closeTimer);
-          closeTimer = undefined;
-        }
-        if (dialog.open) return;
-
-        fillDrawer(dialog);
-        dialog.showModal();
-        dialog.dataset.state = "closed";
-        lockScroll();
-
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            dialog.dataset.state = "open";
-          });
-        });
-
-        dialog.querySelector<HTMLElement>("[data-close-sidebar]")?.focus();
-      };
-
-      const closeSidebar = () => {
-        if (!dialog.open || dialog.dataset.state === "closing") return;
-
-        dialog.dataset.state = "closing";
-        closeTimer = setTimeout(() => {
-          dialog.close();
-        }, CLOSE_DURATION_MS);
-      };
-
-      menuBtn.addEventListener("click", openSidebar, { signal });
-
-      dialog.addEventListener("cancel", (event) => {
-        event.preventDefault();
-        closeSidebar();
-      }, { signal });
-
-      // Fires for Escape, close button, and backdrop click.
-      dialog.addEventListener("close", () => {
-        if (closeTimer) {
-          clearTimeout(closeTimer);
-          closeTimer = undefined;
-        }
-
-        dialog.dataset.state = "closed";
-        unlockScroll();
-        menuBtn.focus();
-      }, { signal });
-
-      dialog.querySelector("[data-close-sidebar]")
-        ?.addEventListener("click", closeSidebar, { signal });
-
-      dialog.addEventListener("click", (e) => {
-        if (e.target === dialog) closeSidebar();
-      }, { signal });
-
-      return () => {
-        controller.abort();
-        if (closeTimer) clearTimeout(closeTimer);
-        // A swap while open never fires `close`; balance the scroll lock.
-        if (dialog.open) unlockScroll();
-      };
-    });
-  </script>
 
 </BaseLayout>
