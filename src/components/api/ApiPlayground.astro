@@ -1,0 +1,47 @@
+---
+import { getApiOperations, getRoutedApiOperation, type ApiOperationPage } from '@/lib/openapi';
+import './playground.css';
+import Button from '@/components/ui/button/Button.astro';
+interface Props { source: ApiOperationPage }
+const { source } = Astro.props;
+const endpoints = await Promise.all(getApiOperations(source.collection).map(async page => {
+  const { view } = await getRoutedApiOperation(page.collection, page.tagSlug, page.slug);
+  return ({
+  id: `${page.method}:${page.path}`, title: page.title, method: page.method, path: page.path,
+  tag: page.tag, operation: page.operation,
+  descriptionHtml: view.descriptionHtml,
+  bodyExample: view.example?.value,
+  responses: view.responses.map(({status, example}) => ({status, example})),
+  parameters: [...new Map(page.pathParameters.map(p => [p.$ref ?? `${p.in}:${p.name}`, p])).values()],
+}); }));
+const tags = [...new Set(endpoints.map(endpoint => endpoint.tag))];
+const parameters = [...new Map(source.pathParameters.map(p => [p.$ref ?? `${p.in}:${p.name}`, p])).values()];
+const config = {
+  endpoints, title: source.title, method: source.method, path: source.path,
+  document: { ...source.document, paths: {} }, operation: source.operation, parameters,
+};
+---
+<dialog id="api-playground-panel" class="ch-api-playground" aria-labelledby="api-playground-title">
+  <header class="ch-playground-modal-header">
+    <div class="ch-playground-endpoint-picker">
+      <span id="api-playground-title" class="pg-visually-hidden">API playground</span>
+      <button type="button" id="playground-endpoint" data-playground-endpoint value={`${source.method}:${source.path}`} aria-label="API endpoint" aria-haspopup="listbox" aria-expanded="false" aria-controls="playground-endpoints">
+        <span data-playground-method class={`pg-method is-${source.method}`}>{source.method.toUpperCase()}</span>
+        <span data-playground-endpoint-title>{source.title}</span><svg class="pg-select-chevron" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      <div id="playground-endpoints" class="pg-endpoint-options" popover="auto" role="listbox" aria-label="API endpoints">
+        {tags.map(tag => <div role="group" aria-label={tag}><div class="pg-endpoint-group" aria-hidden="true">{tag}</div>{endpoints.filter(endpoint => endpoint.tag === tag).map(endpoint => <button type="button" role="option" tabindex="-1" aria-selected={endpoint.method === source.method && endpoint.path === source.path} data-endpoint-value={endpoint.id}><span class={`pg-method is-${endpoint.method}`}>{endpoint.method.toUpperCase()}</span><span>{endpoint.title}</span></button>)}</div>)}
+      </div>
+    </div>
+    <div data-playground-toolbar></div>
+    <Button variant="secondary" shape="square" data-playground-close aria-label="Close API playground" autofocus>✕</Button>
+  </header>
+  <div class="ch-playground-modal-body">
+  <div data-playground-status class="p-6" hidden>
+    <p data-playground-message role="status"></p>
+    <Button data-playground-retry hidden>Retry</Button>
+  </div>
+  <div data-playground-root></div>
+  <script is:inline type="application/json" data-playground-config set:html={JSON.stringify(config).replace(/</g, '\\u003c')} />
+  </div>
+</dialog>

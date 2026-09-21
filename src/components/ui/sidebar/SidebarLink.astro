@@ -12,9 +12,11 @@ interface Props extends HTMLAttributes<"a"> {
   isCurrent?: boolean;
   badge?: SidebarBadge;
   icon?: string;
+  statusBadge?: string;
+  deprecated?: boolean;
 }
 
-const { label, href, isCurrent, badge, icon, class: className, ...attrs } = Astro.props;
+const { label, href, isCurrent, badge, icon, statusBadge, deprecated, class: className, ...attrs } = Astro.props;
 const isMethodBadge = typeof badge === "object" && /^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/.test(badge.text);
 const iconName = icon && !icon.startsWith("/")
   ? icon.includes(":")
@@ -38,12 +40,25 @@ const imageIcon = icon?.startsWith("/") ? inlinePublicIcon(icon) : undefined;
   ) : (
     <Icon name={iconName!} class="shrink-0 h-4 w-4 text-muted-foreground" />
   ))}
-  {isMethodBadge && typeof badge === "object" && <Badge text={badge.text} variant={badge.variant} class="ch-sidebar-method" />}
-  <span class="break-words">{label}</span>
-  {badge && !isMethodBadge &&
-    (typeof badge === "string" ? (
-      <Badge text={badge} />
-    ) : (
-      <Badge text={badge.text} variant={badge.variant} />
-    ))}
+  {isMethodBadge && typeof badge === "object" && (statusBadge || deprecated) ? (
+    <span class="flex min-w-0 flex-col gap-1">
+      <span class="flex flex-wrap items-center gap-1">
+        <Badge text={badge.text} variant={badge.variant} class="ch-sidebar-method" />
+        {statusBadge && <Badge text={statusBadge} variant="info" />}
+        {deprecated && <Badge text="deprecated" variant="warning" />}
+      </span>
+      <span class:list={["break-words", deprecated && "line-through"]}>{label}</span>
+    </span>
+  ) : (
+    <>
+      {isMethodBadge && typeof badge === "object" && <Badge text={badge.text} variant={badge.variant} class="ch-sidebar-method" />}
+      <span class="break-words">{label}</span>
+      {badge && !isMethodBadge &&
+        (typeof badge === "string" ? (
+          <Badge text={badge} />
+        ) : (
+          <Badge text={badge.text} variant={badge.variant} />
+        ))}
+    </>
+  )}
 </a>

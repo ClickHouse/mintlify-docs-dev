@@ -64,6 +64,7 @@ export interface OpenApiOperation {
   deprecated?: boolean;
   parameters?: OpenApiParameter[];
   requestBody?: {
+    $ref?: string;
     required?: boolean;
     description?: string;
     content?: Record<string, OpenApiMediaType>;
@@ -258,6 +259,27 @@ export function getApiOperationByPointer(collection: ApiCollection, pointer: str
   return operation;
 }
 
+/** Describe Cloud API permissions without flattening alternative security requirements. */
+export function cloudPermissionMarkdown(security: Array<Record<string, string[]>>): string {
+  const alternatives = security.map((requirement) => requirement.basicAuth ?? []);
+  if (!alternatives.some((permissions) => permissions.length > 0)) return "";
+
+  const descriptions = alternatives.map((permissions) => {
+    if (permissions.length === 0) return "No additional API-key permissions are required for this alternative.";
+    // Use a delimiter longer than any backtick run in the spec-provided value.
+    const names = permissions.map((permission) => {
+      const delimiter = "`".repeat(Math.max(0, ...(permission.match(/`+/g) ?? []).map((run) => run.length)) + 1);
+      return `${delimiter} ${permission} ${delimiter}`;
+    });
+    return `The API key must have the ${names.join(" and ")} ${names.length === 1 ? "permission" : "permissions"}.`;
+  });
+
+  const body = descriptions.length === 1
+    ? descriptions[0]
+    : `One of the following alternatives must be satisfied:\n\n${descriptions.map((description) => `- ${description}`).join("\n")}`;
+  return `## Permission\n\n${body}`;
+}
+
 async function getNativeApiModel(collection: ApiCollection): Promise<ApiModel> {
   const cached = nativeModelCache.get(collection);
   if (cached) return cached;
@@ -268,6 +290,19 @@ async function getNativeApiModel(collection: ApiCollection): Promise<ApiModel> {
   // child. The docs sidebar preserves that Mintlify hierarchy; Nimbus's API
   // model does not need it here and otherwise reports self-parent warnings.
   delete document["x-tagGroups"];
+
+  // Cloud carries API-key permissions in Basic auth scopes. Include them in the
+  // description before building the model so HTML and Markdown share the content.
+  if (collection === "cloud") {
+    for (const pathItem of Object.values(document.paths)) {
+      for (const method of HTTP_METHODS) {
+        const operation = pathItem[method];
+        if (!operation) continue;
+        const permissions = cloudPermissionMarkdown(operation.security ?? document.security ?? []);
+        if (permissions) operation.description = [operation.description, permissions].filter(Boolean).join("\n\n");
+      }
+    }
+  }
 
   const promise = buildApiModel({
     collection: `${collection}-api`,

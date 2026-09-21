@@ -14,8 +14,13 @@ import { withBase } from "./base";
 /** Groups with fewer children than this are rendered inline even when collapsed. */
 export const LAZY_MIN_CHILDREN = 6;
 
+export interface ApiSidebarMetadata {
+  statusBadge?: string;
+  deprecated?: boolean;
+}
+
 export type ConfigItem =
-  | { label: string; link: string; badge?: import("@cloudflare/nimbus-docs/types").SidebarBadge; icon?: string; hidden?: boolean }
+  | ApiSidebarMetadata & { label: string; link: string; badge?: import("@cloudflare/nimbus-docs/types").SidebarBadge; icon?: string; hidden?: boolean }
   | { label: string; items: ConfigItem[]; collapsed?: boolean; segment?: string; landing?: string; icon?: string };
 
 export function slugifyLabel(label: string): string {
@@ -153,8 +158,8 @@ export function toRendered(items: ConfigItem[], path: string[]): SidebarItem[] {
     const href = /^(https?:)?\/\//.test(item.link) ? item.link : withBase(item.link);
     return [
       /^(https?:)?\/\//.test(item.link)
-        ? ({ type: "external", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem)
-        : ({ type: "link", label: item.label, href, order, badge: item.badge, icon: item.icon } as SidebarItem),
+        ? ({ type: "external", label: item.label, href, order, badge: item.badge, statusBadge: item.statusBadge, deprecated: item.deprecated, icon: item.icon } as SidebarItem)
+        : ({ type: "link", label: item.label, href, order, badge: item.badge, statusBadge: item.statusBadge, deprecated: item.deprecated, icon: item.icon } as SidebarItem),
     ];
   });
 }

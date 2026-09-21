@@ -200,7 +200,7 @@ function noteOrder(groupPath: string, pages: string[]) {
 
 // ---------------------------------------------------------------- conversion
 type NimbusItem =
-  | { label: string; link: string; badge?: NavBadge; icon?: string; hidden?: boolean }
+  | { label: string; link: string; badge?: NavBadge; statusBadge?: string; deprecated?: boolean; icon?: string; hidden?: boolean }
   | { label: string; items: NimbusItem[]; collapsed?: boolean; segment?: string; landing?: string; icon?: string };
 
 function convertPages(pages: Json[], groupPath: string): NimbusItem[] {
@@ -398,6 +398,28 @@ const items: NimbusItem[] = tabs.map((t) => {
   skipped.push(`tab ${label}: unsupported shape`);
   return { label, items: [], collapsed: false };
 });
+
+// Enrich every API link, whether authored as a page, operation pointer, or tag group.
+// Keys use pageLink so localized navigation receives the same operation metadata.
+if (!previewRemote) {
+  const apiPages = new Map(
+    [...getApiOperations("cloud"), ...getApiOperations("clickstack")]
+      .map((operation) => [pageLink(operation.route), operation]),
+  );
+  const enrichApiLinks = (nodes: NimbusItem[]) => {
+    for (const item of nodes) {
+      if ("items" in item) {
+        enrichApiLinks(item.items);
+        continue;
+      }
+      const operation = apiPages.get(item.link);
+      if (!operation) continue;
+      item.statusBadge = operation.badge;
+      item.deprecated = operation.operation.deprecated || undefined;
+    }
+  };
+  enrichApiLinks(items);
+}
 
 const outFile = path.join(outDir, locale ? `sidebar.items.${locale}.json` : "sidebar.items.json");
 fs.writeFileSync(outFile, JSON.stringify(items, null, 2) + "\n");

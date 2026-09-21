@@ -47,12 +47,6 @@ const breadcrumbs = [
   { label: source.tag, href: tagRoute },
   { label: source.tag, href: browserPath },
 ];
-const headings = [
-  ...(view.auth.length ? [{ depth: 2, text: "Authorizations", slug: "authorizations" }] : []),
-  ...view.parameters.map((group) => ({ depth: 2, text: group.label, slug: group.anchor })),
-  ...(view.body.length || view.bodyUnion ? [{ depth: 2, text: "Request body", slug: "request-body" }] : []),
-  ...(view.responses.length ? [{ depth: 2, text: "Response", slug: "response" }] : []),
-];
 const markdownPath = withBase(`/${source.route}.md`);
 const markdownUrl = Astro.site ? new URL(markdownPath, Astro.site).href : markdownPath;
 const language = localeInfo(currentLocale);
@@ -69,6 +63,9 @@ const alternates = Astro.site
       })),
     ]
   : [];
+const issueUrl = new URL("https://github.com/ClickHouse/ClickHouse/issues/new");
+issueUrl.searchParams.set("template", "60_documentation-issue.yaml");
+issueUrl.searchParams.set("page", browserPath);
 const fallbackNotice = notTranslatedNotice(currentLocale);
 ---
 
@@ -76,10 +73,16 @@ const fallbackNotice = notTranslatedNotice(currentLocale);
   title={view.title}
   description={view.description}
   sidebar={sidebar}
-  headings={headings}
+  headings={[
+    ...(view.auth.length ? [{ depth: 2, text: "Authorizations", slug: "authorizations" }] : []),
+    ...view.parameters.map(group => ({ depth: 2, text: group.label, slug: group.anchor })),
+    ...(view.body.length || view.bodyUnion ? [{ depth: 2, text: "Request body", slug: "request-body" }] : []),
+    ...(view.responses.length ? [{ depth: 2, text: "Response", slug: "response" }] : []),
+  ]}
   breadcrumbs={breadcrumbs}
   prevNext={prevNext}
   mode="wide"
+  showPageActions={false}
   markdownUrl={markdownUrl}
   editUrl={source.editUrl}
   lang={language.hreflang}
@@ -101,10 +104,10 @@ const fallbackNotice = notTranslatedNotice(currentLocale);
       {fallbackNotice.message}
     </Aside>
   )}
-  <ApiOperation
-    page={view}
-    authSchemes={source.document.components?.securitySchemes}
-  />
+  <ApiOperation page={view} source={source} authSchemes={source.document.components?.securitySchemes} />
+  <div slot="content-footer" class="mt-8 text-sm">
+    <a href={issueUrl.href}>Report an issue</a>
+  </div>
 </DocsLayout>
 
 <style>
@@ -128,18 +131,6 @@ const fallbackNotice = notTranslatedNotice(currentLocale);
   @media (min-width: 1280px) {
     .ch-api-heading {
       max-width: calc(52% - 2.5rem);
-    }
-
-    :global(.ch-document-grid-wide:has(.ch-api-operation) .ch-title-page-actions) {
-      max-width: calc(52% - 2.5rem);
-      margin-top: 6px;
-      flex-wrap: nowrap;
-      gap: 0;
-      font-size: 0.72rem;
-    }
-
-    :global(.ch-document-grid-wide:has(.ch-api-operation) .ch-title-page-actions > :is(a, button)) {
-      padding-inline: 4px;
     }
 
     :global(.ch-document-grid-wide:has(.ch-api-operation) .docs-content) {
