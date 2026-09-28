@@ -63,6 +63,10 @@ if (buildInput.clickhouseVersion && buildInput.clickhouseVersion !== manifest.cl
 
 fs.writeFileSync(outputPath("build-input.json"), descriptorBytes);
 fs.writeFileSync(outputPath("manifest.json"), manifestBytes);
+// `reference-site.json` describes the versioned route and navigation contract.
+// It is deliberately separate from the system-table catalogs, so it is not a
+// manifest catalog entry but is nevertheless a required renderer input.
+await download(`${buildInput.snapshot}/metadata/reference-site.json`, outputPath("metadata/reference-site.json"));
 for (const catalog of manifest.catalogs) {
   assertRelativePath(catalog.path, `catalog path for ${catalog.name}`);
   await download(`${buildInput.snapshot}/${catalog.path}`, outputPath(catalog.path));
