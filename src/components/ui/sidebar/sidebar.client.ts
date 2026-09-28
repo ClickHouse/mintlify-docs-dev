@@ -8,6 +8,34 @@ interface SidebarState {
   hash: string;
   open: Record<string, boolean>;
   scroll: number;
+  /** Retain an active filter while following a result to another page. */
+  filter?: string;
+}
+
+function readStoredState(): SidebarState | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Partial<SidebarState>;
+    return typeof value.hash === "string" && typeof value.open === "object" && typeof value.scroll === "number"
+      ? value as SidebarState
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveFilter(root: HTMLElement, filter: string): void {
+  const hash = root.dataset.nbSidebarHash ?? "";
+  if (!hash) return;
+  try {
+    const previous = readStoredState();
+    const state: SidebarState = previous?.hash === hash
+      ? previous
+      : { hash, open: {}, scroll: 0 };
+    state.filter = filter || undefined;
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {}
 }
 
 function ownedTrigger(group: HTMLElement): HTMLElement | undefined {
@@ -17,6 +45,11 @@ function ownedTrigger(group: HTMLElement): HTMLElement | undefined {
 
 function ownedLabel(group: HTMLElement): HTMLElement | undefined {
   return Array.from(group.querySelectorAll<HTMLElement>("[data-nb-sidebar-group-label]"))
+    .find((candidate) => candidate.closest("[data-nb-sidebar-group]") === group);
+}
+
+function ownedContent(group: HTMLElement): HTMLElement | undefined {
+  return Array.from(group.querySelectorAll<HTMLElement>("[data-nb-collapsible-content]"))
     .find((candidate) => candidate.closest("[data-nb-sidebar-group]") === group);
 }
 
@@ -60,7 +93,9 @@ function initFilter(root: HTMLElement): (() => void) | null {
   if (!inputElement) return null;
 
   function handleInput() {
-    const query = inputElement!.value.trim().toLowerCase();
+    const rawQuery = inputElement!.value.trim();
+    const query = rawQuery.toLowerCase();
+    saveFilter(root, rawQuery);
     if (!query) {
       resetFilter(root);
       return;
@@ -79,25 +114,68 @@ function initFilter(root: HTMLElement): (() => void) | null {
   inputElement.addEventListener("input", handleInput);
   inputElement.addEventListener("keydown", handleKeydown);
 
+  // Astro replaces the page while following a filtered result. Restore the
+  // query on the replacement rail so the user stays in the same navigation
+  // context instead of being dropped into an unfiltered tree.
+  const storedFilter = readStoredState();
+  const savedFilter = storedFilter && storedFilter.hash === root.dataset.nbSidebarHash
+    ? storedFilter.filter
+    : undefined;
+  if (savedFilter) {
+    inputElement.value = savedFilter;
+    handleInput();
+  }
+
   return () => {
     inputElement.removeEventListener("input", handleInput);
     inputElement.removeEventListener("keydown", handleKeydown);
-    resetFilter(root);
+    // Teardown also runs during Astro route swaps. A persisted reference
+    // explorer is deliberately retained through those swaps, so mutating its
+    // disclosure state here would make all of its top-level entries jump.
+    // `resetFilter` is reserved for an explicit user clear instead.
   };
+}
+
+function collapseAllGroups(root: HTMLElement): void {
+  // Clearing a filter returns the explorer to a compact starting point. Do
+  // not retain the collection of branches that were opened only to reveal
+  // matches (or an active branch that was opened by a route transition).
+  // Descendants must close before their parents; a collapsed parent marks its
+  // panel inert, which would otherwise prevent a nested trigger from closing.
+  Array.from(root.querySelectorAll<HTMLElement>("[data-nb-sidebar-group]"))
+    .reverse()
+    .forEach((group) => {
+      const trigger = ownedTrigger(group);
+      // Section headings such as "Reference" use the same container markup
+      // but intentionally have no trigger. They are the always-visible
+      // wrapper around the actual expandable tabs, not a tab themselves.
+      if (!trigger) return;
+      if (trigger?.getAttribute("data-nb-state") === "open") trigger.click();
+      // Active pages initially open their ancestors on the server. Clearing a
+      // filter is an explicit request to leave that state, so enforce the
+      // collapsed DOM state after the disclosure callback has run.
+      group.setAttribute("data-nb-default-open", "false");
+      trigger.setAttribute("data-nb-state", "closed");
+      trigger.setAttribute("aria-expanded", "false");
+      ownedLabel(group)?.setAttribute("data-nb-state", "closed");
+      const content = ownedContent(group);
+      content?.setAttribute("data-nb-state", "closed");
+      content?.toggleAttribute("inert", true);
+      group.removeAttribute("data-nb-opened-by-filter");
+    });
 }
 
 function resetFilter(root: HTMLElement): void {
   root.querySelectorAll<HTMLElement>("[data-nb-sidebar-hidden]").forEach((el) => {
     el.removeAttribute("data-nb-sidebar-hidden");
   });
-  // Reset groups opened by the filter back to their saved state.
-  root
-    .querySelectorAll<HTMLElement>("[data-nb-sidebar-group][data-nb-opened-by-filter]")
-    .forEach((group) => {
-      const trigger = ownedTrigger(group);
-      trigger?.click();
-      group.removeAttribute("data-nb-opened-by-filter");
-    });
+  collapseAllGroups(root);
+  // Disclosure bindings and the cloned mobile rail can finish their own
+  // updates later in this event turn. Make the explicit reset win after they
+  // have settled.
+  requestAnimationFrame(() => {
+    if (root.isConnected) collapseAllGroups(root);
+  });
 }
 
 function applyFilter(root: HTMLElement, query: string): void {
@@ -144,6 +222,44 @@ function openGroup(group: HTMLElement): void {
   trigger.click();
 }
 
+function normalizePagePath(value: string): string {
+  try {
+    return new URL(value, window.location.origin).pathname.replace(/\/+$/, "") || "/";
+  } catch {
+    return value.replace(/\/+$/, "") || "/";
+  }
+}
+
+/**
+ * A snapshot reference rail is preserved across Astro route swaps to avoid
+ * rebuilding its expanded branches (which visibly moves top-level rows).
+ * Keep its lightweight active marker current without changing disclosure
+ * state or the tree's dimensions.
+ */
+function syncPersistedSidebarCurrentPage(root: HTMLElement): void {
+  const currentPath = normalizePagePath(window.location.pathname);
+  const links = root.querySelectorAll<HTMLAnchorElement>(
+    "[data-nb-sidebar-link], [data-nb-sidebar-group-landing] > a",
+  );
+  links.forEach((link) => {
+    const current = normalizePagePath(link.href) === currentPath;
+    if (current) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+
+    const landing = link.closest<HTMLElement>("[data-nb-sidebar-group-landing]");
+    if (landing) {
+      landing.classList.toggle("bg-accent", current);
+      landing.classList.toggle("text-foreground", current);
+      landing.classList.toggle("font-semibold", current);
+    }
+  });
+
+  root.querySelectorAll<HTMLElement>("[data-nb-sidebar-group]").forEach((group) => {
+    const hasCurrent = Boolean(group.querySelector("[aria-current='page']"));
+    ownedLabel(group)?.classList.toggle("is-active", hasCurrent);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Persistence (open state + scroll)
 // ---------------------------------------------------------------------------
@@ -156,6 +272,25 @@ function initPersistence(root: HTMLElement): (() => void) | null {
     root.closest<HTMLElement>("aside") ??
     root;
   const hash = root.dataset.nbSidebarHash ?? "";
+
+  function preserveDisclosureDefault(event: MouseEvent): void {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const trigger = target.closest<HTMLElement>("[data-nb-collapsible-trigger]");
+    const group = trigger?.closest<HTMLElement>("[data-nb-sidebar-group]");
+    if (!trigger || !group || !root.contains(group)) return;
+
+    // Nimbus remounts disclosure controls after an Astro navigation. Preserve
+    // the user's selection as their new default so a persisted tree does not
+    // silently collapse the branch that contains the destination page.
+    requestAnimationFrame(() => {
+      if (!group.isConnected) return;
+      group.setAttribute(
+        "data-nb-default-open",
+        trigger.getAttribute("data-nb-state") === "open" ? "true" : "false",
+      );
+    });
+  }
 
   function handleLandingPageClick(event: MouseEvent): void {
     if (
@@ -183,6 +318,7 @@ function initPersistence(root: HTMLElement): (() => void) | null {
   }
 
   root.addEventListener("click", handleLandingPageClick);
+  root.addEventListener("click", preserveDisclosureDefault);
 
   function readState(): SidebarState {
     const groups = root.querySelectorAll<HTMLElement>("[data-nb-sidebar-group]");
@@ -193,7 +329,13 @@ function initPersistence(root: HTMLElement): (() => void) | null {
       // open. Recording them as open also repairs state written by older code.
       open[groupKey(group)] = !trigger || trigger.getAttribute("data-nb-state") === "open";
     });
-    return { hash, open, scroll: scrollHost.scrollTop };
+    const previous = readStoredState();
+    return {
+      hash,
+      open,
+      scroll: scrollHost.scrollTop,
+      filter: previous?.hash === hash ? previous.filter : undefined,
+    };
   }
 
   function save() {
@@ -228,6 +370,7 @@ function initPersistence(root: HTMLElement): (() => void) | null {
   return () => {
     observer.disconnect();
     root.removeEventListener("click", handleLandingPageClick);
+    root.removeEventListener("click", preserveDisclosureDefault);
     document.removeEventListener("visibilitychange", handleVisibility);
     document.removeEventListener("astro:before-swap", save);
     window.removeEventListener("pagehide", save);
@@ -265,3 +408,13 @@ function initPersistence(root: HTMLElement): (() => void) | null {
 })();
 
 mount("[data-nb-sidebar]", initSidebar);
+
+if (!document.documentElement.hasAttribute("data-nb-sidebar-current-bound")) {
+  document.documentElement.setAttribute("data-nb-sidebar-current-bound", "");
+  const sync = () => document
+    .querySelectorAll<HTMLElement>("[data-nb-sidebar-persist]")
+    .forEach(syncPersistedSidebarCurrentPage);
+  document.addEventListener("astro:after-swap", sync);
+  document.addEventListener("astro:page-load", sync);
+  sync();
+}

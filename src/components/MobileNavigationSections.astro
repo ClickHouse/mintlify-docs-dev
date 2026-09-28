@@ -7,7 +7,13 @@ interface Props { currentLocale?: string; }
 const locale = localeRouteName(Astro.props.currentLocale ?? "en");
 const items = loadGeneratedNavigation(locale).items;
 const path = Astro.url.pathname;
-const menus = [sectionsFromConfig(items, path), mobileSectionsFromConfig(items, path)];
+// Keep the mobile section picker aligned with the new reference landing URL
+// while the generated navigation contract still contains /reference/home.
+const referenceLanding = <T extends { href: string }>(options: T[]) => options.map((item) => ({
+  ...item,
+  href: item.href.replace(/\/reference\/home$/, "/reference"),
+}));
+const menus = [sectionsFromConfig(items, path), mobileSectionsFromConfig(items, path)].map(referenceLanding);
 ---
 <div class="mb-4 flex flex-col gap-2" data-mobile-section-selectors>
   {menus.filter((options) => options.length).map((options) => (
