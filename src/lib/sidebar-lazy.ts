@@ -216,6 +216,47 @@ export function buildRailFromConfig(items: ConfigItem[], currentPath: string, ke
   return rendered;
 }
 
+/**
+ * Render one complete navigation tree instead of selecting a rail for the
+ * active top-level section. Reference is intentionally a single explorer:
+ * changing from Data Types to String must never replace its tree with a
+ * category-specific rail. `keyPrefix` gives its lazy fragments their own
+ * namespace, separate from the authored documentation navigation.
+ */
+export function buildFullRailFromConfig(items: ConfigItem[], currentPath: string, keyPrefix: string[] = []): SidebarItem[] {
+  const target = normPath(currentPath);
+  const index = navigationIndex(items);
+  const tab = index.tabs[0];
+  if (!tab) return [];
+
+  const root = {
+    type: "group" as const,
+    label: tab.label,
+    collapsed: false,
+    children: toRendered(tab.items, keyPrefix),
+  } as SidebarItem;
+
+  const mark = (nodes: SidebarItem[]): boolean => {
+    let any = false;
+    for (const node of nodes) {
+      if (node.type === "link") {
+        if (normPath(node.href) === target) {
+          (node as { isCurrent?: boolean }).isCurrent = true;
+          any = true;
+        }
+      } else if (node.type === "group") {
+        const indexHit = Boolean(node.indexHref && normPath(node.indexHref) === target);
+        if (indexHit) node.indexIsCurrent = true;
+        if (indexHit || mark(node.children)) any = true;
+      }
+    }
+    return any;
+  };
+
+  mark([root]);
+  return [root];
+}
+
 /** Top-level sections (tabs) for the header, from the generated config tree. */
 export function sectionsFromConfig(items: ConfigItem[], currentPath: string): Array<{ label: string; href: string; isActive: boolean }> {
   const target = normPath(currentPath);
@@ -229,7 +270,7 @@ export function sectionsFromConfig(items: ConfigItem[], currentPath: string): Ar
 }
 
 /** Mobile selectors share the desktop rail's page-to-tab index. */
-export function mobileSectionsFromConfig(items: ConfigItem[], currentPath: string) {
+export function mobileSectionsFromConfig(items: ConfigItem[], currentPath: string): Array<{ label: string; href: string; isActive: boolean }> {
   const target = normPath(currentPath);
   const index = navigationIndex(items);
   const location = index.locations.get(target);
@@ -247,5 +288,5 @@ export function mobileSectionsFromConfig(items: ConfigItem[], currentPath: strin
     label: item.label,
     href: destination(item),
     isActive: internalLinks([item]).includes(target),
-  })).filter((item) => item.href);
+  })).filter((item): item is { label: string; href: string; isActive: boolean } => Boolean(item.href));
 }

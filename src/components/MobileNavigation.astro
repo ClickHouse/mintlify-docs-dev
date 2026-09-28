@@ -40,10 +40,20 @@ const messages = uiStrings(Astro.props.currentLocale);
     function fillDrawer(dialog: HTMLDialogElement) {
       const target = dialog.querySelector<HTMLElement>("[data-nb-drawer-target]");
       const source = document.querySelector<HTMLElement>("#desktop-sidebar nav");
-      if (!target || !source || target.childElementCount > 0) return;
+      if (!target || !source) return;
+      // Astro preserves the dialog across client-side navigations. The source
+      // rail changes its current link and can change its shape, so never keep
+      // an old cloned tree in the drawer.
+      target.replaceChildren();
       for (const child of Array.from(source.children)) {
         const clone = child.cloneNode(true) as HTMLElement;
         clone.removeAttribute("data-nb-sidebar-persist");
+        // The drawer is an ephemeral clone of the desktop rail. Never copy
+        // Astro persistence keys into it: duplicate keys in the same page
+        // make the ClientRouter abort its DOM swap (including archive links).
+        clone.removeAttribute("data-astro-transition-persist");
+        clone.querySelectorAll("[data-astro-transition-persist]")
+          .forEach((element) => element.removeAttribute("data-astro-transition-persist"));
         target.appendChild(clone);
       }
       target.querySelectorAll("[data-nb-sidebar-persist]").forEach((element) => element.removeAttribute("data-nb-sidebar-persist"));
@@ -56,6 +66,30 @@ const messages = uiStrings(Astro.props.currentLocale);
       bindCollapsibles(target);
       const cleanups = [...target.querySelectorAll<HTMLElement>("[data-nb-sidebar]")].map(initSidebar);
       return () => cleanups.forEach((cleanup) => cleanup());
+    }
+
+    function collapseDrawerGroups(dialog: HTMLDialogElement) {
+      const groups = Array.from(dialog.querySelectorAll<HTMLElement>("[data-nb-sidebar-group]")).reverse();
+      for (const group of groups) {
+        const trigger = Array.from(group.querySelectorAll<HTMLElement>("[data-nb-collapsible-trigger]"))
+          .find((candidate) => candidate.closest("[data-nb-sidebar-group]") === group);
+        // The Reference heading is a permanently expanded section wrapper,
+        // rather than a user-toggleable navigation tab.
+        if (!trigger) continue;
+        if (trigger?.getAttribute("data-nb-state") === "open") trigger.click();
+        // An active route is rendered open by the server. Explicitly clear
+        // that rendered state after the disclosure callback so a filter reset
+        // leaves no visibly expanded sections in the drawer.
+        trigger.setAttribute("data-nb-state", "closed");
+        trigger.setAttribute("aria-expanded", "false");
+        const label = Array.from(group.querySelectorAll<HTMLElement>("[data-nb-sidebar-group-label]"))
+          .find((candidate) => candidate.closest("[data-nb-sidebar-group]") === group);
+        label?.setAttribute("data-nb-state", "closed");
+        const content = Array.from(group.querySelectorAll<HTMLElement>("[data-nb-collapsible-content]"))
+          .find((candidate) => candidate.closest("[data-nb-sidebar-group]") === group);
+        content?.setAttribute("data-nb-state", "closed");
+        content?.toggleAttribute("inert", true);
+      }
     }
 
     // mount() re-binds on every astro:page-load and tears down on
@@ -78,7 +112,8 @@ const messages = uiStrings(Astro.props.currentLocale);
         }
         if (dialog.open) return;
 
-        disposeSidebar ??= fillDrawer(dialog);
+        disposeSidebar?.();
+        disposeSidebar = fillDrawer(dialog);
         dialog.showModal();
         dialog.dataset.state = "closed";
         lockScroll();
@@ -129,6 +164,15 @@ const messages = uiStrings(Astro.props.currentLocale);
 
       dialog.addEventListener("click", (e) => {
         if (e.target === dialog) closeSidebar();
+      }, { signal });
+
+      // The drawer owns cloned disclosure controls. Run after its copied
+      // filter listener so clearing a query reliably returns this visible
+      // tree to its compact, all-collapsed state.
+      dialog.addEventListener("input", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement) || !target.matches("[data-nb-sidebar-filter-input]") || target.value.trim()) return;
+        requestAnimationFrame(() => collapseDrawerGroups(dialog));
       }, { signal });
 
       return () => {

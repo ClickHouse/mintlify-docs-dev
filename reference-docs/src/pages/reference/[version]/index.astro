@@ -1,0 +1,26 @@
+---
+import ReferenceBody from "../../../components/ReferenceBody.astro";
+import ReferenceLayout from "../../../layouts/ReferenceLayout.astro";
+import ReferenceUnavailable from "../../../components/ReferenceUnavailable.astro";
+import { archiveVersion, fetchArchivedBody } from "../../../lib/reference-archive.mjs";
+
+export const prerender = false;
+
+const version = archiveVersion(Astro.params.version);
+if (!version) Astro.response.status = 404;
+const result = version
+  ? await fetchArchivedBody({ origin: import.meta.env.REFERENCE_ARCHIVE_S3_ORIGIN, version, slug: "" })
+  : { state: "missing" };
+const reason = result.state === "unconfigured"
+  ? "The archived-reference S3 origin has not been configured for this deployment."
+  : result.state === "missing"
+    ? "This page does not exist in the selected release archive."
+    : "The archived reference content could not be reached. Please try again shortly.";
+
+if (result.state !== "ready") Astro.response.status = result.state === "missing" ? 404 : 503;
+Astro.response.headers.set("cache-control", result.state === "ready" ? "public, s-maxage=60, stale-while-revalidate=300" : "no-store");
+---
+
+<ReferenceLayout title="ClickHouse Reference" version={version ?? "unknown"}>
+  {result.state === "ready" ? <ReferenceBody html={result.html} /> : <ReferenceUnavailable reason={reason} />}
+</ReferenceLayout>

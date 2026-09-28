@@ -10,9 +10,11 @@ import BaseLayout from "./BaseLayout.astro";
 import Header from "@/components/Header.astro";
 import AskAiButton from "@/components/AskAiButton.astro";
 import LocaleSwitcher from "@/components/LocaleSwitcher.astro";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Banner } from "@/components/ui/banner";
 import { Sidebar, SidebarFilter } from "@/components/ui/sidebar";
 import { SearchTrigger } from "@/components/ui/search";
+import ReferenceVersionPicker from "@/components/ReferenceVersionPicker.astro";
 import { TOC, MobileTOC } from "@/components/ui/toc";
 import { Pagination } from "@/components/ui/pagination";
 import { PageActions } from "@/components/ui/page-actions";
@@ -38,9 +40,15 @@ type Props = Omit<DocsPageProps, "mode"> & {
   /** Language-switcher data for documentation routes. */
   currentLocale?: string;
   activeLocales?: string[];
+  /** Small provenance marker for pages whose body came from a binary snapshot. */
+  generatedFromSystemTables?: boolean;
+  /** Keep the generated-reference explorer stable across client-side page swaps. */
+  persistSidebar?: boolean;
+  /** Version displayed beside the snapshot reference-rail heading. */
+  referenceVersion?: string;
 };
 
-const { showPageActions = true, title, description, sidebar, headings, breadcrumbs, prevNext, mode = "doc", banner, head = [], searchable, noindex, markdownUrl, socialImage, lastUpdated, editUrl, draft, audience, collection, entryId, lang, alternates, canonicalUrl, sections, currentLocale, activeLocales } = Astro.props;
+const { showPageActions = true, title, description, sidebar, headings, breadcrumbs, prevNext, mode = "doc", banner, head = [], searchable, noindex, markdownUrl, socialImage, lastUpdated, editUrl, draft, audience, collection, entryId, lang, alternates, canonicalUrl, sections, currentLocale, activeLocales, generatedFromSystemTables = false, persistSidebar = false, referenceVersion } = Astro.props;
 
 // `searchable` derives from `noindex` when omitted: a non-crawlable page is
 // by default not in the site search either. Explicit `searchable: true`
@@ -108,16 +116,24 @@ const messages = uiStrings(currentLocale);
               {hasSidebar ? (
                 <slot name="sidebar" />
               ) : (
-                <nav class="ch-sidebar-content" aria-label={messages.navigation.pages}>
+                <nav class="ch-sidebar-content" aria-label={messages.navigation.pages} data-reference-sidebar-content={persistSidebar ? "" : undefined} transition:persist={persistSidebar ? "reference-sidebar-content" : undefined}>
                   <div class="ch-sidebar-tools" aria-label={messages.navigation.documentationTools}>
                     {config.search !== false && <SearchTrigger sidebar currentLocale={currentLocale} />}
                     <AskAiButton sidebar currentLocale={currentLocale} />
                   </div>
-                  <div class="ch-sidebar-filter"><SidebarFilter currentLocale={currentLocale} /></div>
-                  <div class="ch-sidebar-scroll"><Sidebar items={sidebar} persist currentLocale={currentLocale} /></div>
+                  <div class="ch-sidebar-filter-row">
+                    <div class="ch-sidebar-filter"><SidebarFilter currentLocale={currentLocale} /></div>
+                    {referenceVersion && <ReferenceVersionPicker currentVersion={referenceVersion} />}
+                  </div>
+                  <div class="ch-sidebar-scroll" data-reference-sidebar={referenceVersion ? "" : undefined}><Sidebar items={sidebar} persist currentLocale={currentLocale} /></div>
                 </nav>
               )}
-              <LocaleSwitcher sidebar currentLocale={currentLocale} activeLocales={activeLocales} />
+              <div class="ch-sidebar-footer-controls">
+                <LocaleSwitcher sidebar currentLocale={currentLocale} activeLocales={activeLocales} />
+                <div class="ch-sidebar-theme-control">
+                  <ThemeToggle currentLocale={currentLocale} />
+                </div>
+              </div>
             </aside>
           )}
 
@@ -181,6 +197,12 @@ const messages = uiStrings(currentLocale);
                 if (!sidebar) return;
                 const scrollHost = sidebar.querySelector(".ch-sidebar-scroll");
                 if (!scrollHost) return;
+                // The generated reference explorer keeps this exact DOM
+                // subtree during an Astro route swap. Its disclosure and
+                // scroll state are therefore already authoritative. Applying
+                // the serialized state again here briefly collapses/reopens
+                // branches and visibly moves the top-level entries.
+                if (scrollHost.hasAttribute("data-astro-transition-persist")) return;
                 const content = scrollHost.querySelector("[data-nb-sidebar]");
                 if (!content) return;
 
@@ -288,6 +310,11 @@ const messages = uiStrings(currentLocale);
                   currentLocale={currentLocale}
                   class="ch-title-page-actions"
                 />}
+                {generatedFromSystemTables && (
+                  <p class="ch-generated-watermark" aria-label="Content provenance">
+                    Autogenerated from ClickHouse system tables
+                  </p>
+                )}
                 <div class="ch-title-path-row">
                   <ViewSwitcher compact showPathCue currentLocale={currentLocale} />
                 </div>
@@ -322,7 +349,10 @@ const messages = uiStrings(currentLocale);
   {showSidebar && (
     /* Mobile sidebar — native <dialog> for free focus trap, escape, backdrop. */
     <MobileNavigation currentLocale={currentLocale} activeLocales={activeLocales}>
-      {hasSidebar ? <slot name="sidebar" /> : <div data-nb-drawer-target />}
+      {/* A persisted custom rail belongs exclusively to the desktop tree.
+          The drawer clones it on open; rendering it here as well would emit
+          the same Astro persistence key twice and break client navigation. */}
+      {hasSidebar && !persistSidebar ? <slot name="sidebar" /> : <div data-nb-drawer-target />}
     </MobileNavigation>
   )}
 
@@ -337,7 +367,9 @@ const messages = uiStrings(currentLocale);
       const list = root?.querySelector<HTMLUListElement>("ul");
       if (!root || !list) return;
       list.replaceChildren();
-      const headings = [...document.querySelectorAll<HTMLElement>(".docs-content > h2, .docs-content h3.install-group-heading")];
+      // Authored MDX places H2s directly under `.docs-content`; archived
+      // body fragments are injected beneath a small transport wrapper.
+      const headings = [...document.querySelectorAll<HTMLElement>(".docs-content h2, .docs-content h3.install-group-heading")];
       headings.forEach((heading, index) => {
         const label = heading.textContent?.replace(/#\s*$/, "").trim() ?? "";
         if (!heading.id) {
@@ -356,6 +388,9 @@ const messages = uiStrings(currentLocale);
 
     initializeDynamicToc();
     document.addEventListener("astro:page-load", initializeDynamicToc);
+    // Body-only archived reference pages populate their article after this
+    // shell has rendered. Rebuild the same live TOC once that fragment lands.
+    document.addEventListener("reference:body-loaded", initializeDynamicToc);
   </script>
 
 
