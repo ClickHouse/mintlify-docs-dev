@@ -18,7 +18,7 @@ export function bodyUrl(origin, version, slug, locale = "en", prefix = DEFAULT_P
 
 export async function fetchArchivedBody({ origin, version, slug, fetchImpl = fetch }) {
   if (!origin) return { state: "unconfigured" };
-  const url = bodyUrl(origin, version, slug, process.env.REFERENCE_ARCHIVE_LOCALE ?? "en", process.env.REFERENCE_ARCHIVE_S3_PREFIX ?? DEFAULT_PREFIX);
+  const url = bodyUrl(origin, version, slug, process.env.REFERENCE_ARCHIVE_LOCALE ?? "en", process.env.REFERENCE_ARCHIVE_R2_PREFIX ?? DEFAULT_PREFIX);
   try {
     const response = await fetchImpl(url, {
       headers: { accept: "text/html" },

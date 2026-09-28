@@ -3,11 +3,11 @@
 This is a deliberately small Vercel microfrontend for `/docs/reference/*`.
 It has two separate content lifecycles: **Head** is rendered as static output
 from a snapshot fetched during the Vercel build; released versions read only a
-rendered page body from the `sites/` S3 archive at request time.
+rendered page body from the `sites/` Cloudflare R2 archive at request time.
 
 ## Local flow
 
-Set `REFERENCE_HEAD_SNAPSHOT_ORIGIN` to the private build-input origin. The
+Set `REFERENCE_HEAD_R2_ORIGIN` to the private R2 build-input origin. The
 build downloads its `manifest.json` and listed catalogs before Astro renders
 the Head pages. For example, first export a snapshot from the ClickHouse
 prototype worktree:
@@ -46,7 +46,7 @@ sites/versions.json
 
 The deployed reference microfrontend builds only `head`. The dynamic archived
 route fetches its selected `body.html` at runtime from
-`REFERENCE_ARCHIVE_S3_ORIGIN`; adding 26.9, 26.10, and later releases does not
+`REFERENCE_ARCHIVE_R2_ORIGIN`; adding 26.9, 26.10, and later releases does not
 add routes or Markdown to the Vercel build. Until that origin exists, the
 route deliberately returns an unavailable state instead of docs content.
 

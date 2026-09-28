@@ -1,7 +1,9 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const origin = process.env.REFERENCE_HEAD_SNAPSHOT_ORIGIN?.replace(/\/$/, "");
+// A Cloudflare R2 custom domain, or a build-authorized R2 read gateway. The
+// build downloads Head once; releases are never read through this input.
+const origin = process.env.REFERENCE_HEAD_R2_ORIGIN?.replace(/\/$/, "");
 const destination = path.resolve(".cache/reference-head-snapshot");
 
 function snapshotUrl(relativePath) {
@@ -20,11 +22,11 @@ async function download(relativePath) {
 }
 
 if (!origin) {
-  // The initial project intentionally deploys without a configured bucket.
+  // The initial project intentionally deploys without a configured R2 origin.
   // Astro still emits the static unavailable Head landing page; no fixture or
   // stale local snapshot may accidentally become deployable content.
   await rm(destination, { recursive: true, force: true });
-  console.log("fetch-head-snapshot: REFERENCE_HEAD_SNAPSHOT_ORIGIN is not configured; emitting no Head content pages");
+  console.log("fetch-head-snapshot: REFERENCE_HEAD_R2_ORIGIN is not configured; emitting no Head content pages");
   process.exit(0);
 }
 
