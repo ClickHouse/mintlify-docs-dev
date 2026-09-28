@@ -25,7 +25,7 @@ const contentTypes = {
 http.createServer((request, response) => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const pathname = decodeURIComponent(url.pathname);
-  // The preview is mounted under /docs while the reference microfrontend's
+  // The preview is mounted under /docs while the reference application's
   // route contract is base-independent. Apply the same redirect manifest that
   // a deployment adapter will turn into Vercel redirects.
   const base = pathname === "/docs" || pathname.startsWith("/docs/") ? "/docs" : "";

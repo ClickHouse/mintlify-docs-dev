@@ -4,7 +4,7 @@
  * This deliberately uses the file-derived URLs that Nimbus serves today, not
  * stale frontmatter `slug` values. It is intended to run after
  * generate-reference-prototype.ts and makes route changes explicit before a
- * reference microfrontend is cut over.
+ * archived reference routing is enabled.
  */
 import fs from "node:fs";
 import path from "node:path";

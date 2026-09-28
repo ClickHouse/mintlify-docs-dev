@@ -1,7 +1,8 @@
 /**
  * Render a validated ClickHouse reference snapshot into Nimbus-friendly MDX.
  * This is a visual prototype; production will put the same contract behind
- * the reference microfrontend rather than committing the derived MDX.
+ * the existing Nimbus reference application rather than committing the
+ * derived MDX.
  */
 import { createHash } from "node:crypto";
 import fs from "node:fs";

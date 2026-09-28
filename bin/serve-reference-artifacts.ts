@@ -1,4 +1,4 @@
-/** Serve local body-only artifacts with the same read-only contract as R2. */
+/** Serve local body-only artifacts with the same read-only production contract. */
 import { createServer } from "node:http";
 import fs from "node:fs";
 import path from "node:path";
