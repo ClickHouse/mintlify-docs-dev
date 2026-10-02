@@ -35,6 +35,44 @@ fs.mkdirSync(outDir, { recursive: true });
 function readJson(p: string): Json {
   return JSON.parse(fs.readFileSync(p, "utf8"));
 }
+const remotesFile = path.join(root, "remotes.json");
+const remotes: Array<{ name: string; label: string; repo: string; mount: string; sourceRef: string }> = fs.existsSync(remotesFile)
+  ? (readJson(remotesFile) as { remotes: Array<{ name: string; label: string; repo: string; mount: string }> }).remotes.map((r) => ({
+      ...r,
+      // Mintlify's sourceRef names the GitHub repository (sometimes under an older name).
+      sourceRef: r.repo,
+    }))
+  : [];
+const previewRemote = scope.remotePreview ? remotes.find((remote) => remote.name === scope.remotePreview?.name) : undefined;
+if (scope.remotePreview && !previewRemote) {
+  throw new Error(`gen-sidebar: preview scope names unknown remote "${scope.remotePreview.name}"`);
+}
+
+function remoteIsOmitted(remote: (typeof remotes)[number]): boolean {
+  if (previewRemote && previewRemote.name !== remote.name) return true;
+  const stateFile = path.join(root, ".remote", `${remote.name}.json`);
+  if (!fs.existsSync(stateFile)) return false;
+  const state = readJson(stateFile) as Obj;
+  if (!state.skipped) return false;
+  const reason = String(state.reason ?? "");
+  if (
+    reason !== "excluded-from-base-preview"
+    && reason !== "excluded-from-remote-preview"
+    && reason !== "excluded-from-untrusted-vercel-preview"
+  ) {
+    throw new Error(`gen-sidebar: remote ${remote.name} has an unknown omission reason: ${reason}`);
+  }
+  return true;
+}
+
+function isInOmittedRemote(filePath: string): boolean {
+  const relativePath = path.relative(root, filePath).replaceAll("\\", "/");
+  return remotes.some((remote) => {
+    return remoteIsOmitted(remote)
+      && (relativePath === remote.mount || relativePath.startsWith(`${remote.mount}/`));
+  });
+}
+
 function resolveRefs(node: Json, baseDir: string): Json {
   if (Array.isArray(node)) return node.map((n) => resolveRefs(n, baseDir));
   if (node && typeof node === "object") {
@@ -43,6 +81,7 @@ function resolveRefs(node: Json, baseDir: string): Json {
       // `{ "$ref": "./x.json" }` is replaced by the file; sibling keys (e.g.
       // `{ "language": "es", "$ref": "./es/docs.json" }`) are kept on top.
       const p = path.normalize(path.join(baseDir, o.$ref));
+      if (!fs.existsSync(p) && isInOmittedRemote(p)) return null;
       const target = resolveRefs(readJson(p), path.dirname(p));
       const rest = Object.fromEntries(Object.entries(o).filter(([k]) => k !== "$ref").map(([k, v]) => [k, resolveRefs(v, baseDir)]));
       return target && typeof target === "object" && !Array.isArray(target) ? { ...(target as Obj), ...rest } : target;
@@ -131,37 +170,6 @@ function pageLink(page: string): string {
 function configuredLink(link: string): string {
   if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(link)) return link;
   return pageLink(link.replace(/^\/+/, ""));
-}
-
-// ---------------------------------------------------------------- remotes
-const remotesFile = path.join(root, "remotes.json");
-const remotes: Array<{ name: string; label: string; repo: string; mount: string; sourceRef: string }> = fs.existsSync(remotesFile)
-  ? (readJson(remotesFile) as { remotes: Array<{ name: string; label: string; repo: string; mount: string }> }).remotes.map((r) => ({
-      ...r,
-      // Mintlify's sourceRef names the GitHub repository (sometimes under an older name).
-      sourceRef: r.repo,
-    }))
-  : [];
-const previewRemote = scope.remotePreview ? remotes.find((remote) => remote.name === scope.remotePreview?.name) : undefined;
-if (scope.remotePreview && !previewRemote) {
-  throw new Error(`gen-sidebar: preview scope names unknown remote "${scope.remotePreview.name}"`);
-}
-
-function remoteIsOmitted(remote: (typeof remotes)[number]): boolean {
-  if (previewRemote && previewRemote.name !== remote.name) return true;
-  const stateFile = path.join(root, ".remote", `${remote.name}.json`);
-  if (!fs.existsSync(stateFile)) return false;
-  const state = readJson(stateFile) as Obj;
-  if (!state.skipped) return false;
-  const reason = String(state.reason ?? "");
-  if (
-    reason !== "excluded-from-base-preview"
-    && reason !== "excluded-from-remote-preview"
-    && reason !== "excluded-from-untrusted-vercel-preview"
-  ) {
-    throw new Error(`gen-sidebar: remote ${remote.name} has an unknown omission reason: ${reason}`);
-  }
-  return true;
 }
 
 /** Prefix every page path in a remote navigation tree with its mount directory. */
