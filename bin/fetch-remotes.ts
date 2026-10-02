@@ -1,9 +1,8 @@
 // Fetches docs owned by other repositories into their mount directories so the
 // primary collection builds them at their current URLs. Sources, in order:
-//   1. a GitHub tarball authenticated by a Vercel Connect token,
-//   2. a GitHub tarball authenticated by GH_TOKEN / GITHUB_TOKEN outside Vercel,
-//   3. an anonymous GitHub tarball for public repositories,
-//   4. a shallow GitHub SSH checkout for local development.
+//   1. a shallow, blob-filtered Git checkout with only the configured path,
+//   2. a GitHub tarball fallback when sparse checkout is unavailable,
+//   3. a shallow, blob-filtered Git SSH checkout for local private remotes.
 // Production always reads each repository's `main` branch. A source-repository
 // preview replaces exactly one source with an immutable commit SHA and omits
 // the other remote sources. Base-repository previews omit every remote. Only
@@ -35,10 +34,12 @@ fs.mkdirSync(stateDir, { recursive: true });
 
 type Authentication = "anonymous" | "environment-token" | "vercel-connect";
 
-async function githubAuthentication(remote: Remote, repository: string): Promise<{
+interface GitHubAuthentication {
   authentication: Authentication;
   token?: string;
-}> {
+}
+
+async function githubAuthentication(remote: Remote, repository: string): Promise<GitHubAuthentication> {
   const environmentToken = (process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? "").trim();
   if (environmentToken) {
     if (process.env.VERCEL === "1") {
@@ -78,13 +79,52 @@ async function githubAuthentication(remote: Remote, repository: string): Promise
   return { authentication: "anonymous" };
 }
 
+function gitEnvironment(token?: string): NodeJS.ProcessEnv {
+  if (!token) return process.env;
+  return {
+    ...process.env,
+    // Keep the token out of command arguments and repository configuration.
+    // This child is the only process allowed to use remote credentials.
+    GIT_CONFIG_COUNT: "1",
+    GIT_CONFIG_KEY_0: "http.https://github.com/.extraHeader",
+    GIT_CONFIG_VALUE_0: `Authorization: Bearer ${token}`,
+  };
+}
+
+function checkoutSparseGit(
+  repositoryUrl: string,
+  ref: string,
+  sourcePath: string,
+  destination: string,
+  token?: string,
+): string {
+  const environment = gitEnvironment(token);
+  const checkout = path.join(destination, "checkout");
+  const git = (args: string[]) => execFileSync("git", args, { env: environment, stdio: "pipe" });
+
+  git(["init", checkout]);
+  git(["-C", checkout, "remote", "add", "origin", repositoryUrl]);
+  if (sourcePath !== ".") {
+    git(["-C", checkout, "sparse-checkout", "init", "--cone"]);
+    git(["-C", checkout, "sparse-checkout", "set", "--cone", sourcePath]);
+  }
+  // Fetching the requested ref directly supports immutable pull-request SHAs
+  // as well as the normal main branch. With sparse checkout enabled, Git only
+  // downloads blobs required by sourcePath during checkout.
+  git(["-C", checkout, "fetch", "--depth", "1", "--filter=blob:none", "origin", ref]);
+  git(["-C", checkout, "checkout", "--detach", "FETCH_HEAD"]);
+  return path.join(checkout, sourcePath);
+}
+
 async function downloadGitHubArchive(
   remote: Remote,
   repository: string,
   ref: string,
   destination: string,
+  credentials: GitHubAuthentication,
 ): Promise<Authentication> {
-  let { authentication, token } = await githubAuthentication(remote, repository);
+  const { authentication } = credentials;
+  let token = credentials.token;
   try {
     if (remote.private && !token) {
       throw new Error(
@@ -207,43 +247,48 @@ for (const r of manifest.remotes) {
   }
 
   let source: string | null = null;
-  let sourceKind: "github-api" | "github-ssh" | null = null;
+  let sourceKind: "github-sparse" | "github-api" | "github-ssh-sparse" | null = null;
   let authentication: Authentication | "ssh" | null = null;
   let temporaryDirectory: string | null = null;
   let commit = "unknown";
 
   try {
-    const canUseGitHubApi = Boolean(
-      process.env.GH_TOKEN
-      || process.env.GITHUB_TOKEN
-      || process.env.DOCS_GITHUB_CONNECTOR
-      || process.env.VERCEL_OIDC_TOKEN
-      || !r.private,
-    );
-    if (canUseGitHubApi) {
+    const credentials = await githubAuthentication(r, sourceRepository);
+    if (!r.private || credentials.token) {
       const tmp = fs.mkdtempSync(path.join(stateDir, `${r.name}-`));
       temporaryDirectory = tmp;
-      const tar = path.join(tmp, "src.tgz");
-      authentication = await downloadGitHubArchive(r, sourceRepository, ref, tar);
-      execFileSync("tar", ["-xzf", tar, "-C", tmp]);
-      const extracted = fs.readdirSync(tmp).find((directory) => directory !== "src.tgz");
-      if (!extracted) throw new Error(`fetch-remotes: archive for ${r.name} contained no root directory`);
-      source = path.join(tmp, extracted, r.path);
-      sourceKind = "github-api";
-      commit = extracted.split("-").pop() ?? "unknown";
+      try {
+        source = checkoutSparseGit(
+          `https://github.com/${sourceRepository}.git`,
+          ref,
+          r.path,
+          tmp,
+          credentials.token,
+        );
+        sourceKind = "github-sparse";
+        authentication = credentials.authentication;
+        commit = execFileSync("git", ["-C", path.join(tmp, "checkout"), "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+      } catch {
+        // GitHub archives remain a portable fallback for hosts without partial
+        // clone support. Do not surface child-process output because it may
+        // include transport details from an authenticated request.
+        fs.rmSync(path.join(tmp, "checkout"), { recursive: true, force: true });
+        const tar = path.join(tmp, "src.tgz");
+        authentication = await downloadGitHubArchive(r, sourceRepository, ref, tar, credentials);
+        execFileSync("tar", ["-xzf", tar, "-C", tmp]);
+        const extracted = fs.readdirSync(tmp).find((directory) => directory !== "src.tgz");
+        if (!extracted) throw new Error(`fetch-remotes: archive for ${r.name} contained no root directory`);
+        source = path.join(tmp, extracted, r.path);
+        sourceKind = "github-api";
+        commit = extracted.split("-").pop() ?? "unknown";
+      }
     } else if (!process.env.CI) {
       const tmp = fs.mkdtempSync(path.join(stateDir, `${r.name}-`));
       temporaryDirectory = tmp;
-      const checkout = path.join(tmp, "checkout");
-      execFileSync(
-        "git",
-        ["clone", "--depth", "1", "--branch", ref, `git@github.com:${sourceRepository}.git`, checkout],
-        { stdio: "inherit" },
-      );
-      source = path.join(checkout, r.path);
-      sourceKind = "github-ssh";
+      source = checkoutSparseGit(`git@github.com:${sourceRepository}.git`, ref, r.path, tmp);
+      sourceKind = "github-ssh-sparse";
       authentication = "ssh";
-      commit = execFileSync("git", ["-C", checkout, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+      commit = execFileSync("git", ["-C", path.join(tmp, "checkout"), "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
     }
 
     if (!source) {
