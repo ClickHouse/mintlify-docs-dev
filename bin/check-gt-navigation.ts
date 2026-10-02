@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { readScope } from "../src/lib/scope.ts";
 
 const repositoryRoot = process.cwd();
 const configPath = path.join(repositoryRoot, "gt.config.json");
@@ -21,6 +22,35 @@ function fail(message: string): never {
 
 function readJson(filePath: string): unknown {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function omittedRemoteMounts(): Set<string> {
+  const manifest = asRecord(
+    readJson(path.join(repositoryRoot, "remotes.json")),
+    "remotes.json",
+  );
+  if (!Array.isArray(manifest.remotes)) {
+    fail("remotes.json must contain a remotes array");
+  }
+
+  const scope = readScope(repositoryRoot);
+  const mounts = new Set<string>();
+  for (const [index, remote] of manifest.remotes.entries()) {
+    const definition = asRecord(remote, `remotes.json remote ${index}`);
+    const name = definition.name;
+    const mount = definition.mount;
+    if (typeof name !== "string" || !name.trim()) {
+      fail(`remotes.json remote ${index} must have a non-empty name`);
+    }
+    if (typeof mount !== "string" || !mount.trim()) {
+      fail(`remotes.json remote ${index} must have a non-empty mount`);
+    }
+
+    const included = scope.remotes
+      && (!scope.remotePreview || scope.remotePreview.name === name);
+    if (!included) mounts.add(mount.replace(/^\/+|\/+$/g, ""));
+  }
+  return mounts;
 }
 
 function asRecord(
@@ -163,6 +193,7 @@ function assertNavigationCoverage(): void {
   }
 
   const visitedFiles = new Set<string>();
+  const omittedMounts = omittedRemoteMounts();
   let labelCount = 0;
 
   function visit(value: unknown, sourceDirectory: string): void {
@@ -181,6 +212,10 @@ function assertNavigationCoverage(): void {
         fail(`navigation reference escapes the repository: ${record.$ref}`);
       }
       if (!fs.existsSync(referencedPath)) {
+        const isOmittedRemote = [...omittedMounts].some((mount) => {
+          return relativePath === mount || relativePath.startsWith(`${mount}/`);
+        });
+        if (isOmittedRemote) return;
         fail(`navigation reference does not exist: ${relativePath}`);
       }
       if (visitedFiles.has(referencedPath)) return;

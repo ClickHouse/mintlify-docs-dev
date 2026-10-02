@@ -28,7 +28,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 | `DOCS_INCLUDE` | Comma-separated globs restricting the English collection (spikes, scoped previews). |
 | `DOCS_LOCALE` | A singular locale build (`en`, `es`, `pt-BR`, and so on); normally set only by the Vercel shard orchestrator. |
 | `DOCS_LOCALES` | Translations included in a `translations` or legacy `combined` artifact: `none`, `all`, or a comma-separated list such as `es,fr`. The translations project uses `all`. |
-| `DOCS_REMOTES` | Registered remote-source scope: `none` for a base-repository preview and `all` for source previews and production. |
+| `DOCS_REMOTES` | Registered remote-source scope: `none` for an ordinary base-repository preview and `all` for source previews, production, and a base preview carrying `docs-preview-show-remotes`. |
 | `DOCS_REMOTE_NAME`, `DOCS_REMOTE_REPOSITORY`, `DOCS_REMOTE_REF` | CI-only tuple selecting one registered remote at an immutable commit for an English pull-request preview. |
 | `DOCS_REMOTE_SOURCE_REPOSITORY` | CI-derived repository that owns the preview SHA. It defaults to the registered repository and differs only for a fork PR. |
 | `DOCS_REMOTES_PREFETCHED=1` | Requires the remote mounts and fetch-state files supplied by the credentialed CI fetch job. |
@@ -68,7 +68,13 @@ registered source, repository, and open pull request number.
 
 Standard Vercel Preview deployments are deliberately tokenless. Base-repository
 pull requests use this environment and set `DOCS_REMOTES=none`, regardless of
-whether their head branch belongs to the primary repository or a fork.
+whether their head branch belongs to the primary repository or a fork. To inspect
+remote navigation and content in a base-repository preview, apply the
+`docs-preview-show-remotes` label to a pull request from a trusted
+`ClickHouse/mintlify-docs-dev` branch. The preview then runs in the
+`connect-preview` environment with `DOCS_REMOTES=all`. The workflow rejects that
+label on fork pull requests, because the connected environment may read private
+remote repositories.
 
 Nimbus application pull requests use `.github/workflows/site-preview.yml`.
 The base-branch workflow resolves GitHub's immutable
@@ -140,7 +146,9 @@ Vercel must be provisioned as follows:
    not in standard Preview.
 7. Keep standard Preview free of secrets and privileged integrations. Every
    base-repository pull request builds from the primary repository's synthetic
-   merge ref in this environment and omits registered remotes.
+   merge ref in this environment and omits registered remotes by default. A
+   trusted-branch pull request with the `docs-preview-show-remotes` label instead
+   uses `connect-preview` to fetch all registered remotes.
 8. Add `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` as repository
    secrets under GitHub Actions. Add the translations project's ID as the
    repository variable `VERCEL_TRANSLATIONS_PROJECT_ID`; project IDs are not
