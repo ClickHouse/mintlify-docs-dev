@@ -8,6 +8,7 @@ const root = process.cwd();
 const name = (process.env.DOCS_REMOTE_NAME ?? "").trim();
 const repo = (process.env.DOCS_REMOTE_REPOSITORY ?? "").trim();
 const sourceRepo = (process.env.DOCS_REMOTE_SOURCE_REPOSITORY ?? "").trim() || repo;
+const pullRequestRef = (process.env.DOCS_REMOTE_PULL_REQUEST_REF ?? "").trim();
 const ref = (process.env.DOCS_REMOTE_REF ?? "").trim().toLowerCase();
 if (!name || !repo || !ref) {
   throw new Error("write-remote-preview-scope: DOCS_REMOTE_NAME, DOCS_REMOTE_REPOSITORY and DOCS_REMOTE_REF are required");
@@ -17,6 +18,9 @@ if (!/^[0-9a-f]{40}$/.test(ref)) {
 }
 if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(sourceRepo)) {
   throw new Error("write-remote-preview-scope: DOCS_REMOTE_SOURCE_REPOSITORY must use the owner/name form");
+}
+if (pullRequestRef && !/^refs\/pull\/[1-9][0-9]*\/head$/.test(pullRequestRef)) {
+  throw new Error("write-remote-preview-scope: DOCS_REMOTE_PULL_REQUEST_REF must use the refs/pull/<number>/head form");
 }
 
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "remotes.json"), "utf8")) as { remotes: Remote[] };
@@ -33,6 +37,7 @@ const scope = {
     name: remote.name,
     repository: remote.repo,
     sourceRepository: sourceRepo,
+    pullRequestRef: pullRequestRef || undefined,
     ref,
   },
 };

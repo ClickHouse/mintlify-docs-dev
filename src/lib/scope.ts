@@ -14,7 +14,8 @@
  *       "name": "clickhouse-private",
  *       "repository": "ClickHouse/airgap-docs",
  *       "sourceRepository": "contributor/airgap-docs",
- *       "ref": "<40-character commit SHA>"
+ *       "ref": "<40-character approved commit SHA>",
+ *       "pullRequestRef": "refs/pull/123/head"
  *     }
  *   }
  */
@@ -32,6 +33,9 @@ export interface RemotePreview {
   repository: string;
   /** Repository that owns the immutable preview SHA; differs for fork PRs. */
   sourceRepository: string;
+  /** Base-repository PR ref to fetch before checking it matches ref. */
+  pullRequestRef?: string;
+  /** Immutable commit SHA approved by the triggering GitHub event. */
   ref: string;
 }
 
@@ -111,6 +115,9 @@ function parseRemotePreview(value: unknown, source: string): RemotePreview | und
   const sourceRepository = typeof candidate.sourceRepository === "string"
     ? candidate.sourceRepository.trim()
     : repository;
+  const pullRequestRef = typeof candidate.pullRequestRef === "string"
+    ? candidate.pullRequestRef.trim()
+    : "";
   const ref = typeof candidate.ref === "string" ? candidate.ref.trim().toLowerCase() : "";
   if (!name || !repository || !sourceRepository || !ref) {
     throw new Error(`${source} must contain non-empty name, repository and ref values`);
@@ -122,7 +129,10 @@ function parseRemotePreview(value: unknown, source: string): RemotePreview | und
   if (!/^[0-9a-f]{40}$/.test(ref)) {
     throw new Error(`${source}.ref must be an immutable 40-character commit SHA`);
   }
-  return { name, repository, sourceRepository, ref };
+  if (pullRequestRef && !/^refs\/pull\/[1-9][0-9]*\/head$/.test(pullRequestRef)) {
+    throw new Error(`${source}.pullRequestRef must use the refs/pull/<number>/head form`);
+  }
+  return { name, repository, sourceRepository, pullRequestRef: pullRequestRef || undefined, ref };
 }
 
 function parseReference(value: unknown, source: string): boolean {
@@ -184,6 +194,7 @@ export function readScope(root = process.cwd()): BuildScope {
   const envRemoteName = (process.env.DOCS_REMOTE_NAME ?? "").trim();
   const envRemoteRepository = (process.env.DOCS_REMOTE_REPOSITORY ?? "").trim();
   const envRemoteSourceRepository = (process.env.DOCS_REMOTE_SOURCE_REPOSITORY ?? "").trim();
+  const envRemotePullRequestRef = (process.env.DOCS_REMOTE_PULL_REQUEST_REF ?? "").trim();
   const envRemoteRef = (process.env.DOCS_REMOTE_REF ?? "").trim();
   const file = path.join(root, ".preview-scope.json");
   const fileScope = fs.existsSync(file)
@@ -204,6 +215,11 @@ export function readScope(root = process.cwd()): BuildScope {
   if (envRemoteSourceRepository && !hasRemoteEnvironment) {
     throw new Error(
       "DOCS_REMOTE_SOURCE_REPOSITORY requires DOCS_REMOTE_NAME, DOCS_REMOTE_REPOSITORY and DOCS_REMOTE_REF",
+    );
+  }
+  if (envRemotePullRequestRef && !hasRemoteEnvironment) {
+    throw new Error(
+      "DOCS_REMOTE_PULL_REQUEST_REF requires DOCS_REMOTE_NAME, DOCS_REMOTE_REPOSITORY and DOCS_REMOTE_REF",
     );
   }
 
@@ -276,6 +292,7 @@ export function readScope(root = process.cwd()): BuildScope {
           name: envRemoteName,
           repository: envRemoteRepository,
           sourceRepository: envRemoteSourceRepository || envRemoteRepository,
+          pullRequestRef: envRemotePullRequestRef || undefined,
           ref: envRemoteRef,
         },
         "remote preview environment",

@@ -5,7 +5,9 @@
 //   3. a shallow, blob-filtered Git SSH checkout for local private remotes.
 // Production always reads each repository's `main` branch. A source-repository
 // preview replaces exactly one source with an immutable commit SHA and omits
-// the other remote sources. Base-repository previews omit every remote. Only
+// the other remote sources. Fork previews fetch the PR ref from the registered
+// base repository, then verify it resolves to that immutable SHA.
+// Base-repository previews omit every remote. Only
 // production and the `connect-preview` custom environment may use Vercel
 // Connect. Remote content is copied but never parsed or imported here.
 // Usage: node bin/fetch-remotes.ts
@@ -91,13 +93,19 @@ function gitEnvironment(token?: string): NodeJS.ProcessEnv {
   };
 }
 
+interface CheckedOutSource {
+  source: string;
+  commit: string;
+}
+
 function checkoutSparseGit(
   repositoryUrl: string,
   ref: string,
   sourcePath: string,
   destination: string,
   token?: string,
-): string {
+  expectedCommit?: string,
+): CheckedOutSource {
   const environment = gitEnvironment(token);
   const checkout = path.join(destination, "checkout");
   const git = (args: string[]) => execFileSync("git", args, { env: environment, stdio: "pipe" });
@@ -108,12 +116,16 @@ function checkoutSparseGit(
     git(["-C", checkout, "sparse-checkout", "init", "--cone"]);
     git(["-C", checkout, "sparse-checkout", "set", "--cone", sourcePath]);
   }
-  // Fetching the requested ref directly supports immutable pull-request SHAs
-  // as well as the normal main branch. With sparse checkout enabled, Git only
-  // downloads blobs required by sourcePath during checkout.
+  // Fetching the requested ref directly supports base-repository PR refs,
+  // immutable commit SHAs, and the normal main branch. With sparse checkout
+  // enabled, Git only downloads blobs required by sourcePath during checkout.
   git(["-C", checkout, "fetch", "--depth", "1", "--filter=blob:none", "origin", ref]);
   git(["-C", checkout, "checkout", "--detach", "FETCH_HEAD"]);
-  return path.join(checkout, sourcePath);
+  const commit = git(["-C", checkout, "rev-parse", "HEAD"]).toString().trim().toLowerCase();
+  if (expectedCommit && commit !== expectedCommit) {
+    throw new Error(`fetch-remotes: ${repositoryUrl}@${ref} resolved to ${commit}, expected ${expectedCommit}`);
+  }
+  return { source: path.join(checkout, sourcePath), commit };
 }
 
 async function downloadGitHubArchive(
@@ -221,6 +233,9 @@ for (const r of manifest.remotes) {
     );
   }
   const ref = selectedPreview?.ref ?? "main";
+  const fetchRef = selectedPreview?.pullRequestRef ?? ref;
+  const fetchRepository = selectedPreview?.repository ?? r.repo;
+  const expectedCommit = selectedPreview?.ref;
   const sourceRepository = selectedPreview?.sourceRepository ?? r.repo;
   if (usePrefetchedRemotes) {
     const stateFile = path.join(stateDir, `${r.name}.json`);
@@ -253,47 +268,61 @@ for (const r of manifest.remotes) {
   let commit = "unknown";
 
   try {
-    const credentials = await githubAuthentication(r, sourceRepository);
+    const credentials = await githubAuthentication(r, fetchRepository);
     if (!r.private || credentials.token) {
       const tmp = fs.mkdtempSync(path.join(stateDir, `${r.name}-`));
       temporaryDirectory = tmp;
       try {
-        source = checkoutSparseGit(
-          `https://github.com/${sourceRepository}.git`,
-          ref,
+        const checkedOut = checkoutSparseGit(
+          `https://github.com/${fetchRepository}.git`,
+          fetchRef,
           r.path,
           tmp,
           credentials.token,
+          expectedCommit,
         );
+        source = checkedOut.source;
         sourceKind = "github-sparse";
         authentication = credentials.authentication;
-        commit = execFileSync("git", ["-C", path.join(tmp, "checkout"), "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-      } catch {
+        commit = checkedOut.commit;
+      } catch (error) {
+        if (selectedPreview?.pullRequestRef) throw error;
         // GitHub archives remain a portable fallback for hosts without partial
         // clone support. Do not surface child-process output because it may
         // include transport details from an authenticated request.
         fs.rmSync(path.join(tmp, "checkout"), { recursive: true, force: true });
         const tar = path.join(tmp, "src.tgz");
-        authentication = await downloadGitHubArchive(r, sourceRepository, ref, tar, credentials);
+        authentication = await downloadGitHubArchive(r, fetchRepository, fetchRef, tar, credentials);
         execFileSync("tar", ["-xzf", tar, "-C", tmp]);
         const extracted = fs.readdirSync(tmp).find((directory) => directory !== "src.tgz");
         if (!extracted) throw new Error(`fetch-remotes: archive for ${r.name} contained no root directory`);
         source = path.join(tmp, extracted, r.path);
         sourceKind = "github-api";
-        commit = extracted.split("-").pop() ?? "unknown";
+        commit = (extracted.split("-").pop() ?? "unknown").toLowerCase();
+        if (expectedCommit && commit !== expectedCommit) {
+          throw new Error(`fetch-remotes: archive for ${r.name} resolved to ${commit}, expected ${expectedCommit}`);
+        }
       }
     } else if (!process.env.CI) {
       const tmp = fs.mkdtempSync(path.join(stateDir, `${r.name}-`));
       temporaryDirectory = tmp;
-      source = checkoutSparseGit(`git@github.com:${sourceRepository}.git`, ref, r.path, tmp);
+      const checkedOut = checkoutSparseGit(
+        `git@github.com:${fetchRepository}.git`,
+        fetchRef,
+        r.path,
+        tmp,
+        undefined,
+        expectedCommit,
+      );
+      source = checkedOut.source;
       sourceKind = "github-ssh-sparse";
       authentication = "ssh";
-      commit = execFileSync("git", ["-C", path.join(tmp, "checkout"), "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+      commit = checkedOut.commit;
     }
 
     if (!source) {
       throw new Error(
-        `fetch-remotes: private remote ${r.name} (${sourceRepository}@${ref}) requires Vercel Connect, GH_TOKEN/GITHUB_TOKEN, or local SSH access`,
+        `fetch-remotes: private remote ${r.name} (${fetchRepository}@${fetchRef}) requires Vercel Connect, GH_TOKEN/GITHUB_TOKEN, or local SSH access`,
       );
     }
     if (!fs.existsSync(source)) throw new Error(`fetch-remotes: source path does not exist for ${r.name}: ${source}`);
@@ -304,7 +333,7 @@ for (const r of manifest.remotes) {
       path.join(stateDir, `${r.name}.json`),
       JSON.stringify({ name: r.name, repo: r.repo, sourceRepository, ref, source: sourceKind, authentication, commit, fetchedAt: new Date().toISOString(), files }, null, 2),
     );
-    console.log(`fetch-remotes: ${r.name} <- ${sourceKind}/${authentication} ${sourceRepository}@${ref} (${commit.slice(0, 12)}): ${files} files into ${r.mount}`);
+    console.log(`fetch-remotes: ${r.name} <- ${sourceKind}/${authentication} ${fetchRepository}@${fetchRef} (${commit.slice(0, 12)}): ${files} files into ${r.mount}`);
   } finally {
     if (temporaryDirectory) fs.rmSync(temporaryDirectory, { recursive: true, force: true });
   }
