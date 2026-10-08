@@ -30,7 +30,8 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 | `DOCS_LOCALES` | Translations included in a `translations` or legacy `combined` artifact: `none`, `all`, or a comma-separated list such as `es,fr`. The translations project uses `all`. |
 | `DOCS_REMOTES` | Registered remote-source scope: `none` for an ordinary base-repository preview and `all` for source previews, production, and a base preview carrying `docs-preview-show-remotes`. |
 | `DOCS_REMOTE_NAME`, `DOCS_REMOTE_REPOSITORY`, `DOCS_REMOTE_REF` | CI-only tuple selecting one registered remote at an immutable commit for an English pull-request preview. |
-| `DOCS_REMOTE_SOURCE_REPOSITORY` | CI-derived repository that owns the preview SHA. It defaults to the registered repository and differs only for a fork PR. |
+| `DOCS_REMOTE_SOURCE_REPOSITORY` | CI-derived PR-head repository, retained only for preview attribution and edit links. It defaults to the registered repository. |
+| `DOCS_REMOTE_PULL_REQUEST_REF` | CI-only base-repository PR ref (`refs/pull/<number>/head`) to fetch and verify against `DOCS_REMOTE_REF`. |
 | `DOCS_REMOTES_PREFETCHED=1` | Requires the remote mounts and fetch-state files supplied by the credentialed CI fetch job. |
 | `DOCS_PREVIEW_ALIAS` | Lowercase Cloudflare alias used by `pnpm run deploy:preview`. |
 | `DOCS_GITHUB_CONNECTOR` | Vercel Connect GitHub connector UID, for example `github/clickhouse-docs`. Configure it only for `production` and the `connect-preview` Custom Environment. |
@@ -59,8 +60,10 @@ GitHub App token only to resolve the immutable head SHA and the branch or fork
 repository that owns it, then asks Vercel to build trusted Nimbus `main` in the
 `connect-preview` environment. The Vercel build uses
 its OIDC identity to request a short-lived, `contents:read` token from Vercel
-Connect for the branch or fork repository. Public repositories are fetched
-anonymously. `bin/fetch-remotes.ts` exits before
+Connect for the registered source repository. For a fork, it fetches the
+base repository's `refs/pull/<number>/head` ref and verifies it resolves to the
+approved SHA; the fork repository is metadata only. Public repositories are
+fetched anonymously. `bin/fetch-remotes.ts` exits before
 `bin/vercel-build.ts` removes `VERCEL_OIDC_TOKEN` and starts any Markdown or MDX
 processing. The Actions token never enters Vercel. Maintainers can also run the
 workflow directly from the `mintlify-docs-dev` Actions page by providing the
@@ -87,10 +90,10 @@ registered remote source.
 Source-repository pull requests use
 `.github/workflows/remote-docs-preview.yml`. Vercel builds trusted Nimbus
 `main`, selects exactly one registered source with `DOCS_REMOTE_*`, and fetches
-the pull request's immutable head revision. Trusted branches and forks have the
-same source-only build scope. They use `connect-preview` so private registered
-sources can obtain a short-lived token; public sources remain anonymously
-fetchable.
+the pull request's immutable head revision from the registered repository's PR
+ref. Trusted branches and forks have the same source-only build scope. They use
+`connect-preview` so private registered sources can obtain a short-lived token;
+public sources remain anonymously fetchable.
 
 After a source-repository change reaches its trusted production branch, that
 repository calls `.github/workflows/site-production.yml`. The reusable workflow
