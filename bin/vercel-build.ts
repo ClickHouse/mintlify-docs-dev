@@ -19,6 +19,9 @@ const credentialVariables = [
   "GH_TOKEN",
   "GITHUB_TOKEN",
   "VERCEL_OIDC_TOKEN",
+  // Private Blob access is needed only while fetching the Head archive. Never
+  // expose this store-wide read/write token to renderers or MDX compilation.
+  "BLOB_READ_WRITE_TOKEN",
 ] as const;
 
 const forwardedGitHubCredentials = ["DOCS_REMOTE_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"]
