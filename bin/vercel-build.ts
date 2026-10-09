@@ -13,11 +13,15 @@ import { readScope, type Locale } from "../src/lib/scope.ts";
 import { localeRouteName } from "../src/util/locales.ts";
 
 const root = process.cwd();
+const scope = readScope(root);
 const credentialVariables = [
   "DOCS_REMOTE_TOKEN",
   "GH_TOKEN",
   "GITHUB_TOKEN",
   "VERCEL_OIDC_TOKEN",
+  // Private Blob access is needed only while fetching the Head archive. Never
+  // expose this store-wide read/write token to renderers or MDX compilation.
+  "BLOB_READ_WRITE_TOKEN",
 ] as const;
 
 const forwardedGitHubCredentials = ["DOCS_REMOTE_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"]
@@ -104,9 +108,16 @@ function copyLocaleOutput(locale: Locale, outDir: string, finalOutDir: string): 
   }
 }
 
-// The fetch child is the only process allowed to see the deployment OIDC
-// identity. It downloads bytes but never parses or imports remote-authored MDX.
+// The two fetch children are the only processes allowed to see the deployment
+// OIDC identity. They download bytes but never parse or import remote-authored
+// MDX; all rendering happens after the credential boundary below.
 run(process.execPath, ["bin/fetch-remotes.ts"], { ...process.env });
+if (scope.reference) {
+  // Like remote sources, the private snapshot is downloaded while the Vercel
+  // OIDC identity is still available. The renderer runs only after the
+  // credential boundary below.
+  run(process.execPath, ["bin/fetch-reference-snapshot.ts"], { ...process.env });
+}
 
 // Cross the credential boundary before any generator, Vite plugin, or Astro
 // integration can parse or execute remote-authored content.
@@ -115,7 +126,17 @@ assertCredentialFree(cleanEnvironment);
 
 run("pnpm", ["run", "prepare:site"], cleanEnvironment);
 
-const scope = readScope(root);
+if (scope.reference) {
+  run(process.execPath, ["bin/generate-reference-prototype.ts"], {
+    ...cleanEnvironment,
+    REFERENCE_SNAPSHOT_DIR: path.join(root, ".reference-snapshots", "head"),
+    REFERENCE_VERSION_KEY: "latest",
+    REFERENCE_VERSION_LABEL: "Head",
+    REFERENCE_ROUTE_PREFIX: "/reference",
+    REFERENCE_PROTOTYPE_OUTPUT_DIR: path.join("reference-prototype", "latest"),
+  });
+}
+
 const finalOutDir = path.resolve(root, cleanEnvironment.DOCS_OUT_DIR ?? "dist");
 if (scope.deployTarget === "english" || (scope.deployTarget === "combined" && scope.locales.length === 0)) {
   const environment = shardEnvironment(

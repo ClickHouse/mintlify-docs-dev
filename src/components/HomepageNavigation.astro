@@ -45,6 +45,10 @@ const remotePreview = readScope().remotePreview;
 
 function localHref(href: string): string {
   if (/^(https?:)?\/\//.test(href)) return href;
+  // The reference landing page moved from /reference/home to /reference.
+  // Keep the generated site-navigation input backwards compatible while the
+  // source navigation contract is migrated separately.
+  if (href === "/reference/home") return withBase("/reference");
   if (remotePreview && (href === "/" || href === "")) return "https://clickhouse.com/docs/";
   const localPath = href.startsWith("/") ? href : `/${href}`;
   const alreadyLocalized = localePrefix && (
@@ -60,6 +64,14 @@ function localHref(href: string): string {
 function hasCurrentPage(item: NavItem): boolean {
   if (item.link && localHref(item.link).replace(/\/+$/, "") === currentPath) return true;
   if (item.landing && localHref(item.landing).replace(/\/+$/, "") === currentPath) return true;
+  // The snapshot-driven reference microfrontend owns routes which do not
+  // necessarily appear as individual leaves in the authored navigation. They
+  // are nevertheless part of the Database section, just like the existing
+  // authored reference pages.
+  if (item.label === "Database") {
+    const referenceRoot = localHref("/reference").replace(/\/+$/, "");
+    if (currentPath === referenceRoot || currentPath.startsWith(`${referenceRoot}/`)) return true;
+  }
   return item.items?.some(hasCurrentPage) ?? false;
 }
 
