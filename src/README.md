@@ -29,7 +29,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 | `DOCS_LOCALE` | A singular locale build (`en`, `es`, `pt-BR`, and so on); normally set only by the Vercel shard orchestrator. |
 | `DOCS_LOCALES` | Translations included in a `translations` or legacy `combined` artifact: `none`, `all`, or a comma-separated list such as `es,fr`. The translations project uses `all`. |
 | `DOCS_REMOTES` | Registered remote-source scope: `none` for an ordinary base-repository preview and `all` for source previews, production, and a base preview carrying `docs-preview-show-remotes`. |
-| `DOCS_REMOTE_NAME`, `DOCS_REMOTE_REPOSITORY`, `DOCS_REMOTE_REF` | CI-only tuple selecting one registered remote at an immutable commit for an English pull-request preview. Required for the `connect-preview` Vercel Custom Environment. |
+| `DOCS_REMOTE_NAME`, `DOCS_REMOTE_REPOSITORY`, `DOCS_REMOTE_REF` | CI-only tuple selecting one registered remote at an immutable commit for an English source pull-request preview. Required for that `connect-preview` mode; a trusted base preview with `docs-preview-show-remotes` instead uses `DOCS_REMOTES=all`. |
 | `DOCS_REMOTE_SOURCE_REPOSITORY` | CI-derived PR-head repository, retained only for preview attribution and edit links. It defaults to the registered repository. |
 | `DOCS_REMOTE_PULL_REQUEST_REF` | CI-only base-repository PR ref (`refs/pull/<number>/head`) to fetch and verify against `DOCS_REMOTE_REF`. |
 | `DOCS_REMOTES_PREFETCHED=1` | Requires the remote mounts and fetch-state files supplied by the credentialed CI fetch job. |
