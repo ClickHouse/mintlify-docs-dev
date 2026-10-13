@@ -299,6 +299,11 @@ export function readScope(root = process.cwd()): BuildScope {
       )
     : parseRemotePreview(fileScope?.remotePreview, ".preview-scope.json remotePreview");
 
+  // connect-preview is reserved for the remote PR workflow. Fail closed if
+  // Vercel did not inject its immutable remote-preview configuration.
+  if (vercelTarget === "connect-preview" && !remotePreview) {
+    throw new Error("Vercel connect-preview builds require DOCS_REMOTE_NAME, DOCS_REMOTE_REPOSITORY and DOCS_REMOTE_REF");
+  }
   if (remotePreview && (locale !== "en" || locales.length > 0)) {
     throw new Error("Remote pull-request previews are English-only; omit DOCS_LOCALES");
   }
