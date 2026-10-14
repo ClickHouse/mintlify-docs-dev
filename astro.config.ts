@@ -7,6 +7,7 @@ import { tableScroll } from "@cloudflare/nimbus-docs/markdown";
 import { satteri } from "@astrojs/markdown-satteri";
 import { rebaseUrls } from "./src/plugins/satteri-rebase-urls";
 import { mermaidBlocks } from "./src/plugins/satteri-mermaid";
+import { katexMathMarkers, katexMathRenderer } from "./src/plugins/satteri-katex";
 import { SATTERI_FEATURES } from "./src/plugins/satteri-features";
 import { readScope } from "./src/lib/scope";
 import type { HastPluginDefinition } from "satteri";
@@ -120,7 +121,8 @@ export default defineConfig({
         // Nimbus). Nimbus's own hast plugins must be re-added here.
         processor: satteri({
           features: SATTERI_FEATURES,
-          hastPlugins: [nimbusTableScroll, rebaseUrls({ base: BASE, remoteMounts }), mermaidBlocks()],
+          mdastPlugins: [katexMathMarkers],
+          hastPlugins: [nimbusTableScroll, rebaseUrls({ base: BASE, remoteMounts }), mermaidBlocks(), katexMathRenderer],
         }),
         // The prepared Markdown surfaces are for agents rather than the web
         // renderer. Preserve agent-only content and reduce the path selector
@@ -143,6 +145,22 @@ export default defineConfig({
     }),
   ],
   vite: {
+    // In local development, expose the separately-running archived-artifact
+    // server through the same origin as the docs app. This avoids cross-origin
+    // browser restrictions while keeping the component contract identical to
+    // production, where the website worker serves this prefix from storage.
+    server: {
+      proxy: {
+        // Astro removes `base` before Vite evaluates the proxy matcher, so
+        // the browser's `/docs/reference-artifacts/...` request is seen here
+        // as `/reference-artifacts/...`.
+        "/reference-artifacts": {
+          target: "http://127.0.0.1:4323",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/reference-artifacts/, ""),
+        },
+      },
+    },
     // The Vite dependency optimizer currently resolves React's development
     // JSX runtime to its production implementation in this project. The
     // production runtime intentionally leaves `jsxDEV` undefined, which made

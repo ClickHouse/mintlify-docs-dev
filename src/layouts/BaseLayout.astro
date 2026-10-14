@@ -109,12 +109,52 @@ const projectLogo = inlinePublicIcon("/images/logo.svg");
           targetDocument.documentElement.dataset.inputModality = inputModality;
         };
 
+        // The shortcut hint appears in the server-rendered sidebar. Work out
+        // its platform variant before the body is painted, rather than
+        // rendering one label and replacing it after hydration.
+        const applyShortcutPlatform = (targetDocument = document) => {
+          const platform = navigator.userAgentData?.platform ?? "";
+          const isMac = platform
+            ? /mac/i.test(platform)
+            : /mac|iphone|ipod|ipad/i.test(navigator.userAgent);
+          targetDocument.documentElement.dataset.shortcutPlatform = isMac ? "mac" : "other";
+        };
+
         const carrySidebarScroll = (targetDocument) => {
           const current = document.querySelector("#desktop-sidebar .ch-sidebar-scroll");
           const incoming = targetDocument.querySelector("#desktop-sidebar .ch-sidebar-scroll");
           if (current && incoming) {
-            incoming.setAttribute("data-nb-restore-scroll-top", String(current.scrollTop));
+            // Clicking a link focuses it before Astro dispatches
+            // `astro:before-swap`; that native focus can already have moved
+            // the enclosing scroll rail. For a persisted reference rail, use
+            // the offset captured at pointer-down, before that focus happens.
+            const persisted = current.hasAttribute("data-astro-transition-persist")
+              || Boolean(current.closest("[data-astro-transition-persist]"));
+            const top = persisted
+              ? (current.getAttribute("data-nb-restore-scroll-top") ?? String(current.scrollTop))
+              : String(current.scrollTop);
+            incoming.setAttribute("data-nb-restore-scroll-top", top);
+            // Astro retains the reference explorer's scroll host itself.
+            // Its incoming counterpart is discarded during the swap, so save
+            // the offset on the retained node too. This counteracts the
+            // browser's focus restoration, which otherwise scrolls the rail
+            // by one item after every clicked link.
+            if (persisted) {
+              current.setAttribute("data-nb-restore-scroll-top", top);
+            }
           }
+        };
+
+        const updatePersistedReferenceActiveLink = () => {
+          const sidebar = document.querySelector("[data-reference-sidebar-content]");
+          if (!sidebar) return;
+          const currentPath = window.location.pathname.replace(/\/$/, "");
+          sidebar.querySelectorAll("a[aria-current='page']").forEach((link) => {
+            link.removeAttribute("aria-current");
+          });
+          const match = Array.from(sidebar.querySelectorAll("a[href]"))
+            .find((link) => new URL(link.href, window.location.origin).pathname.replace(/\/$/, "") === currentPath);
+          match?.setAttribute("aria-current", "page");
         };
 
         const restoreSidebarScroll = () => {
@@ -132,11 +172,27 @@ const projectLogo = inlinePublicIcon("/images/logo.svg");
 
         applyTheme();
         applyInputModality();
+        applyShortcutPlatform();
         document.addEventListener(
           "pointerdown",
           () => {
             inputModality = "pointer";
             applyInputModality();
+          },
+          true,
+        );
+        document.addEventListener(
+          "pointerdown",
+          (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            const link = target.closest("#desktop-sidebar a");
+            const scrollHost = link?.closest(".ch-sidebar-scroll");
+            const persisted = scrollHost?.hasAttribute("data-astro-transition-persist")
+              || Boolean(scrollHost?.closest("[data-astro-transition-persist]"));
+            if (scrollHost && persisted) {
+              scrollHost.setAttribute("data-nb-restore-scroll-top", String(scrollHost.scrollTop));
+            }
           },
           true,
         );
@@ -149,6 +205,26 @@ const projectLogo = inlinePublicIcon("/images/logo.svg");
           },
           true,
         );
+        // Theme controls can appear inside a retained reference sidebar. Keep
+        // their behavior in this persistent pre-paint runtime instead of
+        // depending on a per-component hydration hook after every route swap.
+        document.addEventListener(
+          "click",
+          (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            const button = target.closest("[data-theme-choice]");
+            const choice = button?.getAttribute("data-theme-choice");
+            if (choice !== "system" && choice !== "light" && choice !== "dark") return;
+            try {
+              localStorage.setItem(KEY, choice);
+            } catch {
+              // A restricted storage context can still apply the preference.
+            }
+            applyTheme();
+          },
+          true,
+        );
         // ClientRouter replaces every <html> attribute with the attributes from
         // the incoming server document. Stamp the saved theme onto that
         // detached document before the swap so no frame renders with the light
@@ -156,11 +232,14 @@ const projectLogo = inlinePublicIcon("/images/logo.svg");
         document.addEventListener("astro:before-swap", (event) => {
           applyTheme(event.newDocument);
           applyInputModality(event.newDocument);
+          applyShortcutPlatform(event.newDocument);
           carrySidebarScroll(event.newDocument);
         });
         document.addEventListener("astro:after-swap", () => {
           applyTheme();
           applyInputModality();
+          applyShortcutPlatform();
+          updatePersistedReferenceActiveLink();
           restoreSidebarScroll();
         });
         media.addEventListener("change", () => {
@@ -173,6 +252,17 @@ const projectLogo = inlinePublicIcon("/images/logo.svg");
         window.__nbApplyTheme = applyTheme;
       })();
     </script>
+    <style is:inline>
+      /* Critical first-paint surfaces for the fixed reference rail. The full
+         stylesheet supplies all layout and interaction rules; these values
+         only prevent a light/transparent frame before that stylesheet lands. */
+      :root { --nb-background: #fff; --nb-muted: #f7f7f7; }
+      html[data-mode="dark"] { --nb-background: #151515; --nb-muted: #1d1d1d; }
+      body, .ch-sidebar, .ch-sidebar-scroll[data-reference-sidebar] [data-nb-sidebar] > .top-level > li:first-child > [data-nb-sidebar-group] > .nb-sidebar-row,
+      .ch-sidebar-scroll[data-reference-sidebar] [data-nb-sidebar] > .top-level > li:first-child > details > .nb-sidebar-row { background-color: var(--nb-background); }
+      .ch-sidebar-tools [data-sidebar-tool] { background-color: var(--nb-muted); }
+      .ch-sidebar-filter input { background-color: var(--nb-background); }
+    </style>
 
     <NimbusHead
       title={title}
@@ -234,6 +324,37 @@ const projectLogo = inlinePublicIcon("/images/logo.svg");
     <script src="../scripts/kapa.ts"></script>
     <script src="../scripts/anchor-redirects.ts"></script>
     <script src="../scripts/settings-anchor-redirects.ts"></script>
+    {/* Render the collapsed terminal tray here rather than inserting it after
+        JavaScript loads. This makes a hard reload paint the same bottom edge
+        that the terminal runtime subsequently enhances. */}
+    <style is:inline id="ch-webterminal-styles" transition:persist="webterminal-styles">
+      #ch-webterminal-dock { position: fixed; z-index: 2147483645; left: 0; right: 0; bottom: 0; width: 100%; height: 32px; }
+      #ch-webterminal-panel { position: relative; width: 100%; height: 32px; display: flex; flex-direction: column; background: #0d0d0d; color: #f3f4f6; box-shadow: 0 -1px 0 #2a2a2a; }
+      #ch-webterminal-viewport { flex: 1 1 auto; min-height: 0; overflow: hidden; background: #000; box-sizing: border-box; overscroll-behavior: contain; }
+      #ch-webterminal-resizer { position: absolute; top: -4px; left: 0; right: 0; height: 8px; cursor: row-resize; user-select: none; opacity: 0; pointer-events: none; }
+      #ch-webterminal-tray { flex: 0 0 32px; height: 32px; display: flex; align-items: stretch; justify-content: space-between; border-top: 1px solid #2a2a2a; background: #151515; color: #f3f4f6; font: 500 12px/1 Inter, ui-sans-serif, system-ui, sans-serif; }
+      #ch-webterminal-toggle, #ch-webterminal-action { appearance: none; border: 0; margin: 0; color: inherit; background: transparent; cursor: pointer; }
+      #ch-webterminal-toggle { display: flex; align-items: center; gap: 6px; min-width: 152px; padding: 0 10px 0 26px; border-right: 1px solid transparent; text-align: left; }
+      #ch-webterminal-toggle svg { width: 14px; height: 14px; color: #faff69; }
+      #ch-webterminal-toggle .ch-webterminal-label { white-space: nowrap; }
+      #ch-webterminal-toggle .ch-webterminal-shortcut { margin-left: 2px; padding: 1px 4px; border: 1px solid #404040; border-radius: 3px; color: #a9adb7; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+      #ch-webterminal-action { display: flex; align-items: center; justify-content: center; width: 32px; border-left: 1px solid #2a2a2a; color: #a9adb7; }
+      #ch-webterminal-action svg { width: 16px; height: 16px; }
+      @media (max-width: 1023px) { #ch-webterminal-dock { display: none; } }
+    </style>
+    <div id="ch-webterminal-dock" transition:persist="webterminal-dock">
+      <section id="ch-webterminal-panel" aria-label="ClickHouse web terminal">
+        <div id="ch-webterminal-viewport"></div>
+        <div id="ch-webterminal-resizer" role="separator" aria-label="Resize web terminal" aria-orientation="horizontal"></div>
+        <div id="ch-webterminal-tray">
+          <button id="ch-webterminal-toggle" type="button" title="Toggle the web terminal (~)" aria-controls="ch-webterminal-viewport" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2" y="3" width="20" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"></rect><path d="M6.5 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><line x1="12.5" y1="15" x2="17.5" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></line></svg>
+            <span class="ch-webterminal-label">ClickHouse terminal</span><span class="ch-webterminal-shortcut">~</span>
+          </button>
+          <button id="ch-webterminal-action" type="button" aria-label="Open web terminal" title="Open the web terminal"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5.5 12.5L10 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+        </div>
+      </section>
+    </div>
     <script src="../scripts/webterminal.ts"></script>
     <script src="../scripts/galaxy.ts"></script>
 

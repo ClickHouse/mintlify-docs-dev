@@ -13,6 +13,7 @@ export const SECTIONS = [
   "concepts",
   "guides",
   "reference",
+  "reference-prototype",
   "products",
   "clickstack",
   "integrations",
@@ -81,7 +82,39 @@ export function pathId({ entry }: { entry: string }): string {
   // its sitemap canonical is `/folder`, so that is the page id here and
   // `/folder/index` becomes a redirect (bin/gen-redirects.ts). The root
   // `index.mdx` keeps the id `index`, which Nimbus expects.
-  const id = entry.replace(/\.(mdx?|md)$/i, "");
+  const sourceId = entry.replace(/\.(mdx?|md)$/i, "");
+  // The generated Head snapshot owns the public reference route whenever it
+  // has an equivalent source page. Keeping the authored copy in the content
+  // collection under that same id makes Astro choose either entry depending
+  // on loader order, which in turn swaps between the ordinary DocsLayout and
+  // the reference version shell during navigation. Retain the authored file
+  // for source/audit purposes, but give it a private collection id so it
+  // cannot compete for the public route.
+  const authoredReferenceRoute = sourceId.startsWith("reference/")
+    ? sourceId.slice("reference/".length).replace(/\/index$/, "")
+    : undefined;
+  const snapshotOwnsAuthoredReference = authoredReferenceRoute !== undefined && [
+    `reference-prototype/latest/${authoredReferenceRoute}.md`,
+    `reference-prototype/latest/${authoredReferenceRoute}.mdx`,
+    `reference-prototype/latest/${authoredReferenceRoute}/index.md`,
+    `reference-prototype/latest/${authoredReferenceRoute}/index.mdx`,
+  ].some((candidate) => fs.existsSync(candidate));
+  if (snapshotOwnsAuthoredReference) {
+    return `__snapshot-shadowed-reference__/${sourceId}`.replace(/\/index$/, "");
+  }
+  // Keep the generated source isolated in `reference-prototype/`, while the
+  // scoped microfrontend preview publishes it at the real `/reference` mount.
+  // A prototype build excludes the authored `reference/` tree, preventing two
+  // sources from owning the same route.
+  const id = sourceId === "reference-prototype/latest"
+    ? "reference"
+    : sourceId.startsWith("reference-prototype/latest/")
+      ? `reference/${sourceId.slice("reference-prototype/latest/".length)}`
+      : sourceId === "reference-prototype"
+        ? "reference"
+        : sourceId.startsWith("reference-prototype/")
+          ? `reference/${sourceId.slice("reference-prototype/".length)}`
+          : sourceId;
   return id === "index" ? id : id.replace(/\/index$/, "");
 }
 
@@ -112,6 +145,13 @@ const clickhouseFields = {
   rss: z.any().optional(),
   icon: z.string().optional(),
   audience: z.any().optional(),
+  // Snapshot-rendered reference pages disclose their provenance in the layout.
+  generatedFromSystemTables: z.boolean().optional(),
+  // Identifies the generated subtree after its public route becomes `/reference`.
+  referenceSnapshot: z.boolean().optional(),
+  // Stable key used to select the matching snapshot navigation and static assets.
+  referenceSnapshotKey: z.string().optional(),
+  referenceSnapshotVersion: z.string().optional(),
 };
 
 const schema = defineDocSchema({ fields: clickhouseFields, strictFrontmatter: false });

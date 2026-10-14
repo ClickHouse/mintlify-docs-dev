@@ -1,0 +1,211 @@
+---
+import { SidebarFilter } from "@/components/ui/sidebar";
+import AskAiButton from "@/components/AskAiButton.astro";
+import { SearchTrigger } from "@/components/ui/search";
+const archiveOrigin = (import.meta.env.PUBLIC_REFERENCE_ARCHIVE_ORIGIN ?? "").replace(/\/$/, "");
+---
+
+<nav slot="sidebar" class="ch-sidebar-content" aria-label="Archived reference navigation" data-reference-archive-navigation data-reference-archive-origin={archiveOrigin}>
+  <div class="ch-sidebar-tools" aria-label="Documentation tools">
+    <SearchTrigger sidebar currentLocale="en" />
+    <AskAiButton sidebar currentLocale="en" />
+  </div>
+  <div class="ch-sidebar-filter-row">
+    <div class="ch-sidebar-filter"><SidebarFilter currentLocale="en" /></div>
+    <details class="ch-reference-version-picker" data-reference-archive-version-picker>
+      <summary aria-label="Reference version"><span data-reference-version-label>…</span></summary>
+      <div class="ch-reference-version-menu" role="menu" data-reference-version-menu></div>
+    </details>
+  </div>
+  <!-- The desktop archive rail retains its scroll position and disclosure
+       state between pages. DocsLayout leaves the mobile drawer empty at render
+       time and lets it clone this rail on demand, so this key is unique. -->
+  <div class="ch-sidebar-scroll" data-reference-sidebar transition:persist="archived-reference-sidebar-tree">
+    <!-- Keep a stable Nimbus identity: importing SidebarFilter mounts the
+         sidebar runtime globally, and it requires a hash even though this
+         archive tree supplies its own manifest-backed filtering below. -->
+    <div data-nb-sidebar data-nb-sidebar-hash="archived-reference" data-reference-archive-navigation-tree class="reference-navigation-skeleton" aria-label="Loading reference navigation">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<script>
+  type Item = { label: string; link?: string; items?: Item[] };
+  type Version = { version: string; label?: string; routeSlug?: string };
+
+  function pageContext() {
+    const params = new URLSearchParams(window.location.search);
+    const docsBase = window.location.pathname.startsWith("/docs") ? "/docs" : "";
+    const historical = window.location.pathname.match(new RegExp(`^${docsBase}/reference/(\\d+(?:[-.]\\d+)+)(?:/(.*))?/?$`));
+    const version = (params.get("version") ?? historical?.[1] ?? "").replace(/-/g, ".");
+    const route = (params.get("path") ?? historical?.[2] ?? "").replace(/^\/+|\/+$/g, "");
+    return { docsBase, version, route, routeSlug: version.replace(/\./g, "-") };
+  }
+
+  function archivedHref(link: string, context: ReturnType<typeof pageContext>) {
+    const path = new URL(link, window.location.origin).pathname;
+    const reference = `${context.docsBase}/reference`;
+    // Archive navigation is base-path independent (`/reference/...`), while
+    // the browser route includes `/docs` in this local deployment.
+    let relative = path.startsWith(reference)
+      ? path.slice(reference.length)
+      : path.startsWith("/reference")
+        ? path.slice("/reference".length)
+        : path;
+    relative = relative.replace(new RegExp(`^/(?:${context.version.replace(".", "\\.")}|${context.routeSlug})(?=/|$)`), "");
+    return `${reference}/${context.routeSlug}${relative === "/" ? "" : relative}`;
+  }
+
+  function populateVersionPicker(picker: HTMLElement, versions: Version[], context: ReturnType<typeof pageContext>) {
+    const label = picker.querySelector<HTMLElement>("[data-reference-version-label]");
+    const menu = picker.querySelector<HTMLElement>("[data-reference-version-menu]");
+    if (!label || !menu) return;
+    label.textContent = context.version === "latest" ? "Head" : context.version;
+    menu.replaceChildren();
+    const addOption = (optionLabel: string, version: string, current: boolean) => {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.setAttribute("role", "menuitem");
+      option.dataset.referenceArchiveVersionOption = version;
+      option.textContent = optionLabel;
+      if (current) option.setAttribute("aria-current", "true");
+      menu.append(option);
+    };
+    addOption("Head", "latest", context.version === "latest");
+    versions.forEach((version) => addOption(
+      version.label ?? version.version,
+      version.routeSlug ?? version.version.replace(/\./g, "-"),
+      version.version === context.version,
+    ));
+    menu.onclick = (event) => {
+      const target = event.target instanceof Element
+        ? event.target.closest<HTMLElement>("[data-reference-archive-version-option]")
+        : null;
+      if (!target) return;
+      const reference = `${context.docsBase}/reference`;
+      const selected = target.dataset.referenceArchiveVersionOption ?? "latest";
+      (picker as HTMLDetailsElement).open = false;
+      window.location.href = selected === "latest"
+        ? `${reference}${context.route ? `/${context.route}` : ""}`
+        : `${reference}/${selected}${context.route ? `/${context.route}` : ""}`;
+    };
+  }
+
+  function render(items: Item[], context: ReturnType<typeof pageContext>, root: HTMLElement) {
+    const list = document.createElement("ul");
+    list.className = "top-level flex list-none flex-col gap-0.5 p-0";
+    const containsCurrent = (item: Item): boolean => Boolean(
+      item.link && archivedHref(item.link, context).replace(/\/$/, "") === `${context.docsBase}/reference/${context.routeSlug}${context.route ? `/${context.route}` : ""}`.replace(/\/$/, ""),
+    ) || Boolean(item.items?.some(containsCurrent));
+    const makeItem = (item: Item, depth: number): HTMLLIElement => {
+      const li = document.createElement("li");
+      if (item.items) {
+        const details = document.createElement("details");
+        details.className = "group/accordion";
+        details.open = depth === 0 || containsCurrent(item);
+        const summary = document.createElement("summary");
+        summary.className = "nb-sidebar-row cursor-pointer list-none";
+        summary.textContent = item.label;
+        details.append(summary);
+        const children = document.createElement("ul");
+        children.className = "mt-0.5 ml-3 list-none border-l border-border p-0 pl-2 flex flex-col gap-px";
+        item.items.forEach((child) => children.append(makeItem(child, depth + 1)));
+        details.append(children);
+        li.append(details);
+      } else if (item.link) {
+        const link = document.createElement("a");
+        link.href = archivedHref(item.link, context);
+        link.className = "nb-sidebar-link";
+        link.textContent = item.label;
+        if (containsCurrent(item)) link.setAttribute("aria-current", "page");
+        li.append(link);
+      }
+      return li;
+    };
+    items.forEach((item) => list.append(makeItem(item, 0)));
+    root.replaceChildren(list);
+    root.classList.remove("reference-navigation-skeleton");
+    root.dataset.referenceArchiveVersion = context.version;
+    root.dataset.referenceArchiveReady = "true";
+  }
+
+  function syncCurrentPage(root: HTMLElement, context: ReturnType<typeof pageContext>) {
+    const current = `${context.docsBase}/reference/${context.routeSlug}${context.route ? `/${context.route}` : ""}`.replace(/\/$/, "");
+    root.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((link) => {
+      const isCurrent = new URL(link.href, window.location.origin).pathname.replace(/\/$/, "") === current;
+      link.toggleAttribute("aria-current", isCurrent);
+      if (isCurrent) link.setAttribute("aria-current", "page");
+    });
+  }
+
+  function bindFilter(shell: HTMLElement, tree: HTMLElement) {
+    const filter = shell.querySelector<HTMLInputElement>("[data-nb-sidebar-filter-input]");
+    if (!filter) return;
+    filter.addEventListener("input", () => {
+      const query = filter.value.trim().toLowerCase();
+      tree.querySelectorAll<HTMLLIElement>("li").forEach((item) => {
+        const match = !query || (item.textContent ?? "").toLowerCase().includes(query);
+        item.hidden = !match;
+        if (query && match) item.parentElement?.closest("details")?.setAttribute("open", "");
+      });
+    });
+  }
+
+  async function loadNavigation() {
+    const shell = document.querySelector<HTMLElement>("[data-reference-archive-navigation]");
+    const tree = shell?.querySelector<HTMLElement>("[data-reference-archive-navigation-tree]");
+    const picker = shell?.querySelector<HTMLElement>("[data-reference-archive-version-picker]");
+    if (!shell || !tree || !picker) return;
+    const context = pageContext();
+    const retainedTree = tree.dataset.referenceArchiveReady === "true" && tree.dataset.referenceArchiveVersion === context.version;
+    // The desktop scroll host is retained by Astro for within-version page
+    // changes. Rebuilding it here would discard the user's open branches and
+    // snap the rail back to its starting position.
+    const origin = shell.dataset.referenceArchiveOrigin || `${context.docsBase}/reference-artifacts`;
+    try {
+      const [response, versionsResponse] = await Promise.all([
+        fetch(`${origin}/${encodeURIComponent(context.version)}/en/navigation.json`),
+        fetch(`${origin}/versions.json`),
+      ]);
+      if (!response.ok) throw new Error("navigation unavailable");
+      const versions = versionsResponse.ok
+        ? (await versionsResponse.json() as { versions?: Version[] }).versions ?? []
+        : [];
+      populateVersionPicker(picker, versions, context);
+      if (retainedTree) syncCurrentPage(tree, context);
+      else {
+        const payload = await response.json() as { navigation: Item[] };
+        render(payload.navigation, context, tree);
+      }
+      bindFilter(shell, tree);
+    } catch {
+      tree.textContent = "This version’s reference navigation could not be loaded.";
+    }
+  }
+
+  loadNavigation();
+  document.addEventListener("astro:page-load", loadNavigation);
+</script>
+
+<style is:global>
+  .reference-navigation-skeleton { display: grid; gap: 0.75rem; padding: 0.35rem 0; }
+  .reference-navigation-skeleton span {
+    display: block;
+    height: 1rem;
+    border-radius: 0.25rem;
+    background: linear-gradient(90deg, var(--nb-muted) 20%, var(--nb-border) 50%, var(--nb-muted) 80%);
+    background-size: 200% 100%;
+    animation: reference-loading-shimmer 1.25s ease-in-out infinite;
+  }
+  .reference-navigation-skeleton span:nth-child(2) { width: 82%; }
+  .reference-navigation-skeleton span:nth-child(3) { width: 67%; }
+  .reference-navigation-skeleton span:nth-child(4) { width: 76%; }
+  .reference-navigation-skeleton span:nth-child(5) { width: 58%; }
+  @media (prefers-reduced-motion: reduce) { .reference-navigation-skeleton span { animation: none; } }
+
+  [data-reference-archive-navigation-tree] summary::-webkit-details-marker { display: none; }
+  [data-reference-archive-navigation-tree] summary::after { content: "›"; margin-left: auto; font-size: 1rem; }
+  [data-reference-archive-navigation-tree] details[open] > summary::after { transform: rotate(90deg); }
+
+</style>

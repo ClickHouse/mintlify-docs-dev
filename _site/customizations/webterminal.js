@@ -57,9 +57,15 @@
     + '</svg>';
 
   function injectStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    var style = document.createElement('style');
-    style.id = STYLE_ID;
+    var style = document.getElementById(STYLE_ID);
+    // BaseLayout supplies a persistent empty style shell so that the terminal
+    // does not briefly lose its fixed positioning during Astro navigation.
+    if (style && style.dataset.webterminalReady === 'true') return;
+    if (!style) {
+      style = document.createElement('style');
+      style.id = STYLE_ID;
+      document.head.appendChild(style);
+    }
     style.textContent = ''
       // Keep the collapsed tray fixed across the viewport. The document and sidebar deliberately
       // keep their full height and scroll behind it; opening the panel extends the overlay upward.
@@ -104,7 +110,7 @@
       + '#' + ACTION_ID + ' svg { width: 16px; height: 16px; }'
       + '#' + PANEL_ID + '.' + OPEN_CLASS + ' #' + ACTION_ID + ' svg { transform: rotate(180deg); }'
       + '@media (max-width: ' + (DESKTOP_MIN_WIDTH - 1) + 'px) { #' + DOCK_ID + ' { display: none; } }';
-    document.head.appendChild(style);
+    style.dataset.webterminalReady = 'true';
   }
 
   function maxTerminalHeight() {
@@ -159,8 +165,40 @@
     if (panel) return;
     injectStyles();
 
-    dock = document.createElement('div');
-    dock.id = DOCK_ID;
+    // Use BaseLayout's persistent dock when available. The dynamic terminal
+    // panel then survives a client-side page swap instead of being rebuilt.
+    dock = document.getElementById(DOCK_ID);
+    if (!dock) {
+      dock = document.createElement('div');
+      dock.id = DOCK_ID;
+      document.body.appendChild(dock);
+    }
+
+    // BaseLayout renders the collapsed tray in the initial HTML. Enhance that
+    // stable shell instead of removing and recreating it once this deferred
+    // script has arrived.
+    panel = document.getElementById(PANEL_ID);
+    if (panel) {
+      viewport = document.getElementById(VIEWPORT_ID);
+      resizer = document.getElementById(RESIZER_ID);
+      toggle = document.getElementById(TOGGLE_ID);
+      action = document.getElementById(ACTION_ID);
+      if (!viewport || !resizer || !toggle || !action) {
+        panel = null;
+      } else {
+        viewport.addEventListener('wheel', function (e) {
+          if (!terminalOpen) return;
+          e.preventDefault();
+          e.stopPropagation();
+        }, {passive: false});
+        resizer.addEventListener('pointerdown', startResize);
+        resizer.addEventListener('touchstart', function (e) { e.preventDefault(); });
+        toggle.addEventListener('click', toggleTerminal);
+        action.addEventListener('click', toggleTerminal);
+        updateControls();
+        return;
+      }
+    }
 
     panel = document.createElement('section');
     panel.id = PANEL_ID;
@@ -210,7 +248,6 @@
 
     panel.appendChild(tray);
     dock.appendChild(panel);
-    document.body.appendChild(dock);
     updateControls();
   }
 

@@ -12,11 +12,12 @@ import {
 } from "@cloudflare/nimbus-docs";
 import { components } from "../components";
 import { withBase, stripBase } from "../lib/base";
-import { buildRailFromConfig, type ConfigItem } from "../lib/sidebar-lazy";
+import { buildFullRailFromConfig, buildRailFromConfig, type ConfigItem } from "../lib/sidebar-lazy";
 import { AVAILABLE_LOCALES, EMIT_ENGLISH, localeCollectionName } from "../content.config";
 import { localeRouteName } from "../util/locales";
 import { getRemoteEditUrl } from "../lib/remotes";
 import navigation from "../generated/sidebar.items.json";
+import latestReference from "../generated/reference-prototype.latest.json";
 import type { GetStaticPaths } from "astro";
 
 export const prerender = true;
@@ -25,7 +26,10 @@ export const getStaticPaths: GetStaticPaths = async (options) => {
   const paths = await getDocsStaticPaths(options);
   return paths.filter(({ params }) => {
     const slug = params.slug;
-    return typeof slug !== "string" || !slug.startsWith("products/cloud/api-reference/");
+    return typeof slug !== "string" || (
+      !slug.startsWith("products/cloud/api-reference/")
+      && !slug.startsWith("__snapshot-shadowed-reference__/")
+    );
   });
 };
 
@@ -40,8 +44,28 @@ const { sidebar: sidebarOn, tableOfContents: tocOn } = await getRouteFlags(entry
 // Nimbus treats `custom` as a full-canvas route and disables its sidebar.
 // Mintlify customizes only the center content for pages such as the
 // quickstarts explorer, so keep the normal documentation rail there.
-const sidebar = sidebarOn || entry.data.mode === "custom"
-  ? buildRailFromConfig(navigation as ConfigItem[], browserPath)
+const data = entry.data as {
+  title?: string;
+  sidebarTitle?: string;
+  generatedFromSystemTables?: boolean;
+  referenceSnapshot?: boolean;
+  referenceSnapshotKey?: string;
+  referenceSnapshotVersion?: string;
+};
+const isReferencePrototype = data.referenceSnapshot === true;
+const referenceVersionKey = data.referenceSnapshotKey ?? "latest";
+// Only the Head reference tree is a static build input. Historical trees are
+// rendered by the version shell from their archived navigation at runtime.
+const activeReferenceVersion = latestReference;
+if (isReferencePrototype && referenceVersionKey !== "latest") {
+  throw new Error(`Historical reference page ${entry.id} must be served by the archive version shell`);
+}
+// This Nimbus-owned subtree deliberately owns a snapshot-derived rail even
+// though it is not yet in the authored site-wide Mintlify navigation.
+const sidebar = sidebarOn || entry.data.mode === "custom" || isReferencePrototype
+  ? isReferencePrototype
+    ? buildFullRailFromConfig(activeReferenceVersion!.navigation as ConfigItem[], browserPath, ["reference-prototype", referenceVersionKey])
+    : buildRailFromConfig(navigation as ConfigItem[], browserPath)
   : false;
 // The tree now carries base-prefixed hrefs, so match against the browser path.
 const prevNext = await getPrevNext(browserPath, {
@@ -68,7 +92,6 @@ const toc = tocOn && effectiveTocConfig !== false ? getTOC(headings, effectiveTo
 // Preserve Mintlify's `wide` layout hint for landing pages. Nimbus handles the
 // regular `doc` and `custom` modes; DocsLayout applies the wider content rail.
 const layoutMode = entry.data.mode === "custom" || entry.data.mode === "wide" ? entry.data.mode : "doc";
-const data = entry.data as { title?: string; sidebarTitle?: string };
 const pageTitle = data.title ?? data.sidebarTitle ?? entry.id.split("/").pop() ?? entry.id;
 const markdownPath = withBase(`/${entry.id}.md`);
 const markdownUrl = Astro.site ? new URL(markdownPath, Astro.site).href : markdownPath;
@@ -109,6 +132,9 @@ const alternates = Astro.site && AVAILABLE_LOCALES.length && entry.id !== "index
   alternates={alternates}
   currentLocale="en"
   activeLocales={AVAILABLE_LOCALES}
+  generatedFromSystemTables={data.generatedFromSystemTables === true}
+  persistSidebar={isReferencePrototype}
+  referenceVersion={isReferencePrototype ? data.referenceSnapshotVersion : undefined}
 >
   <Content components={components} />
 </DocsLayout>

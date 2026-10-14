@@ -1,0 +1,240 @@
+---
+/**
+ * The historical reference-body transport. The surrounding layout stays in
+ * Astro; this client island fetches only a trusted, CI-produced HTML fragment.
+ */
+import { ArchivedSettingsExplorers } from "./ArchivedSettingsExplorers";
+const archiveOrigin = (import.meta.env.PUBLIC_REFERENCE_ARCHIVE_ORIGIN ?? "").replace(/\/$/, "");
+---
+
+<div data-reference-archive-body data-reference-archive-origin={archiveOrigin} aria-live="polite" aria-busy="true">
+  <div class="reference-loading-page" aria-hidden="true">
+    <span class="reference-loading-line reference-loading-line-wide"></span>
+    <span class="reference-loading-line reference-loading-line-medium"></span>
+    <span class="reference-loading-line reference-loading-line-full"></span>
+    <span class="reference-loading-line reference-loading-line-long"></span>
+    <span class="reference-loading-line reference-loading-line-short"></span>
+    <span class="reference-loading-block"></span>
+  </div>
+</div>
+<ArchivedSettingsExplorers client:load />
+
+<script>
+  const loadingMarkup = `
+    <div class="reference-loading-page" aria-hidden="true">
+      <span class="reference-loading-line reference-loading-line-wide"></span>
+      <span class="reference-loading-line reference-loading-line-medium"></span>
+      <span class="reference-loading-line reference-loading-line-full"></span>
+      <span class="reference-loading-line reference-loading-line-long"></span>
+      <span class="reference-loading-line reference-loading-line-short"></span>
+      <span class="reference-loading-block"></span>
+    </div>`;
+
+  function refreshArchivedToc(body: HTMLElement) {
+    const root = document.querySelector<HTMLElement>("[data-ch-dynamic-toc]");
+    const list = root?.querySelector<HTMLUListElement>("ul");
+    if (!root || !list) return;
+
+    list.replaceChildren();
+    let headings = [...body.querySelectorAll<HTMLElement>("h2, h3.install-group-heading")];
+    // A few legacy reference pages encode their only section labels as
+    // `<p><strong>Syntax</strong></p>` rather than headings. Surface those
+    // only when the archived page has no semantic section headings at all.
+    if (headings.length === 0) {
+      headings = [...body.querySelectorAll<HTMLElement>("p > strong:only-child")]
+        .map((strong) => strong.parentElement as HTMLElement)
+        .filter(Boolean);
+    }
+    headings.forEach((heading, index) => {
+      const label = heading.textContent?.replace(/#\s*$/, "").trim() ?? "";
+      if (!heading.id) {
+        const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        heading.id = slug || `section-${index + 1}`;
+      }
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = `#${heading.id}`;
+      link.textContent = label || heading.id;
+      item.append(link);
+      list.append(item);
+    });
+    root.hidden = headings.length === 0;
+  }
+
+  const loadArchivedBody = () => {
+    const target = document.querySelector<HTMLElement>("[data-reference-archive-body]");
+    if (!target) return;
+    target.setAttribute("aria-busy", "true");
+    target.innerHTML = loadingMarkup;
+    const params = new URLSearchParams(window.location.search);
+    const docsBase = window.location.pathname.startsWith("/docs") ? "/docs" : "";
+    const historicalRoute = window.location.pathname.match(new RegExp(`^${docsBase}/reference/(\\d+(?:[-.]\\d+)+)(?:/(.*))?/?$`));
+    // Object storage uses the release number (`26.9`); the public URL uses
+    // the route-safe slug (`26-9`). Keep those contracts intentionally
+    // separate instead of leaking artifact keys into URLs.
+    const version = (params.get("version") ?? historicalRoute?.[1] ?? "").replace(/-/g, ".");
+    const publicVersion = historicalRoute?.[1] ?? version.replace(/\./g, "-");
+    const route = (params.get("path") ?? historicalRoute?.[2] ?? "").replace(/^\/+|\/+$/g, "");
+    const artifactRoot = target.dataset.referenceArchiveOrigin || `${window.location.pathname.startsWith("/docs") ? "/docs" : ""}/reference-artifacts`;
+    const directory = route ? `/${route}` : "";
+    const bodyUrl = `${artifactRoot}/${encodeURIComponent(version)}/en${directory}/body.html`;
+    const manifestUrl = `${artifactRoot}/${encodeURIComponent(version)}/en/manifest.json`;
+
+    Promise.all([fetch(bodyUrl), fetch(manifestUrl)])
+      .then(async ([body, manifest]) => {
+        if (!body.ok || !manifest.ok) throw new Error(`Archived reference page not found (${body.status}/${manifest.status})`);
+        const pages = (await manifest.json()).pages as Array<{ route: string; title: string }>;
+        const page = pages.find((candidate) => candidate.route === route);
+        if (page) {
+          const heading = document.querySelector("[data-reference-archive-title]");
+          if (heading) heading.textContent = page.title;
+          document.title = `${page.title} | ClickHouse Docs`;
+        }
+        target.innerHTML = await body.text();
+        // Settings indexes are versioned snapshot artifacts. Mount the current
+        // explorer UI against the selected release's immutable JSON data.
+        target.querySelectorAll<HTMLElement>("[data-reference-settings-explorer][data-reference-settings-index]").forEach((explorer) => {
+          const name = explorer.dataset.referenceSettingsIndex;
+          if (!name) return;
+          explorer.dataset.referenceSettingsIndexUrl = `${artifactRoot}/${encodeURIComponent(version)}/en/settings-index/${encodeURIComponent(name)}.json`;
+        });
+        // Retain the archived version for every internal body link without
+        // requiring that version's MDX pages to exist in the Astro build. In
+        // development middleware (and later the production edge rewrite)
+        // serves the one `version-shell` behind this clean URL.
+        if (params.has("version") || historicalRoute) {
+          // The archived HTML is rendered by the normal docs renderer before
+          // it is captured. That renderer canonicalises internal reference
+          // links to `/reference/<route>` (without the version segment).
+          // In the local shell those links must still resolve against the
+          // selected archive, just as the production edge rewrite will do.
+          const prefix = `${docsBase}/reference/`;
+          target.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((anchor) => {
+            const url = new URL(anchor.href, window.location.href);
+            if (!url.pathname.startsWith(prefix)) return;
+            let path = url.pathname.slice(prefix.length).replace(/^\/+|\/+$/g, "");
+            // Depending on whether the release build used the archive route
+            // prefix, the rendered body can contain either `/reference/x` or
+            // `/reference/26.9/x`. Normalize both to artifact-relative x.
+            if (path === version || path === publicVersion) path = "";
+            else if (path.startsWith(`${version}/`)) path = path.slice(version.length + 1);
+            else if (path.startsWith(`${publicVersion}/`)) path = path.slice(publicVersion.length + 1);
+            if (path === "version-shell") return;
+            anchor.href = `${docsBase}/reference/${publicVersion}${path ? `/${path}` : ""}${url.hash}`;
+          });
+        }
+        target.removeAttribute("aria-live");
+        target.removeAttribute("aria-busy");
+        // This page's headings arrive in the archived fragment, after the
+        // Astro shell. Populate the live shell's TOC from those historical
+        // headings — no page or navigation data comes from Head.
+        refreshArchivedToc(target);
+        document.dispatchEvent(new CustomEvent("reference:body-loaded"));
+      })
+      .catch(() => {
+        target.removeAttribute("aria-busy");
+        target.textContent = "This archived reference page could not be found.";
+      });
+  };
+
+  loadArchivedBody();
+  document.addEventListener("astro:page-load", loadArchivedBody);
+</script>
+
+<style is:global>
+  .reference-loading-title,
+  .reference-loading-line,
+  .reference-loading-block {
+    display: block;
+    border-radius: 0.25rem;
+    background: linear-gradient(90deg, var(--nb-muted) 20%, var(--nb-border) 50%, var(--nb-muted) 80%);
+    background-size: 200% 100%;
+    animation: reference-loading-shimmer 1.25s ease-in-out infinite;
+  }
+  .reference-loading-title { width: min(22rem, 75%); height: 0.95em; }
+  .reference-loading-page { display: grid; gap: 0.9rem; padding-top: 0.35rem; }
+  .reference-loading-line { height: 1rem; }
+  .reference-loading-line-wide { width: 88%; }
+  .reference-loading-line-medium { width: 66%; }
+  .reference-loading-line-full { width: 100%; margin-top: 0.8rem; }
+  .reference-loading-line-long { width: 94%; }
+  .reference-loading-line-short { width: 52%; }
+  .reference-loading-block { width: 100%; height: 8rem; margin-top: 1.1rem; }
+  @keyframes reference-loading-shimmer { to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .reference-loading-title,
+    .reference-loading-line,
+    .reference-loading-block { animation: none; }
+  }
+
+  /* Archived fragments retain the normal Aside markup, but not the
+     source build's component-scoped stylesheet. The live shell owns this
+     presentation layer, so archived notes track UI changes automatically. */
+  .docs-content .aside-card,
+  .docs-content [data-reference-callout] {
+    --_fill: var(--_fill-light);
+    --_text: var(--_text-light);
+    --_icon: var(--_icon-light);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--_icon) 22%, transparent);
+    background: var(--_fill);
+  }
+
+  [data-mode="dark"] .docs-content .aside-card,
+  [data-mode="dark"] .docs-content [data-reference-callout] {
+    --_fill: var(--_fill-dark);
+    --_text: var(--_text-dark);
+    --_icon: var(--_icon-dark);
+  }
+
+  .docs-content .aside-card > :first-child,
+  .docs-content [data-reference-callout] > :first-child { color: var(--_icon); }
+  .docs-content .aside-card > :last-child > :first-child,
+  .docs-content [data-reference-callout] > :last-child > :first-child { color: var(--_text); }
+  .docs-content .aside-card-body { color: var(--_text); }
+  .docs-content .aside-card-body p { margin: 0; }
+  .docs-content .aside-card-body p + p { margin-top: 0.375rem; }
+  .docs-content .aside-card-body a {
+    color: inherit !important;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+  }
+  .docs-content .aside-card-default {
+    border-color: color-mix(in oklch, var(--nb-info) 25%, transparent);
+  }
+  .docs-content .aside-card-default > :first-child,
+  .docs-content .aside-card-default > :last-child > :first-child { color: var(--nb-info); }
+  .docs-content .aside-card-default .aside-card-body { color: var(--nb-foreground); }
+  .docs-content .aside-card-default .aside-card-body a { color: var(--nb-link) !important; }
+  .docs-content .aside-card-default .aside-card-body code:not(:where(pre *)) {
+    background: color-mix(in oklch, var(--nb-info) 10%, transparent);
+    border-color: color-mix(in oklch, var(--nb-info) 15%, transparent);
+  }
+  .docs-content [data-reference-callout="note"] {
+    --_fill-light: var(--nb-info-muted);
+    --_text-light: var(--nb-foreground);
+    --_icon-light: var(--nb-info);
+    --_fill-dark: var(--nb-info-muted);
+    --_text-dark: var(--nb-foreground);
+    --_icon-dark: var(--nb-info);
+    border-color: color-mix(in oklch, var(--nb-info) 25%, transparent);
+  }
+  .docs-content .aside-card-body code:not(:where(pre *)) {
+    font-family: var(--nb-font-mono);
+    font-size: 0.8125em;
+    color: inherit;
+    background: color-mix(in srgb, white 34%, transparent);
+    border: 1px solid color-mix(in srgb, var(--_icon) 18%, transparent);
+    border-radius: 0.25rem;
+    padding: 0.0625rem 0.3125rem;
+  }
+  [data-mode="dark"] .docs-content .aside-card-body code:not(:where(pre *)) {
+    background: color-mix(in srgb, white 8%, transparent);
+  }
+</style>

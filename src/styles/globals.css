@@ -1,5 +1,6 @@
 @import "tailwindcss" source(none);
 @import "../../snippets/components/Badges/badges_styles.css";
+@import "katex/dist/katex.min.css";
 /* Explicit sources: the project root also holds ~23k MDX content files that
    Tailwind must not scan. */
 @source "../components";
@@ -643,9 +644,10 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 
 /* ClientRouter keeps navigation fast without animating the page between
    routes. Component-level hover and disclosure transitions remain intact. */
-::view-transition-old(root),
-::view-transition-new(root) {
-	animation: none;
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+	animation: none !important;
 }
 
 /* ---- Sidebar rail: compact classes (see SidebarLink/SidebarGroup) ---- */
@@ -781,9 +783,15 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	align-items: center;
 }
 
-.ch-header-brand img {
+.ch-header-brand :is(img, .ch-header-logo) {
 	width: 166.8px;
 	height: 32px;
+}
+
+.ch-header-logo svg {
+	display: block;
+	width: 100%;
+	height: 100%;
 }
 
 .ch-brand-controls {
@@ -836,7 +844,6 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 .ch-nav-tab.active,
 .ch-nav-dropdown-trigger.active {
 	color: var(--ch-nav-tab-active);
-	font-weight: 600;
 }
 
 .ch-nav-tab.active::after,
@@ -1013,6 +1020,15 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	gap: 6px;
 }
 
+/* The GitHub count is refreshed after first paint. Reserve enough room for
+ * the source fallback (for example, "49.6k") so a shorter live value ("50k")
+ * cannot move the centered primary navigation on a hard refresh. */
+.ch-gh-stars [data-home-github-stars] {
+	display: inline-block;
+	min-width: 5ch;
+	font-variant-numeric: tabular-nums;
+}
+
 .ch-gh-stars:hover,
 .ch-sign-in:hover {
 	color: var(--nb-heading);
@@ -1116,6 +1132,26 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	background: var(--nb-background);
 }
 
+/* Theme changes are a document-level state change, not a hover effect. Some
+ * Nimbus primitives bring `transition-colors` with them, which made the
+ * sticky Reference context and the filter interpolate for 150 ms after the
+ * rest of the canvas had already changed. Keep those fixed rail surfaces in
+ * lockstep with the root colour tokens. This deliberately does not affect
+ * sidebar link/disclosure hover transitions. */
+.ch-sidebar,
+.ch-sidebar-content,
+.ch-sidebar-tools,
+.ch-sidebar-filter-row,
+.ch-sidebar-filter input,
+.ch-reference-version-picker summary,
+.ch-reference-version-menu,
+.ch-sidebar-footer-controls,
+.ch-sidebar-scroll[data-reference-sidebar] [data-nb-sidebar] > .top-level > li:first-child > [data-nb-sidebar-group] > .nb-sidebar-row,
+.ch-sidebar-scroll[data-reference-sidebar] [data-nb-sidebar] > .top-level > li:first-child > details > .nb-sidebar-row {
+	transition-property: none !important;
+	transition-duration: 0s !important;
+}
+
 /* Begin the sidebar divider below the shared header frame so it does not
    separate the brand controls from the primary navigation. */
 .ch-sidebar::after {
@@ -1164,9 +1200,17 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	padding: 0 14px 0 12px;
 }
 
-.ch-sidebar-filter {
+.ch-sidebar-filter-row {
 	flex: 0 0 auto;
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
 	padding: 0 29px 0 27px;
+}
+
+.ch-sidebar-filter {
+	min-width: 0;
+	flex: 1 1 auto;
 }
 
 .ch-sidebar-filter > div {
@@ -1183,6 +1227,9 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	min-height: 0;
 	flex: 1 1 auto;
 	overflow: auto;
+	/* Keep wheel and trackpad overscroll inside the desktop rail rather than
+	   passing it to the document behind the fixed sidebar. */
+	overscroll-behavior: contain;
 	padding: 11px 16px 34px 31px;
 	scrollbar-width: thin;
 	scrollbar-color: var(--nb-border-strong) transparent;
@@ -1198,6 +1245,21 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	margin: 0 0 24px;
 }
 
+/* Reference is a versioned archive context as well as a navigation heading.
+   Keep its first row in view on both Head and archived sidebars. The concrete
+   Nimbus surface token is intentionally used here: the generic Tailwind
+   `--background` alias is not present in every runtime-injected fragment. */
+.ch-sidebar-scroll[data-reference-sidebar] [data-nb-sidebar] > .top-level > li:first-child > [data-nb-sidebar-group] > .nb-sidebar-row,
+.ch-sidebar-scroll[data-reference-sidebar] [data-nb-sidebar] > .top-level > li:first-child > details > .nb-sidebar-row {
+	position: sticky;
+	/* The scroll rail has 11px top padding. Offset it so the sticky surface
+	 * reaches the actual scrollport edge instead of leaving a strip where
+	 * navigation can appear to pass above the Reference context. */
+	top: -11px;
+	z-index: 10;
+	background-color: var(--nb-background);
+}
+
 .ch-sidebar-scroll [data-nb-sidebar] > .top-level > li > [data-nb-sidebar-group] > .nb-sidebar-row {
 	min-height: 20px;
 	margin: 0 0 7px;
@@ -1206,6 +1268,92 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	font-size: 14px;
 	font-weight: 600;
 	line-height: 20px;
+}
+
+/* Compact reference-version menu beside the sidebar filter. It is rendered
+ * in-page rather than using the browser-owned native select popup, so it can
+ * share the documentation UI's surface, corner radius, and downward menu
+ * placement. */
+.ch-reference-version-picker {
+	position: relative;
+	align-self: flex-start;
+	flex: 0 0 auto;
+}
+
+.ch-reference-version-picker summary {
+	/* Keep the filter's right edge aligned roughly with the midpoint of the
+	 * Ask AI button above it. Reference version values are short (`26.9`,
+	 * `26.10`), so the selector does not need to consume a full sidebar slot. */
+	width: 4rem;
+	height: 32px;
+	border: 1px solid var(--nb-border);
+	border-radius: 4px;
+	background: var(--nb-background);
+	padding: 0 17px 0 6px;
+	color: var(--nb-muted-foreground);
+	font-size: 0.6875rem;
+	font-weight: 500;
+	line-height: 1;
+	cursor: pointer;
+	list-style: none;
+	display: flex;
+	align-items: center;
+}
+
+.ch-reference-version-picker summary::-webkit-details-marker { display: none; }
+.ch-reference-version-picker summary::marker { content: ""; }
+
+.ch-reference-version-picker::after {
+	content: "⌄";
+	position: absolute;
+	top: 50%;
+	right: 6px;
+	pointer-events: none;
+	transform: translateY(-56%);
+	color: var(--nb-muted-foreground);
+	font-size: 0.875rem;
+	line-height: 1;
+}
+
+.ch-reference-version-picker summary:hover,
+.ch-reference-version-picker summary:focus-visible {
+	border-color: var(--nb-border-strong);
+	color: var(--nb-foreground);
+	outline: none;
+}
+
+.ch-reference-version-menu {
+	position: absolute;
+	z-index: 90;
+	top: calc(100% + 4px);
+	right: 0;
+	min-width: max-content;
+	overflow: hidden;
+	border: 1px solid var(--nb-border);
+	border-radius: 4px;
+	background: var(--nb-background);
+	box-shadow: 0 8px 22px rgb(0 0 0 / 16%);
+}
+
+.ch-reference-version-menu button {
+	display: block;
+	width: 100%;
+	border: 0;
+	background: transparent;
+	padding: 7px 10px;
+	color: var(--nb-muted-foreground);
+	font-size: 0.75rem;
+	line-height: 1.25rem;
+	text-align: left;
+	cursor: pointer;
+}
+
+.ch-reference-version-menu button:hover,
+.ch-reference-version-menu button:focus-visible,
+.ch-reference-version-menu button[aria-current="true"] {
+	background: var(--nb-muted);
+	color: var(--nb-foreground);
+	outline: none;
 }
 
 .ch-sidebar-scroll [data-nb-sidebar-children] {
@@ -1269,16 +1417,22 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	opacity: 1;
 }
 
+.ch-sidebar-footer-controls {
+	display: flex;
+	flex: 0 0 32px;
+	border-top: 1px solid var(--nb-border);
+}
+
 .ch-language-selector {
 	position: relative;
-	height: 48px;
-	flex: 0 0 auto;
-	border-top: 1px solid var(--nb-border);
+	height: 32px;
+	min-width: 0;
+	flex: 1 1 auto;
 }
 
 .ch-language-selector-trigger {
 	width: 100%;
-	height: 47px;
+	height: 31px;
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -1309,7 +1463,7 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	position: absolute;
 	z-index: 80;
 	right: 16px;
-	bottom: 44px;
+	bottom: 28px;
 	left: 16px;
 	max-height: min(430px, calc(100vh - 170px));
 	overflow: auto;
@@ -1318,6 +1472,20 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	border-radius: 6px;
 	background: var(--nb-card);
 	box-shadow: 0 16px 42px rgb(0 0 0 / 20%);
+}
+
+.ch-sidebar-footer-controls .ch-language-selector-menu {
+	left: 16px;
+	right: auto;
+	width: calc(100% + 68px);
+}
+
+.ch-sidebar-theme-control {
+	width: 100px;
+	display: grid;
+	flex: 0 0 auto;
+	place-items: center;
+	border-left: 1px solid var(--nb-border);
 }
 
 .ch-language-selector-item {
@@ -1660,7 +1828,10 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 
 .ch-page-context [data-nb-toc] nav > ul {
 	max-height: calc(100vh - 352px);
+	min-width: 0;
+	overflow-x: hidden;
 	overflow-y: auto;
+	overscroll-behavior: contain;
 	scrollbar-width: auto;
 }
 
@@ -1675,6 +1846,7 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 }
 
 .ch-page-context [data-nb-toc] nav > ul > li {
+	min-width: 0;
 	margin: 0;
 	padding: 0;
 	box-shadow: inset 1px 0 color-mix(in srgb, var(--nb-foreground) 10%, transparent);
@@ -1716,7 +1888,11 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 	width: calc(100% - var(--ch-toc-depth) * 17px);
 	min-height: 32px;
 	display: block;
+	min-width: 0;
 	margin-left: calc(var(--ch-toc-depth) * 17px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	padding: 4px 0 4px 16px;
 	border: 0;
 	color: var(--nb-muted-foreground);
@@ -1863,6 +2039,98 @@ body:not(:has([data-mobile-sidebar])) [data-menu-btn] {
 
 .ch-title-page-actions {
 	margin-top: 12px;
+}
+
+/* Snapshot reference content should disclose its origin without competing with
+ * the title or page actions. It intentionally sits directly below the action
+ * row, where a reader can discover it before entering the generated body. */
+.ch-generated-watermark {
+	margin: 2px 0 0;
+	padding-left: 4px;
+	font-size: 0.6875rem;
+	line-height: 1.25rem;
+	letter-spacing: 0.01em;
+	color: color-mix(in srgb, var(--nb-muted-foreground) 72%, transparent);
+}
+
+/* Matches the compact metadata row used by the current reference pages while
+ * allowing long generated values to wrap without widening the content column. */
+.ch-setting-metadata {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.125rem 0.5rem;
+	margin: 0.375rem 0;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+}
+
+/* The document rhythm targets every direct content child. Metadata deliberately
+ * follows a heading more tightly, matching the authored reference pages. */
+.docs-content > .ch-setting-metadata {
+	margin: 0.375rem 0;
+}
+
+.ch-setting-metadata-label {
+	font-weight: 600;
+	opacity: 0.72;
+}
+
+.ch-setting-metadata-label:not(:first-child) {
+	margin-inline-start: 0.5rem;
+}
+
+.ch-setting-metadata-value {
+	overflow-wrap: anywhere;
+}
+
+/* Tiers are compact snapshot metadata, not the prominent authored-doc badges. */
+.ch-setting-metadata-tier {
+	display: inline-flex;
+	align-items: center;
+	min-height: 1.125rem;
+	padding: 0 0.375rem;
+	border: 1px solid color-mix(in srgb, var(--nb-foreground) 18%, transparent);
+	border-radius: 9999px;
+	background: color-mix(in srgb, var(--nb-foreground) 7%, transparent);
+	color: var(--nb-muted-foreground);
+	font-size: 0.6875rem;
+	font-weight: 600;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.ch-setting-metadata-tier[data-tier="beta"] {
+	border-color: transparent;
+	background-color: #dbeafe;
+	color: #1d4ed8;
+}
+
+.ch-setting-metadata-tier[data-tier="experimental"] {
+	border-color: transparent;
+	background-color: #f3e8ff;
+	color: #6d28d9;
+}
+
+.ch-setting-metadata-tier[data-tier="privatepreview"] {
+	border-color: transparent;
+	background-color: #fef3c7;
+	color: #b45309;
+}
+
+[data-mode="dark"] .ch-setting-metadata-tier[data-tier="beta"] {
+	background-color: #1e3a6b;
+	color: #93c5fd;
+}
+
+[data-mode="dark"] .ch-setting-metadata-tier[data-tier="experimental"] {
+	background-color: #3b1d6b;
+	color: #d8b4fe;
+}
+
+[data-mode="dark"] .ch-setting-metadata-tier[data-tier="privatepreview"] {
+	background-color: #4b3410;
+	color: #fcd34d;
 }
 
 .ch-title-path-row {

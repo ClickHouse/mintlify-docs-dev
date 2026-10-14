@@ -1,0 +1,126 @@
+---
+/**
+ * Snapshot-version control for the reference explorer.
+ *
+ * The selector preserves the reference-relative route. This makes release
+ * comparison the default interaction: switching 26.9 → latest on an
+ * arithmetic-functions page opens the corresponding latest page, not home.
+ */
+interface Props {
+  currentVersion: string;
+}
+
+const { currentVersion } = Astro.props;
+// Leave this blank locally: Vite proxies the artifact store through the docs
+// origin, matching the production `/docs/reference-artifacts` route.
+const archiveOrigin = import.meta.env.PUBLIC_REFERENCE_ARCHIVE_ORIGIN ?? "";
+---
+
+<details class="ch-reference-version-picker" data-reference-version-picker data-reference-archive-origin={archiveOrigin}>
+  <summary aria-label="Reference version" title={`Reference version: Head (${currentVersion})`}>
+    <span data-reference-version-label>Head</span>
+  </summary>
+  <div class="ch-reference-version-menu" role="menu" data-reference-version-menu>
+    <button type="button" role="menuitem" data-reference-version-option data-version="latest">Head</button>
+  </div>
+</details>
+
+<script>
+  import { navigate } from "astro:transitions/client";
+
+  type ArchivedVersion = { version: string; label?: string; routeSlug?: string };
+
+  function currentReferenceRoute() {
+    const base = window.location.pathname.startsWith("/docs") ? "/docs" : "";
+    const reference = `${base}/reference`;
+    const { pathname, searchParams } = new URL(window.location.href);
+    if (pathname === `${reference}/version-shell`) {
+      return (searchParams.get("path") ?? "").replace(/^\/+|\/+$/g, "");
+    }
+    const historical = pathname.match(new RegExp(`^${reference}/\\d+(?:[-.]\\d+)+(?:/(.*))?/?$`));
+    // Capture 1 is the version slug; capture 2 is the reference-relative
+    // route that should survive a version change.
+    if (historical) return (historical[2] ?? "").replace(/^\/+|\/+$/g, "");
+    return pathname.startsWith(`${reference}/`)
+      ? pathname.slice(reference.length).replace(/^\/+|\/+$/g, "")
+      : "";
+  }
+
+  function referenceBase() {
+    return window.location.pathname.startsWith("/docs") ? "/docs/reference" : "/reference";
+  }
+
+  function routeForVersion(version: string, route: string) {
+    const reference = referenceBase();
+    return version === "latest"
+      ? `${reference}${route ? `/${route}` : ""}`
+      : `${reference}/${version}${route ? `/${route}` : ""}`;
+  }
+
+  function addVersionOption(menu: HTMLElement, label: string, version: string, current: boolean) {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.setAttribute("role", "menuitem");
+    option.dataset.referenceVersionOption = "";
+    option.dataset.version = version;
+    option.textContent = label;
+    if (current) option.setAttribute("aria-current", "true");
+    menu.append(option);
+  }
+
+  async function addArchivedVersions(picker: HTMLElement) {
+    try {
+      // During local development the artifact server is proxied through the
+      // docs origin. In production this can be overridden with the storage
+      // endpoint, but an empty attribute must not suppress archived versions.
+      const docsBase = window.location.pathname.startsWith("/docs") ? "/docs" : "";
+      const archiveBase = (picker.dataset.referenceArchiveOrigin || `${docsBase}/reference-artifacts`).replace(/\/$/, "");
+      const response = await fetch(`${archiveBase}/versions.json`);
+      if (!response.ok) return;
+      const payload = await response.json() as { versions?: ArchivedVersion[] };
+      const menu = picker.querySelector<HTMLElement>("[data-reference-version-menu]");
+      if (!menu) return;
+      const route = currentReferenceRoute();
+      const currentPath = window.location.pathname.replace(/\/$/, "");
+      for (const archive of payload.versions ?? []) {
+        const routeSlug = archive.routeSlug ?? archive.version.replace(/\./g, "-");
+        addVersionOption(
+          menu,
+          archive.label ?? archive.version,
+          routeSlug,
+          currentPath === routeForVersion(routeSlug, route).replace(/\/$/, ""),
+        );
+      }
+    } catch {
+      // The Head build remains usable when the archive catalog is unavailable.
+    }
+  }
+
+  function initializePicker(picker: HTMLElement) {
+    if (picker.dataset.referenceVersionPickerBound === "true") return;
+    picker.dataset.referenceVersionPickerBound = "true";
+    void addArchivedVersions(picker);
+    picker.addEventListener("click", (event) => {
+      const target = event.target instanceof Element
+        ? event.target.closest<HTMLElement>("[data-reference-version-option]")
+        : null;
+      if (!target) return;
+      const destination = new URL(routeForVersion(target.dataset.version ?? "latest", ""), window.location.origin);
+      const route = currentReferenceRoute();
+      destination.pathname = `${destination.pathname.replace(/\/$/, "")}${route ? `/${route}` : ""}`;
+      destination.hash = window.location.hash;
+      (picker as HTMLDetailsElement).open = false;
+      void navigate(`${destination.pathname}${destination.search}${destination.hash}`);
+    });
+  }
+
+  function initializePickers() {
+    document.querySelectorAll<HTMLElement>("[data-reference-version-picker]").forEach(initializePicker);
+  }
+
+  initializePickers();
+  // Component scripts are evaluated once by Astro's client router. Each page
+  // swap supplies a fresh Latest picker, so its release catalog must be bound
+  // again after every route transition.
+  document.addEventListener("astro:page-load", initializePickers);
+</script>

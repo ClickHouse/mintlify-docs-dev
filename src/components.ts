@@ -8,6 +8,8 @@ import Render from "./components/Render.astro";
 import { CardGrid } from "./components/ui/card-grid";
 import { PackageManagers } from "./components/ui/package-managers";
 import { TabItem } from "./components/ui/tabs";
+import SettingMetadata from "./components/SettingMetadata.astro";
+import { SettingsExplorer } from "./components/SettingsExplorer";
 import { mintlifyGlobals } from "./components/compat/globals";
 
 export const components = {
@@ -15,6 +17,8 @@ export const components = {
   CardGrid,
   PackageManagers,
   Render,
+  SettingMetadata,
+  SettingsExplorer,
   TabItem,
   ...mintlifyGlobals,
 };
