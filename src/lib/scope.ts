@@ -299,6 +299,16 @@ export function readScope(root = process.cwd()): BuildScope {
       )
     : parseRemotePreview(fileScope?.remotePreview, ".preview-scope.json remotePreview");
 
+  // connect-preview has two trusted modes: a source-PR preview with one
+  // immutable remote tuple, or a base-repository preview that explicitly
+  // requests every registered remote through its workflow-controlled scope.
+  const showAllRemotesPreview =
+    !hasRemoteEnvironment && envRemotes.toLowerCase() === "all";
+  if (vercelTarget === "connect-preview" && !remotePreview && !showAllRemotesPreview) {
+    throw new Error(
+      "Vercel connect-preview builds require DOCS_REMOTE_NAME, DOCS_REMOTE_REPOSITORY and DOCS_REMOTE_REF, or DOCS_REMOTES=all",
+    );
+  }
   if (remotePreview && (locale !== "en" || locales.length > 0)) {
     throw new Error("Remote pull-request previews are English-only; omit DOCS_LOCALES");
   }
