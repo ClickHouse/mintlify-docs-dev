@@ -19,6 +19,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 | `pnpm run deploy` | Deploys `dist/` to the production Worker selected by `DOCS_LOCALE`. |
 | `pnpm run deploy:preview` | Uploads `dist/` as an aliased Worker version selected by `DOCS_PREVIEW_ALIAS`. |
 | `node bin/fetch-remotes.ts` | Pulls remote-repo docs (`remotes.json`) into their mount directories. |
+| `pnpm exec nimbus-docs outdated` | Compares `nimbus.json` against the Nimbus registry; run before bumping `@cloudflare/nimbus-docs`. Starter-file drift stays unavailable until `templatesTag` is set in `nimbus.json`. |
 
 ## Environment variables
 
@@ -47,6 +48,7 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 - `src/pages/[...slug].md.ts`, `src/pages/**/llms*.txt.ts`: English-only agent surfaces. Every human-language route points to the same canonical English `<page>.md`; no generated `.mdx` or localized agent copies are emitted. The root `llms-full.txt` links to full-text, top-level-section `llms.txt` files; `src/lib/corpus.ts` recursively subdivides any corpus that reaches 24 MiB.
 - `src/components/compat/`: Mintlify component names on Nimbus components; `react/` shims for snippet JSX.
 - `bin/`: generators and measurement scripts; `worker/`: Cloudflare Worker; `wrangler.jsonc`.
+- `nimbus.json`: CLI-maintained provenance of the registry components under `src/components/ui/` (slug, registry release, content hash, `modified` flag). Written by `nimbus-docs init`; `nimbus-docs add` appends to it. Starter provenance is `null` because the site was adopted, not scaffolded. `lastReviewedNimbusVersion` is the upgrade baseline: after bumping `@cloudflare/nimbus-docs`, run `pnpm exec nimbus-docs migrate --from <previous version>` and review its entries, or the build refuses to start.
 - `src/generated/` (gitignored): sidebar items, import index, island wrappers.
 
 Production source topology lives only in `remotes.json`; production fetches each

@@ -115,9 +115,12 @@ export default defineConfig({
       // components, so it is disabled and the build itself is the validator.
       validateMdx: false,
       markdown: {
-        // Own processor so that `## Heading {#custom-id}` is honoured
-        // (Sätteri's headingAttributes is off by default and not exposed by
-        // Nimbus). Nimbus's own hast plugins must be re-added here.
+        // Own processor so that `## Heading {#custom-id}` is honoured and the
+        // URL rebaser and mermaid plugins run in a known order. Nimbus 0.18
+        // exposes `markdown.features` and `markdown.hastPlugins`, so this
+        // override can be retired in a follow-up; while it stays, Nimbus's own
+        // hast plugins must be re-added here and Nimbus reads the features
+        // from this processor.
         processor: satteri({
           features: SATTERI_FEATURES,
           hastPlugins: [nimbusTableScroll, rebaseUrls({ base: BASE, remoteMounts }), mermaidBlocks()],

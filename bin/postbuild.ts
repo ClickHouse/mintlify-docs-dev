@@ -3,6 +3,13 @@
 //  2. generate `__redirects` next to the site,
 //  3. nest the site under <outDir>/docs so asset paths equal request paths.
 // Honours DOCS_OUT_DIR like astro.config.ts.
+//
+// Entries that stay at the output root instead of moving under /docs:
+// `__redirects` (imported by the Worker), `.assetsignore`, and the files
+// Nimbus 0.17+ writes for the origin root: `_headers` (Workers static assets
+// only honour it at the asset root) and `.well-known/` (agent discovery
+// documents advertised at https://clickhouse.com/.well-known/...; the website
+// Worker must forward those paths here for them to be reachable).
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -12,8 +19,9 @@ import { localeRouteName } from "../src/util/locales.ts";
 const root = process.cwd();
 const outDir = path.resolve(root, process.env.DOCS_OUT_DIR ?? "dist");
 const nested = path.join(outDir, "docs");
+const ROOT_ENTRIES = new Set(["__redirects", ".assetsignore", "_headers", ".well-known"]);
 const topLevelSiteEntries = fs.existsSync(outDir)
-  ? fs.readdirSync(outDir).filter((name) => name !== "__redirects" && name !== ".assetsignore")
+  ? fs.readdirSync(outDir).filter((name) => !ROOT_ENTRIES.has(name))
   : [];
 const alreadyNested = fs.existsSync(nested)
   && topLevelSiteEntries.length === 1
@@ -24,10 +32,10 @@ if (alreadyNested) {
   // 1. stray URL rebase
   execFileSync(process.execPath, [path.join(root, "bin/postbuild-rebase.ts"), outDir], { stdio: "inherit" });
 
-  // 3. nest under /docs (everything except __redirects and .assetsignore)
+  // 3. nest under /docs (everything except the root entries above)
   fs.mkdirSync(nested, { recursive: true });
   for (const name of fs.readdirSync(outDir)) {
-    if (name === "docs" || name === "__redirects" || name === ".assetsignore") continue;
+    if (name === "docs" || ROOT_ENTRIES.has(name)) continue;
     fs.renameSync(path.join(outDir, name), path.join(nested, name));
   }
   // 2. redirects at the top level (imported by the Worker; not served as an asset)
