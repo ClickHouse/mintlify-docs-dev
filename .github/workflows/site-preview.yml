@@ -260,6 +260,26 @@ jobs:
             return 1
           }
 
+          # Vercel can report a deployment as READY even if a concurrent status
+          # poll is stalled at the edge. Bound each poll and let the outer loop
+          # retry instead of failing the preview after a stalled request.
+          get_vercel_deployment() {
+            local deployment_id="$1"
+            local deployment_label="$2"
+            local response
+            if ! response="$(
+              curl --silent --show-error --fail-with-body \
+                --connect-timeout 10 \
+                --max-time 30 \
+                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
+            )"; then
+              echo "::warning::Unable to poll $deployment_label Vercel deployment $deployment_id; retrying." >&2
+              return 1
+            fi
+            printf '%s' "$response"
+          }
+
           english_id=""
           translations_id=""
           preview_url=""
@@ -572,35 +592,33 @@ jobs:
           # the 60-minute job timeout terminates the runner.
           for _ in {1..330}; do
             if [[ "$english_state" != "🟢 Ready" ]]; then
-              english_response="$(curl --silent --show-error --fail-with-body \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
-                "https://api.vercel.com/v13/deployments/$english_id?teamId=$VERCEL_ORG_ID")"
-              ready_state="$(jq -er .readyState <<< "$english_response")"
-              case "$ready_state" in
-                READY) english_state="🟢 Ready" ;;
-                ERROR|CANCELED|DELETED|BLOCKED)
-                  jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "English deployment did not complete")' <<< "$english_response" >&2
-                  exit 1
-                  ;;
-                QUEUED|INITIALIZING|BUILDING) ;;
-                *) echo "Unexpected English deployment state: $ready_state" >&2; exit 1 ;;
-              esac
+              if english_response="$(get_vercel_deployment "$english_id" "English")"; then
+                ready_state="$(jq -er .readyState <<< "$english_response")"
+                case "$ready_state" in
+                  READY) english_state="🟢 Ready" ;;
+                  ERROR|CANCELED|DELETED|BLOCKED)
+                    jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "English deployment did not complete")' <<< "$english_response" >&2
+                    exit 1
+                    ;;
+                  QUEUED|INITIALIZING|BUILDING) ;;
+                  *) echo "Unexpected English deployment state: $ready_state" >&2; exit 1 ;;
+                esac
+              fi
             fi
 
             if [[ -n "$translations_id" && "$translations_state" != "🟢 Ready" ]]; then
-              translations_response="$(curl --silent --show-error --fail-with-body \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
-                "https://api.vercel.com/v13/deployments/$translations_id?teamId=$VERCEL_ORG_ID")"
-              ready_state="$(jq -er .readyState <<< "$translations_response")"
-              case "$ready_state" in
-                READY) translations_state="🟢 Ready" ;;
-                ERROR|CANCELED|DELETED|BLOCKED)
-                  jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Translations deployment did not complete")' <<< "$translations_response" >&2
-                  exit 1
-                  ;;
-                QUEUED|INITIALIZING|BUILDING) ;;
-                *) echo "Unexpected translations deployment state: $ready_state" >&2; exit 1 ;;
-              esac
+              if translations_response="$(get_vercel_deployment "$translations_id" "translations")"; then
+                ready_state="$(jq -er .readyState <<< "$translations_response")"
+                case "$ready_state" in
+                  READY) translations_state="🟢 Ready" ;;
+                  ERROR|CANCELED|DELETED|BLOCKED)
+                    jq -r '(.errorCode // "deployment_failed") + ": " + (.errorMessage // "Translations deployment did not complete")' <<< "$translations_response" >&2
+                    exit 1
+                    ;;
+                  QUEUED|INITIALIZING|BUILDING) ;;
+                  *) echo "Unexpected translations deployment state: $ready_state" >&2; exit 1 ;;
+                esac
+              fi
             fi
 
             if [[ "$english_state" == "🟢 Ready" && ( -z "$translations_id" || "$translations_state" == "🟢 Ready" ) ]]; then
