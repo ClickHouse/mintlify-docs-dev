@@ -77,11 +77,16 @@ async function sourceFetchEnvironment(): Promise<NodeJS.ProcessEnv> {
       permissions: ["contents:read"],
     }],
   });
+  // GitHub App installation tokens authenticate Git-over-HTTPS as the password
+  // for the `x-access-token` user. Scope the header to this one private source:
+  // a repository-scoped installation token must never be attached to public
+  // source fetches.
+  const basicCredentials = Buffer.from(`x-access-token:${token}`).toString("base64");
   return {
     ...process.env,
     GIT_CONFIG_COUNT: "1",
-    GIT_CONFIG_KEY_0: "http.https://github.com/.extraHeader",
-    GIT_CONFIG_VALUE_0: `Authorization: Bearer ${token}`,
+    GIT_CONFIG_KEY_0: `http.https://github.com/${repository}.git.extraHeader`,
+    GIT_CONFIG_VALUE_0: `Authorization: Basic ${basicCredentials}`,
   };
 }
 
@@ -144,15 +149,15 @@ function copyLocaleOutput(locale: Locale, outDir: string, finalOutDir: string): 
 // Resolve each first-class Nimbus source while the short-lived Git credential
 // exists. The source snapshot is immutable for the rest of this build.
 const sourceEnvironment = await sourceFetchEnvironment();
+const cleanEnvironment = sanitizedEnvironment();
 // Astro loads the Shiki plugin while evaluating its config. Its keyword table is
 // generated from the checked-in legacy customisation, so it must exist before
 // `astro sync` can load that config in a clean Vercel checkout.
-run("pnpm", ["run", "prepare:config"], sourceEnvironment);
+run("pnpm", ["run", "prepare:config"], cleanEnvironment);
 run("pnpm", ["exec", "astro", "sync"], sourceEnvironment);
 
 // Cross the credential boundary before any generator, Vite plugin, or Astro
 // integration can parse or execute remote-authored content.
-const cleanEnvironment = sanitizedEnvironment();
 assertCredentialFree(cleanEnvironment);
 
 run("pnpm", ["run", "prepare:site"], cleanEnvironment);
