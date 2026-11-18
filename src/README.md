@@ -7,36 +7,36 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 
 ## Commands (run in `docs/`)
 
-| Command | What it does |
-|---|---|
-| `pnpm install` | Node 24, pnpm 10. |
-| `pnpm build` | Resolves registered Nimbus sources, builds the selected locale scope, rebases URLs, generates `__redirects`, nests under `dist/docs`, and enforces the Worker asset limits. |
-| `pnpm run build:vercel` | Resolves registered Nimbus sources using Vercel Connect where required, removes the deployment OIDC identity, and builds the English, translations, or legacy combined Vercel artifact selected by `DOCS_DEPLOY_TARGET`. |
-| `pnpm dev` | Astro dev server (`/docs/...`). |
-| `pnpm check:mdx` | Compiles every MDX file with Sätteri and reports undefined components; seconds, no build. |
-| `pnpm measure` | Page weight, anchor parity, base-path check, URL parity vs the live Mintlify sitemap (needs a nested build in `$DOCS_OUT_DIR`). |
-| `pnpm preview:cf` | `wrangler dev` on the docs Worker (`worker/index.ts`) serving `dist/`. |
-| `pnpm run deploy` | Deploys `dist/` to the production Worker selected by `DOCS_LOCALE`. |
-| `pnpm run deploy:preview` | Uploads `dist/` as an aliased Worker version selected by `DOCS_PREVIEW_ALIAS`. |
-| `pnpm exec astro sync` | Resolves the `remotes.json` repositories into native Nimbus source snapshots. |
-| `pnpm exec nimbus-docs outdated` | Compares `nimbus.json` against the Nimbus registry; run before bumping `@cloudflare/nimbus-docs`. Starter-file drift stays unavailable until `templatesTag` is set in `nimbus.json`. |
+| Command                          | What it does                                                                                                                                                                                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm install`                   | Node 24, pnpm 10.                                                                                                                                                                                                        |
+| `pnpm build`                     | Resolves registered Nimbus sources, builds the selected locale scope, rebases URLs, generates `__redirects`, nests under `dist/docs`, and enforces the Worker asset limits.                                              |
+| `pnpm run build:vercel`          | Resolves registered Nimbus sources using Vercel Connect where required, removes the deployment OIDC identity, and builds the English, translations, or legacy combined Vercel artifact selected by `DOCS_DEPLOY_TARGET`. |
+| `pnpm dev`                       | Astro dev server (`/docs/...`).                                                                                                                                                                                          |
+| `pnpm check:mdx`                 | Compiles every MDX file with Sätteri and reports undefined components; seconds, no build.                                                                                                                                |
+| `pnpm measure`                   | Page weight, anchor parity, base-path check, URL parity vs the live Mintlify sitemap (needs a nested build in `$DOCS_OUT_DIR`).                                                                                          |
+| `pnpm preview:cf`                | `wrangler dev` on the docs Worker (`worker/index.ts`) serving `dist/`.                                                                                                                                                   |
+| `pnpm run deploy`                | Deploys `dist/` to the production Worker selected by `DOCS_LOCALE`.                                                                                                                                                      |
+| `pnpm run deploy:preview`        | Uploads `dist/` as an aliased Worker version selected by `DOCS_PREVIEW_ALIAS`.                                                                                                                                           |
+| `pnpm exec astro sync`           | Resolves the `remotes.json` repositories into native Nimbus source snapshots.                                                                                                                                            |
+| `pnpm exec nimbus-docs outdated` | Compares `nimbus.json` against the Nimbus registry; run before bumping `@cloudflare/nimbus-docs`. Starter-file drift stays unavailable until `templatesTag` is set in `nimbus.json`.                                     |
 
 ## Environment variables
 
-| Variable | Effect |
-|---|---|
-| `DOCS_DEPLOY_TARGET` | Vercel artifact to assemble: `english`, `translations`, or the backward-compatible `combined` default. |
-| `DOCS_INCLUDE` | Comma-separated globs restricting the English collection (spikes, scoped previews). |
-| `DOCS_LOCALE` | A singular locale build (`en`, `es`, `pt-BR`, and so on); normally set only by the Vercel shard orchestrator. |
-| `DOCS_LOCALES` | Translations included in a `translations` or legacy `combined` artifact: `none`, `all`, or a comma-separated list such as `es,fr`. The translations project uses `all`. |
-| `DOCS_REMOTES` | Registered remote-source scope: `none` for an ordinary base-repository preview and `all` for source previews, production, and a base preview carrying `docs-preview-show-remotes`. |
+| Variable                                                        | Effect                                                                                                                                                                                                                                              |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DOCS_DEPLOY_TARGET`                                            | Vercel artifact to assemble: `english`, `translations`, or the backward-compatible `combined` default.                                                                                                                                              |
+| `DOCS_INCLUDE`                                                  | Comma-separated globs restricting the English collection (spikes, scoped previews).                                                                                                                                                                 |
+| `DOCS_LOCALE`                                                   | A singular locale build (`en`, `es`, `pt-BR`, and so on); normally set only by the Vercel shard orchestrator.                                                                                                                                       |
+| `DOCS_LOCALES`                                                  | Translations included in a `translations` or legacy `combined` artifact: `none`, `all`, or a comma-separated list such as `es,fr`. The translations project uses `all`.                                                                             |
+| `DOCS_REMOTES`                                                  | Registered remote-source scope: `none` for an ordinary base-repository preview and `all` for source previews, production, and a base preview carrying `docs-preview-show-remotes`.                                                                  |
 | `DOCS_REMOTE_NAME`, `DOCS_REMOTE_REPOSITORY`, `DOCS_REMOTE_REF` | CI-only tuple selecting one registered remote at an immutable commit for an English source pull-request preview. Required for that `connect-preview` mode; a trusted base preview with `docs-preview-show-remotes` instead uses `DOCS_REMOTES=all`. |
-| `DOCS_REMOTE_SOURCE_REPOSITORY` | CI-derived PR-head repository, retained only for preview attribution and edit links. It defaults to the registered repository. |
-| `DOCS_REMOTE_PULL_REQUEST_REF` | CI-only base-repository PR ref (`refs/pull/<number>/head`) to fetch and verify against `DOCS_REMOTE_REF`. |
-| `DOCS_PREVIEW_ALIAS` | Lowercase Cloudflare alias used by `pnpm run deploy:preview`. |
-| `DOCS_GITHUB_CONNECTOR` | Vercel Connect GitHub connector UID, for example `github/clickhouse-docs`. Configure it only for `production` and the `connect-preview` Custom Environment. |
-| `DOCS_OUT_DIR`, `DOCS_CACHE_DIR` | Isolated output and cache directories. Vercel uses one persistent Astro cache per deployment target and locale under `node_modules/.astro/`. |
-| `NODE_OPTIONS=--max-old-space-size=8192` | Recommended for full builds. Locale processes run sequentially, so memory is bounded to one content tree at a time. |
+| `DOCS_REMOTE_SOURCE_REPOSITORY`                                 | CI-derived PR-head repository, retained only for preview attribution and edit links. It defaults to the registered repository.                                                                                                                      |
+| `DOCS_REMOTE_PULL_REQUEST_REF`                                  | CI-only base-repository PR ref (`refs/pull/<number>/head`) to fetch and verify against `DOCS_REMOTE_REF`.                                                                                                                                           |
+| `DOCS_PREVIEW_ALIAS`                                            | Lowercase Cloudflare alias used by `pnpm run deploy:preview`.                                                                                                                                                                                       |
+| `DOCS_GITHUB_CONNECTOR`                                         | Vercel Connect GitHub connector UID, for example `github/clickhouse-docs`. Configure it only for `production` and the `connect-preview` Custom Environment.                                                                                         |
+| `DOCS_OUT_DIR`, `DOCS_CACHE_DIR`                                | Isolated output and cache directories. Vercel uses one persistent Astro cache per deployment target and locale under `node_modules/.astro/`.                                                                                                        |
+| `NODE_OPTIONS=--max-old-space-size=8192`                        | Recommended for full builds. Locale processes run sequentially, so memory is bounded to one content tree at a time.                                                                                                                                 |
 
 ## Layout
 
@@ -54,6 +54,93 @@ Production source topology lives only in `remotes.json`; Nimbus resolves each
 registered repository from its configured default branch into a first-class
 source. Remote CI supplies the registered name, repository, and exceptional
 immutable SHA only when requesting a preview.
+
+## Multisource repository operations
+
+`remotes.json` is the complete registry and source of truth for the remote
+topology. A registered upstream repository owns the canonical **English** page
+content at its configured source directory. `astro.config.ts` turns each entry
+into a native Nimbus source and mounts it at the public path below `/docs`.
+The primary English collection deliberately excludes those mounts, so a stale
+copy in this repository cannot shadow an upstream page. Nimbus resolves the
+source snapshot during `astro sync`; sidebar generation then reads that snapshot
+and expands the source repository's `docs.json` navigation.
+
+| Registered source     | Canonical repository and directory                    | Published below `/docs`                                | Access  |
+| --------------------- | ----------------------------------------------------- | ------------------------------------------------------ | ------- |
+| `clickhouse-operator` | `ClickHouse/clickhouse-operator` — `docs`             | `products/kubernetes-operator`                         | Public  |
+| `clickhouse-private`  | `ClickHouse/airgap-docs` — repository root            | `products/clickhouse-private`                          | Private |
+| `clickhouse-cpp`      | `ClickHouse/clickhouse-cpp` — `docs`                  | `integrations/language-clients/cpp`                    | Public  |
+| `clickhouse-rs`       | `ClickHouse/clickhouse-rs` — `docs`                   | `integrations/language-clients/rust`                   | Public  |
+| `clickhouse-go`       | `ClickHouse/clickhouse-go` — `docs`                   | `integrations/language-clients/go`                     | Public  |
+| `clickhouse-c`        | `ClickHouse/clickhouse-c` — `docs`                    | `integrations/language-clients/c`                      | Public  |
+| `clickhouse-cs`       | `ClickHouse/clickhouse-cs` — `docs`                   | `integrations/language-clients/csharp`                 | Public  |
+| `clickhouse-java`     | `ClickHouse/clickhouse-java` — `docs/clickhouse-docs` | `integrations/language-clients/java`                   | Public  |
+| `clickhouse-odbc`     | `ClickHouse/clickhouse-odbc` — `docs`                 | `concepts/features/interfaces/odbc`                    | Public  |
+| `chdb`                | `chdb-io/chdb` — `docs`                               | `chdb`                                                 | Public  |
+| `dbt-clickhouse`      | `ClickHouse/dbt-clickhouse` — `docs`                  | `integrations/connectors/data-ingestion/etl-tools/dbt` | Public  |
+
+### Authentication and source resolution
+
+Public sources are fetched anonymously. For a build that includes the private
+`clickhouse-private` source, `bin/vercel-build.ts` uses the deployment's Vercel
+OIDC identity and `DOCS_GITHUB_CONNECTOR` to request a short-lived,
+read-only GitHub App installation token from Vercel Connect. The credential is
+scoped to `ClickHouse/airgap-docs.git` and is exposed only to the `astro sync`
+process that resolves the Nimbus snapshot. No GitHub credential is stored in
+the repository or forwarded from GitHub Actions into Vercel.
+
+### Base-repository previews and labels
+
+The English and translations artifacts are separate Vercel projects. The
+following labels apply to a pull request in `ClickHouse/mintlify-docs-dev`:
+
+| Labels on the pull request                                                    | English preview                                                                                                                                                                        | Translation preview                                                                                          |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| None                                                                          | Standard Preview; builds this repository only and omits every remote source.                                                                                                           | The currently promoted translations deployment is used as the fallback.                                      |
+| `docs-preview-show-remotes`                                                   | Trusted branches only. Uses the `connect-preview` Custom Environment and resolves every registered source, including the private source through Vercel Connect. Fork PRs are rejected. | Production fallback unless a translations label is also present.                                             |
+| `docs-translations-all`                                                       | Same English behavior as the other labels on the PR.                                                                                                                                   | Builds the translations project with every supported locale.                                                 |
+| `docs-translations-ar`, `-es`, `-fr`, `-ja`, `-ko`, `-pt-BR`, `-ru`, or `-zh` | Same English behavior as the other labels on the PR.                                                                                                                                   | Backward-compatible aliases; each still builds **all** locales because they share one translations artifact. |
+
+Labels are case-insensitive. A translations preview intentionally has
+`DOCS_REMOTES=none`: it validates localized content in this repository and
+links remote areas to their production location. Add
+`docs-preview-show-remotes` when the English preview must validate remote
+navigation or upstream English content.
+
+### Upstream source pull-request previews
+
+Changes made in one of the registered upstream repositories use the manually
+dispatched reusable workflow `.github/workflows/remote-docs-preview.yml`, with
+the registered `remote_name`, source repository, and open pull-request number.
+It builds trusted `mintlify-docs-dev` `main` plus that one upstream pull request
+at its verified immutable SHA. The source preview is English-only; other remote
+areas link to their production location. It runs in `connect-preview` so the
+private source can obtain its Vercel Connect token if needed. A fork is fetched
+through the registered repository's pull-request ref and is verified against
+the approved head SHA; the fork itself is never given access to the connected
+environment.
+
+### Production and translations
+
+Production builds always set `DOCS_REMOTES=all`. A push to this repository's
+`main` deploys English, translations, or both according to the changed paths:
+source and renderer configuration changes deploy both, an English-content change
+deploys English, and a locale-only change deploys translations. A production
+call from an upstream source repository defaults to English, which publishes
+the newly canonical upstream English content without waiting for translated
+copies.
+
+Nimbus does not fetch localized content from any remote source. Translations
+belong in this repository at `<locale>/<mount>/…`, using the same path below the
+source mount; for example, a French C++ page belongs at
+`fr/integrations/language-clients/cpp/…`. The supported locale roots are `ar`,
+`es`, `fr`, `ja`, `ko`, `pt-BR`, `ru`, and `zh`. They remain generated output:
+update the English source and use the established translation workflow rather
+than manually editing a locale file. When a localized page is absent, the
+translations deployment emits the corresponding English fallback. Updating
+those generated locale files then triggers the translations project on the next
+`main` deployment.
 
 Remote repositories create previews through
 `.github/workflows/remote-docs-preview.yml`. The caller invokes the reusable
