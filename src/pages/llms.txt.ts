@@ -1,10 +1,4 @@
-import { getPreparedLlmsArtifact } from "@cloudflare/nimbus-docs/build";
+import { llmsRoute } from "@cloudflare/nimbus-docs/agent-endpoints";
 
 export const prerender = true;
-
-export async function GET() {
-  const artifact = await getPreparedLlmsArtifact({ scope: "site", surface: "index" });
-  return new Response(artifact.body, {
-    headers: { "Content-Type": artifact.mediaType },
-  });
-}
+export const { GET } = llmsRoute();

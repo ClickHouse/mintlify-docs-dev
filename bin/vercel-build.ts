@@ -1,14 +1,15 @@
 /**
  * Build the site on Vercel without exposing GitHub credentials to remote MDX.
  *
- * `fetch-remotes.ts` exchanges the deployment's OIDC identity for a short-lived,
- * repository-scoped token through Vercel Connect. It is the only child process
- * allowed to see that identity. Preparation, Astro compilation, and
+ * Nimbus source sync exchanges the deployment's OIDC identity for a short-lived,
+ * repository-scoped token through Vercel Connect. `astro sync` is the only child
+ * process allowed to see that identity. Preparation, Astro compilation, and
  * post-processing run after every credential has been removed.
  */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { getToken } from "@vercel/connect";
 import { readScope, type Locale } from "../src/lib/scope.ts";
 import { localeRouteName } from "../src/util/locales.ts";
 
@@ -46,6 +47,42 @@ function assertCredentialFree(environment: NodeJS.ProcessEnv): void {
 
 function run(command: string, args: string[], environment: NodeJS.ProcessEnv): void {
   execFileSync(command, args, { cwd: root, env: environment, stdio: "inherit" });
+}
+
+async function sourceFetchEnvironment(): Promise<NodeJS.ProcessEnv> {
+  const scope = readScope(root);
+  if (!scope.remotes) return { ...process.env };
+
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, "remotes.json"), "utf8")) as {
+    remotes: Array<{ name: string; repo: string; private?: boolean }>;
+  };
+  const privateSource = manifest.remotes.find(({ name, private: isPrivate }) =>
+    isPrivate && (!scope.remotePreview || scope.remotePreview.name === name),
+  );
+  if (!privateSource) return { ...process.env };
+
+  const connector = (process.env.DOCS_GITHUB_CONNECTOR ?? "").trim();
+  const oidcToken = (process.env.VERCEL_OIDC_TOKEN ?? "").trim();
+  if (!connector || !oidcToken) {
+    throw new Error("vercel-build: private Nimbus sources require DOCS_GITHUB_CONNECTOR and VERCEL_OIDC_TOKEN");
+  }
+  const repository = scope.remotePreview?.name === privateSource.name
+    ? scope.remotePreview.sourceRepository
+    : privateSource.repo;
+  const token = await getToken(connector, {
+    subject: { type: "app" },
+    authorizationDetails: [{
+      type: "github_app_installation",
+      repositories: [repository],
+      permissions: ["contents:read"],
+    }],
+  });
+  return {
+    ...process.env,
+    GIT_CONFIG_COUNT: "1",
+    GIT_CONFIG_KEY_0: "http.https://github.com/.extraHeader",
+    GIT_CONFIG_VALUE_0: `Authorization: Bearer ${token}`,
+  };
 }
 
 function shardEnvironment(
@@ -104,9 +141,10 @@ function copyLocaleOutput(locale: Locale, outDir: string, finalOutDir: string): 
   }
 }
 
-// The fetch child is the only process allowed to see the deployment OIDC
-// identity. It downloads bytes but never parses or imports remote-authored MDX.
-run(process.execPath, ["bin/fetch-remotes.ts"], { ...process.env });
+// Resolve each first-class Nimbus source while the short-lived Git credential
+// exists. The source snapshot is immutable for the rest of this build.
+const sourceEnvironment = await sourceFetchEnvironment();
+run("pnpm", ["exec", "astro", "sync"], sourceEnvironment);
 
 // Cross the credential boundary before any generator, Vite plugin, or Astro
 // integration can parse or execute remote-authored content.

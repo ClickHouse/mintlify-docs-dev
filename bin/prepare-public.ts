@@ -1,9 +1,9 @@
 /**
  * Build the public asset view consumed by Astro.
  *
- * Full builds retain the existing public trees. A remote preview exposes only
- * shared chrome icons and explicitly declared assets from its selected mount,
- * preventing Astro from copying the entire documentation image corpus.
+ * Full builds retain the existing public trees. Nimbus resolves external docs
+ * into `.nimbus/sources`; this step copies only explicitly declared source
+ * assets into their public mount.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -11,7 +11,7 @@ import { interpolateDocsVariables, readDocsVariables } from "../src/lib/docs-var
 import { readScope } from "../src/lib/scope.ts";
 
 interface RemoteAsset { source: string; mount: string }
-interface Remote { name: string; repo: string; mount: string; assets?: RemoteAsset[] }
+interface Remote { name: string; repo: string; path: string; mount: string; assets?: RemoteAsset[] }
 
 const root = process.cwd();
 const scope = readScope(root);
@@ -30,8 +30,7 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function interpolateRemoteVariables(remote: Remote): { files: number; replacements: number } {
-  const directory = path.join(root, remote.mount);
+function interpolateRemoteVariables(remote: Remote, directory: string): { files: number; replacements: number } {
   const configFile = path.join(directory, "docs.json");
   if (!fs.existsSync(configFile)) return { files: 0, replacements: 0 };
 
@@ -60,14 +59,13 @@ function interpolateRemoteVariables(remote: Remote): { files: number; replacemen
   return { files, replacements };
 }
 
-function rewriteRemoteAssetUrls(remote: Remote): number {
+function rewriteRemoteAssetUrls(remote: Remote, directory: string): number {
   const assets = (remote.assets ?? []).map((asset, index) => ({
     source: relativeManifestPath(asset.source, `${remote.name}.assets[${index}].source`),
     mount: relativeManifestPath(asset.mount, `${remote.name}.assets[${index}].mount`),
   }));
   if (!assets.length) return 0;
 
-  const directory = path.join(root, remote.mount);
   let changed = 0;
   const visit = (current: string): void => {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
@@ -106,6 +104,24 @@ function materialize(source: string, destination: string): void {
   }
 }
 
+/** The source selected by Nimbus during the preceding `astro sync`. */
+function sourceDirectory(remote: Remote): string | undefined {
+  const currentFile = path.join(root, ".nimbus", "sources", "current.json");
+  if (!fs.existsSync(currentFile)) return undefined;
+  const current = JSON.parse(fs.readFileSync(currentFile, "utf8")) as {
+    version?: number;
+    sources?: Record<string, { dir?: string; path?: string }>;
+  };
+  const source = current.sources?.[remote.name];
+  if (!source?.dir) return undefined;
+  const snapshot = path.resolve(root, source.dir);
+  const sourcesRoot = path.resolve(root, ".nimbus", "sources");
+  if (!snapshot.startsWith(`${sourcesRoot}${path.sep}`)) {
+    throw new Error(`prepare-public: source snapshot for ${remote.name} escapes .nimbus/sources`);
+  }
+  return path.join(snapshot, source.path ?? (remote.path === "." ? "" : remote.path));
+}
+
 fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 
@@ -127,34 +143,23 @@ if (scope.deployTarget === "translations") {
 }
 
 for (const remote of manifest.remotes) {
-  if (scope.remotePreview && scope.remotePreview.name !== remote.name) continue;
-  const stateFile = path.join(root, ".remote", `${remote.name}.json`);
-  if (!fs.existsSync(stateFile)) throw new Error(`prepare-public: missing fetch state for remote "${remote.name}"`);
-  const state = JSON.parse(fs.readFileSync(stateFile, "utf8")) as {
-    name?: string;
-    repo?: string;
-    skipped?: boolean;
-    reason?: string;
-  };
-  if (state.name !== remote.name || state.repo !== remote.repo) {
-    throw new Error(`prepare-public: fetch state for remote "${remote.name}" does not match remotes.json`);
-  }
-  if (state.skipped) {
-    if (
-      state.reason === "excluded-from-base-preview"
-      || state.reason === "excluded-from-untrusted-vercel-preview"
-    ) continue;
-    throw new Error(`prepare-public: remote "${remote.name}" was omitted but its assets were requested`);
+  if (!scope.remotes || (scope.remotePreview && scope.remotePreview.name !== remote.name)) continue;
+  const directory = sourceDirectory(remote);
+  // `astro sync` is deliberately non-fatal when a local credential is absent;
+  // the following full build reports Nimbus's source-specific error.
+  if (!directory) continue;
+  if (!fs.existsSync(directory)) {
+    throw new Error(`prepare-public: Nimbus selected a missing source directory for ${remote.name}: ${directory}`);
   }
 
-  const interpolatedVariables = interpolateRemoteVariables(remote);
+  const interpolatedVariables = interpolateRemoteVariables(remote, directory);
   if (interpolatedVariables.replacements) {
     console.log(
       `prepare-public: interpolated ${interpolatedVariables.replacements} ${remote.name} variable references in ${interpolatedVariables.files} files`,
     );
   }
 
-  const rewrittenAssetReferences = rewriteRemoteAssetUrls(remote);
+  const rewrittenAssetReferences = rewriteRemoteAssetUrls(remote, directory);
   if (rewrittenAssetReferences) {
     console.log(`prepare-public: rewrote asset references in ${rewrittenAssetReferences} ${remote.name} files`);
   }
@@ -163,7 +168,7 @@ for (const remote of manifest.remotes) {
     for (const [index, asset] of (remote.assets ?? []).entries()) {
       const source = relativeManifestPath(asset.source, `${remote.name}.assets[${index}].source`);
       const mount = relativeManifestPath(asset.mount, `${remote.name}.assets[${index}].mount`);
-      materialize(path.join(root, remote.mount, source), path.join(output, mount));
+      materialize(path.join(directory, source), path.join(output, mount));
     }
   }
 }

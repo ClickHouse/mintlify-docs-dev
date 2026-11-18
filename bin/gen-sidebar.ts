@@ -49,20 +49,23 @@ if (scope.remotePreview && !previewRemote) {
 }
 
 function remoteIsOmitted(remote: (typeof remotes)[number]): boolean {
+  if (!scope.remotes) return true;
   if (previewRemote && previewRemote.name !== remote.name) return true;
-  const stateFile = path.join(root, ".remote", `${remote.name}.json`);
-  if (!fs.existsSync(stateFile)) return false;
-  const state = readJson(stateFile) as Obj;
-  if (!state.skipped) return false;
-  const reason = String(state.reason ?? "");
-  if (
-    reason !== "excluded-from-base-preview"
-    && reason !== "excluded-from-remote-preview"
-    && reason !== "excluded-from-untrusted-vercel-preview"
-  ) {
-    throw new Error(`gen-sidebar: remote ${remote.name} has an unknown omission reason: ${reason}`);
+  return false;
+}
+
+function sourceDirectory(remote: (typeof remotes)[number]): string | undefined {
+  const currentFile = path.join(root, ".nimbus", "sources", "current.json");
+  if (!fs.existsSync(currentFile)) return undefined;
+  const current = readJson(currentFile) as { sources?: Record<string, { dir?: string; path?: string }> };
+  const source = current.sources?.[remote.name];
+  if (!source?.dir) return undefined;
+  const directory = path.resolve(root, source.dir, source.path ?? "");
+  const sourcesRoot = path.resolve(root, ".nimbus", "sources");
+  if (!directory.startsWith(`${sourcesRoot}${path.sep}`)) {
+    throw new Error(`gen-sidebar: source snapshot for ${remote.name} escapes .nimbus/sources`);
   }
-  return true;
+  return directory;
 }
 
 function isInOmittedRemote(filePath: string): boolean {
@@ -117,7 +120,16 @@ function pageInfo(page: string): { label: string; exists: boolean; badge?: NavBa
   const englishFile = locale
     ? extensions.map((e) => path.join(root, rel + e)).find((f) => fs.existsSync(f))
     : undefined;
-  const file = localizedFile ?? englishFile;
+  // First-class Nimbus sources are intentionally not copied into the base
+  // repository. Read their frontmatter from the resolved snapshot when a
+  // navigation page sits beneath a configured source mount.
+  const remote = remotes.find((candidate) => rel === candidate.mount || rel.startsWith(`${candidate.mount}/`));
+  const remoteDirectory = remote ? sourceDirectory(remote) : undefined;
+  const sourceRelativePath = remote ? rel.slice(remote.mount.length).replace(/^\//, "") : "";
+  const sourceFile = remoteDirectory
+    ? extensions.map((e) => path.join(remoteDirectory, sourceRelativePath + e)).find((f) => fs.existsSync(f))
+    : undefined;
+  const file = localizedFile ?? englishFile ?? sourceFile;
   let label = rel.split("/").pop() ?? rel;
   let badge: NavBadge | undefined;
   let icon: string | undefined;
@@ -275,15 +287,11 @@ function convertGroupEntries(g: Obj, parentPath: string): NimbusItem[] {
     skipped.push(`${parentPath}: sourceRef ${String(g.sourceRef)} omitted by build scope; linked to production`);
     return [remoteProductionLink(remote)];
   }
-  const localizedDocsJson = path.join(contentRoot, remote.mount, "docs.json");
-  const englishDocsJson = path.join(root, remote.mount, "docs.json");
-  const remoteDocsJson = localizedDocsJson && fs.existsSync(localizedDocsJson)
-    ? localizedDocsJson
-    : englishDocsJson && fs.existsSync(englishDocsJson)
-      ? englishDocsJson
-      : null;
-
-  if (!remoteDocsJson) throw new Error(`gen-sidebar: sourceRef ${String(g.sourceRef)} was not fetched`);
+  const remoteDirectory = sourceDirectory(remote);
+  const remoteDocsJson = remoteDirectory ? path.join(remoteDirectory, "docs.json") : null;
+  if (!remoteDocsJson || !fs.existsSync(remoteDocsJson)) {
+    throw new Error(`gen-sidebar: sourceRef ${String(g.sourceRef)} was not resolved by Nimbus`);
+  }
 
   const remoteConfig = readJson(remoteDocsJson) as Obj;
   const groups = (((remoteConfig.navigation as Obj)?.groups ?? []) as Json[]);
@@ -325,21 +333,22 @@ function convertGroup(g: Obj, parentPath: string): NimbusItem {
     }));
   }
   if (g.sourceRef !== undefined) {
-    // Remote repository docs (remotes.json). When the fetcher has placed the
-    // remote's own docs.json in its mount directory, its groups are expanded
-    // here with page paths prefixed by the mount; otherwise the group is empty.
+    // Nimbus source docs expand their own docs.json using page paths prefixed
+    // by the source collection's configured public mount.
     const remote = remotes.find((r) => r.sourceRef === String(g.sourceRef));
     if (!remote) throw new Error(`gen-sidebar: sourceRef ${String(g.sourceRef)} has no entry in remotes.json`);
-    const remoteDocsJson = path.join(contentRoot, remote.mount, "docs.json");
     if (remoteIsOmitted(remote)) {
       scopedRemoteLink = remoteProductionLink(remote);
       skipped.push(`${groupPath}: sourceRef ${String(g.sourceRef)} omitted by build scope; linked to production`);
-    } else if (remoteDocsJson && fs.existsSync(remoteDocsJson)) {
+    } else {
+      const directory = sourceDirectory(remote);
+      const remoteDocsJson = directory && path.join(directory, "docs.json");
+      if (!remoteDocsJson || !fs.existsSync(remoteDocsJson)) {
+        throw new Error(`gen-sidebar: sourceRef ${String(g.sourceRef)} was not resolved by Nimbus`);
+      }
       const rd = readJson(remoteDocsJson) as Obj;
       const groups = (((rd.navigation as Obj)?.groups ?? []) as Json[]);
       sourcePages = prefixPages(groups, remote.mount);
-    } else {
-      throw new Error(`gen-sidebar: sourceRef ${String(g.sourceRef)} was not fetched`);
     }
   }
   const items = scopedRemoteLink ? [scopedRemoteLink] : convertPages(sourcePages, groupPath);

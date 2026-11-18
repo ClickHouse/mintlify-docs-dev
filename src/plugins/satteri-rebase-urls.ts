@@ -16,8 +16,8 @@ import { fileURLToPath } from "node:url";
  */
 export interface RebaseUrlsOptions {
   base: string;
-  /** Remote source mount directories, relative to the repository root. */
-  remoteMounts?: string[];
+  /** Nimbus source name to public mount directory. */
+  remoteMounts?: Record<string, string>;
   /** Repository root used to identify the source file's remote mount. */
   root?: string;
   /** JSX component names whose string props are rebased. */
@@ -40,16 +40,16 @@ export function rebaseUrls(options: RebaseUrlsOptions): HastPluginDefinition {
   const base = options.base.replace(/\/+$/, "");
   const props = new Set(options.props ?? DEFAULT_PROPS);
   const root = path.resolve(options.root ?? process.cwd());
-  const remoteMounts = (options.remoteMounts ?? [])
-    .map((mount) => mount.replaceAll("\\", "/").replace(/^\/+|\/+$/g, ""))
-    .filter(Boolean)
-    .sort((left, right) => right.length - left.length);
+  const remoteMounts = new Map(Object.entries(options.remoteMounts ?? {})
+    .map(([source, mount]) => [source, mount.replaceAll("\\", "/").replace(/^\/+|\/+$/g, "")] as const)
+    .filter(([, mount]) => Boolean(mount)));
 
   const sourceMount = (fileURL: URL | undefined): string | undefined => {
     if (!fileURL || fileURL.protocol !== "file:") return undefined;
     const relativePath = path.relative(root, fileURLToPath(fileURL)).replaceAll("\\", "/");
     if (relativePath.startsWith("../") || path.isAbsolute(relativePath)) return undefined;
-    return remoteMounts.find((mount) => relativePath === mount || relativePath.startsWith(`${mount}/`));
+    const source = /^\.nimbus\/sources\/([a-z0-9-]+)\//.exec(relativePath)?.[1];
+    return source ? remoteMounts.get(source) : undefined;
   };
 
   const rebase = (value: unknown, fileURL: URL | undefined): unknown => {
@@ -61,8 +61,8 @@ export function rebaseUrls(options: RebaseUrlsOptions): HastPluginDefinition {
     if (rewritten === base || rewritten.startsWith(base + "/") || rewritten.startsWith(base + "#") || rewritten.startsWith(base + "?")) return rewritten;
 
     // A root-relative link in a remote source is relative to that source's
-    // namespace. Mintlify applies the sourceRef mount automatically; because
-    // Astro loads the fetched files as one collection, insert the mount here.
+    // namespace. Nimbus keeps each source in its own collection; insert its
+    // public mount before Astro applies the site's base.
     const mount = sourceMount(fileURL);
     const mountPath = mount ? `/${mount}` : undefined;
     const alreadyMounted = mountPath && (

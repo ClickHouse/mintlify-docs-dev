@@ -10,15 +10,15 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 | Command | What it does |
 |---|---|
 | `pnpm install` | Node 24, pnpm 10. |
-| `pnpm build` | Fetches registered sources, builds the selected locale scope, rebases URLs, generates `__redirects`, nests under `dist/docs`, and enforces the Worker asset limits. |
-| `pnpm run build:vercel` | Fetches registered sources using Vercel Connect where required, removes the deployment OIDC identity, and builds the English, translations, or legacy combined Vercel artifact selected by `DOCS_DEPLOY_TARGET`. |
+| `pnpm build` | Resolves registered Nimbus sources, builds the selected locale scope, rebases URLs, generates `__redirects`, nests under `dist/docs`, and enforces the Worker asset limits. |
+| `pnpm run build:vercel` | Resolves registered Nimbus sources using Vercel Connect where required, removes the deployment OIDC identity, and builds the English, translations, or legacy combined Vercel artifact selected by `DOCS_DEPLOY_TARGET`. |
 | `pnpm dev` | Astro dev server (`/docs/...`). |
 | `pnpm check:mdx` | Compiles every MDX file with Sätteri and reports undefined components; seconds, no build. |
 | `pnpm measure` | Page weight, anchor parity, base-path check, URL parity vs the live Mintlify sitemap (needs a nested build in `$DOCS_OUT_DIR`). |
 | `pnpm preview:cf` | `wrangler dev` on the docs Worker (`worker/index.ts`) serving `dist/`. |
 | `pnpm run deploy` | Deploys `dist/` to the production Worker selected by `DOCS_LOCALE`. |
 | `pnpm run deploy:preview` | Uploads `dist/` as an aliased Worker version selected by `DOCS_PREVIEW_ALIAS`. |
-| `node bin/fetch-remotes.ts` | Pulls remote-repo docs (`remotes.json`) into their mount directories. |
+| `pnpm exec astro sync` | Resolves the `remotes.json` repositories into native Nimbus source snapshots. |
 | `pnpm exec nimbus-docs outdated` | Compares `nimbus.json` against the Nimbus registry; run before bumping `@cloudflare/nimbus-docs`. Starter-file drift stays unavailable until `templatesTag` is set in `nimbus.json`. |
 
 ## Environment variables
@@ -33,7 +33,6 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 | `DOCS_REMOTE_NAME`, `DOCS_REMOTE_REPOSITORY`, `DOCS_REMOTE_REF` | CI-only tuple selecting one registered remote at an immutable commit for an English source pull-request preview. Required for that `connect-preview` mode; a trusted base preview with `docs-preview-show-remotes` instead uses `DOCS_REMOTES=all`. |
 | `DOCS_REMOTE_SOURCE_REPOSITORY` | CI-derived PR-head repository, retained only for preview attribution and edit links. It defaults to the registered repository. |
 | `DOCS_REMOTE_PULL_REQUEST_REF` | CI-only base-repository PR ref (`refs/pull/<number>/head`) to fetch and verify against `DOCS_REMOTE_REF`. |
-| `DOCS_REMOTES_PREFETCHED=1` | Requires the remote mounts and fetch-state files supplied by the credentialed CI fetch job. |
 | `DOCS_PREVIEW_ALIAS` | Lowercase Cloudflare alias used by `pnpm run deploy:preview`. |
 | `DOCS_GITHUB_CONNECTOR` | Vercel Connect GitHub connector UID, for example `github/clickhouse-docs`. Configure it only for `production` and the `connect-preview` Custom Environment. |
 | `DOCS_OUT_DIR`, `DOCS_CACHE_DIR` | Isolated output and cache directories. Vercel uses one persistent Astro cache per deployment target and locale under `node_modules/.astro/`. |
@@ -45,15 +44,16 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 - `src/content.config.ts`: `docs` (English, path-derived ids) and one collection per locale (`es`, `pt-br`, ...).
 - `src/pages/[...slug].astro`, `src/pages/[locale]/[...slug].astro`: page routes (locale pages fall back to English).
 - `src/pages/nav/[...key].astro`: lazy sidebar fragments; `src/lib/sidebar-lazy.ts`.
-- `src/pages/[...slug].md.ts`, `src/pages/**/llms*.txt.ts`: English-only agent surfaces. Every human-language route points to the same canonical English `<page>.md`; no generated `.mdx` or localized agent copies are emitted. The root `llms-full.txt` links to full-text, top-level-section `llms.txt` files; `src/lib/corpus.ts` recursively subdivides any corpus that reaches 24 MiB.
+- `src/pages/[...slug]/index.md.ts`, `src/pages/[...section]/llms.txt.ts`, `src/pages/llms*.txt.ts`: Nimbus agent surfaces. Every human-language route points to the same canonical English `<page>/index.md`; no generated `.mdx` or localized agent copies are emitted. Nimbus emits source-aware section indexes and partitions large corpora.
 - `src/components/compat/`: Mintlify component names on Nimbus components; `react/` shims for snippet JSX.
 - `bin/`: generators and measurement scripts; `worker/`: Cloudflare Worker; `wrangler.jsonc`.
 - `nimbus.json`: CLI-maintained provenance of the registry components under `src/components/ui/` (slug, registry release, content hash, `modified` flag). Written by `nimbus-docs init`; `nimbus-docs add` appends to it. Starter provenance is `null` because the site was adopted, not scaffolded. `lastReviewedNimbusVersion` is the upgrade baseline: after bumping `@cloudflare/nimbus-docs`, run `pnpm exec nimbus-docs migrate --from <previous version>` and review its entries, or the build refuses to start.
 - `src/generated/` (gitignored): sidebar items, import index, island wrappers.
 
-Production source topology lives only in `remotes.json`; production fetches each
-registered repository from `main`. Remote CI supplies the registered name,
-repository, and exceptional immutable SHA only when requesting a preview.
+Production source topology lives only in `remotes.json`; Nimbus resolves each
+registered repository from its configured default branch into a first-class
+source. Remote CI supplies the registered name, repository, and exceptional
+immutable SHA only when requesting a preview.
 
 Remote repositories create previews through
 `.github/workflows/remote-docs-preview.yml`. The caller invokes the reusable
@@ -65,9 +65,9 @@ its OIDC identity to request a short-lived, `contents:read` token from Vercel
 Connect for the registered source repository. For a fork, it fetches the
 base repository's `refs/pull/<number>/head` ref and verifies it resolves to the
 approved SHA; the fork repository is metadata only. Public repositories are
-fetched anonymously. `bin/fetch-remotes.ts` exits before
-`bin/vercel-build.ts` removes `VERCEL_OIDC_TOKEN` and starts any Markdown or MDX
-processing. The Actions token never enters Vercel. Maintainers can also run the
+resolved anonymously. `bin/vercel-build.ts` runs credentialed `astro sync`, then
+removes `VERCEL_OIDC_TOKEN` before any Markdown or MDX processing. The Actions
+token never enters Vercel. Maintainers can also run the
 workflow directly from the `mintlify-docs-dev` Actions page by providing the
 registered source, repository, and open pull request number.
 

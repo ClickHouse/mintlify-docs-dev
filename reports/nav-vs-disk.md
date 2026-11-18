@@ -1,8 +1,8 @@
-# Navigation vs disk (en, generated 2026-09-06)
+# Navigation vs disk (en, generated 2026-11-18)
 
-- Tabs: 5; pages referenced by navigation: 2732; pages on disk in content sections: 2680.
+- Tabs: 5; pages referenced by navigation: 2738; pages on disk in content sections: 2639.
 - Navigation entries without a file: 0.
-- Files not referenced by navigation (orphans, still built and reachable by URL): 14.
+- Files not referenced by navigation (orphans, still built and reachable by URL): 13.
 - Groups whose authored order differs from alphabetical disk order: 217.
 - Navigation constructs skipped by the generator: 0.
 
@@ -17,7 +17,6 @@
 - clickstack/managed-onboarding/setting-up-your-opentelemetry-collector
 - clickstack/managed-onboarding/tuning-clickstack-schema
 - integrations/language-clients/rust/index
-- products/clickhouse-private/.github/pull_request_template
 - reference/AGENTS
 - reference/settings/formats
 - reference/settings/merge-tree-settings
@@ -146,9 +145,9 @@
 - Solutions > ClickHouse Cloud > Billing > ClickPipes: 3 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Cloud > Billing: 6 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Cloud > ClickHouse Private > Tutorials: 6 pages, authored order differs from alphabetical
-- Solutions > ClickHouse Cloud > ClickHouse Private > How-To Guides: 17 pages, authored order differs from alphabetical
-- Solutions > ClickHouse Cloud > ClickHouse Private > Reference: 8 pages, authored order differs from alphabetical
-- Solutions > ClickHouse Cloud > ClickHouse Private > Explanation: 6 pages, authored order differs from alphabetical
+- Solutions > ClickHouse Cloud > ClickHouse Private > How-To Guides: 20 pages, authored order differs from alphabetical
+- Solutions > ClickHouse Cloud > ClickHouse Private > Reference: 10 pages, authored order differs from alphabetical
+- Solutions > ClickHouse Cloud > ClickHouse Private > Explanation: 7 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Cloud > ClickHouse Private: 3 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Managed Postgres > Features: 14 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Managed Postgres > Migrations: 8 pages, authored order differs from alphabetical

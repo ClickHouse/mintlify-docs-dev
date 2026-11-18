@@ -30,7 +30,6 @@ import {
   type LocaleCollectionName,
 } from "../../content.config";
 import { localeRouteName, notTranslatedNotice } from "../../util/locales";
-import { getRemoteEditUrl } from "../../lib/remotes";
 import { loadGeneratedNavigation } from "../../lib/sidebar-navigation.server";
 import { translatedPageIds } from "../../lib/locale-content.server";
 
@@ -115,10 +114,7 @@ const prevNext = await getPrevNext(browserPath, {
 const breadcrumbs = (await getBreadcrumbs(currentSlug, { collection: entry.collection })).map((c) =>
   c.href ? { ...c, href: withBase(c.href) } : c,
 );
-// A translated page belongs to the main repository. An English fallback can
-// originate in a fetched remote, in which case its page actions follow that
-// remote's recorded source revision.
-const editUrl = fallback ? (getRemoteEditUrl(entry) ?? await getEditUrl(entry)) : await getEditUrl(entry);
+const editUrl = await getEditUrl(entry);
 const lastUpdated = entry.data.lastUpdated ?? (await getLastUpdated(entry));
 const tocConfig = entry.data.tableOfContents;
 const tocMax = (entry.data as { toc_max_heading_level?: number }).toc_max_heading_level;
