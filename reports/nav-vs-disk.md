@@ -1,9 +1,9 @@
 # Navigation vs disk (en, generated 2026-11-18)
 
-- Tabs: 5; pages referenced by navigation: 2691; pages on disk in content sections: 2559.
+- Tabs: 5; pages referenced by navigation: 2736; pages on disk in content sections: 2559.
 - Navigation entries without a file: 0.
 - Files not referenced by navigation (orphans, still built and reachable by URL): 12.
-- Groups whose authored order differs from alphabetical disk order: 210.
+- Groups whose authored order differs from alphabetical disk order: 217.
 - Navigation constructs skipped by the generator: 0.
 
 ## Navigation entries without a file
@@ -175,6 +175,13 @@
 - Solutions > ClickStack > Integration partners: 4 pages, authored order differs from alphabetical
 - Solutions > Agentic Data Stack > Get started: 2 pages, authored order differs from alphabetical
 - Solutions > Agentic Data Stack > Components: 3 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Get started: 2 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Language integrations: 7 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > DataStore: 10 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Configuration: 4 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Debugging: 4 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Developer guides: 14 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Technical reference: 4 pages, authored order differs from alphabetical
 - Solutions > ClickHouse/clickhouse-operator > Kubernetes Operator > Install: 3 pages, authored order differs from alphabetical
 - Solutions > ClickHouse/clickhouse-operator > Kubernetes Operator > Guides: 8 pages, authored order differs from alphabetical
 - Integrations > Ecosystem: 2 pages, authored order differs from alphabetical

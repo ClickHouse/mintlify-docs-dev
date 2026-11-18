@@ -1,61 +1,16 @@
 # Navigation vs disk (zh, generated 2026-11-18)
 
-- Tabs: 5; pages referenced by navigation: 2685; pages on disk in content sections: 2559.
+- Tabs: 5; pages referenced by navigation: 2730; pages on disk in content sections: 2559.
 - Navigation entries without a file: 0.
-- Files not referenced by navigation (orphans, still built and reachable by URL): 72.
-- Groups whose authored order differs from alphabetical disk order: 206.
+- Files not referenced by navigation (orphans, still built and reachable by URL): 27.
+- Groups whose authored order differs from alphabetical disk order: 213.
 - Navigation constructs skipped by the generator: 0.
 
 ## Navigation entries without a file
 
 ## Orphans (on disk, not in navigation)
 
-- chdb/api/python
-- chdb/configuration/execution-engine
-- chdb/configuration/function-config
-- chdb/configuration/index
-- chdb/configuration/performance-mode
-- chdb/datastore/accessors
-- chdb/datastore/aggregation
-- chdb/datastore/class-reference
-- chdb/datastore/execution-model
-- chdb/datastore/factory-methods
-- chdb/datastore/index
-- chdb/datastore/io
-- chdb/datastore/pandas-compat
-- chdb/datastore/query-building
-- chdb/datastore/quickstart
-- chdb/debugging/explain
-- chdb/debugging/index
-- chdb/debugging/logging
-- chdb/debugging/profiling
-- chdb/getting-started
-- chdb/guides/clickhouse-local
-- chdb/guides/index
-- chdb/guides/jupysql
-- chdb/guides/migration-from-pandas
-- chdb/guides/pandas-cookbook
-- chdb/guides/pandas-differences
-- chdb/guides/pandas-performance
-- chdb/guides/pandas-to-sql
-- chdb/guides/python-udf
-- chdb/guides/query-remote-clickhouse
-- chdb/guides/querying-apache-arrow
-- chdb/guides/querying-pandas
-- chdb/guides/querying-parquet
-- chdb/guides/querying-s3-bucket
-- chdb/index
 - chdb/install/adbc
-- chdb/install/bun
-- chdb/install/c
-- chdb/install/go
-- chdb/install/index
-- chdb/install/nodejs
-- chdb/install/python
-- chdb/install/rust
-- chdb/reference/data-formats
-- chdb/reference/index
-- chdb/reference/sql-reference
 - clickstack/api-reference
 - clickstack/ingesting-data/index
 - clickstack/managed-onboarding/instrument-application
@@ -231,6 +186,13 @@
 - Solutions > ClickStack > Integration partners: 4 pages, authored order differs from alphabetical
 - Solutions > Agentic Data Stack > Get started: 2 pages, authored order differs from alphabetical
 - Solutions > Agentic Data Stack > Components: 3 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Get started: 2 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Language integrations: 7 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > DataStore: 10 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Configuration: 4 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Debugging: 4 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Developer guides: 14 pages, authored order differs from alphabetical
+- Solutions > chdb-io/chdb > chDB > Technical reference: 4 pages, authored order differs from alphabetical
 - Solutions > ClickHouse/clickhouse-operator > Kubernetes Operator > Install: 3 pages, authored order differs from alphabetical
 - Solutions > ClickHouse/clickhouse-operator > Kubernetes Operator > Guides: 8 pages, authored order differs from alphabetical
 - Integrations > Ecosystem: 2 pages, authored order differs from alphabetical

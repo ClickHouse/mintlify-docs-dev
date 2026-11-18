@@ -406,7 +406,8 @@ function remoteNavigationEntries(remote: (typeof remotes)[number]): Json[] {
   }
 
   // A docs.json often wraps an older navigation.json as one object with a
-  // `groups` array. The wrapper is not itself a rendered sidebar group.
+  // `groups` array. Preserve that source-owned wrapper when it supplies an
+  // `item` label; otherwise it is not itself a rendered sidebar group.
   if (
     entries.length === 1 &&
     entries[0] &&
@@ -414,12 +415,13 @@ function remoteNavigationEntries(remote: (typeof remotes)[number]): Json[] {
     !Array.isArray(entries[0])
   ) {
     const wrapper = entries[0] as Obj;
-    if (
-      Array.isArray(wrapper.groups) &&
-      wrapper.group === undefined &&
-      wrapper.item === undefined
-    ) {
-      entries = wrapper.groups as Json[];
+    if (Array.isArray(wrapper.groups) && wrapper.group === undefined) {
+      if (typeof wrapper.item === "string") {
+        const { groups, item, ...rest } = wrapper;
+        entries = [{ ...rest, group: item, pages: groups, root: remote.mount }];
+      } else {
+        entries = wrapper.groups as Json[];
+      }
     }
   }
 
