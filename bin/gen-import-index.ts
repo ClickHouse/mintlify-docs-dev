@@ -8,7 +8,19 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const SECTIONS = ["get-started", "concepts", "guides", "reference", "products", "clickstack", "integrations", "resources", "chdb", "snippets"];
+// First-class Nimbus sources (including chDB) are not copied into this tree.
+// This index covers only local content that can import the legacy snippets.
+const SECTIONS = [
+  "get-started",
+  "concepts",
+  "guides",
+  "reference",
+  "products",
+  "clickstack",
+  "integrations",
+  "resources",
+  "snippets",
+];
 const counts = new Map<string, Map<string, number>>();
 
 function bump(name: string, spec: string) {
@@ -25,7 +37,9 @@ function bump(name: string, spec: string) {
     if (e.isDirectory()) walk(p);
     else if (/\.mdx?$/.test(e.name)) {
       const src = fs.readFileSync(p, "utf8");
-      for (const m of src.matchAll(/^import\s+(.+?)\s+from\s+["']([^"']+)["'];?\s*$/gm)) {
+      for (const m of src.matchAll(
+        /^import\s+(.+?)\s+from\s+["']([^"']+)["'];?\s*$/gm,
+      )) {
         const clause = m[1].trim();
         const spec = m[2];
         // Only site-absolute specifiers are location-independent.
@@ -33,23 +47,43 @@ function bump(name: string, spec: string) {
         const def = clause.match(/^([A-Za-z0-9_]+)(?:\s*,|$)/);
         if (def) bump(def[1], spec);
         const named = clause.match(/\{([^}]*)\}/);
-        if (named) for (const part of named[1].split(",")) {
-          const n = part.trim().split(/\s+as\s+/).pop()!.trim();
-          if (n) bump(n, `${spec}#${part.trim().split(/\s+as\s+/)[0].trim()}`);
-        }
+        if (named)
+          for (const part of named[1].split(",")) {
+            const n = part
+              .trim()
+              .split(/\s+as\s+/)
+              .pop()!
+              .trim();
+            if (n)
+              bump(
+                n,
+                `${spec}#${part
+                  .trim()
+                  .split(/\s+as\s+/)[0]
+                  .trim()}`,
+              );
+          }
       }
     }
   }
 })(root);
-for (const s of SECTIONS) if (!fs.existsSync(path.join(root, s))) throw new Error(`missing ${s}`);
+for (const s of SECTIONS)
+  if (!fs.existsSync(path.join(root, s))) throw new Error(`missing ${s}`);
 
 const index: Record<string, string> = {};
 for (const [name, m] of counts) {
   // Most frequently used specifier wins; English (non-locale) paths preferred.
-  const best = [...m.entries()]
-    .sort((a, b) => Number(/^\/snippets\/(ar|es|fr|ja|ko|pt-BR|ru|zh)\//.test(a[0])) - Number(/^\/snippets\/(ar|es|fr|ja|ko|pt-BR|ru|zh)\//.test(b[0])) || b[1] - a[1])[0];
+  const best = [...m.entries()].sort(
+    (a, b) =>
+      Number(/^\/snippets\/(ar|es|fr|ja|ko|pt-BR|ru|zh)\//.test(a[0])) -
+        Number(/^\/snippets\/(ar|es|fr|ja|ko|pt-BR|ru|zh)\//.test(b[0])) ||
+      b[1] - a[1],
+  )[0];
   index[name] = best[0];
 }
 fs.mkdirSync(path.join(root, "src/generated"), { recursive: true });
-fs.writeFileSync(path.join(root, "src/generated/import-index.json"), JSON.stringify(index, null, 2) + "\n");
+fs.writeFileSync(
+  path.join(root, "src/generated/import-index.json"),
+  JSON.stringify(index, null, 2) + "\n",
+);
 console.log(`gen-import-index: ${Object.keys(index).length} component names`);

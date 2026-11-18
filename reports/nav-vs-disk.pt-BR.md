@@ -1,14 +1,61 @@
-# Navigation vs disk (pt-BR, generated 2026-09-05)
+# Navigation vs disk (pt-BR, generated 2026-11-18)
 
-- Tabs: 5; pages referenced by navigation: 2726; pages on disk in content sections: 2559.
+- Tabs: 5; pages referenced by navigation: 2685; pages on disk in content sections: 2559.
 - Navigation entries without a file: 0.
-- Files not referenced by navigation (orphans, still built and reachable by URL): 21.
-- Groups whose authored order differs from alphabetical disk order: 213.
+- Files not referenced by navigation (orphans, still built and reachable by URL): 72.
+- Groups whose authored order differs from alphabetical disk order: 206.
 - Navigation constructs skipped by the generator: 0.
 
 ## Navigation entries without a file
 
 ## Orphans (on disk, not in navigation)
+
+- chdb/api/python
+- chdb/configuration/execution-engine
+- chdb/configuration/function-config
+- chdb/configuration/index
+- chdb/configuration/performance-mode
+- chdb/datastore/accessors
+- chdb/datastore/aggregation
+- chdb/datastore/class-reference
+- chdb/datastore/execution-model
+- chdb/datastore/factory-methods
+- chdb/datastore/index
+- chdb/datastore/io
+- chdb/datastore/pandas-compat
+- chdb/datastore/query-building
+- chdb/datastore/quickstart
+- chdb/debugging/explain
+- chdb/debugging/index
+- chdb/debugging/logging
+- chdb/debugging/profiling
+- chdb/getting-started
+- chdb/guides/clickhouse-local
+- chdb/guides/index
+- chdb/guides/jupysql
+- chdb/guides/migration-from-pandas
+- chdb/guides/pandas-cookbook
+- chdb/guides/pandas-differences
+- chdb/guides/pandas-performance
+- chdb/guides/pandas-to-sql
+- chdb/guides/python-udf
+- chdb/guides/query-remote-clickhouse
+- chdb/guides/querying-apache-arrow
+- chdb/guides/querying-pandas
+- chdb/guides/querying-parquet
+- chdb/guides/querying-s3-bucket
+- chdb/index
+- chdb/install/adbc
+- chdb/install/bun
+- chdb/install/c
+- chdb/install/go
+- chdb/install/index
+- chdb/install/nodejs
+- chdb/install/python
+- chdb/install/rust
+- chdb/reference/data-formats
+- chdb/reference/index
+- chdb/reference/sql-reference
 - clickstack/api-reference
 - clickstack/ingesting-data/index
 - clickstack/managed-onboarding/instrument-application
@@ -20,6 +67,11 @@
 - concepts/features/interfaces/odbc
 - integrations/connectors/data-ingestion/index
 - integrations/connectors/data-ingestion/odbc-with-clickhouse
+- integrations/language-clients/c/index
+- integrations/language-clients/cpp/index
+- integrations/language-clients/csharp/overview
+- integrations/language-clients/go/index
+- integrations/language-clients/java/index
 - integrations/language-clients/rust/index
 - products/cloud/features/ai-ml/ask-ai
 - products/cloud/features/backups/faq
@@ -32,6 +84,7 @@
 - resources/develop-contribute/index
 
 ## Groups with authored order != alphabetical
+
 - Database > Get started > Get started > Guias de início rápido > Todos os casos de uso: 6 pages, authored order differs from alphabetical
 - Database > Get started > Get started > Introduction: 3 pages, authored order differs from alphabetical
 - Database > Get started > Get started > Use cases: 5 pages, authored order differs from alphabetical
@@ -153,9 +206,9 @@
 - Solutions > ClickHouse Cloud > Billing > ClickPipes: 3 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Cloud > Billing: 6 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Cloud > ClickHouse Private > Tutorials: 6 pages, authored order differs from alphabetical
-- Solutions > ClickHouse Cloud > ClickHouse Private > How-To Guides: 17 pages, authored order differs from alphabetical
-- Solutions > ClickHouse Cloud > ClickHouse Private > Reference: 8 pages, authored order differs from alphabetical
-- Solutions > ClickHouse Cloud > ClickHouse Private > Explanation: 6 pages, authored order differs from alphabetical
+- Solutions > ClickHouse Cloud > ClickHouse Private > How-To Guides: 20 pages, authored order differs from alphabetical
+- Solutions > ClickHouse Cloud > ClickHouse Private > Reference: 10 pages, authored order differs from alphabetical
+- Solutions > ClickHouse Cloud > ClickHouse Private > Explanation: 7 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Cloud > ClickHouse Private: 3 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Managed Postgres > Features: 14 pages, authored order differs from alphabetical
 - Solutions > ClickHouse Managed Postgres > Migrations: 7 pages, authored order differs from alphabetical
@@ -178,15 +231,8 @@
 - Solutions > ClickStack > Integration partners: 4 pages, authored order differs from alphabetical
 - Solutions > Agentic Data Stack > Get started: 2 pages, authored order differs from alphabetical
 - Solutions > Agentic Data Stack > Components: 3 pages, authored order differs from alphabetical
-- Solutions > chDB > Get started: 2 pages, authored order differs from alphabetical
-- Solutions > chDB > Language integrations: 8 pages, authored order differs from alphabetical
-- Solutions > chDB > DataStore: 10 pages, authored order differs from alphabetical
-- Solutions > chDB > Configuration: 4 pages, authored order differs from alphabetical
-- Solutions > chDB > Debugging: 4 pages, authored order differs from alphabetical
-- Solutions > chDB > Developer guides: 14 pages, authored order differs from alphabetical
-- Solutions > chDB > Technical reference: 4 pages, authored order differs from alphabetical
-- Solutions > Kubernetes Operator > Install: 3 pages, authored order differs from alphabetical
-- Solutions > Kubernetes Operator > Guides: 8 pages, authored order differs from alphabetical
+- Solutions > ClickHouse/clickhouse-operator > Kubernetes Operator > Install: 3 pages, authored order differs from alphabetical
+- Solutions > ClickHouse/clickhouse-operator > Kubernetes Operator > Guides: 8 pages, authored order differs from alphabetical
 - Integrations > Ecosystem: 2 pages, authored order differs from alphabetical
 - Integrations > ClickPipes > ClickPipes for Streaming > Kafka: 6 pages, authored order differs from alphabetical
 - Integrations > ClickPipes > ClickPipes for Streaming > Amazon Kinesis: 2 pages, authored order differs from alphabetical
@@ -207,7 +253,7 @@
 - Integrations > ClickPipes > Networking: 5 pages, authored order differs from alphabetical
 - Integrations > ClickPipes: 3 pages, authored order differs from alphabetical
 - Integrations > Language clients > Python: 7 pages, authored order differs from alphabetical
-- Integrations > Language clients > Go: 6 pages, authored order differs from alphabetical
+- Integrations > Language clients > Go: 5 pages, authored order differs from alphabetical
 - Integrations > Language clients > Java: 5 pages, authored order differs from alphabetical
 - Integrations > Connectors > Data sources > AWS S3: 3 pages, authored order differs from alphabetical
 - Integrations > Connectors > Data sources > Kafka: 11 pages, authored order differs from alphabetical
@@ -217,7 +263,7 @@
 - Integrations > Connectors > Data visualization > Community integrations: 15 pages, authored order differs from alphabetical
 - Integrations > Connectors > Data visualization: 10 pages, authored order differs from alphabetical
 - Integrations > Connectors > Data ingestion > Apache Spark: 4 pages, authored order differs from alphabetical
-- Integrations > Connectors > Data ingestion > dbt: 5 pages, authored order differs from alphabetical
+- Integrations > Connectors > Data ingestion > dbt: 6 pages, authored order differs from alphabetical
 - Integrations > Connectors > Data ingestion > Streamkap: 2 pages, authored order differs from alphabetical
 - Integrations > Connectors > Data ingestion > Community integrations > Estuary: 3 pages, authored order differs from alphabetical
 - Integrations > Connectors > Data ingestion: 11 pages, authored order differs from alphabetical

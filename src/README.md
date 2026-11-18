@@ -50,21 +50,25 @@ Mintlify-flavoured MDX build (see `src/plugins/vite-mintlify-snippets.ts` and
 - `nimbus.json`: CLI-maintained provenance of the registry components under `src/components/ui/` (slug, registry release, content hash, `modified` flag). Written by `nimbus-docs init`; `nimbus-docs add` appends to it. Starter provenance is `null` because the site was adopted, not scaffolded. `lastReviewedNimbusVersion` is the upgrade baseline: after bumping `@cloudflare/nimbus-docs`, run `pnpm exec nimbus-docs migrate --from <previous version>` and review its entries, or the build refuses to start.
 - `src/generated/` (gitignored): sidebar items, import index, island wrappers.
 
-Production source topology lives only in `remotes.json`; Nimbus resolves each
-registered repository from its configured default branch into a first-class
-source. Remote CI supplies the registered name, repository, and exceptional
-immutable SHA only when requesting a preview.
+Nimbus sources are configured in `astro.config.ts`. The shared repository,
+mount, and preview metadata it consumes lives in `remotes.json`; it contains no
+copied source pages or source-owned navigation. Remote CI supplies a registered
+name, repository, and exceptional immutable SHA only when requesting a preview.
 
 ## Multisource repository operations
 
-`remotes.json` is the complete registry and source of truth for the remote
-topology. A registered upstream repository owns the canonical **English** page
-content at its configured source directory. `astro.config.ts` turns each entry
-into a native Nimbus source and mounts it at the public path below `/docs`.
-The primary English collection deliberately excludes those mounts, so a stale
-copy in this repository cannot shadow an upstream page. Nimbus resolves the
-source snapshot during `astro sync`; sidebar generation then reads that snapshot
-and expands the source repository's `docs.json` navigation.
+`astro.config.ts` is the Nimbus configuration authority. It constructs native
+Nimbus sources from the shared metadata in `remotes.json` and mounts each one
+below `/docs`. A registered upstream repository owns the canonical **English**
+pages _and its navigation slice_. The primary English collection deliberately
+excludes source mounts, so neither pages nor a central navigation mirror can
+shadow the upstream owner.
+
+Nimbus resolves each source snapshot during `astro sync`. Sidebar generation
+then reads the source's `docs.json`, following its `$ref` files, or its
+`navigation.json` directly for the existing integration repositories. The main
+repository controls only the source's placement among global site sections;
+the source repository controls its labels, groups, and page order.
 
 | Registered source     | Canonical repository and directory                    | Published below `/docs`                                | Access  |
 | --------------------- | ----------------------------------------------------- | ------------------------------------------------------ | ------- |
