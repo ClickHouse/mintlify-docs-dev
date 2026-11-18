@@ -144,6 +144,10 @@ function copyLocaleOutput(locale: Locale, outDir: string, finalOutDir: string): 
 // Resolve each first-class Nimbus source while the short-lived Git credential
 // exists. The source snapshot is immutable for the rest of this build.
 const sourceEnvironment = await sourceFetchEnvironment();
+// Astro loads the Shiki plugin while evaluating its config. Its keyword table is
+// generated from the checked-in legacy customisation, so it must exist before
+// `astro sync` can load that config in a clean Vercel checkout.
+run("pnpm", ["run", "prepare:config"], sourceEnvironment);
 run("pnpm", ["exec", "astro", "sync"], sourceEnvironment);
 
 // Cross the credential boundary before any generator, Vite plugin, or Astro
