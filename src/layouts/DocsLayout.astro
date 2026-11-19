@@ -41,6 +41,11 @@ type Props = Omit<DocsPageProps, "mode"> & {
 };
 
 const { showPageActions = true, title, description, sidebar, headings, breadcrumbs, prevNext, mode = "doc", banner, head = [], searchable, noindex, markdownUrl, socialImage, lastUpdated, editUrl, draft, audience, collection, entryId, lang, alternates, canonicalUrl, sections, currentLocale, activeLocales } = Astro.props;
+// Nimbus generates Markdown as `<page>/index.md`; Vercel publishes that
+// static asset at the clean `<page>.md` URL. Keep the site root at /index.md.
+const publicMarkdownUrl = markdownUrl === "/index.md"
+  ? markdownUrl
+  : markdownUrl?.replace(/\/index\.md$/, ".md");
 
 // `searchable` derives from `noindex` when omitted: a non-crawlable page is
 // by default not in the site search either. Explicit `searchable: true`
@@ -97,7 +102,7 @@ const pageBreadcrumb = breadcrumbs.length > 1 ? breadcrumbs.at(-2) : breadcrumbs
 const messages = uiStrings(currentLocale);
 ---
 
-<BaseLayout title={title} description={description} noindex={noindex || draft} markdownUrl={markdownUrl} socialImage={socialImage} lastUpdated={lastUpdated} head={head} collection={collection} entryId={entryId} lang={lang} alternates={alternates} canonicalUrl={canonicalUrl}>
+<BaseLayout title={title} description={description} noindex={noindex || draft} markdownUrl={publicMarkdownUrl} socialImage={socialImage} lastUpdated={lastUpdated} head={head} collection={collection} entryId={entryId} lang={lang} alternates={alternates} canonicalUrl={canonicalUrl}>
   <div class="flex flex-col min-h-screen">
     {hasHeader ? <slot name="header" /> : <Header collection={collection} entryId={entryId} showSidebar={showSidebar} sections={sections} currentLocale={currentLocale} activeLocales={activeLocales} />}
 
@@ -282,7 +287,7 @@ const messages = uiStrings(currentLocale);
                   </Fragment>
                 )}
                 {showPageActions && <PageActions
-                  markdownUrl={markdownUrl}
+                  markdownUrl={publicMarkdownUrl}
                   lastUpdated={lastUpdated}
                   editUrl={editUrl}
                   currentLocale={currentLocale}
