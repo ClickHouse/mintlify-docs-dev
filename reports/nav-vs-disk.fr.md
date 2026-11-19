@@ -1,4 +1,4 @@
-# Navigation vs disk (fr, generated 2026-11-18)
+# Navigation vs disk (fr, generated 2026-11-19)
 
 - Tabs: 5; pages referenced by navigation: 2730; pages on disk in content sections: 2559.
 - Navigation entries without a file: 0.

@@ -651,6 +651,7 @@ function convertGroup(g: Obj, parentPath: string): NimbusItem {
     collapsed: typeof g.expanded === "boolean" ? !g.expanded : true,
     icon: typeof g.icon === "string" ? g.icon : undefined,
   };
+  let rootLink: string | undefined;
   if (typeof g.root === "string") {
     (group as { segment?: string; landing?: string }).segment = pageLink(
       g.root,
@@ -659,8 +660,21 @@ function convertGroup(g: Obj, parentPath: string): NimbusItem {
     const rootPage = pageInfo(g.root + "/index").exists
       ? g.root + "/index"
       : g.root;
-    if (pageInfo(rootPage).exists)
-      (group as { landing?: string }).landing = pageLink(rootPage);
+    if (pageInfo(rootPage).exists) {
+      rootLink = pageLink(rootPage);
+      (group as { landing?: string }).landing = rootLink;
+    }
+  }
+
+  // A source with one document may represent it as a root and an empty pages
+  // array. Render that root document directly instead of an empty collapsible
+  // section. The source still owns the label, icon, and destination.
+  if (items.length === 0 && rootLink) {
+    return {
+      label,
+      link: rootLink,
+      icon: typeof g.icon === "string" ? g.icon : undefined,
+    };
   }
   return group;
 }
