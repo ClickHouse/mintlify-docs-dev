@@ -209,7 +209,8 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TRANSLATIONS_PROJECT_ID: ${{ secrets.VERCEL_TRANSLATIONS_PROJECT_ID }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TOKEN_CLICKHOUSE_DOCS: ${{ secrets.VERCEL_TOKEN_CLICKHOUSE_DOCS }}
+          VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N: ${{ secrets.VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N }}
         run: |
           repository_owner="${GITHUB_REPOSITORY%%/*}"
           repository_name="${GITHUB_REPOSITORY#*/}"
@@ -266,12 +267,13 @@ jobs:
           get_vercel_deployment() {
             local deployment_id="$1"
             local deployment_label="$2"
+            local vercel_token="$3"
             local response
             if ! response="$(
               curl --silent --show-error --fail-with-body \
                 --connect-timeout 10 \
                 --max-time 30 \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                --header "Authorization: Bearer $vercel_token" \
                 "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
             )"; then
               echo "::warning::Unable to poll $deployment_label Vercel deployment $deployment_id; retrying." >&2
@@ -291,6 +293,7 @@ jobs:
           cancel_vercel_deployment() {
             local deployment_id="$1"
             local deployment_label="$2"
+            local vercel_token="$3"
             local cancel_response
             local cancel_exit_code
             local deployment_response
@@ -299,7 +302,7 @@ jobs:
             if cancel_response="$(
               curl --silent --show-error --fail-with-body \
                 --request PATCH \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                --header "Authorization: Bearer $vercel_token" \
                 "https://api.vercel.com/v12/deployments/$deployment_id/cancel?teamId=$VERCEL_ORG_ID"
             )"; then
               echo "Canceled $deployment_label Vercel deployment $deployment_id."
@@ -313,7 +316,7 @@ jobs:
             # verify that it is terminal rather than hiding an API failure.
             if deployment_response="$(
               curl --silent --show-error --fail-with-body \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                --header "Authorization: Bearer $vercel_token" \
                 "https://api.vercel.com/v13/deployments/$deployment_id?teamId=$VERCEL_ORG_ID"
             )"; then
               ready_state="$(jq -er .readyState <<< "$deployment_response")"
@@ -334,6 +337,7 @@ jobs:
             local project_id="$1"
             local build_scope="$2"
             local deployment_label="$3"
+            local vercel_token="$4"
             local ready_state
             local until=""
             local list_response
@@ -354,7 +358,7 @@ jobs:
                   --show-error
                   --fail-with-body
                   --get
-                  --header "Authorization: Bearer $VERCEL_TOKEN"
+                  --header "Authorization: Bearer $vercel_token"
                   --data-urlencode "projectId=$project_id"
                   --data-urlencode "state=$ready_state"
                   --data-urlencode "limit=100"
@@ -383,7 +387,7 @@ jobs:
                     <<< "$list_response"
                 )
                 for deployment_id in "${deployment_ids[@]}"; do
-                  cancel_vercel_deployment "$deployment_id" "superseded $deployment_label" || return 1
+                  cancel_vercel_deployment "$deployment_id" "superseded $deployment_label" "$vercel_token" || return 1
                 done
 
                 next="$(jq -er '.pagination.next // ""' <<< "$list_response")"
@@ -404,10 +408,10 @@ jobs:
             local cleanup_failed=false
             trap - EXIT INT TERM
             if [[ "$preview_finished" != true ]]; then
-              if [[ -n "$english_id" ]] && ! cancel_vercel_deployment "$english_id" "English"; then
+              if [[ -n "$english_id" ]] && ! cancel_vercel_deployment "$english_id" "English" "$VERCEL_TOKEN_CLICKHOUSE_DOCS"; then
                 cleanup_failed=true
               fi
-              if [[ -n "$translations_id" ]] && ! cancel_vercel_deployment "$translations_id" "translations"; then
+              if [[ -n "$translations_id" ]] && ! cancel_vercel_deployment "$translations_id" "translations" "$VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N"; then
                 cleanup_failed=true
               fi
               if [[ -n "$preview_url" ]] && ! update_preview_comment_with_retry "🔴 Failed"; then
@@ -425,9 +429,17 @@ jobs:
           # Cancel matching in-progress deployments before creating this run's
           # replacements. This also covers abrupt runner termination where the
           # old run's EXIT trap did not execute.
-          cancel_superseded_deployments "$VERCEL_PROJECT_ID" "english-preview" "English"
+          if [[ -z "$VERCEL_TOKEN_CLICKHOUSE_DOCS" ]]; then
+            echo "The VERCEL_TOKEN_CLICKHOUSE_DOCS repository secret is required." >&2
+            exit 1
+          fi
+          cancel_superseded_deployments "$VERCEL_PROJECT_ID" "english-preview" "English" "$VERCEL_TOKEN_CLICKHOUSE_DOCS"
           if [[ "$TRANSLATION_SCOPE" == "all" ]]; then
-            cancel_superseded_deployments "$VERCEL_TRANSLATIONS_PROJECT_ID" "translations-preview" "translations"
+            if [[ -z "$VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N" ]]; then
+              echo "docs-translations-all requires the VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N repository secret." >&2
+              exit 1
+            fi
+            cancel_superseded_deployments "$VERCEL_TRANSLATIONS_PROJECT_ID" "translations-preview" "translations" "$VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N"
           fi
 
           trap finalize_preview_comment EXIT
@@ -436,7 +448,7 @@ jobs:
 
           if ! project_response="$(
             curl --silent --show-error --fail-with-body \
-              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Authorization: Bearer $VERCEL_TOKEN_CLICKHOUSE_DOCS" \
               "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID"
           )"; then
             printf '%s\n' "$project_response" >&2
@@ -490,7 +502,7 @@ jobs:
           if ! english_response="$(
             curl --silent --show-error --fail-with-body \
               --request POST \
-              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Authorization: Bearer $VERCEL_TOKEN_CLICKHOUSE_DOCS" \
               --header "Content-Type: application/json" \
               --data "$english_payload" \
               "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
@@ -518,7 +530,7 @@ jobs:
             fi
             if ! translations_project_response="$(
               curl --silent --show-error --fail-with-body \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                --header "Authorization: Bearer $VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N" \
                 "https://api.vercel.com/v9/projects/$VERCEL_TRANSLATIONS_PROJECT_ID?teamId=$VERCEL_ORG_ID"
             )"; then
               printf '%s\n' "$translations_project_response" >&2
@@ -568,7 +580,7 @@ jobs:
             if ! translations_response="$(
               curl --silent --show-error --fail-with-body \
                 --request POST \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                --header "Authorization: Bearer $VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N" \
                 --header "Content-Type: application/json" \
                 --data "$translations_payload" \
                 "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
@@ -592,7 +604,7 @@ jobs:
           # the 60-minute job timeout terminates the runner.
           for _ in {1..330}; do
             if [[ "$english_state" != "🟢 Ready" ]]; then
-              if english_response="$(get_vercel_deployment "$english_id" "English")"; then
+              if english_response="$(get_vercel_deployment "$english_id" "English" "$VERCEL_TOKEN_CLICKHOUSE_DOCS")"; then
                 ready_state="$(jq -er .readyState <<< "$english_response")"
                 case "$ready_state" in
                   READY) english_state="🟢 Ready" ;;
@@ -607,7 +619,7 @@ jobs:
             fi
 
             if [[ -n "$translations_id" && "$translations_state" != "🟢 Ready" ]]; then
-              if translations_response="$(get_vercel_deployment "$translations_id" "translations")"; then
+              if translations_response="$(get_vercel_deployment "$translations_id" "translations" "$VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N")"; then
                 ready_state="$(jq -er .readyState <<< "$translations_response")"
                 case "$ready_state" in
                   READY) translations_state="🟢 Ready" ;;
