@@ -19,8 +19,10 @@ on:
         default: english
         type: string
     secrets:
-      VERCEL_TOKEN:
+      VERCEL_TOKEN_CLICKHOUSE_DOCS:
         required: true
+      VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N:
+        required: false
       VERCEL_ORG_ID:
         required: true
       VERCEL_PROJECT_ID:
@@ -156,13 +158,15 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TRANSLATIONS_PROJECT_ID: ${{ secrets.VERCEL_TRANSLATIONS_PROJECT_ID }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TOKEN_CLICKHOUSE_DOCS: ${{ secrets.VERCEL_TOKEN_CLICKHOUSE_DOCS }}
+          VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N: ${{ secrets.VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N }}
         run: |
           project_name() {
             local project_id="$1"
+            local vercel_token="$2"
             local response
             response="$(curl --silent --show-error --fail-with-body \
-              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Authorization: Bearer $vercel_token" \
               "https://api.vercel.com/v9/projects/$project_id?teamId=$VERCEL_ORG_ID")"
             jq -er .name <<< "$response"
           }
@@ -172,6 +176,7 @@ jobs:
             local deploy_target="$2"
             local locales="$3"
             local project_name_value="$4"
+            local vercel_token="$5"
             local payload
             payload="$(jq --null-input \
               --arg approved_sha "$SITE_SHA" \
@@ -210,7 +215,7 @@ jobs:
               }')"
             curl --silent --show-error --fail-with-body \
               --request POST \
-              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Authorization: Bearer $vercel_token" \
               --header "Content-Type: application/json" \
               --data "$payload" \
               "https://api.vercel.com/v13/deployments?forceNew=1&teamId=$VERCEL_ORG_ID"
@@ -224,8 +229,12 @@ jobs:
           translations_state="SKIPPED"
 
           if [[ "$DEPLOY_ENGLISH" == "true" ]]; then
-            english_project_name="$(project_name "$VERCEL_PROJECT_ID")"
-            english_response="$(create_deployment "$VERCEL_PROJECT_ID" english none "$english_project_name")"
+            if [[ -z "$VERCEL_TOKEN_CLICKHOUSE_DOCS" ]]; then
+              echo "The VERCEL_TOKEN_CLICKHOUSE_DOCS repository secret is required." >&2
+              exit 1
+            fi
+            english_project_name="$(project_name "$VERCEL_PROJECT_ID" "$VERCEL_TOKEN_CLICKHOUSE_DOCS")"
+            english_response="$(create_deployment "$VERCEL_PROJECT_ID" english none "$english_project_name" "$VERCEL_TOKEN_CLICKHOUSE_DOCS")"
             english_id="$(jq -er .id <<< "$english_response")"
             english_host="$(jq -er .url <<< "$english_response")"
             english_url="https://${english_host#https://}"
@@ -238,8 +247,12 @@ jobs:
               echo "Translation deployment requires the VERCEL_TRANSLATIONS_PROJECT_ID repository secret." >&2
               exit 1
             fi
-            translations_project_name="$(project_name "$VERCEL_TRANSLATIONS_PROJECT_ID")"
-            translations_response="$(create_deployment "$VERCEL_TRANSLATIONS_PROJECT_ID" translations all "$translations_project_name")"
+            if [[ -z "$VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N" ]]; then
+              echo "Translation deployment requires the VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N repository secret." >&2
+              exit 1
+            fi
+            translations_project_name="$(project_name "$VERCEL_TRANSLATIONS_PROJECT_ID" "$VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N")"
+            translations_response="$(create_deployment "$VERCEL_TRANSLATIONS_PROJECT_ID" translations all "$translations_project_name" "$VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N")"
             translations_id="$(jq -er .id <<< "$translations_response")"
             translations_host="$(jq -er .url <<< "$translations_response")"
             translations_url="https://${translations_host#https://}"
@@ -250,7 +263,7 @@ jobs:
           for _ in {1..720}; do
             if [[ "$english_state" == "BUILDING" ]]; then
               response="$(curl --silent --show-error --fail-with-body \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                --header "Authorization: Bearer $VERCEL_TOKEN_CLICKHOUSE_DOCS" \
                 "https://api.vercel.com/v13/deployments/$english_id?teamId=$VERCEL_ORG_ID")"
               english_state="$(jq -er .readyState <<< "$response")"
               if [[ "$english_state" =~ ^(ERROR|CANCELED|DELETED|BLOCKED)$ ]]; then
@@ -262,7 +275,7 @@ jobs:
 
             if [[ "$translations_state" == "BUILDING" ]]; then
               response="$(curl --silent --show-error --fail-with-body \
-                --header "Authorization: Bearer $VERCEL_TOKEN" \
+                --header "Authorization: Bearer $VERCEL_TOKEN_CLICKHOUSE_DOCS_I18N" \
                 "https://api.vercel.com/v13/deployments/$translations_id?teamId=$VERCEL_ORG_ID")"
               translations_state="$(jq -er .readyState <<< "$response")"
               if [[ "$translations_state" =~ ^(ERROR|CANCELED|DELETED|BLOCKED)$ ]]; then
