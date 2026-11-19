@@ -2,7 +2,7 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 import { defineDocSchema } from "@cloudflare/nimbus-docs/schemas";
-import { withNimbusMarkdown } from "@cloudflare/nimbus-docs/content";
+import { docsCollection, withNimbusMarkdown } from "@cloudflare/nimbus-docs/content";
 import { readScope } from "./lib/scope";
 import { staleSiblingPages } from "./lib/stale-siblings";
 import fs from "node:fs";
@@ -63,11 +63,12 @@ if (scope.remotePreview && !previewRemote) {
 // Preview builds omit the reference section (`reference: false` in the scope):
 // no clickhouse binary is needed and the build is a fraction of the size.
 const scopedSections = SECTIONS.filter((s) => scope.reference || s !== "reference");
+const remoteExclusions = remoteManifest.remotes.map(({ mount }) => `!${mount}/**/*.{md,mdx}`);
 const docsPattern = previewRemote
-  ? [`${previewRemote.mount}/**/*.{md,mdx}`]
+  ? ["__remote_preview__/**/*.{md,mdx}"]
   : include.length
     ? include
-    : [`{${scopedSections.join(",")}}/**/*.{md,mdx}`];
+    : [`{${scopedSections.join(",")}}/**/*.{md,mdx}`, ...remoteExclusions];
 // The homepage (`index.mdx`, `mode: custom`, inline React with hooks) is not
 // part of the collection: it is rebuilt natively as src/pages/index.astro.
 
@@ -102,7 +103,6 @@ const clickhouseFields = {
   // `draft: true` (Nimbus drops the page). Neutralised for URL parity.
   sidebar: z.any().optional().transform((v) => (v && typeof v === "object" ? v : undefined)),
   draft: z.any().optional().transform(() => false),
-  slug: z.string().optional(),
   tag: z.string().optional(),
   openapi: z.string().optional(),
   integration: z.any().optional(),
@@ -115,6 +115,15 @@ const clickhouseFields = {
 };
 
 const schema = defineDocSchema({ fields: clickhouseFields, strictFrontmatter: false });
+
+/**
+ * Remote repositories are first-class Nimbus content sources. Keep each
+ * source name literal: Nimbus reads this file without executing it to avoid
+ * fetching unrelated sources for a collection slice. Base previews instead
+ * use an empty directory and therefore need no repository credentials.
+ */
+const remoteSourceEnabled = (name: string) => scope.remotes
+  && (!scope.remotePreview || scope.remotePreview.name === name);
 
 const changelogSchema = z.object({
   title: z.string(),
@@ -200,6 +209,39 @@ export const collections = {
     })),
     schema: partialSchema,
   }),
+  "clickhouse-operator": defineCollection(remoteSourceEnabled("clickhouse-operator")
+    ? docsCollection({ source: "clickhouse-operator", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_clickhouse-operator__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  "clickhouse-private": defineCollection(remoteSourceEnabled("clickhouse-private")
+    ? docsCollection({ source: "clickhouse-private", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_clickhouse-private__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  "clickhouse-cpp": defineCollection(remoteSourceEnabled("clickhouse-cpp")
+    ? docsCollection({ source: "clickhouse-cpp", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_clickhouse-cpp__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  "clickhouse-rs": defineCollection(remoteSourceEnabled("clickhouse-rs")
+    ? docsCollection({ source: "clickhouse-rs", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_clickhouse-rs__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  "clickhouse-go": defineCollection(remoteSourceEnabled("clickhouse-go")
+    ? docsCollection({ source: "clickhouse-go", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_clickhouse-go__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  "clickhouse-c": defineCollection(remoteSourceEnabled("clickhouse-c")
+    ? docsCollection({ source: "clickhouse-c", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_clickhouse-c__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  "clickhouse-cs": defineCollection(remoteSourceEnabled("clickhouse-cs")
+    ? docsCollection({ source: "clickhouse-cs", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_clickhouse-cs__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  "clickhouse-java": defineCollection(remoteSourceEnabled("clickhouse-java")
+    ? docsCollection({ source: "clickhouse-java", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_clickhouse-java__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  "clickhouse-odbc": defineCollection(remoteSourceEnabled("clickhouse-odbc")
+    ? docsCollection({ source: "clickhouse-odbc", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_clickhouse-odbc__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  chdb: defineCollection(remoteSourceEnabled("chdb")
+    ? docsCollection({ source: "chdb", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_chdb__", schemaFields: clickhouseFields, strictFrontmatter: false })),
+  "dbt-clickhouse": defineCollection(remoteSourceEnabled("dbt-clickhouse")
+    ? docsCollection({ source: "dbt-clickhouse", schemaFields: clickhouseFields, strictFrontmatter: false })
+    : docsCollection({ base: "__inactive_dbt-clickhouse__", schemaFields: clickhouseFields, strictFrontmatter: false })),
   ar: localeCollection("ar"),
   es: localeCollection("es"),
   fr: localeCollection("fr"),

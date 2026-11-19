@@ -9,7 +9,12 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { execFileSync } from "node:child_process";
 import { readScope } from "../src/lib/scope.ts";
-import { apiMethodVariant, getApiOperationByPointer, getApiOperations, type HttpMethod } from "../src/lib/openapi.ts";
+import {
+  apiMethodVariant,
+  getApiOperationByPointer,
+  getApiOperations,
+  type HttpMethod,
+} from "../src/lib/openapi.ts";
 
 type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
 type Obj = { [k: string]: Json };
@@ -22,7 +27,10 @@ const localeArg = process.argv.indexOf("--locale");
 const scope = readScope(root);
 if (localeArg < 0 && !process.env.__GEN_SIDEBAR_CHILD) {
   for (const l of scope.locales) {
-    execFileSync(process.execPath, [process.argv[1], "--locale", l], { stdio: "inherit", env: { ...process.env, __GEN_SIDEBAR_CHILD: "1" } });
+    execFileSync(process.execPath, [process.argv[1], "--locale", l], {
+      stdio: "inherit",
+      env: { ...process.env, __GEN_SIDEBAR_CHILD: "1" },
+    });
   }
 }
 const locale = localeArg >= 0 ? process.argv[localeArg + 1] : null;
@@ -36,40 +44,69 @@ function readJson(p: string): Json {
   return JSON.parse(fs.readFileSync(p, "utf8"));
 }
 const remotesFile = path.join(root, "remotes.json");
-const remotes: Array<{ name: string; label: string; repo: string; mount: string; sourceRef: string }> = fs.existsSync(remotesFile)
-  ? (readJson(remotesFile) as { remotes: Array<{ name: string; label: string; repo: string; mount: string }> }).remotes.map((r) => ({
+const remotes: Array<{
+  name: string;
+  label: string;
+  repo: string;
+  mount: string;
+  sourceRef: string;
+}> = fs.existsSync(remotesFile)
+  ? (
+      readJson(remotesFile) as {
+        remotes: Array<{
+          name: string;
+          label: string;
+          repo: string;
+          mount: string;
+        }>;
+      }
+    ).remotes.map((r) => ({
       ...r,
       // Mintlify's sourceRef names the GitHub repository (sometimes under an older name).
       sourceRef: r.repo,
     }))
   : [];
-const previewRemote = scope.remotePreview ? remotes.find((remote) => remote.name === scope.remotePreview?.name) : undefined;
+const previewRemote = scope.remotePreview
+  ? remotes.find((remote) => remote.name === scope.remotePreview?.name)
+  : undefined;
 if (scope.remotePreview && !previewRemote) {
-  throw new Error(`gen-sidebar: preview scope names unknown remote "${scope.remotePreview.name}"`);
+  throw new Error(
+    `gen-sidebar: preview scope names unknown remote "${scope.remotePreview.name}"`,
+  );
 }
 
 function remoteIsOmitted(remote: (typeof remotes)[number]): boolean {
+  if (!scope.remotes) return true;
   if (previewRemote && previewRemote.name !== remote.name) return true;
-  const stateFile = path.join(root, ".remote", `${remote.name}.json`);
-  if (!fs.existsSync(stateFile)) return false;
-  const state = readJson(stateFile) as Obj;
-  if (!state.skipped) return false;
-  const reason = String(state.reason ?? "");
-  if (
-    reason !== "excluded-from-base-preview"
-    && reason !== "excluded-from-remote-preview"
-    && reason !== "excluded-from-untrusted-vercel-preview"
-  ) {
-    throw new Error(`gen-sidebar: remote ${remote.name} has an unknown omission reason: ${reason}`);
+  return false;
+}
+
+function sourceDirectory(remote: (typeof remotes)[number]): string | undefined {
+  const currentFile = path.join(root, ".nimbus", "sources", "current.json");
+  if (!fs.existsSync(currentFile)) return undefined;
+  const current = readJson(currentFile) as {
+    sources?: Record<string, { dir?: string; path?: string }>;
+  };
+  const source = current.sources?.[remote.name];
+  if (!source?.dir) return undefined;
+  const directory = path.resolve(root, source.dir, source.path ?? "");
+  const sourcesRoot = path.resolve(root, ".nimbus", "sources");
+  if (!directory.startsWith(`${sourcesRoot}${path.sep}`)) {
+    throw new Error(
+      `gen-sidebar: source snapshot for ${remote.name} escapes .nimbus/sources`,
+    );
   }
-  return true;
+  return directory;
 }
 
 function isInOmittedRemote(filePath: string): boolean {
   const relativePath = path.relative(root, filePath).replaceAll("\\", "/");
   return remotes.some((remote) => {
-    return remoteIsOmitted(remote)
-      && (relativePath === remote.mount || relativePath.startsWith(`${remote.mount}/`));
+    return (
+      remoteIsOmitted(remote) &&
+      (relativePath === remote.mount ||
+        relativePath.startsWith(`${remote.mount}/`))
+    );
   });
 }
 
@@ -83,41 +120,148 @@ function resolveRefs(node: Json, baseDir: string): Json {
       const p = path.normalize(path.join(baseDir, o.$ref));
       if (!fs.existsSync(p) && isInOmittedRemote(p)) return null;
       const target = resolveRefs(readJson(p), path.dirname(p));
-      const rest = Object.fromEntries(Object.entries(o).filter(([k]) => k !== "$ref").map(([k, v]) => [k, resolveRefs(v, baseDir)]));
-      return target && typeof target === "object" && !Array.isArray(target) ? { ...(target as Obj), ...rest } : target;
+      const rest = Object.fromEntries(
+        Object.entries(o)
+          .filter(([k]) => k !== "$ref")
+          .map(([k, v]) => [k, resolveRefs(v, baseDir)]),
+      );
+      return target && typeof target === "object" && !Array.isArray(target)
+        ? { ...(target as Obj), ...rest }
+        : target;
     }
-    return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, resolveRefs(v, baseDir)]));
+    return Object.fromEntries(
+      Object.entries(o).map(([k, v]) => [k, resolveRefs(v, baseDir)]),
+    );
   }
   return node;
+}
+
+/** Resolve a source's Mintlify navigation without allowing it to escape its snapshot. */
+function resolveSourceRefs(
+  node: Json,
+  baseDir: string,
+  sourceRoot: string,
+): Json {
+  if (Array.isArray(node))
+    return node.map((n) => resolveSourceRefs(n, baseDir, sourceRoot));
+  if (!node || typeof node !== "object") return node;
+
+  const object = node as Obj;
+  if (typeof object.$ref !== "string") {
+    return Object.fromEntries(
+      Object.entries(object).map(([key, value]) => [
+        key,
+        resolveSourceRefs(value, baseDir, sourceRoot),
+      ]),
+    );
+  }
+
+  const referenced = path.resolve(baseDir, object.$ref);
+  if (
+    referenced !== sourceRoot &&
+    !referenced.startsWith(`${sourceRoot}${path.sep}`)
+  ) {
+    throw new Error(
+      `gen-sidebar: source navigation reference escapes its snapshot: ${object.$ref}`,
+    );
+  }
+  if (!fs.existsSync(referenced)) {
+    throw new Error(
+      `gen-sidebar: source navigation reference does not exist: ${object.$ref}`,
+    );
+  }
+  const target = resolveSourceRefs(
+    readJson(referenced),
+    path.dirname(referenced),
+    sourceRoot,
+  );
+  const rest = Object.fromEntries(
+    Object.entries(object)
+      .filter(([key]) => key !== "$ref")
+      .map(([key, value]) => [
+        key,
+        resolveSourceRefs(value, baseDir, sourceRoot),
+      ]),
+  );
+  return target && typeof target === "object" && !Array.isArray(target)
+    ? { ...(target as Obj), ...rest }
+    : target;
 }
 
 // Locale navigation lives in `<locale>/docs.json` as a `{ language, tabs }`
 // fragment pulled into the root file's `navigation.languages` via `$ref`, so
 // every locale is resolved from the root docs.json.
 const docsJsonPath = path.join(root, "docs.json");
-const docsJson = resolveRefs(readJson(docsJsonPath), path.dirname(docsJsonPath)) as Obj;
+const docsJson = resolveRefs(
+  readJson(docsJsonPath),
+  path.dirname(docsJsonPath),
+) as Obj;
 const languages = ((docsJson.navigation as Obj).languages ?? []) as Obj[];
 const lang = languages.find((l) => l.language === (locale ?? "en"));
-if (!lang) throw new Error(`gen-sidebar: no navigation for language "${locale ?? "en"}" in docs.json`);
+if (!lang)
+  throw new Error(
+    `gen-sidebar: no navigation for language "${locale ?? "en"}" in docs.json`,
+  );
 const tabs = (lang.tabs ?? []) as Obj[];
 
 // ---------------------------------------------------------------- labels
-type NavBadge = { text: string; variant: "success" | "info" | "warning" | "danger" | "note" };
-const labelCache = new Map<string, { label: string; exists: boolean; badge?: NavBadge; icon?: string; hidden?: boolean }>();
-function pageInfo(page: string): { label: string; exists: boolean; badge?: NavBadge; icon?: string; hidden?: boolean } {
+type NavBadge = {
+  text: string;
+  variant: "success" | "info" | "warning" | "danger" | "note";
+};
+const labelCache = new Map<
+  string,
+  {
+    label: string;
+    exists: boolean;
+    badge?: NavBadge;
+    icon?: string;
+    hidden?: boolean;
+  }
+>();
+function pageInfo(page: string): {
+  label: string;
+  exists: boolean;
+  badge?: NavBadge;
+  icon?: string;
+  hidden?: boolean;
+} {
   const cached = labelCache.get(page);
   if (cached) return cached;
   // Locale nav references are `es/...`; strip the locale so files resolve.
-  const rel = locale && page.startsWith(locale + "/") ? page.slice(locale.length + 1) : page;
+  const rel =
+    locale && page.startsWith(locale + "/")
+      ? page.slice(locale.length + 1)
+      : page;
   const extensions = [".mdx", ".md"];
-  const localizedFile = extensions.map((e) => path.join(contentRoot, rel + e)).find((f) => fs.existsSync(f));
+  const localizedFile = extensions
+    .map((e) => path.join(contentRoot, rel + e))
+    .find((f) => fs.existsSync(f));
   // Locale navigation can reference pages which have not been translated yet.
   // Those routes are backed by the English entry in the Astro route, so use
   // its frontmatter for a useful sidebar label instead of the path segment.
   const englishFile = locale
-    ? extensions.map((e) => path.join(root, rel + e)).find((f) => fs.existsSync(f))
+    ? extensions
+        .map((e) => path.join(root, rel + e))
+        .find((f) => fs.existsSync(f))
     : undefined;
-  const file = localizedFile ?? englishFile;
+  // First-class Nimbus sources are intentionally not copied into the base
+  // repository. Read their frontmatter from the resolved snapshot when a
+  // navigation page sits beneath a configured source mount.
+  const remote = remotes.find(
+    (candidate) =>
+      rel === candidate.mount || rel.startsWith(`${candidate.mount}/`),
+  );
+  const remoteDirectory = remote ? sourceDirectory(remote) : undefined;
+  const sourceRelativePath = remote
+    ? rel.slice(remote.mount.length).replace(/^\//, "")
+    : "";
+  const sourceFile = remoteDirectory
+    ? extensions
+        .map((e) => path.join(remoteDirectory, sourceRelativePath + e))
+        .find((f) => fs.existsSync(f))
+    : undefined;
+  const file = localizedFile ?? englishFile ?? sourceFile;
   let label = rel.split("/").pop() ?? rel;
   let badge: NavBadge | undefined;
   let icon: string | undefined;
@@ -130,11 +274,18 @@ function pageInfo(page: string): { label: string; exists: boolean; badge?: NavBa
         const fm = (parseYaml(m[1]) ?? {}) as Record<string, unknown>;
         const st = fm.sidebarTitle ?? fm.title;
         if (typeof st === "string" && st.trim()) label = st.trim();
-        if (typeof fm.icon === "string" && fm.icon.trim()) icon = fm.icon.trim();
+        if (typeof fm.icon === "string" && fm.icon.trim())
+          icon = fm.icon.trim();
         hidden = fm.hidden === true;
         if (typeof fm.openapi === "string") {
-          const method = fm.openapi.match(/\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//i)?.[1]?.toLowerCase() as HttpMethod | undefined;
-          if (method) badge = { text: method.toUpperCase(), variant: apiMethodVariant(method) };
+          const method = fm.openapi
+            .match(/\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//i)?.[1]
+            ?.toLowerCase() as HttpMethod | undefined;
+          if (method)
+            badge = {
+              text: method.toUpperCase(),
+              variant: apiMethodVariant(method),
+            };
         }
       } catch {
         // fall back to the path segment
@@ -153,17 +304,25 @@ const PRODUCTION_ORIGIN = "https://clickhouse.com/docs";
 function isPreviewRoute(rel: string): boolean {
   if (!previewRemote) return true;
   const normalized = rel.replace(/^\/+|\/+$/g, "").replace(/\/index$/, "");
-  return normalized === previewRemote.mount || normalized.startsWith(`${previewRemote.mount}/`);
+  return (
+    normalized === previewRemote.mount ||
+    normalized.startsWith(`${previewRemote.mount}/`)
+  );
 }
 
 function pageLink(page: string): string {
-  const rel = locale && page.startsWith(locale + "/") ? page.slice(locale.length + 1) : page;
+  const rel =
+    locale && page.startsWith(locale + "/")
+      ? page.slice(locale.length + 1)
+      : page;
   // The homepage is the native src/pages/index.astro route, not a collection page.
-  if (rel === "index") return previewRemote ? `${PRODUCTION_ORIGIN}/` : `${urlPrefix}/`;
+  if (rel === "index")
+    return previewRemote ? `${PRODUCTION_ORIGIN}/` : `${urlPrefix}/`;
   // Index pages are canonical at /folder (see pathId in src/content.config.ts).
   const link = `${urlPrefix}/${rel.replace(/\/index$/, "")}`;
   if (!isPreviewRoute(rel)) return `${PRODUCTION_ORIGIN}${link}`;
-  if (referenceOff && rel.startsWith("reference/")) return `${PRODUCTION_ORIGIN}${link}`;
+  if (referenceOff && rel.startsWith("reference/"))
+    return `${PRODUCTION_ORIGIN}${link}`;
   return link;
 }
 
@@ -175,13 +334,112 @@ function configuredLink(link: string): string {
 /** Prefix every page path in a remote navigation tree with its mount directory. */
 function prefixPages(nodes: Json[], mount: string): Json[] {
   return nodes.map((n) => {
-    if (typeof n === "string") return `${mount}/${n}`;
+    if (typeof n === "string") {
+      const page = n.replace(/^\/+/, "");
+      return page === mount || page.startsWith(`${mount}/`)
+        ? page
+        : `${mount}/${page}`;
+    }
     if (n && typeof n === "object" && !Array.isArray(n)) {
       const o = { ...(n as Obj) };
-      if (Array.isArray(o.pages)) o.pages = prefixPages(o.pages as Json[], mount);
+      if (Array.isArray(o.pages))
+        o.pages = prefixPages(o.pages as Json[], mount);
+      if (typeof o.root === "string") {
+        const page = o.root.replace(/^\/+/, "");
+        o.root =
+          page === mount || page.startsWith(`${mount}/`)
+            ? page
+            : `${mount}/${page}`;
+      }
       return o;
     }
     return n;
+  });
+}
+
+/**
+ * Read a remote owner's navigation from its Nimbus snapshot. Sources may use
+ * a full Mintlify docs.json (including nested $ref files) or navigation.json
+ * directly while they migrate. The main repository only decides where this
+ * tree is mounted; page grouping and order stay with the source repository.
+ */
+function remoteNavigationEntries(remote: (typeof remotes)[number]): Json[] {
+  const directory = sourceDirectory(remote);
+  if (!directory)
+    throw new Error(
+      `gen-sidebar: sourceRef ${remote.sourceRef} was not resolved by Nimbus`,
+    );
+
+  const docsConfig = path.join(directory, "docs.json");
+  const navigationConfig = path.join(directory, "navigation.json");
+  const configPath = fs.existsSync(docsConfig) ? docsConfig : navigationConfig;
+  if (!fs.existsSync(configPath)) {
+    throw new Error(
+      `gen-sidebar: sourceRef ${remote.sourceRef} has no docs.json or navigation.json`,
+    );
+  }
+
+  const config = resolveSourceRefs(
+    readJson(configPath),
+    path.dirname(configPath),
+    directory,
+  ) as Obj;
+  const navigation =
+    config.navigation &&
+    typeof config.navigation === "object" &&
+    !Array.isArray(config.navigation)
+      ? (config.navigation as Obj)
+      : undefined;
+  let entries = (navigation?.groups ?? config.groups) as Json[] | undefined;
+  if (
+    !entries &&
+    (typeof config.group === "string" ||
+      typeof config.item === "string" ||
+      Array.isArray(config.pages))
+  ) {
+    entries = [config];
+  }
+  if (!entries) {
+    throw new Error(
+      `gen-sidebar: sourceRef ${remote.sourceRef} has no navigation groups`,
+    );
+  }
+
+  // A docs.json often wraps an older navigation.json as one object with a
+  // `groups` array. Preserve that source-owned wrapper when it supplies an
+  // `item` label; otherwise it is not itself a rendered sidebar group.
+  if (
+    entries.length === 1 &&
+    entries[0] &&
+    typeof entries[0] === "object" &&
+    !Array.isArray(entries[0])
+  ) {
+    const wrapper = entries[0] as Obj;
+    if (Array.isArray(wrapper.groups) && wrapper.group === undefined) {
+      if (typeof wrapper.item === "string") {
+        const { groups, item, ...rest } = wrapper;
+        entries = [{ ...rest, group: item, pages: groups, root: remote.mount }];
+      } else {
+        entries = wrapper.groups as Json[];
+      }
+    }
+  }
+
+  // Source repositories use either source-relative paths (`install/python`) or
+  // their existing site paths (`chdb/install/python`). Normalize those against
+  // the English mount first, then add the locale prefix for translated rails.
+  const mounted = prefixPages(entries, remote.mount);
+  const localized = locale ? prefixPages(mounted, locale) : mounted;
+  return localized.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry))
+      return entry;
+    const group = { ...(entry as Obj) };
+    // Legacy Mintlify files use `item` for a top-level source section.
+    if (typeof group.item === "string" && typeof group.group !== "string") {
+      group.group = group.item;
+      delete group.item;
+    }
+    return group;
   });
 }
 
@@ -202,14 +460,31 @@ function noteOrder(groupPath: string, pages: string[]) {
   // Compare the authored order with the alphabetical disk order of the same set.
   const sorted = [...pages].sort((a, b) => a.localeCompare(b));
   if (pages.length > 1 && pages.some((p, i) => p !== sorted[i])) {
-    orderDrift.push(`${groupPath}: ${pages.length} pages, authored order differs from alphabetical`);
+    orderDrift.push(
+      `${groupPath}: ${pages.length} pages, authored order differs from alphabetical`,
+    );
   }
 }
 
 // ---------------------------------------------------------------- conversion
 type NimbusItem =
-  | { label: string; link: string; badge?: NavBadge; statusBadge?: string; deprecated?: boolean; icon?: string; hidden?: boolean }
-  | { label: string; items: NimbusItem[]; collapsed?: boolean; segment?: string; landing?: string; icon?: string };
+  | {
+      label: string;
+      link: string;
+      badge?: NavBadge;
+      statusBadge?: string;
+      deprecated?: boolean;
+      icon?: string;
+      hidden?: boolean;
+    }
+  | {
+      label: string;
+      items: NimbusItem[];
+      collapsed?: boolean;
+      segment?: string;
+      landing?: string;
+      icon?: string;
+    };
 
 function convertPages(pages: Json[], groupPath: string): NimbusItem[] {
   const out: NimbusItem[] = [];
@@ -220,7 +495,10 @@ function convertPages(pages: Json[], groupPath: string): NimbusItem[] {
       if (/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//i.test(p)) {
         if (previewRemote) {
           seenPages.add(p);
-          out.push({ label: p, link: `${PRODUCTION_ORIGIN}/products/cloud/api-reference` });
+          out.push({
+            label: p,
+            link: `${PRODUCTION_ORIGIN}/products/cloud/api-reference`,
+          });
           continue;
         }
         const operation = getApiOperationByPointer("cloud", p);
@@ -228,21 +506,41 @@ function convertPages(pages: Json[], groupPath: string): NimbusItem[] {
         out.push({
           label: operation.title,
           link: pageLink(operation.route),
-          badge: { text: operation.method.toUpperCase(), variant: apiMethodVariant(operation.method) },
+          badge: {
+            text: operation.method.toUpperCase(),
+            variant: apiMethodVariant(operation.method),
+          },
         });
         continue;
       }
       const info = pageInfo(p);
       if (!info.exists) missing.push(`${groupPath}: ${p}`);
       seenPages.add(p);
-      out.push({ label: info.label, link: pageLink(p), badge: info.badge, icon: info.icon, hidden: info.hidden || undefined });
+      out.push({
+        label: info.label,
+        link: pageLink(p),
+        badge: info.badge,
+        icon: info.icon,
+        hidden: info.hidden || undefined,
+      });
       continue;
     }
     if (p && typeof p === "object") {
       const o = p as Obj;
-      if (typeof o.__apiLabel === "string" && typeof o.__apiLink === "string" && typeof o.__apiMethod === "string") {
+      if (
+        typeof o.__apiLabel === "string" &&
+        typeof o.__apiLink === "string" &&
+        typeof o.__apiMethod === "string"
+      ) {
         const method = o.__apiMethod as HttpMethod;
-        out.push({ label: o.__apiLabel, link: configuredLink(o.__apiLink), badge: { text: method.toUpperCase(), variant: apiMethodVariant(method) } });
+        out.push({
+          label: o.__apiLabel,
+          link: configuredLink(o.__apiLink),
+          badge: {
+            text: method.toUpperCase(),
+            variant: apiMethodVariant(method),
+          },
+        });
         continue;
       }
       if (typeof o.group === "string" || o.sourceRef !== undefined) {
@@ -267,27 +565,21 @@ function convertPages(pages: Json[], groupPath: string): NimbusItem[] {
  * content with a translated fallback notice.
  */
 function convertGroupEntries(g: Obj, parentPath: string): NimbusItem[] {
-  if (g.sourceRef === undefined || typeof g.group === "string") return [convertGroup(g, parentPath)];
+  if (g.sourceRef === undefined || typeof g.group === "string")
+    return [convertGroup(g, parentPath)];
 
   const remote = remotes.find((r) => r.sourceRef === String(g.sourceRef));
-  if (!remote) throw new Error(`gen-sidebar: sourceRef ${String(g.sourceRef)} has no entry in remotes.json`);
+  if (!remote)
+    throw new Error(
+      `gen-sidebar: sourceRef ${String(g.sourceRef)} has no entry in remotes.json`,
+    );
   if (remoteIsOmitted(remote)) {
-    skipped.push(`${parentPath}: sourceRef ${String(g.sourceRef)} omitted by build scope; linked to production`);
+    skipped.push(
+      `${parentPath}: sourceRef ${String(g.sourceRef)} omitted by build scope; linked to production`,
+    );
     return [remoteProductionLink(remote)];
   }
-  const localizedDocsJson = path.join(contentRoot, remote.mount, "docs.json");
-  const englishDocsJson = path.join(root, remote.mount, "docs.json");
-  const remoteDocsJson = localizedDocsJson && fs.existsSync(localizedDocsJson)
-    ? localizedDocsJson
-    : englishDocsJson && fs.existsSync(englishDocsJson)
-      ? englishDocsJson
-      : null;
-
-  if (!remoteDocsJson) throw new Error(`gen-sidebar: sourceRef ${String(g.sourceRef)} was not fetched`);
-
-  const remoteConfig = readJson(remoteDocsJson) as Obj;
-  const groups = (((remoteConfig.navigation as Obj)?.groups ?? []) as Json[]);
-  return prefixPages(groups, remote.mount).flatMap((node) => {
+  return remoteNavigationEntries(remote).flatMap((node) => {
     if (!node || typeof node !== "object" || Array.isArray(node)) return [];
     return convertGroupEntries(node as Obj, parentPath);
   });
@@ -296,7 +588,10 @@ function convertGroupEntries(g: Obj, parentPath: string): NimbusItem[] {
 function convertGroup(g: Obj, parentPath: string): NimbusItem {
   const label = String(g.group);
   const groupPath = `${parentPath} > ${label}`;
-  const openapi = g.openapi && typeof g.openapi === "object" && !Array.isArray(g.openapi) ? g.openapi as Obj : undefined;
+  const openapi =
+    g.openapi && typeof g.openapi === "object" && !Array.isArray(g.openapi)
+      ? (g.openapi as Obj)
+      : undefined;
   let sourcePages: Json[] = (g.pages as Json[]) ?? [];
   let scopedRemoteLink: NimbusItem | null = null;
   if (previewRemote && openapi) {
@@ -305,10 +600,14 @@ function convertGroup(g: Obj, parentPath: string): NimbusItem {
       label: "API reference",
       link: `${PRODUCTION_ORIGIN}/${directory}`,
     };
-    skipped.push(`${groupPath}: OpenAPI pages omitted by remote preview scope; linked to production`);
+    skipped.push(
+      `${groupPath}: OpenAPI pages omitted by remote preview scope; linked to production`,
+    );
   } else if (openapi && sourcePages.length === 0) {
     const directory = String(openapi.directory ?? "");
-    const collection = directory.startsWith("clickstack/") ? "clickstack" : "cloud";
+    const collection = directory.startsWith("clickstack/")
+      ? "clickstack"
+      : "cloud";
     const byTag = new Map<string, ReturnType<typeof getApiOperations>>();
     for (const operation of getApiOperations(collection)) {
       const operations = byTag.get(operation.tag) ?? [];
@@ -325,24 +624,25 @@ function convertGroup(g: Obj, parentPath: string): NimbusItem {
     }));
   }
   if (g.sourceRef !== undefined) {
-    // Remote repository docs (remotes.json). When the fetcher has placed the
-    // remote's own docs.json in its mount directory, its groups are expanded
-    // here with page paths prefixed by the mount; otherwise the group is empty.
+    // Nimbus source docs expand their own docs.json using page paths prefixed
+    // by the source collection's configured public mount.
     const remote = remotes.find((r) => r.sourceRef === String(g.sourceRef));
-    if (!remote) throw new Error(`gen-sidebar: sourceRef ${String(g.sourceRef)} has no entry in remotes.json`);
-    const remoteDocsJson = path.join(contentRoot, remote.mount, "docs.json");
+    if (!remote)
+      throw new Error(
+        `gen-sidebar: sourceRef ${String(g.sourceRef)} has no entry in remotes.json`,
+      );
     if (remoteIsOmitted(remote)) {
       scopedRemoteLink = remoteProductionLink(remote);
-      skipped.push(`${groupPath}: sourceRef ${String(g.sourceRef)} omitted by build scope; linked to production`);
-    } else if (remoteDocsJson && fs.existsSync(remoteDocsJson)) {
-      const rd = readJson(remoteDocsJson) as Obj;
-      const groups = (((rd.navigation as Obj)?.groups ?? []) as Json[]);
-      sourcePages = prefixPages(groups, remote.mount);
+      skipped.push(
+        `${groupPath}: sourceRef ${String(g.sourceRef)} omitted by build scope; linked to production`,
+      );
     } else {
-      throw new Error(`gen-sidebar: sourceRef ${String(g.sourceRef)} was not fetched`);
+      sourcePages = remoteNavigationEntries(remote);
     }
   }
-  const items = scopedRemoteLink ? [scopedRemoteLink] : convertPages(sourcePages, groupPath);
+  const items = scopedRemoteLink
+    ? [scopedRemoteLink]
+    : convertPages(sourcePages, groupPath);
   // Preserve Mintlify's authored initial disclosure state. Collapsed groups
   // still load lazily, while expanded groups reproduce the live rail.
   const group: NimbusItem = {
@@ -351,11 +651,30 @@ function convertGroup(g: Obj, parentPath: string): NimbusItem {
     collapsed: typeof g.expanded === "boolean" ? !g.expanded : true,
     icon: typeof g.icon === "string" ? g.icon : undefined,
   };
+  let rootLink: string | undefined;
   if (typeof g.root === "string") {
-    (group as { segment?: string; landing?: string }).segment = pageLink(g.root);
+    (group as { segment?: string; landing?: string }).segment = pageLink(
+      g.root,
+    );
     // The root's own page, when it exists, is where the label links.
-    const rootPage = pageInfo(g.root + "/index").exists ? g.root + "/index" : g.root;
-    if (pageInfo(rootPage).exists) (group as { landing?: string }).landing = pageLink(rootPage);
+    const rootPage = pageInfo(g.root + "/index").exists
+      ? g.root + "/index"
+      : g.root;
+    if (pageInfo(rootPage).exists) {
+      rootLink = pageLink(rootPage);
+      (group as { landing?: string }).landing = rootLink;
+    }
+  }
+
+  // A source with one document may represent it as a root and an empty pages
+  // array. Render that root document directly instead of an empty collapsible
+  // section. The source still owns the label, icon, and destination.
+  if (items.length === 0 && rootLink) {
+    return {
+      label,
+      link: rootLink,
+      icon: typeof g.icon === "string" ? g.icon : undefined,
+    };
   }
   return group;
 }
@@ -363,8 +682,13 @@ function convertGroup(g: Obj, parentPath: string): NimbusItem {
 function convertMenu(menu: Obj[], tabPath: string): NimbusItem[] {
   // `href: "#"` entries are section headers: they own the items that follow.
   const out: NimbusItem[] = [];
-  let current: { label: string; items: NimbusItem[]; collapsed?: boolean } | null = null;
-  const push = (item: NimbusItem) => (current ? current.items.push(item) : out.push(item));
+  let current: {
+    label: string;
+    items: NimbusItem[];
+    collapsed?: boolean;
+  } | null = null;
+  const push = (item: NimbusItem) =>
+    current ? current.items.push(item) : out.push(item);
   for (const m of menu) {
     const label = String(m.item ?? m.group ?? "");
     if (m.href === "#") {
@@ -376,21 +700,42 @@ function convertMenu(menu: Obj[], tabPath: string): NimbusItem[] {
       push({ label, link: configuredLink(m.href) });
       continue;
     }
+    if (m.sourceRef !== undefined) {
+      for (const item of convertGroupEntries(
+        m,
+        `${tabPath} > ${label || String(m.sourceRef)}`,
+      ))
+        push(item);
+      continue;
+    }
     if (Array.isArray(m.dropdowns)) {
       const dd = (m.dropdowns as Obj[]).map((d) => ({
         label: String(d.dropdown),
-        items: convertPages((d.pages as Json[]) ?? [], `${tabPath} > ${label} > ${String(d.dropdown)}`),
+        items: convertPages(
+          (d.pages as Json[]) ?? [],
+          `${tabPath} > ${label} > ${String(d.dropdown)}`,
+        ),
         collapsed: true,
       }));
       push({ label, items: dd, collapsed: true });
       continue;
     }
     if (Array.isArray(m.pages)) {
-      push({ label, items: convertPages(m.pages as Json[], `${tabPath} > ${label}`), collapsed: true });
+      push({
+        label,
+        items: convertPages(m.pages as Json[], `${tabPath} > ${label}`),
+        collapsed: true,
+      });
       continue;
     }
     if (Array.isArray(m.groups)) {
-      push({ label, items: (m.groups as Obj[]).flatMap((g) => convertGroupEntries(g, `${tabPath} > ${label}`)), collapsed: true });
+      push({
+        label,
+        items: (m.groups as Obj[]).flatMap((g) =>
+          convertGroupEntries(g, `${tabPath} > ${label}`),
+        ),
+        collapsed: true,
+      });
       continue;
     }
     skipped.push(`${tabPath}: menu item ${JSON.stringify(m).slice(0, 120)}`);
@@ -400,9 +745,24 @@ function convertMenu(menu: Obj[], tabPath: string): NimbusItem[] {
 
 const items: NimbusItem[] = tabs.map((t) => {
   const label = String(t.tab);
-  if (Array.isArray(t.menu)) return { label, items: convertMenu(t.menu as Obj[], label), collapsed: false };
-  if (Array.isArray(t.pages)) return { label, items: convertPages(t.pages as Json[], label), collapsed: false };
-  if (Array.isArray(t.groups)) return { label, items: (t.groups as Obj[]).flatMap((g) => convertGroupEntries(g, label)), collapsed: false };
+  if (Array.isArray(t.menu))
+    return {
+      label,
+      items: convertMenu(t.menu as Obj[], label),
+      collapsed: false,
+    };
+  if (Array.isArray(t.pages))
+    return {
+      label,
+      items: convertPages(t.pages as Json[], label),
+      collapsed: false,
+    };
+  if (Array.isArray(t.groups))
+    return {
+      label,
+      items: (t.groups as Obj[]).flatMap((g) => convertGroupEntries(g, label)),
+      collapsed: false,
+    };
   skipped.push(`tab ${label}: unsupported shape`);
   return { label, items: [], collapsed: false };
 });
@@ -411,8 +771,9 @@ const items: NimbusItem[] = tabs.map((t) => {
 // Keys use pageLink so localized navigation receives the same operation metadata.
 if (!previewRemote) {
   const apiPages = new Map(
-    [...getApiOperations("cloud"), ...getApiOperations("clickstack")]
-      .map((operation) => [pageLink(operation.route), operation]),
+    [...getApiOperations("cloud"), ...getApiOperations("clickstack")].map(
+      (operation) => [pageLink(operation.route), operation],
+    ),
   );
   const enrichApiLinks = (nodes: NimbusItem[]) => {
     for (const item of nodes) {
@@ -429,22 +790,42 @@ if (!previewRemote) {
   enrichApiLinks(items);
 }
 
-const outFile = path.join(outDir, locale ? `sidebar.items.${locale}.json` : "sidebar.items.json");
+const outFile = path.join(
+  outDir,
+  locale ? `sidebar.items.${locale}.json` : "sidebar.items.json",
+);
 fs.writeFileSync(outFile, JSON.stringify(items, null, 2) + "\n");
 
 // ---------------------------------------------------------------- nav vs disk
-const SECTIONS = ["get-started", "concepts", "guides", "reference", "products", "clickstack", "integrations", "resources", "chdb"];
+const SECTIONS = [
+  "get-started",
+  "concepts",
+  "guides",
+  "reference",
+  "products",
+  "clickstack",
+  "integrations",
+  "resources",
+  "chdb",
+];
 const onDisk: string[] = [];
 (function walk(dir: string) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.name.startsWith("_") || e.name === "node_modules") continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p);
-    else if (/\.mdx?$/.test(e.name) && !/README\.mdx?$/.test(e.name)) onDisk.push(path.relative(contentRoot, p).replace(/\.mdx?$/, ""));
+    else if (/\.mdx?$/.test(e.name) && !/README\.mdx?$/.test(e.name))
+      onDisk.push(path.relative(contentRoot, p).replace(/\.mdx?$/, ""));
   }
 })(contentRoot);
-const inSections = onDisk.filter((p) => SECTIONS.some((s) => p.startsWith(s + "/")));
-const seenRel = new Set([...seenPages].map((p) => (locale && p.startsWith(locale + "/") ? p.slice(locale.length + 1) : p)));
+const inSections = onDisk.filter((p) =>
+  SECTIONS.some((s) => p.startsWith(s + "/")),
+);
+const seenRel = new Set(
+  [...seenPages].map((p) =>
+    locale && p.startsWith(locale + "/") ? p.slice(locale.length + 1) : p,
+  ),
+);
 const orphans = inSections.filter((p) => !seenRel.has(p));
 
 const reportDir = path.join(root, "reports");
@@ -471,7 +852,10 @@ const report = [
   ...skipped.map((s) => `- ${s}`),
   "",
 ].join("\n");
-fs.writeFileSync(path.join(reportDir, locale ? `nav-vs-disk.${locale}.md` : "nav-vs-disk.md"), report);
+fs.writeFileSync(
+  path.join(reportDir, locale ? `nav-vs-disk.${locale}.md` : "nav-vs-disk.md"),
+  report,
+);
 
 console.log(
   `gen-sidebar: ${items.length} tabs, ${seenPages.size} pages -> ${path.relative(root, outFile)}; ` +

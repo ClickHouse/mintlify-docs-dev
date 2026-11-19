@@ -1,0 +1,75 @@
+---
+/** Render a first-class Nimbus source collection at its existing public URL. */
+import DocsLayout from "../layouts/DocsLayout.astro";
+import {
+  getRouteFlags,
+  getPrevNext,
+  getBreadcrumbs,
+  getEditUrl,
+  getLastUpdated,
+  getTOC,
+} from "@cloudflare/nimbus-docs";
+import { components } from "../components";
+import { withBase, stripBase } from "../lib/base";
+import { buildRailFromConfig, type ConfigItem } from "../lib/sidebar-lazy";
+import navigation from "../generated/sidebar.items.json";
+
+interface Props {
+  entry: any;
+  Content: any;
+  headings: any;
+  markdownUrl?: string;
+}
+
+const { entry, Content, headings, markdownUrl } = Astro.props;
+const browserPath = Astro.url.pathname.replace(/\/$/, "") || "/";
+const currentSlug = stripBase(browserPath);
+const { sidebar: sidebarOn, tableOfContents: tocOn } = await getRouteFlags(entry);
+const sidebar = sidebarOn || entry.data.mode === "custom"
+  ? buildRailFromConfig(navigation as ConfigItem[], browserPath)
+  : false;
+const prevNext = await getPrevNext(browserPath, {
+  sidebarTree: sidebar === false ? [] : sidebar,
+  overrides: { prev: entry.data.prev, next: entry.data.next },
+});
+const breadcrumbs = (await getBreadcrumbs(currentSlug, { collection: entry.collection })).map((crumb) =>
+  crumb.href ? { ...crumb, href: withBase(crumb.href) } : crumb,
+);
+const tocConfig = entry.data.tableOfContents;
+const tocMax = (entry.data as { toc_max_heading_level?: number }).toc_max_heading_level;
+const effectiveTocConfig = tocConfig === false
+  ? false
+  : tocMax
+    ? { minHeadingLevel: 2, maxHeadingLevel: Math.max(2, Math.min(6, tocMax)) }
+    : tocConfig;
+const toc = tocOn && effectiveTocConfig !== false ? getTOC(headings, effectiveTocConfig) : false;
+const layoutMode = entry.data.mode === "custom" || entry.data.mode === "wide" ? entry.data.mode : "doc";
+const data = entry.data as { title?: string; sidebarTitle?: string };
+const pageTitle = data.title ?? data.sidebarTitle ?? entry.id.split("/").pop() ?? entry.id;
+---
+
+<DocsLayout
+  title={pageTitle}
+  description={entry.data.description}
+  sidebar={sidebar}
+  headings={toc}
+  breadcrumbs={breadcrumbs}
+  prevNext={prevNext}
+  mode={layoutMode}
+  banner={entry.data.banner}
+  head={entry.data.head}
+  searchable={entry.data.searchable}
+  noindex={entry.data.noindex}
+  markdownUrl={markdownUrl}
+  socialImage={entry.data.socialImage}
+  lastUpdated={entry.data.lastUpdated ?? await getLastUpdated(entry)}
+  editUrl={await getEditUrl(entry)}
+  draft={entry.data.draft}
+  audience={entry.data.audience}
+  collection={entry.collection}
+  entryId={entry.id}
+  lang="en"
+  currentLocale="en"
+>
+  <Content components={components} />
+</DocsLayout>

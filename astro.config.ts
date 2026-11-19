@@ -11,6 +11,7 @@ import { SATTERI_FEATURES } from "./src/plugins/satteri-features";
 import { readScope } from "./src/lib/scope";
 import type { HastPluginDefinition } from "satteri";
 import fs from "node:fs";
+import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
@@ -32,9 +33,65 @@ const buildAssetsDirectory = buildScope.locale === "en"
   ? "_astro"
   : `_astro-${buildScope.locale.toLowerCase()}`;
 const nimbusTableScroll = tableScroll() as unknown as HastPluginDefinition;
-const remoteMounts = (JSON.parse(fs.readFileSync(new URL("./remotes.json", import.meta.url), "utf8")) as {
-  remotes: Array<{ mount: string }>;
-}).remotes.map(({ mount }) => mount);
+const remoteManifest = JSON.parse(fs.readFileSync(new URL("./remotes.json", import.meta.url), "utf8")) as {
+  remotes: Array<{
+    name: string;
+    repo: string;
+    ref?: string;
+    path: string;
+    mount: string;
+    editPattern: string;
+  }>;
+};
+const remoteMounts = Object.fromEntries(remoteManifest.remotes.map(({ name, mount }) => [name, mount]));
+const sourceRemotes = buildScope.remotes
+  ? remoteManifest.remotes.filter(({ name }) => !buildScope.remotePreview || buildScope.remotePreview.name === name)
+  : [];
+const sources = Object.fromEntries(sourceRemotes.map((remote) => {
+  const preview = buildScope.remotePreview;
+  const repository = preview?.name === remote.name ? preview.sourceRepository : remote.repo;
+  const ref = preview?.name === remote.name ? preview.ref : (remote.ref ?? "main");
+  return [remote.name, {
+    repo: `https://github.com/${repository}.git`,
+    ref,
+    path: remote.path === "." ? "" : remote.path,
+    // A source page must link to the repository that supplied it. A preview
+    // pins the link to the reviewed commit; production follows its main tree.
+    editPattern: remote.editPattern.replace("{repo}", repository),
+  }];
+}));
+
+/**
+ * The repositories predate their Nimbus collections and retain Docusaurus
+ * `slug` frontmatter for their former standalone URLs. Astro's glob loader
+ * uses that field while assigning an entry ID, before the collection schema
+ * can normalize it. Strip it from Nimbus's disposable source snapshot so
+ * source-relative paths are mounted by the collection route instead.
+ */
+function stripLegacySourceSlugs() {
+  const current = new URL("./.nimbus/sources/current.json", import.meta.url);
+  if (!fs.existsSync(current)) return;
+
+  const selected = JSON.parse(fs.readFileSync(current, "utf8")) as {
+    sources?: Record<string, { dir: string; path?: string }>;
+  };
+  for (const remote of remoteManifest.remotes) {
+    const source = selected.sources?.[remote.name];
+    if (!source) continue;
+
+    const root = path.resolve(fileURLToPath(new URL(".", import.meta.url)), source.dir, source.path ?? "");
+    for (const entry of fs.readdirSync(root, { recursive: true, withFileTypes: true })) {
+      if (!entry.isFile() || !/\.mdx?$/i.test(entry.name)) continue;
+      const file = path.join(entry.parentPath, entry.name);
+      const text = fs.readFileSync(file, "utf8");
+      const normalized = text.replace(
+        /^(---\r?\n[\s\S]*?)^slug:\s*.*\r?\n([\s\S]*?^---\r?\n)/m,
+        "$1$2",
+      );
+      if (normalized !== text) fs.writeFileSync(file, normalized);
+    }
+  }
+}
 // Inkeep's dependency tree imports `tslib` from several packages. Vercel's
 // pnpm install does not expose those transitive links to Rolldown, so use the
 // vendored ESM runtime instead of relying on node_modules symlink layout.
@@ -65,6 +122,7 @@ const nimbusConfig = defineNimbusConfig({
   socialImageAlt: "ClickHouse documentation",
   // Inkeep provides search; no Pagefind index is built.
   search: { provider: "custom" },
+  sources,
   sidebar: {
     items: sidebarItems,
     scope: "section",
@@ -144,6 +202,12 @@ export default defineConfig({
         },
       },
     }),
+    {
+      name: "clickhouse:normalize-source-frontmatter",
+      hooks: {
+        "astro:config:setup": () => stripLegacySourceSlugs(),
+      },
+    },
   ],
   vite: {
     // The Vite dependency optimizer currently resolves React's development
